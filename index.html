@@ -83,6 +83,7 @@ table.avail th,table.avail td{padding:6px 4px}
   <div>
     <h1>🚗 AZ Carpool Aalsmeer–Alkmaar</h1>
     <p id="whoami">Laden…</p>
+    <p id="myUidLine" class="muted" style="font-size:10px;opacity:.8"></p>
   </div>
   <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
 </header>
@@ -239,6 +240,8 @@ async function init(){
   try{
     const cred = await signInAnonymously(fbAuth);
     me = cred.user.uid;
+    const uidEl=document.getElementById('myUidLine');
+    if(uidEl) uidEl.textContent = "Mijn account-ID (bewaar dit voor herstel): "+me;
   }catch(e){
     setStatus("⚠️ Niet verbonden.");
     showConnectionError(e);
