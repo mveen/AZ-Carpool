@@ -36,6 +36,7 @@ input[type=text],input[type=number],select{width:100%;padding:9px 8px;border:1px
 input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;width:100%;min-height:38px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
 .chk input{min-height:18px}
 button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-top:10px;min-height:40px}
@@ -110,15 +111,13 @@ import {
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD06qcffnbm2VFl-3JYEf16BrkTGsqQr70",
-  authDomain: "az-carpool.firebaseapp.com",
-  projectId: "az-carpool",
-  storageBucket: "az-carpool.firebasestorage.app",
-  messagingSenderId: "366961042772",
-  appId: "1:366961042772:web:7bcbf144fa4316146814c1",
-  measurementId: "G-B1VT4T621M"
+  apiKey: "PASTE_YOUR_API_KEY_HERE",
+  authDomain: "PASTE_YOUR_PROJECT.firebaseapp.com",
+  projectId: "PASTE_YOUR_PROJECT_ID",
+  storageBucket: "PASTE_YOUR_PROJECT.appspot.com",
+  messagingSenderId: "PASTE_YOUR_SENDER_ID",
+  appId: "PASTE_YOUR_APP_ID"
 };
-
 
 const fbApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(fbApp);
@@ -151,9 +150,9 @@ const db = { doc: docRef, collection: collRef };
 // ============================================================
 
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
-let me=null,canEdit=false,coordinatorExists=false;
+let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null;
 let families={}, groups={}, links={};
-let settings={gapThresholdHours:3, travelLeadMinutes:60, prefWindowMinutes:30};
+let settings={gapThresholdHours:3, travelLeadMinutes:60, prefWindowMinutes:30, parentPrefWindowMinutes:60};
 let prefs={rules:[]};
 let shiftPriority={}; // { "Ma_heen": {familyId: rank}, ... }
 
@@ -217,8 +216,9 @@ async function init(){
   try{
     const coordSnap = await db.doc("config/coordinator").get();
     coordinatorExists = coordSnap.exists;
-    canEdit = coordSnap.exists && coordSnap.data().uid === me;
-  }catch(e){ coordinatorExists=false; canEdit=false; }
+    coordinatorConfig = coordSnap.exists? coordSnap.data() : null;
+  }catch(e){ coordinatorExists=false; coordinatorConfig=null; }
+  recomputeCanEdit();
   setStatus(canEdit? "Coördinator (kan rooster bewerken)" : "Ouder (alleen-lezen rooster)");
   const navB=document.getElementById('navBeheer');
   if(navB) navB.style.display = canEdit? 'inline-block':'none';
@@ -228,7 +228,10 @@ async function init(){
       err=>{ setStatus("⚠️ Fout bij laden gezinnen: "+(err&&err.message||err)); });
     db.collection("groups").onSnapshot(snap=>{ groups={}; snap.docs.forEach(d=>groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
       err=>{ setStatus("⚠️ Fout bij laden rooster: "+(err&&err.message||err)); });
-    db.collection("links").onSnapshot(snap=>{ links={}; snap.docs.forEach(d=>links[d.id]=d.data()); renderProfile(); renderBeheer(); renderMyWeek(); },
+    db.collection("links").onSnapshot(snap=>{ links={}; snap.docs.forEach(d=>links[d.id]=d.data());
+      const navB=document.getElementById('navBeheer');
+      recomputeCanEdit(); if(navB) navB.style.display = canEdit? 'inline-block':'none';
+      renderProfile(); renderBeheer(); renderMyWeek(); },
       err=>{ setStatus("⚠️ Fout bij laden koppelingen: "+(err&&err.message||err)); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) settings={...settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
       err=>{ setStatus("⚠️ Fout bij laden instellingen: "+(err&&err.message||err)); });
@@ -349,13 +352,24 @@ function renderClaimCoordinator(){
   const btn=document.getElementById('claimCoordBtn');
   if(btn) btn.onclick=async ()=>{
     try{
-      await db.doc("config/coordinator").set({uid:me, claimedAt:Date.now()});
-      canEdit=true; coordinatorExists=true;
-      const navB=document.getElementById('navBeheer'); if(navB) navB.style.display='inline-block';
+      const cfg={uid:me, claimedAt:Date.now()};
+      await db.doc("config/coordinator").set(cfg);
+      coordinatorConfig=cfg; coordinatorExists=true;
+      recomputeCanEdit();
+      const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
       showToast("Je bent nu coördinator ✓");
       renderAll();
     }catch(e){ showToast("Mislukt (mogelijk had iemand anders je net voor): "+(e&&e.message||e)); }
   };
+}
+// Coordinator status is either tied to the original claiming browser (uid), or — once the
+// coordinator designates one in Beheer — to whichever family is linked as "coordinator gezin",
+// so it survives clearing browser data as long as that family re-verifies through the gate.
+function recomputeCanEdit(){
+  if(!coordinatorConfig){ canEdit=false; return; }
+  if(coordinatorConfig.uid && coordinatorConfig.uid===me){ canEdit=true; return; }
+  if(coordinatorConfig.familyId && links[me] && links[me].familyId===coordinatorConfig.familyId){ canEdit=true; return; }
+  canEdit=false;
 }
 
 // ---------- Access gate: phone + daughter + coordinator-issued code, before anything else shows ----------
@@ -419,14 +433,22 @@ async function submitGate(){
   const code=(document.getElementById('gateCode').value||'').trim();
   const msg=document.getElementById('gateMsg');
   if(!phone||!girlId||!code){ if(msg) msg.textContent="Vul alle velden in."; return; }
-  const expected=(fam(girlId).inviteCode||'').trim();
-  if(!expected){ if(msg) msg.textContent="Voor dit gezin is nog geen code ingesteld. Vraag de coördinator."; return; }
-  if(code!==expected){ if(msg) msg.textContent="Code klopt niet. Controleer en probeer opnieuw."; return; }
+  const expectedCode=(fam(girlId).inviteCode||'').trim();
+  const expectedPhone=fam(girlId).parentPhone||'';
+  if(!expectedCode||!expectedPhone){ if(msg) msg.textContent="Voor dit gezin is nog geen code/telefoonnummer ingesteld. Vraag de coördinator."; return; }
+  if(normalizePhone(phone)!==normalizePhone(expectedPhone)){ if(msg) msg.textContent="Telefoonnummer komt niet overeen met dit gezin."; return; }
+  if(code!==expectedCode){ if(msg) msg.textContent="Code klopt niet. Controleer en probeer opnieuw."; return; }
   try{
     await db.doc("links/"+me).set({familyId:girlId, phone});
-    try{ await db.doc("families/"+girlId).update({parentPhone:phone}); }catch(e){}
     showToast("Toegang verleend ✓");
   }catch(e){ if(msg) msg.textContent="Mislukt: "+(e&&e.message||e); }
+}
+// Compares Dutch numbers regardless of 06.../ +316.../ 00316... formatting or stray spaces/dashes.
+function normalizePhone(p){
+  let digits=(p||'').replace(/[^\d]/g,'');
+  if(digits.startsWith('0031')) digits='0'+digits.slice(4);
+  else if(digits.startsWith('31') && digits.length>=11) digits='0'+digits.slice(2);
+  return digits;
 }
 
 function renderProfile(){
@@ -503,7 +525,11 @@ function renderMyWeek(){
         const dep=g.departureTime||'?';
         const isMe=g.driverFamilyId===myId;
         const driverName=g.driverFamilyId? fam(g.driverFamilyId).parentName : 'geen chauffeur';
-        parts.push(`<div><div style="font-weight:700;font-size:14px">${dep}</div><div style="font-size:11px;${isMe? 'color:var(--accent);font-weight:700' : 'color:var(--muted)'}">👧 ${isMe? 'Jij rijdt haar!' : driverName}</div></div>`);
+        const passengers=g.girlIds.filter(id=>id!==myId).map(id=>fam(id).girlName||fam(id).parentName).join(', ');
+        const line = isMe
+          ? `👧 Jij rijdt haar!${passengers? `<br><span style="font-weight:400">Passagiers: ${passengers}</span>` : ''}`
+          : `👧 ${driverName}`;
+        parts.push(`<div><div style="font-weight:700;font-size:14px">${dep}</div><div style="font-size:11px;${isMe? 'color:var(--accent);font-weight:700' : 'color:var(--muted)'}">${line}</div></div>`);
       } else {
         parts.push(`<div><div style="font-weight:700;font-size:14px">${s}</div><div class="fitbad" style="font-size:11px">nog niet ingepland</div></div>`);
       }
@@ -579,6 +605,17 @@ function renderPrefsCard(){
 }
 
 let selectedShiftKey='Ma_heen';
+function renderCoordinatorCard(){
+  const familyOptions = Object.entries(families).map(([id,f])=>`<option value="${id}" ${coordinatorConfig&&coordinatorConfig.familyId===id?'selected':''}>${f.girlName||f.parentName||id}</option>`).join('');
+  const currentLabel = coordinatorConfig && coordinatorConfig.familyId
+    ? `Gekoppeld aan gezin: <strong>${girlName(coordinatorConfig.familyId)}</strong> — iedereen die met dit gezin toegang heeft, is coördinator.`
+    : `Nog gekoppeld aan het browser-account van wie zich als eerste aanmeldde (niet aan een gezin). Stel hieronder een gezin in zodat coördinator-toegang niet verloren gaat als dat apparaat/browser wisselt.`;
+  return `<p class="muted">${currentLabel}</p>
+    ${Object.keys(families).length? `<label>Maak dit gezin coördinator</label>
+    <select id="coordFamilySelect">${familyOptions}</select>
+    <button type="button" class="btn secondary" id="setCoordFamilyBtn">Instellen</button>
+    <span id="coordFamilyMsg" class="muted"></span>` : `<p class="muted">Voeg eerst een gezin toe om dit in te stellen.</p>`}`;
+}
 function renderPriorityCard(){
   const shifts=[];
   DAYS.forEach(([k,label])=>{ shifts.push([k+'_heen', label+' – Heen']); shifts.push([k+'_terug', label+' – Terug']); });
@@ -636,7 +673,7 @@ function renderBeheer(){
   const rows = Object.entries(families).map(([id,fd])=>`
     <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border)">
       <span>${fd.girlName||'(naam?)'} <span class="muted">– ${fd.parentName||'(ouder?)'}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''}
-        ${fd.inviteCode? `<br><span class="muted">Code: <strong>${fd.inviteCode}</strong></span>` : `<br><span class="fitbad" style="font-size:11px">geen code ingesteld</span>`}</span>
+        <br><span class="muted">${fd.parentPhone? `Tel: <strong>${fd.parentPhone}</strong> · `:'Tel: <span class="fitbad">niet ingesteld</span> · '}${fd.inviteCode? `Code: <strong>${fd.inviteCode}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
       <span><button type="button" class="btn small secondary" data-coordedit="${id}">Bewerken</button>
       <button type="button" class="btn small secondary" data-coorddel="${id}">Verwijder</button></span>
     </div>`).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
@@ -649,6 +686,10 @@ function renderBeheer(){
       ${rows}
       <button type="button" class="btn secondary" id="coordNew">+ Nieuw gezin toevoegen</button>
       <div id="coordEditArea"></div>
+    </div>
+    <div class="card">
+      <h2>Coördinator</h2>
+      ${renderCoordinatorCard()}
     </div>
     <div class="card">
       <h2>Selectievolgorde per shift</h2>
@@ -666,10 +707,11 @@ function renderBeheer(){
     <div class="card">
       <h2>Planning-instellingen</h2>
       <p class="muted">Deze regels bepalen hoe combinaties in het Rooster worden voorgesteld. Wijzigingen worden automatisch opgeslagen.</p>
-      <div class="grid3">
+      <div class="grid4">
         <div><label>Max. tijdsverschil voor 1 auto (uur)</label><input type="number" id="setGap" min="0.5" step="0.5" value="${settings.gapThresholdHours}"></div>
         <div><label>Rijtijd Aalsmeer→Alkmaar (min, vertrektijd heen)</label><input type="number" id="setLead" min="0" step="5" value="${settings.travelLeadMinutes}"></div>
         <div><label>Voorkeur-marge (min)</label><input type="number" id="setPrefWindow" min="0" step="5" value="${settings.prefWindowMinutes}"></div>
+        <div><label>Max. wachttijd om met eigen ouder te rijden (min)</label><input type="number" id="setParentPrefWindow" min="0" step="5" value="${settings.parentPrefWindowMinutes}"></div>
       </div>
     </div>
     <div class="card">
@@ -684,12 +726,14 @@ function renderBeheer(){
       const gapThresholdHours = parseFloat(document.getElementById('setGap').value)||3;
       const travelLeadMinutes = parseInt(document.getElementById('setLead').value)||60;
       const prefWindowMinutes = parseInt(document.getElementById('setPrefWindow').value);
-      try{ await db.doc("settings/planning").set({gapThresholdHours,travelLeadMinutes,prefWindowMinutes: isNaN(prefWindowMinutes)?30:prefWindowMinutes}); showToast("Opgeslagen ✓"); }
+      const parentPrefWindowMinutes = parseInt(document.getElementById('setParentPrefWindow').value);
+      try{ await db.doc("settings/planning").set({gapThresholdHours,travelLeadMinutes,prefWindowMinutes: isNaN(prefWindowMinutes)?30:prefWindowMinutes, parentPrefWindowMinutes: isNaN(parentPrefWindowMinutes)?60:parentPrefWindowMinutes}); showToast("Opgeslagen ✓"); }
       catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
     };
     const setGapEl=document.getElementById('setGap'); if(setGapEl) setGapEl.onchange=saveSettingsAuto;
     const setLeadEl=document.getElementById('setLead'); if(setLeadEl) setLeadEl.onchange=saveSettingsAuto;
     const setPrefWindowEl=document.getElementById('setPrefWindow'); if(setPrefWindowEl) setPrefWindowEl.onchange=saveSettingsAuto;
+    const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     const atp=document.getElementById('addTogetherPref');
     if(atp) atp.onclick=async ()=>{
       const ids=[...document.querySelectorAll('.prefTogetherPick:checked')].map(c=>c.value);
@@ -711,6 +755,18 @@ function renderBeheer(){
       const rules=(prefs.rules||[]).filter((_,i)=>i!==idx);
       try{ await db.doc("settings/prefs").set({rules}); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
     });
+    const setCoordBtn=document.getElementById('setCoordFamilyBtn');
+    if(setCoordBtn) setCoordBtn.onclick=async ()=>{
+      const sel=document.getElementById('coordFamilySelect'); if(!sel||!db) return;
+      try{
+        const cfg={familyId:sel.value};
+        await db.doc("config/coordinator").set(cfg);
+        coordinatorConfig=cfg; coordinatorExists=true;
+        recomputeCanEdit();
+        showToast("Coördinator ingesteld ✓");
+        renderBeheer();
+      }catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+    };
     const shiftSel=document.getElementById('shiftPrioritySelect');
     if(shiftSel){
       shiftSel.onchange = ()=>{ selectedShiftKey=shiftSel.value; renderShiftPriorityRows(selectedShiftKey); };
@@ -737,12 +793,13 @@ function renderCoordEditor(){
   const currentCode = f? (f.inviteCode||'') : genCode();
   area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
     <h2>${isNew? 'Nieuw gezin toevoegen' : 'Bewerken: '+((f.girlName||f.parentName)||'')}</h2>
+    <label>Telefoonnummer ouder (NL, voor toegangscontrole)</label>
+    <input type="text" id="coord_parentPhone" value="${f&&f.parentPhone||''}" placeholder="06-12345678">
     <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp)</label>
     <div class="rowflex" style="gap:6px">
       <input type="text" id="coord_inviteCode" value="${currentCode}" style="flex:1">
       <button type="button" class="btn small secondary" id="genCodeBtn">🎲 Nieuwe code</button>
     </div>
-    ${f && f.parentPhone? `<p class="muted" style="margin-top:6px">Telefoonnummer bij aanmelding: ${f.parentPhone}</p>` : ''}
     ${familyFormHtml('coord', f)}
     <button type="button" class="btn secondary" id="coordCancel">Sluiten</button>
     <p class="muted" style="margin-top:8px">Wijzigingen worden automatisch opgeslagen.</p>
@@ -758,8 +815,9 @@ async function saveCoordFamily(){
   if(!db){showToast("Geen verbinding met opslag.");return;}
   const data = readFamilyForm('coord');
   const codeEl=document.getElementById('coord_inviteCode');
+  const phoneEl=document.getElementById('coord_parentPhone');
   data.inviteCode = codeEl? codeEl.value.trim() : '';
-  if(coordEditId!=null && fam(coordEditId).parentPhone) data.parentPhone = fam(coordEditId).parentPhone;
+  data.parentPhone = phoneEl? phoneEl.value.trim() : '';
   if(coordEditId==null){
     const slug = (data.girlName||data.parentName||'gezin').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30) || 'gezin';
     coordEditId = 'manual-'+slug+'-'+Date.now().toString(36);
@@ -906,15 +964,25 @@ function planPrimaryOption(day,direction,list){
   }
   if(priorityOrder.length<2) return null;
   const [id2,f2]=priorityOrder[1];
+  const parentWindow = settings.parentPrefWindowMinutes!=null? settings.parentPrefWindowMinutes : 60;
   let best=null,bestScore=-Infinity;
   for(let k=1;k<n;k++){
-    const c1=withMin.slice(0,k).map(x=>x.id), c2=withMin.slice(k).map(x=>x.id);
+    const c1obj=withMin.slice(0,k), c2obj=withMin.slice(k);
+    const c1=c1obj.map(x=>x.id), c2=c2obj.map(x=>x.id);
     const fitsAB=f1.capacity>=c1.length && f2.capacity>=c2.length;
     const fitsBA=f2.capacity>=c1.length && f1.capacity>=c2.length;
     if(!fitsAB && !fitsBA) continue;
     const gap=withMin[k].min-withMin[k-1].min;
     const {broken,satisfied,prefWeight}=scoreSplitPrefs(c1,c2,gap);
-    const score=-broken*1000+satisfied*prefWeight+gap*0.01;
+    let score=-broken*1000+satisfied*prefWeight+gap*0.01;
+    // Prefer a girl riding with her own parent (family id === driver id) when doing so
+    // wouldn't make her wait more than the configured window inside that car.
+    [[c1obj,id1],[c2obj,id2]].forEach(([clusterObj,driverId])=>{
+      if(clusterObj.some(x=>x.id===driverId)){
+        const clusterGap = Math.max(...clusterObj.map(x=>x.min)) - Math.min(...clusterObj.map(x=>x.min));
+        if(clusterGap<=parentWindow) score += 800;
+      }
+    });
     if(score>bestScore){bestScore=score;best={c1,c2,fitsAB,fitsBA};}
   }
   if(!best) return null;
