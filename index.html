@@ -435,9 +435,11 @@ async function submitGate(){
   const msg=document.getElementById('gateMsg');
   if(!phone||!girlId||!code){ if(msg) msg.textContent="Vul alle velden in."; return; }
   const expectedCode=(fam(girlId).inviteCode||'').trim();
-  const expectedPhone=fam(girlId).parentPhone||'';
-  if(!expectedCode||!expectedPhone){ if(msg) msg.textContent="Voor dit gezin is nog geen code/telefoonnummer ingesteld. Vraag de coördinator."; return; }
-  if(normalizePhone(phone)!==normalizePhone(expectedPhone)){ if(msg) msg.textContent="Telefoonnummer komt niet overeen met dit gezin."; return; }
+  const expectedPhone1=fam(girlId).parentPhone1||'';
+  const expectedPhone2=fam(girlId).parentPhone2||'';
+  if(!expectedCode||(!expectedPhone1&&!expectedPhone2)){ if(msg) msg.textContent="Voor dit gezin is nog geen code/telefoonnummer ingesteld. Vraag de coördinator."; return; }
+  const enteredNorm=normalizePhone(phone);
+  if(enteredNorm!==normalizePhone(expectedPhone1) && enteredNorm!==normalizePhone(expectedPhone2)){ if(msg) msg.textContent="Telefoonnummer komt niet overeen met dit gezin."; return; }
   if(code!==expectedCode){ if(msg) msg.textContent="Code klopt niet. Controleer en probeer opnieuw."; return; }
   try{
     await db.doc("links/"+me).set({familyId:girlId, phone});
@@ -606,17 +608,6 @@ function renderPrefsCard(){
 }
 
 let selectedShiftKey='Ma_heen';
-function renderCoordinatorCard(){
-  const familyOptions = Object.entries(families).map(([id,f])=>`<option value="${id}" ${coordinatorConfig&&coordinatorConfig.familyId===id?'selected':''}>${f.girlName||f.parentName||id}</option>`).join('');
-  const currentLabel = coordinatorConfig && coordinatorConfig.familyId
-    ? `Gekoppeld aan gezin: <strong>${girlName(coordinatorConfig.familyId)}</strong> — iedereen die met dit gezin toegang heeft, is coördinator.`
-    : `Nog gekoppeld aan het browser-account van wie zich als eerste aanmeldde (niet aan een gezin). Stel hieronder een gezin in zodat coördinator-toegang niet verloren gaat als dat apparaat/browser wisselt.`;
-  return `<p class="muted">${currentLabel}</p>
-    ${Object.keys(families).length? `<label>Maak dit gezin coördinator</label>
-    <select id="coordFamilySelect">${familyOptions}</select>
-    <button type="button" class="btn secondary" id="setCoordFamilyBtn">Instellen</button>
-    <span id="coordFamilyMsg" class="muted"></span>` : `<p class="muted">Voeg eerst een gezin toe om dit in te stellen.</p>`}`;
-}
 function renderPriorityCard(){
   const shifts=[];
   DAYS.forEach(([k,label])=>{ shifts.push([k+'_heen', label+' – Heen']); shifts.push([k+'_terug', label+' – Terug']); });
@@ -671,26 +662,26 @@ function renderBeheer(){
       <div class="fitbad">⚠️ Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:</div>
       ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${list[0][1].girlName}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${fd.parentName||id} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px">Verwijder</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
-  const rows = Object.entries(families).map(([id,fd])=>`
+  const rows = Object.entries(families).map(([id,fd])=>{
+    const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
+    return `
     <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border)">
-      <span>${fd.girlName||'(naam?)'} <span class="muted">– ${fd.parentName||'(ouder?)'}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''}
-        <br><span class="muted">${fd.parentPhone? `Tel: <strong>${fd.parentPhone}</strong> · `:'Tel: <span class="fitbad">niet ingesteld</span> · '}${fd.inviteCode? `Code: <strong>${fd.inviteCode}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
+      <span>${fd.girlName||'(naam?)'} <span class="muted">– ${fd.parentName||'(ouder?)'}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}
+        <br><span class="muted">${fd.parentPhone1? `Tel 1: <strong>${fd.parentPhone1}</strong> · `:''}${fd.parentPhone2? `Tel 2: <strong>${fd.parentPhone2}</strong> · `:''}${!fd.parentPhone1&&!fd.parentPhone2? 'Tel: <span class="fitbad">niet ingesteld</span> · ':''}${fd.inviteCode? `Code: <strong>${fd.inviteCode}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
       <span><button type="button" class="btn small secondary" data-coordedit="${id}">Bewerken</button>
+      <button type="button" class="btn small secondary" data-togglecoord="${id}">${isCoord? '✓ Coördinator (intrekken)' : '★ Maak coördinator'}</button>
       <button type="button" class="btn small secondary" data-coorddel="${id}">Verwijder</button></span>
-    </div>`).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
+    </div>`;
+  }).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
 
   box.innerHTML = `
     <div class="card">
       <h2>Gezinnen beheren</h2>
-      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Wijzigingen worden automatisch opgeslagen.</p>
+      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Wijzigingen worden automatisch opgeslagen. Gebruik "Maak coördinator" om coördinator-toegang aan een gezin te koppelen (blijft werken op elk apparaat, zodra dat gezin via de toegangscode inlogt).</p>
       ${dupWarning}
       ${rows}
       <button type="button" class="btn secondary" id="coordNew">+ Nieuw gezin toevoegen</button>
       <div id="coordEditArea"></div>
-    </div>
-    <div class="card">
-      <h2>Coördinator</h2>
-      ${renderCoordinatorCard()}
     </div>
     <div class="card">
       <h2>Selectievolgorde per shift</h2>
@@ -756,18 +747,24 @@ function renderBeheer(){
       const rules=(prefs.rules||[]).filter((_,i)=>i!==idx);
       try{ await db.doc("settings/prefs").set({rules}); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
     });
-    const setCoordBtn=document.getElementById('setCoordFamilyBtn');
-    if(setCoordBtn) setCoordBtn.onclick=async ()=>{
-      const sel=document.getElementById('coordFamilySelect'); if(!sel||!db) return;
+    document.querySelectorAll('[data-togglecoord]').forEach(b=>b.onclick=async ()=>{
+      const id=b.dataset.togglecoord;
+      const isCurrently = coordinatorConfig && coordinatorConfig.familyId===id;
       try{
-        const cfg={familyId:sel.value};
-        await db.doc("config/coordinator").set(cfg);
-        coordinatorConfig=cfg; coordinatorExists=true;
+        if(isCurrently){
+          await db.doc("config/coordinator").delete();
+          coordinatorConfig=null; coordinatorExists=false;
+        } else {
+          const cfg={familyId:id};
+          await db.doc("config/coordinator").set(cfg);
+          coordinatorConfig=cfg; coordinatorExists=true;
+        }
         recomputeCanEdit();
-        showToast("Coördinator ingesteld ✓");
-        renderBeheer();
+        const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+        showToast(isCurrently? "Coördinator-rol ingetrokken" : "Coördinator ingesteld ✓");
+        renderAll();
       }catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
-    };
+    });
     const shiftSel=document.getElementById('shiftPrioritySelect');
     if(shiftSel){
       shiftSel.onchange = ()=>{ selectedShiftKey=shiftSel.value; renderShiftPriorityRows(selectedShiftKey); };
@@ -794,9 +791,11 @@ function renderCoordEditor(){
   const currentCode = f? (f.inviteCode||'') : genCode();
   area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
     <h2>${isNew? 'Nieuw gezin toevoegen' : 'Bewerken: '+((f.girlName||f.parentName)||'')}</h2>
-    <label>Telefoonnummer ouder (NL, voor toegangscontrole)</label>
-    <input type="text" id="coord_parentPhone" value="${f&&f.parentPhone||''}" placeholder="06-12345678">
-    <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp)</label>
+    <label>Telefoonnummer ouder 1 (NL, voor toegangscontrole)</label>
+    <input type="text" id="coord_parentPhone1" value="${f&&f.parentPhone1||''}" placeholder="06-12345678">
+    <label>Telefoonnummer ouder 2 (optioneel — bijv. bij gescheiden ouders)</label>
+    <input type="text" id="coord_parentPhone2" value="${f&&f.parentPhone2||''}" placeholder="06-12345678">
+    <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp — meerdere mensen kunnen dezelfde code gebruiken)</label>
     <div class="rowflex" style="gap:6px">
       <input type="text" id="coord_inviteCode" value="${currentCode}" style="flex:1">
       <button type="button" class="btn small secondary" id="genCodeBtn">🎲 Nieuwe code</button>
@@ -816,9 +815,11 @@ async function saveCoordFamily(){
   if(!db){showToast("Geen verbinding met opslag.");return;}
   const data = readFamilyForm('coord');
   const codeEl=document.getElementById('coord_inviteCode');
-  const phoneEl=document.getElementById('coord_parentPhone');
+  const phone1El=document.getElementById('coord_parentPhone1');
+  const phone2El=document.getElementById('coord_parentPhone2');
   data.inviteCode = codeEl? codeEl.value.trim() : '';
-  data.parentPhone = phoneEl? phoneEl.value.trim() : '';
+  data.parentPhone1 = phone1El? phone1El.value.trim() : '';
+  data.parentPhone2 = phone2El? phone2El.value.trim() : '';
   if(coordEditId==null){
     const slug = (data.girlName||data.parentName||'gezin').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30) || 'gezin';
     coordEditId = 'manual-'+slug+'-'+Date.now().toString(36);
@@ -966,7 +967,10 @@ function planPrimaryOption(day,direction,list){
   if(priorityOrder.length<2) return null;
   const [id2,f2]=priorityOrder[1];
   const parentWindow = settings.parentPrefWindowMinutes!=null? settings.parentPrefWindowMinutes : 60;
-  let best=null,bestScore=-Infinity;
+
+  // Pass 1: best split on time/Reisvoorkeuren alone — this is the bar every split must clear.
+  const candidates=[];
+  let baseBestScore=-Infinity;
   for(let k=1;k<n;k++){
     const c1obj=withMin.slice(0,k), c2obj=withMin.slice(k);
     const c1=c1obj.map(x=>x.id), c2=c2obj.map(x=>x.id);
@@ -975,17 +979,27 @@ function planPrimaryOption(day,direction,list){
     if(!fitsAB && !fitsBA) continue;
     const gap=withMin[k].min-withMin[k-1].min;
     const {broken,satisfied,prefWeight}=scoreSplitPrefs(c1,c2,gap);
-    let score=-broken*1000+satisfied*prefWeight+gap*0.01;
-    // Prefer a girl riding with her own parent (family id === driver id) when doing so
-    // wouldn't make her wait more than the configured window inside that car.
-    [[c1obj,id1],[c2obj,id2]].forEach(([clusterObj,driverId])=>{
+    const baseScore=-broken*1000+satisfied*prefWeight+gap*0.01;
+    candidates.push({c1,c2,c1obj,c2obj,fitsAB,fitsBA,baseScore});
+    if(baseScore>baseBestScore) baseBestScore=baseScore;
+  }
+  if(!candidates.length) return null;
+
+  // Pass 2: among splits that are genuinely tied on that bar, prefer whichever lets a girl
+  // ride with her own available parent within the configured wait window — never below it,
+  // so this preference can only break ties, not force an otherwise-worse split.
+  let best=null, bestParentCount=-1;
+  candidates.forEach(cand=>{
+    if(cand.baseScore < baseBestScore - 0.001) return;
+    let parentCount=0;
+    [[cand.c1obj,id1],[cand.c2obj,id2]].forEach(([clusterObj,driverId])=>{
       if(clusterObj.some(x=>x.id===driverId)){
         const clusterGap = Math.max(...clusterObj.map(x=>x.min)) - Math.min(...clusterObj.map(x=>x.min));
-        if(clusterGap<=parentWindow) score += 800;
+        if(clusterGap<=parentWindow) parentCount++;
       }
     });
-    if(score>bestScore){bestScore=score;best={c1,c2,fitsAB,fitsBA};}
-  }
+    if(parentCount>bestParentCount){ bestParentCount=parentCount; best={c1:cand.c1,c2:cand.c2,fitsAB:cand.fitsAB,fitsBA:cand.fitsBA}; }
+  });
   if(!best) return null;
   let g1=best.c1,g2=best.c2;
   if(!best.fitsAB && best.fitsBA){ g1=best.c2; g2=best.c1; }
