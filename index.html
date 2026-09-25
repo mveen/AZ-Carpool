@@ -1,6 +1,1310 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+<script>(function(){try{var p=localStorage.getItem('theme-pref');if(p==='light')document.documentElement.setAttribute('data-theme','light');else if(p==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>AZ Carpool Aalsmeer</title>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--text:#1c1e21;--muted:#5b6472;--border:#e3e5e8;
+  --accent:#dc2626;--accent2:#fee2e2;--ok:#059669;--ok2:#d1fae5;--warn:#b45309;--warn2:#fef3c7;
+  --backup:#4b5563;--info:#2563eb;--info2:#dbeafe;--pill:#1d4ed8;--pill2:#dbeafe;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){--bg:#15171a;--card:#1f2226;--text:#eceef0;--muted:#9aa1ab;--border:#2c2f34;--accent:#ef4444;--accent2:#3a1414;--ok:#34d399;--ok2:#0f2b21;--warn:#fbbf24;--warn2:#3a2e0f;--backup:#9aa1ab;--info:#60a5fa;--info2:#122036;--pill:#60a5fa;--pill2:#122036;}
+}
+:root[data-theme="dark"]{--bg:#15171a;--card:#1f2226;--text:#eceef0;--muted:#9aa1ab;--border:#2c2f34;--accent:#ef4444;--accent2:#3a1414;--ok:#34d399;--ok2:#0f2b21;--warn:#fbbf24;--warn2:#3a2e0f;--backup:#9aa1ab;--info:#60a5fa;--info2:#122036;--pill:#60a5fa;--pill2:#122036;}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100%;}
+#topbar{position:fixed;top:0;left:0;right:0;z-index:5}
+header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:var(--accent);color:#fff}
+header h1{margin:0;font-size:18px}
+header p{margin:2px 0 0;font-size:12px;opacity:.9}
+nav{display:flex;gap:6px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto}
+nav button{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:8px 12px;border-radius:20px;font-size:13px;white-space:nowrap;cursor:pointer;min-height:38px}
+nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+main{padding:14px 16px 40px;max-width:760px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 10px;font-size:15px}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+input[type=text],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;min-height:38px}
+input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;width:100%;min-height:38px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
+.chk input{min-height:18px}
+button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-top:10px;min-height:40px}
+button.btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+button.btn.small{padding:8px 12px;font-size:12.5px;margin:0;min-height:36px}
+button.btn:disabled{opacity:.35;cursor:default}
+.daysection{margin-bottom:16px}
+.daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px}
+.group{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg)}
+.group.confirmed{border-left-color:var(--info)}
+.group.suggestion{border-left-color:var(--ok)}
+.group.suggestion.primary{border-left-color:var(--ok);background:var(--ok2)}
+.group.warning{border-left-color:var(--warn)}
+.group .dir{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
+.group .time{font-size:18px;font-weight:600}
+.group .subtime{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;background:var(--pill2);color:var(--pill);border-radius:12px;padding:3px 9px;font-size:12px;margin:2px 3px 0 0}
+.driver{color:var(--ok);font-weight:600;font-size:13px;margin-top:4px}
+.cap{font-size:12px;color:var(--muted)}
+.reserve{font-size:12px;color:var(--muted);margin-top:4px}
+.girlchk{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.muted{color:var(--muted);font-size:12px}
+.badge{background:var(--ok2);color:var(--ok);font-size:11px;padding:2px 7px;border-radius:10px}
+.badge.rec{background:var(--accent2);color:var(--accent);font-weight:700}
+.rowflex{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fitok{color:var(--ok);font-size:12px;margin-top:4px;font-weight:600}
+.fitbad{color:var(--warn);font-size:12px;margin-top:4px;font-weight:600}
+.chip{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:12px}
+table.avail{width:100%;border-collapse:collapse;font-size:12px}
+table.avail th,table.avail td{padding:6px 4px}
+.dayBlock{border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden}
+.dayBlockHead{padding:10px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);background:var(--card)}
+.dayBlockHead .sumInfo{font-weight:400;color:var(--muted);font-size:12px}
+.dayDetailsBody{padding:10px 12px}
+.iconbtn{background:none;border:1px solid var(--border);border-radius:8px;min-width:38px;min-height:38px;font-size:14px;cursor:pointer;color:var(--text)}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+</style>
+</head>
+<body>
+<div id="topbar">
+<div id="impersonateBanner" style="display:none"></div>
+<header style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+  <div>
+    <h1>🚗 AZ Carpool Aalsmeer–Alkmaar</h1>
+    <p id="whoami">Laden…</p>
+  </div>
+  <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
+</header>
+<nav aria-label="Hoofdnavigatie">
+  <button type="button" data-tab="schedule" class="active">Rooster</button>
+  <button type="button" data-tab="myweek">Mijn week</button>
+  <button type="button" data-tab="profile">Mijn gezin</button>
+  <button type="button" data-tab="beheer" id="navBeheer" style="display:none">Beheer</button>
+</nav>
+</div>
+<main>
+  <div id="tab-schedule"></div>
+  <div id="tab-myweek" style="display:none"></div>
+  <div id="tab-profile" style="display:none"></div>
+  <div id="tab-beheer" style="display:none"></div>
+  <div id="tab-gate" style="display:none"></div>
+</main>
+
+<script type="module">
+// ============================================================
+// FIREBASE SETUP — paste your own project's config below.
+// Firebase console → gear icon → Project settings → scroll to
+// "Your apps" → the </> (web) icon → copy the firebaseConfig object.
+// These values are meant to be public; real security comes from
+// the Firestore rules you'll paste in the console, not from hiding this.
+// ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot
+} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyD06qcffnbm2VFl-3JYEf16BrkTGsqQr70",
+  authDomain: "az-carpool.firebaseapp.com",
+  projectId: "az-carpool",
+  storageBucket: "az-carpool.firebasestorage.app",
+  messagingSenderId: "366961042772",
+  appId: "1:366961042772:web:7bcbf144fa4316146814c1",
+  measurementId: "G-B1VT4T621M"
+};
+
+const fbApp = initializeApp(firebaseConfig);
+const firestoreDb = getFirestore(fbApp);
+const fbAuth = getAuth(fbApp);
+
+// ---- Compatibility shim: gives the rest of this app the exact same
+// db.doc(...)/db.collection(...) API it used with Claude's built-in
+// database, so none of the app logic below had to change. ----
+function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data() }; }
+function wrapQuerySnap(s){ return { docs: s.docs.map(wrapDocSnap) }; }
+function docRef(path){
+  const ref = doc(firestoreDb, ...path.split('/'));
+  return {
+    get: ()=>getDoc(ref).then(wrapDocSnap),
+    set: (data)=>setDoc(ref, data),
+    update: (data)=>updateDoc(ref, data),
+    delete: ()=>deleteDoc(ref),
+    onSnapshot: (onNext,onErr)=>onSnapshot(ref, s=>onNext(wrapDocSnap(s)), onErr)
+  };
+}
+function collRef(path){
+  const ref = collection(firestoreDb, path);
+  return {
+    get: ()=>getDocs(ref).then(wrapQuerySnap),
+    onSnapshot: (onNext,onErr)=>onSnapshot(ref, s=>onNext(wrapQuerySnap(s)), onErr),
+    doc: (id)=>docRef(path+'/'+id)
+  };
+}
+const db = { doc: docRef, collection: collRef };
+// ============================================================
+
+const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
+let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
+let families={}, groups={}, links={};
+let settings={gapThresholdHours:3, travelLeadMinutes:60, prefWindowMinutes:30, parentPrefWindowMinutes:60};
+let prefs={rules:[]};
+let shiftPriority={}; // { "Ma_heen": {familyId: rank}, ... }
+
+function fam(id){return families[id]||{parentName:"?",girlName:"?",capacity:4,schedule:{},availability:{}};}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function girlName(id){ return esc(girlName(id)||id); }
+function myFamilyId(){ return impersonateFamilyId || (links[me] && links[me].familyId) || me; }
+function shiftKeyOf(day,direction){ return day+'_'+direction; }
+function shiftPriorityOf(day,direction,id){
+  const map = shiftPriority[shiftKeyOf(day,direction)] || {};
+  return map[id]!=null? map[id] : 999;
+}
+function sortByShiftPriority(day,direction,entries){
+  return [...entries].sort((a,b)=>shiftPriorityOf(day,direction,a[0])-shiftPriorityOf(day,direction,b[0]));
+}
+function backupField(direction){ return direction==='heen' ? 'backupHeen' : 'backupTerug'; }
+function isAvailable(f,day,direction){
+  const a=(f.availability&&f.availability[day])||{};
+  return !!(a[direction] || a[backupField(direction)]);
+}
+
+// ---------- Theme: Systeem (default) / Licht / Donker, overrides prefers-color-scheme ----------
+function applyTheme(pref){
+  if(pref==='light') document.documentElement.setAttribute('data-theme','light');
+  else if(pref==='dark') document.documentElement.setAttribute('data-theme','dark');
+  else document.documentElement.removeAttribute('data-theme');
+  const btn=document.getElementById('themeToggle');
+  if(btn){
+    const icons={auto:'🌓 Systeem',light:'☀️ Licht',dark:'🌙 Donker'};
+    btn.textContent = icons[pref]||icons.auto;
+  }
+}
+function cycleTheme(){
+  const cur = (()=>{ try{ return localStorage.getItem('theme-pref')||'auto'; }catch(e){ return 'auto'; } })();
+  const next = cur==='auto'?'light':cur==='light'?'dark':'auto';
+  try{ localStorage.setItem('theme-pref',next); }catch(e){}
+  applyTheme(next);
+}
+(function initTheme(){
+  let pref='auto'; try{ pref=localStorage.getItem('theme-pref')||'auto'; }catch(e){}
+  applyTheme(pref);
+  const btn=document.getElementById('themeToggle');
+  if(btn) btn.onclick=cycleTheme;
+})();
+
+function setStatus(msg){ const el=document.getElementById('whoami'); if(el) el.textContent=msg; adjustMainPadding(); }
+function adjustMainPadding(){
+  const topbar=document.getElementById('topbar');
+  const main=document.querySelector('main');
+  if(topbar && main) main.style.paddingTop = (topbar.offsetHeight + 14) + 'px';
+}
+window.addEventListener('resize', adjustMainPadding);
+function showToast(msg){
+  let t=document.getElementById('toast');
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite');
+    t.style.cssText='position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 16px;border-radius:20px;font-size:13px;max-width:90%;text-align:center;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2)';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg; t.style.display='block';
+  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},4000);
+}
+function twoStepConfirm(btn, confirmLabel, action){
+  if(btn.dataset.confirming==='1'){
+    clearTimeout(btn._resetTimer);
+    btn.dataset.confirming=''; btn.textContent=btn.dataset.origLabel;
+    action();
+  } else {
+    btn.dataset.origLabel = btn.textContent;
+    btn.dataset.confirming='1';
+    btn.textContent = confirmLabel;
+    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; btn.textContent=btn.dataset.origLabel; }, 4000);
+  }
+}
+
+async function init(){
+  renderAll();
+  setStatus("Verbinden…");
+  try{
+    const cred = await signInAnonymously(fbAuth);
+    me = cred.user.uid;
+  }catch(e){
+    setStatus("⚠️ Niet verbonden.");
+    showConnectionError(e);
+    return;
+  }
+  try{
+    const coordSnap = await db.doc("config/coordinator").get();
+    coordinatorExists = coordSnap.exists;
+    coordinatorConfig = coordSnap.exists? coordSnap.data() : null;
+    appReady = true;
+  }catch(e){
+    setStatus("⚠️ Niet verbonden.");
+    showConnectionError(e);
+    return;
+  }
+  recomputeCanEdit();
+  setStatus(canEdit? "Coördinator (kan rooster bewerken)" : "Ouder (alleen-lezen rooster)");
+  const navB=document.getElementById('navBeheer');
+  if(navB) navB.style.display = canEdit? 'inline-block':'none';
+  renderAll();
+  try{
+    db.collection("families").onSnapshot(snap=>{ families={}; snap.docs.forEach(d=>families[d.id]=d.data()); renderAll(); },
+      err=>{ setStatus("⚠️ Fout bij laden gezinnen: "+(err&&err.message||err)); });
+    db.collection("groups").onSnapshot(snap=>{ groups={}; snap.docs.forEach(d=>groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
+      err=>{ setStatus("⚠️ Fout bij laden rooster: "+(err&&err.message||err)); });
+    db.collection("links").onSnapshot(snap=>{ links={}; snap.docs.forEach(d=>links[d.id]=d.data());
+      const navB=document.getElementById('navBeheer');
+      recomputeCanEdit(); if(navB) navB.style.display = canEdit? 'inline-block':'none';
+      renderProfile(); renderBeheer(); renderMyWeek(); },
+      err=>{ setStatus("⚠️ Fout bij laden koppelingen: "+(err&&err.message||err)); });
+    db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) settings={...settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
+      err=>{ setStatus("⚠️ Fout bij laden instellingen: "+(err&&err.message||err)); });
+    db.doc("settings/prefs").onSnapshot(snap=>{ prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!prefs.rules) prefs.rules=[]; renderBeheer(); renderSchedule(); },
+      err=>{ setStatus("⚠️ Fout bij laden voorkeuren: "+(err&&err.message||err)); });
+    db.doc("settings/priority").onSnapshot(snap=>{ shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
+      err=>{ setStatus("⚠️ Fout bij laden prioriteit: "+(err&&err.message||err)); });
+  }catch(e){ setStatus("⚠️ Kon niet live verbinden: "+(e&&e.message||e)); }
+  adjustMainPadding();
+}
+function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderImpersonateBanner(); adjustMainPadding(); }
+
+// ---------- Coordinator test mode: view the app as a specific parent, without losing real rights ----------
+function renderImpersonateBanner(){
+  const el=document.getElementById('impersonateBanner');
+  if(!el) return;
+  if(impersonateFamilyId){
+    el.style.display='block';
+    el.style.cssText='display:block;background:var(--warn2);color:var(--warn);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--border)';
+    el.innerHTML = `🧪 Testweergave als: ${esc(fam(impersonateFamilyId).girlName||fam(impersonateFamilyId).parentName||impersonateFamilyId)} <button type="button" class="btn small secondary" id="stopImpersonateBtn" style="margin-left:8px">Stop testen</button>`;
+    const btn=document.getElementById('stopImpersonateBtn');
+    if(btn) btn.onclick=stopImpersonate;
+  } else {
+    el.style.display='none'; el.innerHTML='';
+  }
+}
+function startImpersonate(familyId){
+  if(!familyId) return;
+  impersonateFamilyId=familyId;
+  recomputeCanEdit();
+  const navB=document.getElementById('navBeheer'); if(navB) navB.style.display='none';
+  showToast("Testweergave gestart ✓");
+  renderAll();
+}
+function stopImpersonate(){
+  impersonateFamilyId=null;
+  recomputeCanEdit();
+  const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+  showToast("Terug naar coördinatorweergave ✓");
+  renderAll();
+}
+
+document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+  ['schedule','myweek','profile','beheer'].forEach(t=>{
+    const el=document.getElementById('tab-'+t);
+    if(el) el.style.display = (b.dataset.tab===t)?'block':'none';
+  });
+}));
+
+// ---------- Shared family form: per-day <details> instead of a 5-column grid, so it's usable on phones ----------
+function familyFormHtml(prefix,f){
+  f = f || {parentName:"",girlName:"",capacity:4,schedule:{},availability:{}};
+  const dayBlocks = DAYS.map(([k,label])=>{
+    const s=(f.schedule&&f.schedule[k])||{};
+    const a=(f.availability&&f.availability[k])||{};
+    const summary = (s.heen||s.terug) ? `${s.heen||'–'} / ${s.terug||'–'}` : 'geen rit';
+    return `<div class="dayBlock">
+      <div class="dayBlockHead">${label} <span class="sumInfo">${summary}</span></div>
+      <div class="dayDetailsBody">
+        <div class="grid2">
+          <div><label style="margin-top:0">Heen aank.</label><input type="time" id="${prefix}_sch_${k}_heen" value="${s.heen||''}"></div>
+          <div><label style="margin-top:0">Terug klaar</label><input type="time" id="${prefix}_sch_${k}_terug" value="${s.terug||''}"></div>
+        </div>
+        <div class="chk"><input type="checkbox" id="${prefix}_av_${k}_heen" ${a.heen?'checked':''}><label for="${prefix}_av_${k}_heen" style="margin:0;color:inherit;font-size:12px">Rijdt heen</label></div>
+        <div class="chk"><input type="checkbox" id="${prefix}_av_${k}_terug" ${a.terug?'checked':''}><label for="${prefix}_av_${k}_terug" style="margin:0;color:inherit;font-size:12px">Rijdt terug</label></div>
+        <div class="chk"><input type="checkbox" id="${prefix}_bkH_${k}" ${a.backupHeen?'checked':''}><label for="${prefix}_bkH_${k}" style="margin:0;color:inherit;font-size:12px">Back-up heen</label></div>
+        <div class="chk"><input type="checkbox" id="${prefix}_bkT_${k}" ${a.backupTerug?'checked':''}><label for="${prefix}_bkT_${k}" style="margin:0;color:inherit;font-size:12px">Back-up terug</label></div>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <label>Naam ouder</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}">
+    <label>Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}">
+    <label>Autocapaciteit (incl. bestuurder)</label><input type="number" id="${prefix}_capacity" min="1" max="9" value="${f.capacity||4}">
+    <p class="muted" style="margin-top:10px">Weekschema, beschikbaarheid &amp; back-up:</p>
+    ${dayBlocks}`;
+}
+// "Rijdt X" and "Back-up X" are mutually exclusive: ticking one unticks the other.
+function wireExclusiveAvailability(prefix){
+  DAYS.forEach(([k])=>{
+    const heen=document.getElementById(`${prefix}_av_${k}_heen`);
+    const bkH=document.getElementById(`${prefix}_bkH_${k}`);
+    const terug=document.getElementById(`${prefix}_av_${k}_terug`);
+    const bkT=document.getElementById(`${prefix}_bkT_${k}`);
+    if(heen && bkH){
+      heen.addEventListener('change', ()=>{ if(heen.checked) bkH.checked=false; });
+      bkH.addEventListener('change', ()=>{ if(bkH.checked) heen.checked=false; });
+    }
+    if(terug && bkT){
+      terug.addEventListener('change', ()=>{ if(terug.checked) bkT.checked=false; });
+      bkT.addEventListener('change', ()=>{ if(bkT.checked) terug.checked=false; });
+    }
+  });
+}
+function readFamilyForm(prefix){
+  const schedule={}, availability={};
+  DAYS.forEach(([k])=>{
+    schedule[k]={heen:document.getElementById(`${prefix}_sch_${k}_heen`).value, terug:document.getElementById(`${prefix}_sch_${k}_terug`).value};
+    availability[k]={
+      heen:document.getElementById(`${prefix}_av_${k}_heen`).checked,
+      terug:document.getElementById(`${prefix}_av_${k}_terug`).checked,
+      backupHeen:document.getElementById(`${prefix}_bkH_${k}`).checked,
+      backupTerug:document.getElementById(`${prefix}_bkT_${k}`).checked
+    };
+  });
+  return {
+    parentName:document.getElementById(`${prefix}_parentName`).value.trim(),
+    girlName:document.getElementById(`${prefix}_girlName`).value.trim(),
+    capacity:parseInt(document.getElementById(`${prefix}_capacity`).value)||4,
+    schedule, availability
+  };
+}
+
+// ---------- Mijn gezin tab ----------
+// ---------- Firebase connection failed (bad config, offline, etc.) ----------
+function showConnectionError(err){
+  const nav=document.querySelector('nav');
+  if(nav) nav.style.display='none';
+  ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+  const gateDiv=document.getElementById('tab-gate');
+  if(gateDiv){
+    gateDiv.style.display='block';
+    gateDiv.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
+      <div class="card">
+        <h2>Geen verbinding</h2>
+        <p class="muted">Kan geen verbinding maken met de database. Dit betekent meestal dat het Firebase-configuratieblok bovenaan het bestand nog niet is ingevuld, of dat er geen internetverbinding is.</p>
+        <p class="muted" style="margin-top:8px">Foutmelding: ${err&&err.message? err.message : String(err)}</p>
+      </div>
+    </div>`;
+  }
+  adjustMainPadding();
+}
+
+// ---------- First-run: nobody has claimed coordinator yet ----------
+function renderClaimCoordinator(){
+  const box=document.getElementById('tab-gate');
+  if(!box) return;
+  box.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
+    <div class="card">
+      <h2>Welkom bij AZ Carpool</h2>
+      <p class="muted">Er is nog geen coördinator ingesteld voor deze app. Ben jij dat?</p>
+      <button type="button" class="btn" id="claimCoordBtn">Ik ben de coördinator</button>
+      <p class="muted" style="margin-top:10px">Ben je een ouder en geen coördinator? Wacht tot de coördinator dit heeft ingesteld en de link met een uitnodigingscode met je deelt.</p>
+    </div>
+  </div>`;
+  const btn=document.getElementById('claimCoordBtn');
+  if(btn) btn.onclick=async ()=>{
+    try{
+      const cfg={uid:me, claimedAt:Date.now()};
+      await db.doc("config/coordinator").set(cfg);
+      coordinatorConfig=cfg; coordinatorExists=true;
+      recomputeCanEdit();
+      const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+      showToast("Je bent nu coördinator ✓");
+      renderAll();
+    }catch(e){ showToast("Mislukt (mogelijk had iemand anders je net voor): "+(e&&e.message||e)); }
+  };
+}
+// Coordinator status is either tied to the original claiming browser (uid), or — once the
+// coordinator designates one in Beheer — to whichever family is linked as "coordinator gezin",
+// so it survives clearing browser data as long as that family re-verifies through the gate.
+function recomputeCanEdit(){
+  if(impersonateFamilyId){ canEdit=false; return; } // testing as a parent always overrides real coordinator status
+  if(!coordinatorConfig){ canEdit=false; return; }
+  if(coordinatorConfig.uid && coordinatorConfig.uid===me){ canEdit=true; return; }
+  if(coordinatorConfig.familyId && links[me] && links[me].familyId===coordinatorConfig.familyId){ canEdit=true; return; }
+  canEdit=false;
+}
+
+// ---------- Access gate: phone + daughter + coordinator-issued code, before anything else shows ----------
+function genCode(){ return String(Math.floor(100000+Math.random()*900000)); }
+function needsGate(){ if(impersonateFamilyId) return false; return !!me && !canEdit && !(links[me] && links[me].familyId); }
+function renderGateOrApp(){
+  const nav=document.querySelector('nav');
+  const gateDiv=document.getElementById('tab-gate');
+  if(!gateDiv) return;
+  if(!appReady){
+    // Still determining auth/coordinator state — never show the claim screen (or anything else)
+    // until we actually know whether a coordinator already exists.
+    if(nav) nav.style.display='none';
+    ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+    gateDiv.style.display='block';
+    gateDiv.innerHTML = `<div style="max-width:420px;margin:30px auto 0"><div class="card"><p class="muted">Laden…</p></div></div>`;
+    adjustMainPadding();
+    return;
+  }
+  if(!coordinatorExists && !canEdit){
+    if(nav) nav.style.display='none';
+    ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+    gateDiv.style.display='block';
+    renderClaimCoordinator();
+    adjustMainPadding();
+    return;
+  }
+  if(needsGate()){
+    if(nav) nav.style.display='none';
+    ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+    gateDiv.style.display='block';
+    renderGate();
+  } else {
+    if(nav) nav.style.display='flex';
+    gateDiv.style.display='none';
+    const activeBtn=document.querySelector('nav button.active');
+    const activeTab=activeBtn? activeBtn.dataset.tab : 'schedule';
+    ['schedule','myweek','profile','beheer'].forEach(t=>{
+      const el=document.getElementById('tab-'+t);
+      if(el) el.style.display=(t===activeTab)?'block':'none';
+    });
+  }
+  adjustMainPadding();
+}
+function renderGate(){
+  const box=document.getElementById('tab-gate');
+  if(!box) return;
+  const options = Object.entries(families);
+  box.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
+    <div class="card">
+      <h2>Toegang tot AZ Carpool</h2>
+      <p class="muted">Vul je gegevens in. De coördinator heeft je samen met deze link ook een code gegeven.</p>
+      <label>Telefoonnummer</label>
+      <input type="text" id="gatePhone" placeholder="06-12345678">
+      <label>Mijn dochter</label>
+      ${options.length? `<select id="gateGirl">${options.map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>` : `<p class="muted">Er zijn nog geen gezinnen toegevoegd door de coördinator.</p>`}
+      <label>Code</label>
+      <input type="text" id="gateCode" placeholder="6-cijferige code">
+      <button type="button" class="btn" id="gateSubmit" ${options.length?'':'disabled'}>Toegang aanvragen</button>
+      <p id="gateMsg" class="muted" style="margin-top:8px"></p>
+    </div>
+  </div>`;
+  const btn=document.getElementById('gateSubmit');
+  if(btn) btn.onclick=submitGate;
+}
+async function submitGate(){
+  if(!db||!me){ showToast("Geen verbinding. Herlaad de pagina."); return; }
+  const phone=(document.getElementById('gatePhone').value||'').trim();
+  const girlSel=document.getElementById('gateGirl');
+  const girlId=girlSel? girlSel.value : null;
+  const code=(document.getElementById('gateCode').value||'').trim();
+  const msg=document.getElementById('gateMsg');
+  if(!phone||!girlId||!code){ if(msg) msg.textContent="Vul alle velden in."; return; }
+  const expectedCode=(fam(girlId).inviteCode||'').trim();
+  const expectedPhone1=fam(girlId).parentPhone1||'';
+  const expectedPhone2=fam(girlId).parentPhone2||'';
+  if(!expectedCode||(!expectedPhone1&&!expectedPhone2)){ if(msg) msg.textContent="Voor dit gezin is nog geen code/telefoonnummer ingesteld. Vraag de coördinator."; return; }
+  const enteredNorm=normalizePhone(phone);
+  if(enteredNorm!==normalizePhone(expectedPhone1) && enteredNorm!==normalizePhone(expectedPhone2)){ if(msg) msg.textContent="Telefoonnummer komt niet overeen met dit gezin."; return; }
+  if(code!==expectedCode){ if(msg) msg.textContent="Code klopt niet. Controleer en probeer opnieuw."; return; }
+  try{
+    await db.doc("links/"+me).set({familyId:girlId, phone});
+    showToast("Toegang verleend ✓");
+  }catch(e){ if(msg) msg.textContent="Mislukt: "+(e&&e.message||e); }
+}
+// Compares Dutch numbers regardless of 06.../ +316.../ 00316... formatting or stray spaces/dashes.
+function normalizePhone(p){
+  let digits=(p||'').replace(/[^\d]/g,'');
+  if(digits.startsWith('0031')) digits='0'+digits.slice(4);
+  else if(digits.startsWith('31') && digits.length>=11) digits='0'+digits.slice(2);
+  return digits;
+}
+
+function renderProfile(){
+  const box=document.getElementById('tab-profile');
+  if(!box) return;
+  let html='';
+  if(!me){
+    html = `<div class="card"><h2>Mijn gezin</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`;
+  } else {
+    const linked = !!impersonateFamilyId || !!(links[me] && links[me].familyId);
+    if(linked){
+      const effId = myFamilyId();
+      const lf = fam(effId);
+      const unlinkCtl = impersonateFamilyId? '' : ` · <button type="button" class="btn small secondary" id="unlinkBtn">Ontkoppelen</button>`;
+      html = `<div class="card"><h2>Mijn gezin</h2>
+        <p class="muted">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong>${unlinkCtl}</p>
+        ${familyFormHtml('me', fam(effId))}
+        <p class="muted" style="margin-top:8px">Wijzigingen worden automatisch opgeslagen.</p>
+      </div>`;
+    } else {
+      const options = Object.entries(families);
+      html = `<div class="card"><h2>Mijn gezin</h2>
+        <p class="muted">Welkom! Selecteer je dochter om haar gegevens te bekijken en bij te werken. (Alleen de coördinator kan nieuwe gezinnen toevoegen; twee ouders kunnen dezelfde dochter selecteren.)</p>
+        ${options.length? `<label>Mijn dochter</label><select id="linkSelect">${options.map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>
+        <button type="button" class="btn secondary" id="linkBtn">Dit is mijn dochter</button>
+        <span id="linkMsg" class="muted"></span>` : `<p class="muted">Er zijn nog geen gezinnen toegevoegd door de coördinator.</p>`}
+      </div>`;
+    }
+  }
+  box.innerHTML = html;
+  if(me){
+    const linked = !!impersonateFamilyId || !!(links[me] && links[me].familyId);
+    if(linked){
+      const card=box.querySelector('.card');
+      if(card) card.addEventListener('change', ()=>saveProfile());
+      wireExclusiveAvailability('me');
+      const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=async ()=>{
+        try{ await db.doc("links/"+me).delete(); showToast("Ontkoppeld ✓"); }catch(e){showToast("Mislukt: "+(e&&e.message||e));}
+      };
+    } else {
+      const lb=document.getElementById('linkBtn'); if(lb) lb.onclick=async ()=>{
+        const sel=document.getElementById('linkSelect'); if(!sel||!db)return;
+        try{ await db.doc("links/"+me).set({familyId:sel.value}); showToast("Gekoppeld ✓"); }
+        catch(e){showToast("Koppelen mislukt: "+(e&&e.message||e));}
+      };
+    }
+  }
+  renderGateOrApp();
+}
+async function saveProfile(){
+  if(!db){showToast("Geen verbinding met opslag. Herlaad de pagina en probeer opnieuw.");return;}
+  if(!me){showToast("Je account kon niet herkend worden. Herlaad de pagina.");return;}
+  const effId = myFamilyId();
+  const data = readFamilyForm('me');
+  try{ await db.doc("families/"+effId).set(data); showToast("Opgeslagen ✓"); }
+  catch(e){showToast("Opslaan mislukt: "+(e&&e.message||e));}
+}
+
+// ---------- Mijn week: a compact, scroll-free view of just what a parent needs ----------
+function renderMyWeek(){
+  const box=document.getElementById('tab-myweek');
+  if(!box) return;
+  if(!me){ box.innerHTML=`<div class="card"><h2>Mijn week</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`; return; }
+  const linked = !!(links[me] && links[me].familyId);
+  if(!linked){ box.innerHTML=`<div class="card"><h2>Mijn week</h2><p class="muted">Koppel eerst je dochter via 'Mijn gezin' om hier je weekoverzicht te zien.</p></div>`; return; }
+  const myId = myFamilyId();
+  function cell(day,direction){
+    const s = fam(myId).schedule && fam(myId).schedule[day] && fam(myId).schedule[day][direction];
+    const daughterGrp = groupsFor(day,direction).find(([gid,g])=>g.girlIds.includes(myId));
+    const drivingGrp = groupsFor(day,direction).find(([gid,g])=>g.driverFamilyId===myId);
+    const parts=[];
+    if(s){
+      if(daughterGrp){
+        const [,g]=daughterGrp;
+        const dep=g.departureTime||'?';
+        const isMe=g.driverFamilyId===myId;
+        const driverName=g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'geen chauffeur';
+        const passengers=g.girlIds.filter(id=>id!==myId).map(id=>girlName(id)).join(', ');
+        const line = isMe
+          ? `👧 Jij rijdt haar!${passengers? `<br><span style="font-weight:400">Passagiers: ${passengers}</span>` : ''}`
+          : `👧 ${driverName}`;
+        parts.push(`<div><div style="font-weight:700;font-size:14px">${dep}</div><div style="font-size:11px;${isMe? 'color:var(--accent);font-weight:700' : 'color:var(--muted)'}">${line}</div></div>`);
+      } else {
+        parts.push(`<div><div style="font-weight:700;font-size:14px">${s}</div><div class="fitbad" style="font-size:11px">nog niet ingepland</div></div>`);
+      }
+    }
+    // Show the parent's own driving duty separately whenever it's a DIFFERENT car than the
+    // daughter's ride (or the daughter isn't travelling that shift at all) — these are not the same thing.
+    if(drivingGrp && (!daughterGrp || drivingGrp[0]!==daughterGrp[0])){
+      const [,dg]=drivingGrp;
+      const dep=dg.departureTime||'?';
+      const names=dg.girlIds.map(id=>girlName(id)).join(', ');
+      parts.push(`<div style="margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);font-size:11px;color:var(--accent);font-weight:700">🚗 Jij rijdt om ${dep}<br><span style="font-weight:400">${names}</span></div>`);
+    }
+    return parts.length? parts.join('') : '<span class="muted">–</span>';
+  }
+  const rows = DAYS.map(([k,label])=>`
+    <tr style="border-top:1px solid var(--border)">
+      <td style="padding:12px 6px;font-weight:600">${label}</td>
+      <td style="padding:12px 6px;text-align:center">${cell(k,'heen')}</td>
+      <td style="padding:12px 6px;text-align:center">${cell(k,'terug')}</td>
+    </tr>`).join('');
+  box.innerHTML = `<div class="card">
+    <h2>Mijn week — ${fam(myId).girlName||''}</h2>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr><th style="text-align:left;padding:6px">Dag</th><th style="padding:6px">Heen</th><th style="padding:6px">Terug</th></tr>
+      ${rows}
+    </table></div>
+    <p class="muted" style="margin-top:8px">👧 = de rit van je dochter (🚗 ernaast als jij die zelf rijdt). Los daarvan: 🚗 <em>Jij rijdt om …</em> = jouw eigen chauffeursbeurt, ook als dat een andere auto is dan die van je dochter.</p>
+  </div>`;
+}
+
+// ---------- Beheer tab ----------
+let coordEditId;
+
+function renderAvailabilityTable(){
+  const rows = Object.entries(families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
+  if(!rows.length) return `<p class="muted">Nog geen gezinnen.</p>`;
+  const head = `<tr><th style="text-align:left">Ouder</th>${DAYS.map(([k])=>`<th colspan="2">${k}</th>`).join('')}</tr>
+    <tr><th></th>${DAYS.map(()=>`<th style="font-size:11px;color:var(--muted)">H</th><th style="font-size:11px;color:var(--muted)">T</th>`).join('')}</tr>`;
+  const body = rows.map(([id,f])=>{
+    const cells = DAYS.map(([k])=>{
+      const a=(f.availability&&f.availability[k])||{};
+      const cellFor = (isDefault,isBackup) => isDefault
+        ? `<span style="color:var(--ok);font-weight:700">${f.capacity}</span>`
+        : isBackup ? `<span style="color:var(--backup);font-weight:400">${f.capacity}</span>` : '<span class="muted">–</span>';
+      return `<td style="text-align:center">${cellFor(a.heen,a.backupHeen)}</td><td style="text-align:center">${cellFor(a.terug,a.backupTerug)}</td>`;
+    }).join('');
+    return `<tr style="border-top:1px solid var(--border)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
+  }).join('');
+  return `<div style="overflow-x:auto"><table class="avail">${head}${body}</table></div>
+    <p class="muted" style="margin-top:6px"><span style="color:var(--ok);font-weight:700">Vet groen</span> = standaard beschikbaar. <span style="color:var(--backup)">Grijs</span> = back-up (indien nodig). Cijfer = autocapaciteit. H = heen, T = terug.</p>`;
+}
+
+function renderPrefsCard(){
+  const girls = Object.entries(families).filter(([id,f])=>f.girlName);
+  const ruleRows = (prefs.rules||[]).map((r,i)=>{
+    const label = r.type==='together'
+      ? `Samen reizen: ${(r.ids||[]).map(girlName).join(' &amp; ')}`
+      : `Voorkeur: ${girlName(r.girlId)} met ${(r.withAny||[]).map(girlName).join(' of ')}`;
+    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px">${label}</span><button type="button" class="btn small secondary" data-delpref="${i}" aria-label="Voorkeur verwijderen">✕</button></div>`;
+  }).join('') || `<p class="muted">Nog geen voorkeuren.</p>`;
+  const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
+  const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
+  const preferChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefWithPick" value="${id}">${esc(f.girlName)}</label>`).join('');
+  return `${ruleRows}
+    <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+    <p class="muted"><strong>Samen reizen</strong> (moeten altijd samen in 1 auto als het even kan):</p>
+    <div>${togetherChecks || '<span class="muted">Nog geen meiden.</span>'}</div>
+    <button type="button" class="btn small secondary" id="addTogetherPref">+ Toevoegen</button>
+    <p class="muted" style="margin-top:14px"><strong>Voorkeur</strong> (moet met minstens één van de gekozen meiden):</p>
+    <label>Wie</label>${preferSelect}
+    <label>Bij voorkeur met (kies één of meer)</label><div>${preferChecks || '<span class="muted">Nog geen meiden.</span>'}</div>
+    <button type="button" class="btn small secondary" id="addPreferPref">+ Toevoegen</button>`;
+}
+
+let selectedShiftKey='Ma_heen';
+function renderPriorityCard(){
+  const shifts=[];
+  DAYS.forEach(([k,label])=>{ shifts.push([k+'_heen', label+' – Heen']); shifts.push([k+'_terug', label+' – Terug']); });
+  const options = shifts.map(([key,label])=>`<option value="${key}" ${key===selectedShiftKey?'selected':''}>${label}</option>`).join('');
+  return `<p class="muted">Bepaal per shift in welke volgorde beschikbare chauffeurs worden voorgesteld.</p>
+    <label>Shift</label><select id="shiftPrioritySelect">${options}</select>
+    <div id="shiftPriorityRows" style="margin-top:8px"></div>`;
+}
+function renderShiftPriorityRows(shiftKeyVal){
+  const div=document.getElementById('shiftPriorityRows');
+  if(!div) return;
+  const [day,direction]=shiftKeyVal.split('_');
+  const rows = sortByShiftPriority(day,direction, availableDrivers(day,direction));
+  if(!rows.length){ div.innerHTML=`<p class="muted">Geen beschikbare chauffeurs voor deze shift.</p>`; return; }
+  div.innerHTML = rows.map(([id,f],i)=>`
+    <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--border)">
+      <span>${i+1}. ${esc(f.parentName||'?')} <span class="muted">(${esc(f.girlName||'')}, ${f.capacity} pl.)</span></span>
+      <span style="display:flex;gap:4px">
+        <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>▲</button>
+        <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>▼</button>
+      </span>
+    </div>`).join('');
+  const ids=rows.map(([id])=>id);
+  div.querySelectorAll('[data-prioup]').forEach(btn=>btn.onclick=()=>movePriority(shiftKeyVal,ids,btn.dataset.prioup,-1));
+  div.querySelectorAll('[data-priodown]').forEach(btn=>btn.onclick=()=>movePriority(shiftKeyVal,ids,btn.dataset.priodown,1));
+}
+async function movePriority(shiftKeyVal,ids,id,delta){
+  const idx=ids.indexOf(id);
+  const newIdx=idx+delta;
+  if(newIdx<0||newIdx>=ids.length) return;
+  const newIds=[...ids];
+  [newIds[idx],newIds[newIdx]]=[newIds[newIdx],newIds[idx]];
+  const map={}; newIds.forEach((gid,i)=>map[gid]=i+1);
+  if(!db){showToast("Geen verbinding met opslag.");return;}
+  try{ await db.doc("settings/priority").set({...shiftPriority,[shiftKeyVal]:map}); showToast("Volgorde opgeslagen ✓"); }
+  catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+}
+
+function renderBeheer(){
+  const box=document.getElementById('tab-beheer');
+  if(!box) return;
+  if(!canEdit){ box.innerHTML = `<div class="card"><p class="muted">Deze pagina is alleen voor de coördinator.</p></div>`; return; }
+
+  const claimed = {}; Object.entries(links).forEach(([uid,l])=>claimed[l.familyId]=true);
+  const byName={};
+  Object.entries(families).forEach(([id,fd])=>{
+    const key=(fd.girlName||'').trim().toLowerCase();
+    if(key) (byName[key]=byName[key]||[]).push([id,fd]);
+  });
+  const dupGroups = Object.values(byName).filter(list=>list.length>1);
+  const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
+      <div class="fitbad">⚠️ Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:</div>
+      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px">Verwijder</button></span>`).join(' ')}</div>`).join('')}
+    </div>` : '';
+  const rows = Object.entries(families).map(([id,fd])=>{
+    const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
+    return `
+    <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border)">
+      <span>${esc(fd.girlName||'(naam?)')} <span class="muted">– ${esc(fd.parentName||'(ouder?)')}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}
+        <br><span class="muted">${fd.parentPhone1? `Tel 1: <strong>${esc(fd.parentPhone1)}</strong> · `:''}${fd.parentPhone2? `Tel 2: <strong>${esc(fd.parentPhone2)}</strong> · `:''}${!fd.parentPhone1&&!fd.parentPhone2? 'Tel: <span class="fitbad">niet ingesteld</span> · ':''}${fd.inviteCode? `Code: <strong>${esc(fd.inviteCode)}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
+      <span><button type="button" class="btn small secondary" data-coordedit="${id}">Bewerken</button>
+      <button type="button" class="btn small secondary" data-togglecoord="${id}">${isCoord? '✓ Coördinator (intrekken)' : '★ Maak coördinator'}</button>
+      <button type="button" class="btn small secondary" data-coorddel="${id}">Verwijder</button></span>
+    </div>`;
+  }).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
+
+  box.innerHTML = `
+    <div class="card">
+      <h2>Gezinnen beheren</h2>
+      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Wijzigingen worden automatisch opgeslagen. Gebruik "Maak coördinator" om coördinator-toegang aan een gezin te koppelen (blijft werken op elk apparaat, zodra dat gezin via de toegangscode inlogt).</p>
+      ${dupWarning}
+      ${rows}
+      <button type="button" class="btn secondary" id="coordNew">+ Nieuw gezin toevoegen</button>
+      <div id="coordEditArea"></div>
+    </div>
+    <div class="card">
+      <h2>Selectievolgorde per shift</h2>
+      ${renderPriorityCard()}
+    </div>
+    <div class="card">
+      <h2>Reisvoorkeuren</h2>
+      <p class="muted">Wie er logistiek het beste samen in 1 auto kan; wordt meegewogen bij het opsplitsen in auto's.</p>
+      ${renderPrefsCard()}
+    </div>
+    <div class="card">
+      <h2>Beschikbaarheid chauffeurs (weekoverzicht)</h2>
+      ${renderAvailabilityTable()}
+    </div>
+    <div class="card">
+      <h2>Planning-instellingen</h2>
+      <p class="muted">Deze regels bepalen hoe combinaties in het Rooster worden voorgesteld. Wijzigingen worden automatisch opgeslagen.</p>
+      <div class="grid4">
+        <div><label>Max. tijdsverschil voor 1 auto (uur)</label><input type="number" id="setGap" min="0.5" step="0.5" value="${settings.gapThresholdHours}"></div>
+        <div><label>Rijtijd Aalsmeer→Alkmaar (min, vertrektijd heen)</label><input type="number" id="setLead" min="0" step="5" value="${settings.travelLeadMinutes}"></div>
+        <div><label>Voorkeur-marge (min)</label><input type="number" id="setPrefWindow" min="0" step="5" value="${settings.prefWindowMinutes}"></div>
+        <div><label>Max. wachttijd om met eigen ouder te rijden (min)</label><input type="number" id="setParentPrefWindow" min="0" step="5" value="${settings.parentPrefWindowMinutes}"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Test als andere ouder</h2>
+      <p class="muted">Bekijk de app zoals een specifieke ouder hem ziet (alleen-lezen Rooster, geen Beheer), zonder je coördinator-rechten echt te verliezen. Klik daarna op "Stop testen" in de balk bovenaan om terug te gaan.</p>
+      ${Object.keys(families).length? `<label>Bekijk als</label>
+      <select id="impersonateSelect">${Object.entries(families).map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>
+      <button type="button" class="btn secondary" id="startImpersonateBtn">Bekijk als deze ouder</button>` : `<p class="muted">Voeg eerst een gezin toe.</p>`}
+    </div>
+    <div class="card">
+      <h2>Beheerderstools</h2>
+      <button type="button" class="btn secondary" id="seedPdf">🔄 Alles wissen &amp; PDF-gegevens laden</button>
+      <p id="seedMsg" class="muted" style="margin-top:8px"></p>
+    </div>`;
+
+  try{
+    const saveSettingsAuto = async ()=>{
+      if(!db){showToast("Geen verbinding met opslag.");return;}
+      const gapThresholdHours = parseFloat(document.getElementById('setGap').value)||3;
+      const travelLeadMinutes = parseInt(document.getElementById('setLead').value)||60;
+      const prefWindowMinutes = parseInt(document.getElementById('setPrefWindow').value);
+      const parentPrefWindowMinutes = parseInt(document.getElementById('setParentPrefWindow').value);
+      try{ await db.doc("settings/planning").set({gapThresholdHours,travelLeadMinutes,prefWindowMinutes: isNaN(prefWindowMinutes)?30:prefWindowMinutes, parentPrefWindowMinutes: isNaN(parentPrefWindowMinutes)?60:parentPrefWindowMinutes}); showToast("Opgeslagen ✓"); }
+      catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+    };
+    const setGapEl=document.getElementById('setGap'); if(setGapEl) setGapEl.onchange=saveSettingsAuto;
+    const setLeadEl=document.getElementById('setLead'); if(setLeadEl) setLeadEl.onchange=saveSettingsAuto;
+    const setPrefWindowEl=document.getElementById('setPrefWindow'); if(setPrefWindowEl) setPrefWindowEl.onchange=saveSettingsAuto;
+    const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
+    const atp=document.getElementById('addTogetherPref');
+    if(atp) atp.onclick=async ()=>{
+      const ids=[...document.querySelectorAll('.prefTogetherPick:checked')].map(c=>c.value);
+      if(ids.length<2){showToast("Kies minstens 2 meiden.");return;}
+      try{ await db.doc("settings/prefs").set({rules:[...(prefs.rules||[]), {type:'together', ids}]}); showToast("Toegevoegd ✓"); }
+      catch(e){showToast("Mislukt: "+(e&&e.message||e));}
+    };
+    const app_=document.getElementById('addPreferPref');
+    if(app_) app_.onclick=async ()=>{
+      const girlSel=document.getElementById('preferGirlSelect');
+      const girlId=girlSel? girlSel.value : null;
+      const withAny=[...document.querySelectorAll('.prefWithPick:checked')].map(c=>c.value).filter(id=>id!==girlId);
+      if(!girlId||!withAny.length){showToast("Kies een meisje en minstens 1 voorkeur.");return;}
+      try{ await db.doc("settings/prefs").set({rules:[...(prefs.rules||[]), {type:'prefer', girlId, withAny}]}); showToast("Toegevoegd ✓"); }
+      catch(e){showToast("Mislukt: "+(e&&e.message||e));}
+    };
+    document.querySelectorAll('[data-delpref]').forEach(b=>b.onclick=async ()=>{
+      const idx=+b.dataset.delpref;
+      const rules=(prefs.rules||[]).filter((_,i)=>i!==idx);
+      try{ await db.doc("settings/prefs").set({rules}); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
+    });
+    document.querySelectorAll('[data-togglecoord]').forEach(b=>b.onclick=async ()=>{
+      const id=b.dataset.togglecoord;
+      const isCurrently = coordinatorConfig && coordinatorConfig.familyId===id;
+      try{
+        if(isCurrently){
+          await db.doc("config/coordinator").delete();
+          coordinatorConfig=null; coordinatorExists=false;
+        } else {
+          const cfg={familyId:id};
+          await db.doc("config/coordinator").set(cfg);
+          coordinatorConfig=cfg; coordinatorExists=true;
+        }
+        recomputeCanEdit();
+        const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+        showToast(isCurrently? "Coördinator-rol ingetrokken" : "Coördinator ingesteld ✓");
+        renderAll();
+      }catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+    });
+    const shiftSel=document.getElementById('shiftPrioritySelect');
+    if(shiftSel){
+      shiftSel.onchange = ()=>{ selectedShiftKey=shiftSel.value; renderShiftPriorityRows(selectedShiftKey); };
+      renderShiftPriorityRows(selectedShiftKey);
+    }
+    const cn=document.getElementById('coordNew');
+    if(cn) cn.onclick = ()=>{ coordEditId=null; renderCoordEditor(); };
+    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{ coordEditId=b.dataset.coordedit; renderCoordEditor(); });
+    document.querySelectorAll('[data-coorddel]').forEach(b=>b.onclick=()=>twoStepConfirm(b,"Zeker? Nogmaals klikken",async ()=>{
+      try{ await db.doc("families/"+b.dataset.coorddel).delete(); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
+    }));
+    if(coordEditId!==undefined) renderCoordEditor();
+    const startImpBtn=document.getElementById('startImpersonateBtn');
+    if(startImpBtn) startImpBtn.onclick=()=>{
+      const sel=document.getElementById('impersonateSelect');
+      if(sel) startImpersonate(sel.value);
+    };
+    const sd=document.getElementById('seedPdf');
+    if(sd) sd.onclick = ()=>twoStepConfirm(sd,"Zeker?! Alles wordt gewist — klik nogmaals",seedFromPdf);
+  }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
+}
+
+function renderCoordEditor(){
+  const area=document.getElementById('coordEditArea');
+  if(!area)return;
+  if(coordEditId===undefined){area.innerHTML='';return;}
+  const isNew = coordEditId===null;
+  const f = isNew? null : fam(coordEditId);
+  const currentCode = f? (f.inviteCode||'') : genCode();
+  area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
+    <h2>${isNew? 'Nieuw gezin toevoegen' : 'Bewerken: '+esc((f.girlName||f.parentName)||'')}</h2>
+    <label>Telefoonnummer ouder 1 (NL, voor toegangscontrole)</label>
+    <input type="text" id="coord_parentPhone1" value="${esc(f&&f.parentPhone1||'')}" placeholder="06-12345678">
+    <label>Telefoonnummer ouder 2 (optioneel)</label>
+    <input type="text" id="coord_parentPhone2" value="${esc(f&&f.parentPhone2||'')}" placeholder="06-12345678">
+    <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp — meerdere mensen kunnen dezelfde code gebruiken)</label>
+    <div class="rowflex" style="gap:6px">
+      <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
+      <button type="button" class="btn small secondary" id="genCodeBtn">🎲 Nieuwe code</button>
+    </div>
+    ${familyFormHtml('coord', f)}
+    <button type="button" class="btn secondary" id="coordCancel">Sluiten</button>
+    <p class="muted" style="margin-top:8px">Wijzigingen worden automatisch opgeslagen.</p>
+  </div>`;
+  const card=area.querySelector('.card');
+  if(card) card.addEventListener('change', ()=>saveCoordFamily());
+  wireExclusiveAvailability('coord');
+  document.getElementById('coordCancel').onclick = ()=>{ coordEditId=undefined; renderBeheer(); };
+  const genBtn=document.getElementById('genCodeBtn');
+  if(genBtn) genBtn.onclick=()=>{ document.getElementById('coord_inviteCode').value=genCode(); saveCoordFamily(); };
+}
+async function saveCoordFamily(){
+  if(!db){showToast("Geen verbinding met opslag.");return;}
+  const data = readFamilyForm('coord');
+  const codeEl=document.getElementById('coord_inviteCode');
+  const phone1El=document.getElementById('coord_parentPhone1');
+  const phone2El=document.getElementById('coord_parentPhone2');
+  data.inviteCode = codeEl? codeEl.value.trim() : '';
+  data.parentPhone1 = phone1El? phone1El.value.trim() : '';
+  data.parentPhone2 = phone2El? phone2El.value.trim() : '';
+  if(coordEditId==null){
+    const slug = (data.girlName||data.parentName||'gezin').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30) || 'gezin';
+    coordEditId = 'manual-'+slug+'-'+Date.now().toString(36);
+    const dupName=(data.girlName||'').trim().toLowerCase();
+    const dup = dupName && Object.entries(families).some(([fid,fd])=> fid!==coordEditId && (fd.girlName||'').trim().toLowerCase()===dupName);
+    if(dup) showToast("Let op: er bestaat al een gezin met de naam '"+data.girlName+"' — controleer op dubbelen.");
+  }
+  try{ await db.doc("families/"+coordEditId).set(data); showToast("Opgeslagen ✓"); }
+  catch(e){showToast("Opslaan mislukt: "+(e&&e.message||e));}
+}
+
+// ---------- Seed from PDF ----------
+const PDF_SEED = [
+  {girlName:"Evi",     schedule:{Ma:{heen:"10:15",terug:"18:00"},Di:{heen:"08:30",terug:"17:00"},Wo:{heen:"08:30",terug:"15:30"},Do:{heen:"09:15",terug:"17:30"},Vr:{heen:"08:00",terug:"15:30"}}},
+  {girlName:"Jahaimy", schedule:{Ma:{heen:"08:30",terug:"16:45"},Di:{heen:"09:15",terug:"17:30"},Wo:{heen:"08:30",terug:"14:45"},Do:{heen:"08:30",terug:"17:30"},Vr:{heen:"09:15",terug:"16:45"}}},
+  {girlName:"Anouk",   schedule:{Ma:{heen:"10:15",terug:"17:00"},Di:{heen:"08:15",terug:"13:45"},Wo:{heen:"10:15",terug:"13:00"},Do:{heen:"08:30",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
+  {girlName:"Eline",   schedule:{Ma:{heen:"08:30",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"10:15",terug:"15:30"},Do:{heen:"10:15",terug:"18:00"},Vr:{heen:"08:30",terug:"15:30"}}},
+  {girlName:"Jet",     schedule:{Ma:{heen:"11:00",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"13:00",terug:"15:30"},Do:{heen:"11:00",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
+  {girlName:"Saar",    schedule:{Ma:{heen:"11:00",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"13:00",terug:"15:30"},Do:{heen:"11:00",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
+  {girlName:"Loïs",    schedule:{Ma:{heen:"10:15",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"10:15",terug:"13:00"},Do:{heen:"08:30",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
+  {girlName:"Robbin",  schedule:{Ma:{heen:"13:15",terug:"17:00"},Di:{heen:"08:15",terug:"12:00"},Wo:{heen:"",terug:""},Do:{heen:"13:15",terug:"18:00"},Vr:{heen:"08:30",terug:"10:45"}}}
+];
+function slugify(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'); }
+
+async function seedFromPdf(){
+  if(!db){showToast("Geen verbinding met opslag.");return;}
+  const msg=document.getElementById('seedMsg');
+  if(msg) msg.textContent="Bezig met wissen…";
+  try{
+    const famSnap = await db.collection("families").get();
+    await Promise.all(famSnap.docs.map(d=>db.doc("families/"+d.id).delete()));
+    const grpSnap = await db.collection("groups").get();
+    await Promise.all(grpSnap.docs.map(d=>db.doc("groups/"+d.id).delete()));
+    if(msg) msg.textContent="Bezig met invullen…";
+    const emptyAvail={heen:false,terug:false,backupHeen:false,backupTerug:false};
+    await Promise.all(PDF_SEED.map(g=>{
+      const availability={}; DAYS.forEach(([k])=>availability[k]={...emptyAvail});
+      return db.doc("families/"+slugify(g.girlName)).set({
+        parentName:"Ouder van "+g.girlName, girlName:g.girlName, capacity:4, schedule:g.schedule, availability
+      });
+    }));
+    const check = await db.collection("families").get();
+    const docs = check.docs.map(d=>d.data());
+    let ok = docs.length===8; let details=[];
+    docs.forEach(f=>{
+      DAYS.forEach(([k])=>{
+        const has = f.schedule && f.schedule[k] && f.schedule[k].heen && f.schedule[k].terug;
+        const expectMissing = (f.girlName==='Robbin' && k==='Wo');
+        if(expectMissing && has) {ok=false; details.push(f.girlName+" "+k+" had wel een tijd (onverwacht)");}
+        if(!expectMissing && !has){ok=false; details.push(f.girlName+" "+k+" mist een tijd");}
+      });
+    });
+    if(msg) msg.textContent = ok
+      ? `✅ Klaar: ${docs.length} gezinnen aangemaakt, alle dagen ingevuld behalve Robbin/Woensdag (zoals verwacht).`
+      : `⚠️ ${docs.length} gezinnen aangemaakt, maar validatie vond afwijkingen: ${details.join('; ')}`;
+  }catch(e){ if(msg) msg.textContent="Fout tijdens laden: "+(e&&e.message||e); }
+}
+
+// ---------- Rooster tab ----------
+function girlsFor(day,direction){
+  return Object.entries(families).filter(([id,f])=>f.schedule && f.schedule[day] && f.schedule[day][direction]);
+}
+function groupsFor(day,direction){
+  return Object.entries(groups).filter(([id,g])=>g.day===day && g.direction===direction);
+}
+function alreadyGrouped(day,direction){
+  const ids=new Set();
+  groupsFor(day,direction).forEach(([id,g])=>g.girlIds.forEach(gid=>ids.add(gid)));
+  return ids;
+}
+function eligibleDrivers(day,direction,count){
+  return sortByShiftPriority(day,direction, Object.entries(families).filter(([id,f])=>
+    isAvailable(f,day,direction) && (f.capacity||0)>=count
+  ));
+}
+function availableDrivers(day,direction){
+  return Object.entries(families).filter(([id,f])=> isAvailable(f,day,direction));
+}
+function timeToMinutes(t){ if(!t) return null; const p=t.split(':'); return (+p[0])*60+(+p[1]); }
+function minutesToTime(min){ min=((Math.round(min)%1440)+1440)%1440; const h=Math.floor(min/60), m=min%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+function computeDepartureTime(day,direction,girlIds){
+  const times = girlIds.map(id=>timeToMinutes(fam(id).schedule[day]&&fam(id).schedule[day][direction])).filter(v=>v!=null);
+  if(!times.length) return '';
+  // Heen: leave early enough for the earliest arrival requirement. Terug: can't leave Alkmaar
+  // until the LAST passenger is actually ready, so use the latest "klaar" time, not the earliest.
+  return direction==='heen' ? minutesToTime(Math.min(...times) - (settings.travelLeadMinutes||60)) : minutesToTime(Math.max(...times));
+}
+function scoreSplitPrefs(c1,c2,gap){
+  let broken=0, satisfied=0;
+  (prefs.rules||[]).forEach(r=>{
+    if(r.type==='together'){
+      const ids=r.ids||[];
+      const present = ids.filter(id=>c1.includes(id)||c2.includes(id));
+      if(present.length<2) return;
+      const inC1=ids.filter(id=>c1.includes(id)).length, inC2=ids.filter(id=>c2.includes(id)).length;
+      if(inC1>0 && inC2>0) broken++;
+    } else if(r.type==='prefer'){
+      const girlIn1=c1.includes(r.girlId), girlIn2=c2.includes(r.girlId);
+      if(!girlIn1 && !girlIn2) return;
+      const anyIn1=(r.withAny||[]).some(id=>c1.includes(id));
+      const anyIn2=(r.withAny||[]).some(id=>c2.includes(id));
+      if((girlIn1&&anyIn1)||(girlIn2&&anyIn2)) satisfied++;
+    }
+  });
+  const prefWindow = settings.prefWindowMinutes!=null? settings.prefWindowMinutes : 30;
+  const prefWeight = gap<=prefWindow ? 500 : 10;
+  return {broken,satisfied,prefWeight};
+}
+function planClusters(day,direction,list){
+  if(!list.length) return [];
+  const gapLimit = (settings.gapThresholdHours||3)*60;
+  const withMin = list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
+  const totalGap = withMin[withMin.length-1].min - withMin[0].min;
+  const oneCarOk = eligibleDrivers(day,direction,withMin.length).length>0;
+  if(oneCarOk && totalGap<=gapLimit) return [withMin.map(x=>x.id)];
+  const avail = availableDrivers(day,direction);
+  const splitCoverable = (n1,n2) => avail.some(([idA,fA])=>avail.some(([idB,fB])=> idA!==idB &&
+    ((fA.capacity>=n1 && fB.capacity>=n2) || (fB.capacity>=n1 && fA.capacity>=n2))));
+  let best=null, bestScore=-Infinity;
+  for(let k=1;k<withMin.length;k++){
+    const c1=withMin.slice(0,k).map(x=>x.id), c2=withMin.slice(k).map(x=>x.id);
+    if(!splitCoverable(c1.length,c2.length)) continue;
+    const gap=withMin[k].min-withMin[k-1].min;
+    const {broken,satisfied,prefWeight}=scoreSplitPrefs(c1,c2,gap);
+    const score = -broken*1000 + satisfied*prefWeight + gap*0.01;
+    if(score>bestScore){ bestScore=score; best=[c1,c2]; }
+  }
+  if(best) return best;
+  let bestSplit=1,bestG=-1;
+  for(let k=1;k<withMin.length;k++){ const gap=withMin[k].min-withMin[k-1].min; if(gap>bestG){bestG=gap;bestSplit=k;} }
+  return [withMin.slice(0,bestSplit).map(x=>x.id), withMin.slice(bestSplit).map(x=>x.id)];
+}
+function planPrimaryOption(day,direction,list){
+  if(!list.length) return null;
+  const gapLimit=(settings.gapThresholdHours||3)*60;
+  const withMin=list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
+  const n=withMin.length;
+  const totalGap=withMin[n-1].min-withMin[0].min;
+  const priorityOrder=sortByShiftPriority(day,direction, availableDrivers(day,direction));
+  if(!priorityOrder.length) return null;
+  const [id1,f1]=priorityOrder[0];
+  if(f1.capacity>=n && totalGap<=gapLimit){
+    return {label:`${esc(f1.parentName)} (${n}/${f1.capacity} pl.)`, assignment:[{driverId:id1,girlIds:withMin.map(x=>x.id)}]};
+  }
+  if(priorityOrder.length<2) return null;
+  const [id2,f2]=priorityOrder[1];
+  const parentWindow = settings.parentPrefWindowMinutes!=null? settings.parentPrefWindowMinutes : 60;
+
+  // Pass 1: best split on time/Reisvoorkeuren alone — this is the bar every split must clear.
+  const candidates=[];
+  let baseBestScore=-Infinity;
+  for(let k=1;k<n;k++){
+    const c1obj=withMin.slice(0,k), c2obj=withMin.slice(k);
+    const c1=c1obj.map(x=>x.id), c2=c2obj.map(x=>x.id);
+    const fitsAB=f1.capacity>=c1.length && f2.capacity>=c2.length;
+    const fitsBA=f2.capacity>=c1.length && f1.capacity>=c2.length;
+    if(!fitsAB && !fitsBA) continue;
+    const gap=withMin[k].min-withMin[k-1].min;
+    const {broken,satisfied,prefWeight}=scoreSplitPrefs(c1,c2,gap);
+    const baseScore=-broken*1000+satisfied*prefWeight+gap*0.01;
+    candidates.push({c1,c2,c1obj,c2obj,fitsAB,fitsBA,baseScore});
+    if(baseScore>baseBestScore) baseBestScore=baseScore;
+  }
+  if(!candidates.length) return null;
+
+  // Pass 2: among splits that are genuinely tied on that bar, prefer whichever lets a girl
+  // ride with her own available parent within the configured wait window — never below it,
+  // so this preference can only break ties, not force an otherwise-worse split.
+  let best=null, bestParentCount=-1;
+  candidates.forEach(cand=>{
+    if(cand.baseScore < baseBestScore - 0.001) return;
+    let parentCount=0;
+    [[cand.c1obj,id1],[cand.c2obj,id2]].forEach(([clusterObj,driverId])=>{
+      if(clusterObj.some(x=>x.id===driverId)){
+        const clusterGap = Math.max(...clusterObj.map(x=>x.min)) - Math.min(...clusterObj.map(x=>x.min));
+        if(clusterGap<=parentWindow) parentCount++;
+      }
+    });
+    if(parentCount>bestParentCount){ bestParentCount=parentCount; best={c1:cand.c1,c2:cand.c2,fitsAB:cand.fitsAB,fitsBA:cand.fitsBA}; }
+  });
+  if(!best) return null;
+  let g1=best.c1,g2=best.c2;
+  if(!best.fitsAB && best.fitsBA){ g1=best.c2; g2=best.c1; }
+  return {label:`${esc(f1.parentName)} &amp; ${esc(f2.parentName)}`, assignment:[{driverId:id1,girlIds:g1},{driverId:id2,girlIds:g2}]};
+}
+function planOptions(day,direction,list){
+  const clusters = planClusters(day,direction,list);
+  let opts;
+  if(clusters.length===1){
+    const c=clusters[0];
+    opts = eligibleDrivers(day,direction,c.length).map(([id,f])=>({label:`${esc(f.parentName)} (${c.length}/${f.capacity} pl.)`, assignment:[{driverId:id,girlIds:c}]}));
+  } else if(clusters.length===2){
+    const [c1,c2]=clusters;
+    const avail=availableDrivers(day,direction);
+    opts=[]; const seen=new Set();
+    for(let i=0;i<avail.length;i++)for(let j=i+1;j<avail.length;j++){
+      const [idA,fA]=avail[i], [idB,fB]=avail[j];
+      let pick=null;
+      if(fA.capacity>=c1.length && fB.capacity>=c2.length) pick=[{driverId:idA,girlIds:c1},{driverId:idB,girlIds:c2}];
+      else if(fB.capacity>=c1.length && fA.capacity>=c2.length) pick=[{driverId:idB,girlIds:c1},{driverId:idA,girlIds:c2}];
+      if(pick){
+        const key=[pick[0].driverId,pick[1].driverId].sort().join('+');
+        if(!seen.has(key)){ seen.add(key); opts.push({label:`${esc(fA.parentName)} &amp; ${esc(fB.parentName)}`, assignment:pick}); }
+      }
+    }
+  } else opts=[];
+  opts.sort((a,b)=>{
+    const pa=a.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId),0);
+    const pb=b.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId),0);
+    return pa-pb;
+  });
+  const primary = planPrimaryOption(day,direction,list);
+  if(primary){
+    const key=a=>a.assignment.map(x=>x.driverId).sort().join('+');
+    opts = opts.filter(o=>key(o)!==key(primary));
+    opts.unshift(primary);
+  }
+  return opts;
+}
+async function createGroupWithDriver(day,direction,girlIds,driverId,extraExclude=[]){
+  if(!db){showToast("Geen verbinding met opslag.");return;}
+  const alreadyDriving = groupsFor(day,direction).map(([gid,g])=>g.driverFamilyId).filter(Boolean);
+  const exclude = new Set([driverId, ...alreadyDriving, ...extraExclude]);
+  const reserveIds = eligibleDrivers(day,direction,girlIds.length).map(([id])=>id).filter(id=>!exclude.has(id));
+  const gid=`${day}_${direction}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
+  const departureTime=computeDepartureTime(day,direction,girlIds);
+  try{ await db.doc("groups/"+gid).set({day,direction,girlIds,driverFamilyId:driverId||null,reserveFamilyIds:reserveIds,departureTime}); }
+  catch(e){showToast("Kon groep niet opslaan (alleen coördinator kan bewerken): "+(e&&e.message||e));}
+}
+async function useOption(day,direction,assignment){
+  const usedDrivers = assignment.map(a=>a.driverId).filter(Boolean);
+  for(const a of assignment){ await createGroupWithDriver(day,direction,a.girlIds,a.driverId, usedDrivers.filter(id=>id!==a.driverId)); }
+}
+async function createGroupCustom(day,direction,ids){
+  if(!ids.length){showToast("Selecteer minstens 1 dochter.");return;}
+  const eligible=eligibleDrivers(day,direction,ids.length);
+  await createGroupWithDriver(day,direction,ids, eligible[0]?eligible[0][0]:null);
+}
+
+function renderSchedule(){
+  const box=document.getElementById('tab-schedule');
+  if(!box) return;
+  box.innerHTML = DAYS.map(([k,label])=>renderDay(k,label)).join('');
+  attachScheduleHandlers();
+}
+function renderDay(day,label){
+  return `<div class="daysection"><h3>${label}</h3>
+    ${renderDirection(day,'heen','Naar Alkmaar (heen)')}
+    ${renderDirection(day,'terug','Terug naar Aalsmeer')}
+  </div>`;
+}
+function renderDirection(day,direction,title){
+  const grps = groupsFor(day,direction);
+  const grouped = alreadyGrouped(day,direction);
+  const ungrouped = girlsFor(day,direction).filter(([id])=>!grouped.has(id));
+
+  const groupHtml = grps.map(([gid,g])=>{
+    const times = g.girlIds.map(id=>fam(id).schedule[day][direction]).filter(Boolean).sort();
+    const departureFallback = direction==='terug' ? times[times.length-1] : times[0];
+    const departure = g.departureTime || departureFallback || '--:--';
+    const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
+    const reserves = (g.reserveFamilyIds||[]).map(id=>esc(fam(id).parentName)).join(', ');
+    const eligible = eligibleDrivers(day,direction,g.girlIds.length);
+    const driverOptions = `<option value="" disabled ${!g.driverFamilyId?'selected':''}>-- kies chauffeur --</option>` + eligible.map(([id,f])=>`<option value="${id}" ${id===g.driverFamilyId?'selected':''}>${esc(f.parentName)} (${f.capacity} pl.)</option>`).join('');
+    const otherGroups = grps.filter(([oid])=>oid!==gid);
+    const moveOptions = otherGroups.map(([oid,og],i)=>{
+      const dname = og.driverFamilyId? esc(fam(og.driverFamilyId).parentName) : 'geen chauffeur';
+      return `<option value="${oid}" ${i===0?'selected':''}>Auto: ${dname}</option>`;
+    }).join('');
+    return `<div class="group confirmed" data-gid="${gid}">
+      <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
+      <div class="time">${departure}${canEdit? ` <input type="time" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px">`:''}</div>
+      <div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}` : `Klaar om op te halen: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`}</div>
+      <div>${g.girlIds.map(id=>`<span class="pill">${girlName(id)}</span>`).join('')}</div>
+      ${driver? `<div class="driver">🚘 ${esc(driver.parentName)} rijdt <span class="cap">(${g.girlIds.length}/${driver.capacity} bezet)</span></div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
+      ${reserves? `<div class="reserve">Reserve: ${reserves}</div>`:''}
+      ${canEdit? `<div class="rowflex" style="margin-top:8px">
+          <select data-swap="${gid}" style="flex:1" aria-label="Chauffeur wisselen">${driverOptions||'<option>Geen kandidaten</option>'}</select>
+          <button type="button" class="btn small" data-delgroup="${gid}">Verwijder</button>
+        </div>`:''}
+      ${canEdit && otherGroups.length? `<div class="rowflex" style="margin-top:8px;gap:6px">
+          <select data-moveFromGirl="${gid}" style="flex:1" aria-label="Kies dochter om te verplaatsen">
+            <option value="">Verplaats passagier…</option>
+            ${g.girlIds.map(id=>`<option value="${id}">${girlName(id)}</option>`).join('')}
+          </select>
+          <select data-moveToGroup="${gid}" style="flex:1" aria-label="Kies bestemming auto">
+            <option value="">Naar…</option>${moveOptions}
+          </select>
+          <button type="button" class="btn small" data-moveConfirm="${gid}">Verplaats</button>
+        </div>`:''}
+    </div>`;
+  }).join('') || `<p class="muted">Nog geen ritten ingepland.</p>`;
+
+  let suggestHtml = '';
+  let pickerHtml = '';
+  if(canEdit && ungrouped.length){
+    const clusters = planClusters(day,direction,ungrouped);
+    const options = planOptions(day,direction,ungrouped);
+    const clusterLabel = clusters.length===1
+      ? `<p class="muted" style="margin:10px 0 4px">Alle ${clusters[0].length} meiden passen logisch in 1 auto. Voorgestelde chauffeur(s):</p>`
+      : `<p class="muted" style="margin:10px 0 4px">Tijdsverschil is te groot voor 1 auto (grens: ${settings.gapThresholdHours} uur) — max. 2 auto's. Optie 1 volgt je selectievolgorde:</p>`;
+    if(options.length){
+      suggestHtml = clusterLabel + options.map((opt,i)=>{
+        const sub = opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${fam(a.driverId).capacity} pl.)`).join(' · ');
+        return `<div class="group suggestion${i===0?' primary':''}">
+          <div class="fitok">${i===0?'<span class="badge rec">AANBEVOLEN</span> ':'✅ '}Optie ${i+1}: ${opt.label}</div>
+          <div class="subtime">${sub}</div>
+          <button type="button" class="btn small" data-useoption="${day}|${direction}|${i}">Gebruik deze combinatie</button>
+        </div>`;
+      }).join('');
+      window.__planOptions = window.__planOptions||{};
+      window.__planOptions[day+'|'+direction] = options;
+    } else {
+      suggestHtml = clusterLabel + `<div class="group warning"><div class="fitbad">⚠️ Geen enkele chauffeur(scombinatie) heeft genoeg plek voor deze ${ungrouped.length} meiden.</div></div>`;
+    }
+    const ungroupedSorted = [...ungrouped].sort((a,b)=>{
+      const ta=timeToMinutes(a[1].schedule[day][direction]), tb=timeToMinutes(b[1].schedule[day][direction]);
+      if(ta!==tb) return ta-tb;
+      return (a[1].girlName||'').localeCompare(b[1].girlName||'');
+    });
+    pickerHtml = `
+    <div class="group" style="border-style:dashed">
+      <h3 style="margin-bottom:6px">Aangepaste combinatie</h3>
+      ${ungroupedSorted.map(([id,f])=>`<div class="girlchk"><label style="margin:0;flex:1"><input type="checkbox" class="girlpick" value="${id}"> ${esc(f.girlName||f.parentName)} — ${f.schedule[day][direction]}</label></div>`).join('')}
+      <button type="button" class="btn small" data-makegroup="${day}|${direction}">Groep + chauffeur toewijzen</button>
+    </div>`;
+  } else if(canEdit){
+    pickerHtml = `<p class="muted">Iedereen is ingedeeld.</p>`;
+  }
+  return `<div style="margin-bottom:10px"><span class="badge">${title}</span>${groupHtml}${suggestHtml}${pickerHtml}</div>`;
+}
+
+function attachScheduleHandlers(){
+ try{
+  document.querySelectorAll('[data-makegroup]').forEach(btn=>btn.onclick=async ()=>{
+    const [day,direction]=btn.dataset.makegroup.split('|');
+    const box=btn.closest('.group');
+    const picked=[...box.querySelectorAll('.girlpick:checked')].map(c=>c.value);
+    await createGroupCustom(day,direction,picked);
+  });
+  document.querySelectorAll('[data-useoption]').forEach(btn=>btn.onclick=async ()=>{
+    const [day,direction,idxStr]=btn.dataset.useoption.split('|');
+    const opts=(window.__planOptions||{})[day+'|'+direction]||[];
+    const opt=opts[+idxStr];
+    if(opt) await useOption(day,direction,opt.assignment);
+  });
+  document.querySelectorAll('[data-delgroup]').forEach(btn=>btn.onclick=async ()=>{
+    try{ await db.doc("groups/"+btn.dataset.delgroup).delete(); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
+  });
+  document.querySelectorAll('[data-swap]').forEach(sel=>sel.onchange=async ()=>{
+    const gid=sel.dataset.swap; const g=groups[gid]; if(!g)return;
+    const newDriver=sel.value;
+    try{
+      await db.doc("groups/"+gid).update({driverFamilyId:newDriver});
+      const siblings = groupsFor(g.day,g.direction).filter(([oid,og])=>oid!==gid && og.driverFamilyId===newDriver);
+      for(const [oid,og] of siblings){
+        const usedElsewhere = new Set(groupsFor(g.day,g.direction).filter(([xid])=>xid!==oid).map(([xid,xg])=>xg.driverFamilyId).filter(Boolean));
+        usedElsewhere.add(newDriver);
+        const alt = eligibleDrivers(g.day,g.direction,og.girlIds.length).map(([id])=>id).find(id=>!usedElsewhere.has(id));
+        await db.doc("groups/"+oid).update({driverFamilyId: alt||null});
+      }
+      showToast(siblings.length? "Chauffeur gewisseld — dubbele boeking automatisch opgelost ✓" : "Chauffeur gewisseld ✓");
+    }catch(e){showToast("Wisselen mislukt: "+(e&&e.message||e));}
+  });
+  document.querySelectorAll('[data-deptime]').forEach(inp=>inp.onchange=async ()=>{
+    const gid=inp.dataset.deptime;
+    try{ await db.doc("groups/"+gid).update({departureTime:inp.value}); }catch(e){showToast("Aanpassen mislukt: "+(e&&e.message||e));}
+  });
+  document.querySelectorAll('[data-moveConfirm]').forEach(btn=>btn.onclick=async ()=>{
+    const gid=btn.dataset.moveconfirm;
+    const box=btn.closest('.group');
+    const girlSel=box.querySelector(`[data-moveFromGirl="${gid}"]`);
+    const toSel=box.querySelector(`[data-moveToGroup="${gid}"]`);
+    const girlId=girlSel&&girlSel.value, toGid=toSel&&toSel.value;
+    if(!girlId||!toGid){ showToast("Kies eerst een dochter én een bestemming."); return; }
+    const from=groups[gid], to=groups[toGid];
+    if(!from||!to) return;
+    try{
+      const newFrom=from.girlIds.filter(id=>id!==girlId);
+      const newTo=[...to.girlIds, girlId];
+      if(newFrom.length){ await db.doc("groups/"+gid).update({girlIds:newFrom}); }
+      else { await db.doc("groups/"+gid).delete(); }
+      await db.doc("groups/"+toGid).update({girlIds:newTo});
+      showToast("Verplaatst ✓");
+    }catch(e){showToast("Verplaatsen mislukt: "+(e&&e.message||e));}
+  });
+ }catch(e){ setStatus("⚠️ Fout bij koppelen roosterknoppen: "+(e&&e.message||e)); }
+}
+
+init();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
