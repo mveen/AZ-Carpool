@@ -56,6 +56,10 @@ header p{margin:2px 0 0;font-size:12px;opacity:.9}
 #bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px)}
 .navtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:8px 4px 6px;min-height:56px;cursor:pointer;color:var(--muted);position:relative}
 .navtab .navicon{font-size:19px;line-height:1}
+.navtab .navicon svg{width:22px;height:22px}
+.navtab .navicon .ph-fill{display:none}
+.navtab.active .navicon .ph-regular{display:none}
+.navtab.active .navicon .ph-fill{display:inline}
 .navtab .navlabel{font-size:10px;font-weight:600;white-space:nowrap}
 .navtab.active{color:var(--accent)}
 .navtab.active .navlabel{font-weight:700}
@@ -149,19 +153,35 @@ table.avail th,table.avail td{padding:6px 4px}
 <div id="impersonateBanner" style="display:none"></div>
 <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
   <div>
-    <h1>🚗 AZ Carpool Aalsmeer–Alkmaar</h1>
+    <h1><svg viewBox="0 0 256 256" style="width:1em;height:1em;vertical-align:-0.15em;margin-right:4px" aria-hidden="true"><path d="M48 176v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h96v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h8a8 8 0 0 0 8-8v-40a24 24 0 0 0-16.8-22.9l-9.6-32A24 24 0 0 0 178 56H78a24 24 0 0 0-23.6 17.1l-9.6 32A24 24 0 0 0 24 128v40a8 8 0 0 0 8 8Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="80" cy="152" r="12" fill="currentColor"/><circle cx="176" cy="152" r="12" fill="currentColor"/></svg>AZ Carpool Aalsmeer–Alkmaar</h1>
     <p id="whoami">Laden…</p>
   </div>
   <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
 </header>
 </div>
 <nav id="bottomnav" aria-label="Hoofdnavigatie">
-  <button type="button" data-tab="schedule" class="navtab active"><span class="navicon">📅</span><span class="navlabel">Rooster</span></button>
-  <button type="button" data-tab="myweek" class="navtab"><span class="navicon">👧</span><span class="navlabel">Mijn week</span></button>
-  <button type="button" data-tab="deviation" class="navtab"><span class="navicon">⚡</span><span class="navlabel">Afwijking</span></button>
-  <button type="button" data-tab="profile" class="navtab"><span class="navicon">👨‍👩‍👧</span><span class="navlabel">Mijn gezin</span></button>
-  <button type="button" data-tab="beheer" id="navBeheer" class="navtab" style="display:none"><span class="navicon">⚙️</span><span class="navlabel">Beheer</span></button>
+  <button type="button" data-tab="schedule" class="navtab active"><span class="navicon">
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="currentColor"/><rect x="40" y="88" width="176" height="20" fill="var(--card)"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+    </span><span class="navlabel">Rooster</span></button>
+  <button type="button" data-tab="myweek" class="navtab"><span class="navicon">
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="96" r="52" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="96" r="52" fill="currentColor"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80Z" fill="currentColor"/></svg>
+    </span><span class="navlabel">Mijn week</span></button>
+  <button type="button" data-tab="deviation" class="navtab"><span class="navicon">
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="currentColor"/></svg>
+    </span><span class="navlabel">Afwijking</span></button>
+  <button type="button" data-tab="profile" class="navtab"><span class="navicon">
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M162 88a44 44 0 0 1 0 88" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M184 148c26 8 40 32 40 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="currentColor"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68Z" fill="currentColor"/><path d="M162 88a44 44 0 0 1 0 88 44 44 0 0 1-10-1.2 68 68 0 0 0 18-42.8 68 68 0 0 0-18-42.8A44 44 0 0 1 162 88Z" fill="currentColor"/><path d="M184 148c26 8 40 32 40 68h-40Z" fill="currentColor"/></svg>
+    </span><span class="navlabel">Mijn gezin</span></button>
+  <button type="button" data-tab="beheer" id="navBeheer" class="navtab" style="display:none"><span class="navicon">
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="36" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path d="M128 92a36 36 0 1 0 36 36 36 36 0 0 0-36-36Zm100 36a94 94 0 0 1-1.5 16.7l20.6 16a8 8 0 0 1 1.9 10.2l-20 34.6a8 8 0 0 1-9.7 3.5l-24.3-9.8a95.6 95.6 0 0 1-14.5 8.4l-3.7 25.9a8 8 0 0 1-7.9 6.9h-40a8 8 0 0 1-7.9-6.9l-3.7-25.9a95.6 95.6 0 0 1-14.5-8.4l-24.3 9.8a8 8 0 0 1-9.7-3.5l-20-34.6a8 8 0 0 1 1.9-10.2l20.6-16A94 94 0 0 1 28 128a94 94 0 0 1 1.5-16.7l-20.6-16a8 8 0 0 1-1.9-10.2l20-34.6a8 8 0 0 1 9.7-3.5l24.3 9.8a95.6 95.6 0 0 1 14.5-8.4l3.7-25.9A8 8 0 0 1 87.1 14h40a8 8 0 0 1 7.9 6.9l3.7 25.9a95.6 95.6 0 0 1 14.5 8.4l24.3-9.8a8 8 0 0 1 9.7 3.5l20 34.6a8 8 0 0 1-1.9 10.2l-20.6 16A94 94 0 0 1 228 128Z" fill="currentColor"/></svg>
+    </span><span class="navlabel">Beheer</span></button>
 </nav>
+
 <main>
   <div id="tab-schedule"></div>
   <div id="tab-myweek" style="display:none"></div>
@@ -222,10 +242,53 @@ function collRef(path){
 const db = { doc: docRef, collection: collRef };
 // ============================================================
 
+// ---------- Phosphor-style icon helper ----------
+// Inline SVGs (256 viewBox, 16px stroke for outline, solid path for fill) instead of emoji.
+// All use currentColor, so every icon automatically follows the surrounding text color —
+// including dark mode and the accent-red active nav state — with zero extra CSS.
+function phIcon(name, opts){
+  opts = opts||{};
+  const size = opts.size || '1em';
+  const style = `width:${size};height:${size};vertical-align:-0.15em;flex-shrink:0${opts.style?';'+opts.style:''}`;
+  const body = PH_PATHS[name];
+  if(!body) return '';
+  return `<svg viewBox="0 0 256 256" style="${style}" aria-hidden="true">${body}</svg>`;
+}
+const PH_PATHS = {
+  calendar: `<rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
+  'calendar-fill': `<rect x="40" y="40" width="176" height="176" rx="16" fill="currentColor"/><rect x="40" y="88" width="176" height="20" fill="var(--card,#fff)"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
+  user: `<circle cx="128" cy="96" r="52" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
+  'user-fill': `<circle cx="128" cy="96" r="52" fill="currentColor"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80Z" fill="currentColor"/>`,
+  users: `<circle cx="88" cy="100" r="44" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M162 88a44 44 0 0 1 0 88" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M184 148c26 8 40 32 40 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
+  'users-fill': `<circle cx="88" cy="100" r="44" fill="currentColor"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68Z" fill="currentColor"/><path d="M162 88a44 44 0 0 1 0 88 44 44 0 0 1-10-1.2 68 68 0 0 0 18-42.8 68 68 0 0 0-18-42.8A44 44 0 0 1 162 88Z" fill="currentColor"/><path d="M184 148c26 8 40 32 40 68h-40Z" fill="currentColor"/>`,
+  lightning: `<path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
+  'lightning-fill': `<path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="currentColor"/>`,
+  gear: `<circle cx="128" cy="128" r="36" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
+  'gear-fill': `<path d="M128 92a36 36 0 1 0 36 36 36 36 0 0 0-36-36Zm100 36a94 94 0 0 1-1.5 16.7l20.6 16a8 8 0 0 1 1.9 10.2l-20 34.6a8 8 0 0 1-9.7 3.5l-24.3-9.8a95.6 95.6 0 0 1-14.5 8.4l-3.7 25.9a8 8 0 0 1-7.9 6.9h-40a8 8 0 0 1-7.9-6.9l-3.7-25.9a95.6 95.6 0 0 1-14.5-8.4l-24.3 9.8a8 8 0 0 1-9.7-3.5l-20-34.6a8 8 0 0 1 1.9-10.2l20.6-16A94 94 0 0 1 28 128a94 94 0 0 1 1.5-16.7l-20.6-16a8 8 0 0 1-1.9-10.2l20-34.6a8 8 0 0 1 9.7-3.5l24.3 9.8a95.6 95.6 0 0 1 14.5-8.4l3.7-25.9A8 8 0 0 1 87.1 14h40a8 8 0 0 1 7.9 6.9l3.7 25.9a95.6 95.6 0 0 1 14.5 8.4l24.3-9.8a8 8 0 0 1 9.7 3.5l20 34.6a8 8 0 0 1-1.9 10.2l-20.6 16A94 94 0 0 1 228 128Z" fill="currentColor"/>`,
+  warning: `<path d="M236 208H20a8 8 0 0 1-7-11.9L121 44.5a8 8 0 0 1 14 0l108 151.6a8 8 0 0 1-7 11.9Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><line x1="128" y1="104" x2="128" y2="144" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><circle cx="128" cy="172" r="10" fill="currentColor"/>`,
+  check: `<polyline points="216,72 96,192 40,136" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'check-circle': `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><polyline points="172,100 116,156 84,128" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  car: `<path d="M48 176v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h96v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h8a8 8 0 0 0 8-8v-40a24 24 0 0 0-16.8-22.9l-9.6-32A24 24 0 0 0 178 56H78a24 24 0 0 0-23.6 17.1l-9.6 32A24 24 0 0 0 24 128v40a8 8 0 0 0 8 8Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="80" cy="152" r="12" fill="currentColor"/><circle cx="176" cy="152" r="12" fill="currentColor"/>`,
+  trash: `<path d="M56 64h144l-12 144a8 8 0 0 1-8 8H76a8 8 0 0 1-8-8Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><line x1="40" y1="64" x2="216" y2="64" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M96 64V48a16 16 0 0 1 16-16h32a16 16 0 0 1 16 16v16" fill="none" stroke="currentColor" stroke-width="16"/>`,
+  pencil: `<path d="M64 192 40 216l24-64L188 28a20 20 0 0 1 28 0l12 12a20 20 0 0 1 0 28Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><line x1="160" y1="56" x2="200" y2="96" stroke="currentColor" stroke-width="16"/>`,
+  dice: `<rect x="40" y="40" width="176" height="176" rx="24" fill="none" stroke="currentColor" stroke-width="16"/><circle cx="88" cy="88" r="12" fill="currentColor"/><circle cx="168" cy="88" r="12" fill="currentColor"/><circle cx="128" cy="128" r="12" fill="currentColor"/><circle cx="88" cy="168" r="12" fill="currentColor"/><circle cx="168" cy="168" r="12" fill="currentColor"/>`,
+  refresh: `<path d="M60 108a72 72 0 0 1 122-42l14 14M196 148a72 72 0 0 1-122 42l-14-14" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><polyline points="180,50 182,80 152,80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><polyline points="76,206 74,176 104,176" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  flask: `<path d="M100 32h56M108 32v64l-56 108a16 16 0 0 0 14 24h124a16 16 0 0 0 14-24l-56-108V32" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="76" y1="168" x2="180" y2="168" stroke="currentColor" stroke-width="16"/>`,
+  x: `<line x1="200" y1="56" x2="56" y2="200" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><line x1="200" y1="200" x2="56" y2="56" stroke="currentColor" stroke-width="18" stroke-linecap="round"/>`,
+  star: `<path d="M128 32l30 64 70 10-51 50 12 70-61-32-61 32 12-70-51-50 70-10Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/>`,
+  'arrow-left': `<line x1="216" y1="128" x2="40" y2="128" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="104,64 40,128 104,192" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+  sun: `<circle cx="128" cy="128" r="42" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
+  moon: `<path d="M216 136A88 88 0 1 1 120 40a70 70 0 0 0 96 96Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
+};
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 // Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
-const todayKey = (()=>{ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return map[new Date().getDay()] || "Ma"; })();
-let scheduleDay = todayKey;
+// True weekday-or-null: null on Sat/Sun means "no day is actually today" — used ONLY for
+// real "is this today" indicators (green dot, VANDAAG badge). Never falls back to a weekday.
+const todayKey = (()=>{ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return map[new Date().getDay()]; })();
+// Separate from todayKey on purpose: this is just "which day should Rooster/Dagafwijking
+// default to on first view" — Monday is a reasonable default on a weekend, but that does NOT
+// make Monday "today".
+let scheduleDay = todayKey || "Ma";
 // Real vibration feedback via the Web Vibration API — Android Chrome supports this; iOS
 // Safari has no equivalent API at all, so this silently does nothing there (not faked).
 function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
@@ -315,7 +378,7 @@ function isAvailable(f,day,direction){
 function applyTheme(pref){
   document.documentElement.setAttribute('data-theme', pref==='dark'?'dark':'light');
   const btn=document.getElementById('themeToggle');
-  if(btn) btn.textContent = pref==='dark' ? '🌙 Donker' : '☀️ Licht';
+  if(btn) btn.innerHTML = pref==='dark' ? phIcon('moon')+' Donker' : phIcon('sun')+' Licht';
 }
 function cycleTheme(){
   const cur = (()=>{ try{ return localStorage.getItem('theme-pref')||'light'; }catch(e){ return 'light'; } })();
@@ -457,7 +520,7 @@ function renderImpersonateBanner(){
   if(impersonateFamilyId){
     el.style.display='block';
     el.style.cssText='display:block;background:var(--warn2);color:var(--warn);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--border)';
-    el.innerHTML = `🧪 Testweergave als: ${esc(fam(impersonateFamilyId).girlName||fam(impersonateFamilyId).parentName||impersonateFamilyId)} <button type="button" class="btn small secondary" id="stopImpersonateBtn" style="margin-left:8px">Stop testen</button>`;
+    el.innerHTML = `${phIcon('flask')} Testweergave als: ${esc(fam(impersonateFamilyId).girlName||fam(impersonateFamilyId).parentName||impersonateFamilyId)} <button type="button" class="btn small secondary" id="stopImpersonateBtn" style="margin-left:8px">Stop testen</button>`;
     const btn=document.getElementById('stopImpersonateBtn');
     if(btn) btn.onclick=stopImpersonate;
   } else {
@@ -813,10 +876,10 @@ function renderMyWeek(){
       const isMe = g.driverFamilyId===myId;
       if(isMe){
         const passengers=g.girlIds.filter(id=>id!==myId).map(id=>girlName(id)).join(', ');
-        statusHtml = `👧🚘 Jij rijdt mee!${passengers? ` · ${passengers}`:''}`; statusClass='driving';
+        statusHtml = `${phIcon('user')}${phIcon('car')} Jij rijdt mee!${passengers? ` · ${passengers}`:''}`; statusClass='driving';
       } else {
         const driverName = g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'nog geen chauffeur';
-        statusHtml = `👧 Rijdt mee met: ${driverName}`;
+        statusHtml = `${phIcon('user')} Rijdt mee met: ${driverName}`;
       }
     } else {
       statusHtml = 'nog niet ingepland'; statusClass='';
@@ -826,9 +889,9 @@ function renderMyWeek(){
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg=cars[drivingIdx];
       const names=dg.girlIds.map(id=>girlName(id)).join(', ');
-      extraDriving = `<div class="subrideStatus driving">🚘 Jouw rijbeurt om ${dg.departureTime||'?'} · ${names}</div>`;
+      extraDriving = `<div class="subrideStatus driving">${phIcon('car')} Jouw rijbeurt om ${dg.departureTime||'?'} · ${names}</div>`;
     }
-    const devTag = activeDeviation(day,direction)? `<div class="subrideStatus" style="color:var(--warn)">⚠️ Dagafwijking actief</div>` : '';
+    const devTag = activeDeviation(day,direction)? `<div class="subrideStatus" style="color:var(--warn)">${phIcon('warning')} Dagafwijking actief</div>` : '';
     return `<div class="subride">
       <div class="subrideHead"><span>${label}</span><span class="subrideDep">${dep}</span></div>
       <div class="subrideStatus ${statusClass}">${statusHtml}</div>
@@ -861,7 +924,7 @@ function renderMyWeek(){
       <p class="heroSub">Ouder: ${esc(myFam.parentName||'')} · ${seats(myFam)} passagiersplekken</p>
       ${whatsAppButtonHtml('wa-hero')}
       <div class="heroLegend">
-        <span>👧 Rit dochter</span><span>🚘 Jouw rijbeurt</span><span style="color:#fef08a">⚠️ Dagafwijking</span>
+        <span>${phIcon('user')} Rit dochter</span><span>${phIcon('car')} Jouw rijbeurt</span><span style="color:#fef08a">${phIcon('warning')} Dagafwijking</span>
       </div>
     </div>
     ${dayCards}
@@ -923,7 +986,7 @@ function renderDeviationTab(){
   const dayLabel = DAYS.find(([k])=>k===deviationDay)[1];
   box.innerHTML = `<div class="devAlert">
       <div class="rowflex"><p class="devAlertTitle" style="margin:0">⚡ Dagafwijking — ${dayLabel}</p>
-        <button type="button" class="btn small secondary" id="devBackBtn">← Andere dag</button></div>
+        <button type="button" class="btn small secondary" id="devBackBtn">${phIcon('arrow-left')} Andere dag</button></div>
       <p class="devAlertBody">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
       ${whatsAppButtonHtml()}
     </div>
@@ -959,7 +1022,7 @@ function renderDevDirection(day,direction,title){
       <div class="time">${c.departureTime||'--:--'} <input type="time" class="devDeptimeInp" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" value="${c.departureTime||''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px"></div>
       <label style="margin-top:8px">Chauffeur</label>
       <select class="devDriverSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${driverOptions}</select>
-      ${!driverOk? `<p class="fitbad" style="font-size:11px;margin-top:2px">⚠️ Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven — controleer of dit echt klopt.</p>` : ''}
+      ${!driverOk? `<p class="fitbad" style="font-size:11px;margin-top:2px">${phIcon('warning')} Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven — controleer of dit echt klopt.</p>` : ''}
       <div style="margin-top:8px">${passengerRows}</div>
     </div>`;
   }).join('') || `<p class="muted">Geen ritten gepland in het standaard Rooster voor dit moment.</p>`;
@@ -1068,7 +1131,7 @@ function renderPrefsCard(){
     const label = r.type==='together'
       ? `Samen reizen: ${(r.ids||[]).map(girlName).join(' &amp; ')}`
       : `Voorkeur: ${girlName(r.girlId)} met ${(r.withAny||[]).map(girlName).join(' of ')}`;
-    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px">${label}</span><button type="button" class="btn small secondary" data-delpref="${i}" aria-label="Voorkeur verwijderen">✕</button></div>`;
+    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px">${label}</span><button type="button" class="btn small secondary" data-delpref="${i}" aria-label="Voorkeur verwijderen">${phIcon('x')}</button></div>`;
   }).join('') || `<p class="muted">Nog geen voorkeuren.</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
@@ -1136,21 +1199,21 @@ function renderBeheer(){
   });
   const dupGroups = Object.values(byName).filter(list=>list.length>1);
   const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
-      <div class="fitbad">⚠️ Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:</div>
-      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px" aria-label="Verwijder" title="Verwijder">🗑️</button></span>`).join(' ')}</div>`).join('')}
+      <div class="fitbad">${phIcon('warning')} Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:</div>
+      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
   const rows = Object.entries(families).map(([id,fd])=>{
     const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
     const selfLinked = !!(links[me] && links[me].familyId===id);
-    const toggleIcon = isCoord? '✓' : (selfLinked? '★' : '⚠️');
+    const toggleIcon = isCoord? phIcon('check') : (selfLinked? phIcon('star') : phIcon('warning'));
     const toggleAria = isCoord? 'Coördinator-rol intrekken' : (selfLinked? 'Maak coördinator' : 'Maak coördinator (let op: niet jouw account)');
     return `
     <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border)">
       <span>${esc(fd.girlName||'(naam?)')} <span class="muted">– ${esc(fd.parentName||'(ouder?)')}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}
         <br><span class="muted">${fd.parentPhone1? `Tel 1: <strong>${esc(fd.parentPhone1)}</strong> · `:''}${fd.parentPhone2? `Tel 2: <strong>${esc(fd.parentPhone2)}</strong> · `:''}${!fd.parentPhone1&&!fd.parentPhone2? 'Tel: <span class="fitbad">niet ingesteld</span> · ':''}${fd.inviteCode? `Code: <strong>${esc(fd.inviteCode)}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
-      <span><button type="button" class="btn small secondary" data-coordedit="${id}" aria-label="Bewerken" title="Bewerken">✏️</button>
+      <span><button type="button" class="btn small secondary" data-coordedit="${id}" aria-label="Bewerken" title="Bewerken">${phIcon('pencil')}</button>
       <button type="button" class="btn small secondary" data-togglecoord="${id}" aria-label="${toggleAria}" title="${toggleAria}">${toggleIcon}</button>
-      <button type="button" class="btn small secondary" data-coorddel="${id}" aria-label="Verwijder" title="Verwijder">🗑️</button></span>
+      <button type="button" class="btn small secondary" data-coorddel="${id}" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button></span>
     </div>`;
   }).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
 
@@ -1195,7 +1258,7 @@ function renderBeheer(){
     </div>
     <div class="card">
       <h2>Beheerderstools</h2>
-      <button type="button" class="btn secondary" id="seedPdf">🔄 Alles wissen &amp; PDF-gegevens laden</button>
+      <button type="button" class="btn secondary" id="seedPdf">${phIcon('refresh')} Alles wissen &amp; PDF-gegevens laden</button>
       <p id="seedMsg" class="muted" style="margin-top:8px"></p>
     </div>`;
 
@@ -1304,7 +1367,7 @@ function renderCoordEditor(){
     <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp — meerdere mensen kunnen dezelfde code gebruiken)</label>
     <div class="rowflex" style="gap:6px">
       <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
-      <button type="button" class="btn small secondary" id="genCodeBtn">🎲 Nieuwe code</button>
+      <button type="button" class="btn small secondary" id="genCodeBtn">${phIcon('dice')} Nieuwe code</button>
     </div>
     ${familyFormHtml('coord', f)}
     <button type="button" class="btn secondary" id="coordCancel">Sluiten</button>
@@ -1534,7 +1597,7 @@ function renderDirection(day,direction,title){
       </div>
       <div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}` : `Klaar om op te halen: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`}</div>
       <div>${g.girlIds.map(id=>`<span class="pill">${girlName(id)}</span>`).join('')}</div>
-      ${driver? `<div class="driver">🚘 Chauffeur: ${esc(driver.parentName)}</div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
+      ${driver? `<div class="driver">${phIcon('car')} Chauffeur: ${esc(driver.parentName)}</div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
       ${reserves? `<div class="reserve">Reserve: ${reserves}</div>`:''}
       ${canEdit? `<div class="rowflex" style="margin-top:8px">
           <select data-swap="${gid}" style="flex:1" aria-label="Chauffeur wisselen">${driverOptions||'<option>Geen kandidaten</option>'}</select>
@@ -1565,7 +1628,7 @@ function renderDirection(day,direction,title){
       suggestHtml = clusterLabel + options.map((opt,i)=>{
         const sub = opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
         return `<div class="group suggestion${i===0?' primary':''}">
-          <div class="fitok">${i===0?'<span class="badge rec">AANBEVOLEN</span> ':'✅ '}Optie ${i+1}: ${opt.label}</div>
+          <div class="fitok">${i===0?'<span class="badge rec">AANBEVOLEN</span> ':phIcon('check')+' '}Optie ${i+1}: ${opt.label}</div>
           <div class="subtime">${sub}</div>
           <button type="button" class="btn small" data-useoption="${day}|${direction}|${i}">Gebruik deze combinatie</button>
         </div>`;
@@ -1573,7 +1636,7 @@ function renderDirection(day,direction,title){
       window.__planOptions = window.__planOptions||{};
       window.__planOptions[day+'|'+direction] = options;
     } else {
-      suggestHtml = clusterLabel + `<div class="group warning"><div class="fitbad">⚠️ Geen enkele chauffeur(scombinatie) heeft genoeg plek voor deze ${ungrouped.length} meiden.</div></div>`;
+      suggestHtml = clusterLabel + `<div class="group warning"><div class="fitbad">${phIcon('warning')} Geen enkele chauffeur(scombinatie) heeft genoeg plek voor deze ${ungrouped.length} meiden.</div></div>`;
     }
     const ungroupedSorted = [...ungrouped].sort((a,b)=>{
       const ta=timeToMinutes(a[1].schedule[day][direction]), tb=timeToMinutes(b[1].schedule[day][direction]);
@@ -1589,7 +1652,7 @@ function renderDirection(day,direction,title){
   } else if(canEdit){
     pickerHtml = `<p class="muted">Iedereen is ingedeeld.</p>`;
   }
-  const devNote = activeDeviation(day,direction)? `<p class="fitbad" style="margin:4px 0">⚠️ Voor deze rit is een tijdelijke wijziging actief in "Dagafwijking" — dit Rooster blijft het standaard schema tonen.</p>` : '';
+  const devNote = activeDeviation(day,direction)? `<p class="fitbad" style="margin:4px 0">${phIcon('warning')} Voor deze rit is een tijdelijke wijziging actief in "Dagafwijking" — dit Rooster blijft het standaard schema tonen.</p>` : '';
   return `<div style="margin-bottom:10px"><span class="badge">${title}</span>${devNote}${groupHtml}${suggestHtml}${pickerHtml}</div>`;
 }
 
