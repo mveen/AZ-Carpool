@@ -90,6 +90,7 @@ table.avail th,table.avail td{padding:6px 4px}
 <nav aria-label="Hoofdnavigatie">
   <button type="button" data-tab="schedule" class="active">Rooster</button>
   <button type="button" data-tab="myweek">Mijn week</button>
+  <button type="button" data-tab="deviation">Dagafwijking</button>
   <button type="button" data-tab="profile">Mijn gezin</button>
   <button type="button" data-tab="beheer" id="navBeheer" style="display:none">Beheer</button>
 </nav>
@@ -97,6 +98,7 @@ table.avail th,table.avail td{padding:6px 4px}
 <main>
   <div id="tab-schedule"></div>
   <div id="tab-myweek" style="display:none"></div>
+  <div id="tab-deviation" style="display:none"></div>
   <div id="tab-profile" style="display:none"></div>
   <div id="tab-beheer" style="display:none"></div>
   <div id="tab-gate" style="display:none"></div>
@@ -146,7 +148,39 @@ const db = { doc: docRef, collection: collRef };
 
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
-let families={}, groups={}, links={};
+let families={}, groups={}, links={}, deviations={};
+// ISO week (e.g. "2026-W14") — deviations are tagged with this so they can never apply to
+// any week but the one they were made for, regardless of when the app happens to be opened.
+function getISOWeekKey(date){
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = (d.getUTCDay()+6)%7;
+  d.setUTCDate(d.getUTCDate()-dayNum+3);
+  const firstThursday = new Date(Date.UTC(d.getUTCFullYear(),0,4));
+  const weekNum = 1+Math.round(((d-firstThursday)/86400000-3+((firstThursday.getUTCDay()+6)%7))/7);
+  return d.getUTCFullYear()+'-W'+String(weekNum).padStart(2,'0');
+}
+const currentWeekKey = getISOWeekKey(new Date());
+function deviationKey(day,direction){ return day+'_'+direction; }
+function activeDeviation(day,direction){
+  const dev = deviations[deviationKey(day,direction)];
+  return (dev && dev.weekKey===currentWeekKey && dev.cars && dev.cars.length) ? dev : null;
+}
+// The single source of truth for "what cars actually run today" — the default Rooster groups,
+// unless a still-current-week deviation overrides them. Used by Mijn week and the editor itself;
+// Rooster always shows the real default groups regardless, per the requirement that deviations
+// never touch the default schedule.
+function effectiveCars(day,direction){
+  const dev = activeDeviation(day,direction);
+  if(dev) return dev.cars.map(c=>({...c}));
+  return groupsFor(day,direction).map(([gid,g])=>({...g, baseGroupId:gid}));
+}
+async function purgeStaleDeviations(){
+  for(const [key,dev] of Object.entries(deviations)){
+    if(dev.weekKey!==currentWeekKey){
+      try{ await db.doc("deviations/"+key).delete(); }catch(e){}
+    }
+  }
+}
 let settings={gapThresholdHours:3, travelLeadMinutes:60, prefWindowMinutes:30, parentPrefWindowMinutes:60};
 let prefs={rules:[]};
 let shiftPriority={}; // { "Ma_heen": {familyId: rank}, ... }
@@ -269,10 +303,15 @@ async function init(){
       err=>{ setStatus("⚠️ Fout bij laden voorkeuren: "+(err&&err.message||err)); });
     db.doc("settings/priority").onSnapshot(snap=>{ shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
       err=>{ setStatus("⚠️ Fout bij laden prioriteit: "+(err&&err.message||err)); });
+    db.collection("deviations").onSnapshot(snap=>{
+      deviations={}; snap.docs.forEach(d=>deviations[d.id]=d.data());
+      purgeStaleDeviations();
+      renderSchedule(); renderMyWeek(); renderDeviationTab();
+    }, err=>{ setStatus("⚠️ Fout bij laden dagafwijkingen: "+(err&&err.message||err)); });
   }catch(e){ setStatus("⚠️ Kon niet live verbinden: "+(e&&e.message||e)); }
   adjustMainPadding();
 }
-function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderImpersonateBanner(); adjustMainPadding(); }
+function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderImpersonateBanner(); adjustMainPadding(); }
 
 // ---------- Coordinator test mode: view the app as a specific parent, without losing real rights ----------
 function renderImpersonateBanner(){
@@ -307,7 +346,7 @@ function stopImpersonate(){
 document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
   b.classList.add('active');
-  ['schedule','myweek','profile','beheer'].forEach(t=>{
+  ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
     const el=document.getElementById('tab-'+t);
     if(el) el.style.display = (b.dataset.tab===t)?'block':'none';
   });
@@ -384,7 +423,7 @@ function readFamilyForm(prefix){
 function showConnectionError(err){
   const nav=document.querySelector('nav');
   if(nav) nav.style.display='none';
-  ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+  ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
   const gateDiv=document.getElementById('tab-gate');
   if(gateDiv){
     gateDiv.style.display='block';
@@ -446,7 +485,7 @@ function renderGateOrApp(){
     // Still determining auth/coordinator state — never show the claim screen (or anything else)
     // until we actually know whether a coordinator already exists.
     if(nav) nav.style.display='none';
-    ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+    ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
     gateDiv.style.display='block';
     gateDiv.innerHTML = `<div style="max-width:420px;margin:30px auto 0"><div class="card"><p class="muted">Laden…</p></div></div>`;
     adjustMainPadding();
@@ -454,7 +493,7 @@ function renderGateOrApp(){
   }
   if(!coordinatorExists && !canEdit){
     if(nav) nav.style.display='none';
-    ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+    ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
     gateDiv.style.display='block';
     renderClaimCoordinator();
     adjustMainPadding();
@@ -462,7 +501,7 @@ function renderGateOrApp(){
   }
   if(needsGate()){
     if(nav) nav.style.display='none';
-    ['schedule','myweek','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
+    ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
     gateDiv.style.display='block';
     renderGate();
   } else {
@@ -470,7 +509,7 @@ function renderGateOrApp(){
     gateDiv.style.display='none';
     const activeBtn=document.querySelector('nav button.active');
     const activeTab=activeBtn? activeBtn.dataset.tab : 'schedule';
-    ['schedule','myweek','profile','beheer'].forEach(t=>{
+    ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
       const el=document.getElementById('tab-'+t);
       if(el) el.style.display=(t===activeTab)?'block':'none';
     });
@@ -592,12 +631,13 @@ function renderMyWeek(){
   const myId = myFamilyId();
   function cell(day,direction){
     const s = fam(myId).schedule && fam(myId).schedule[day] && fam(myId).schedule[day][direction];
-    const daughterGrp = groupsFor(day,direction).find(([gid,g])=>g.girlIds.includes(myId));
-    const drivingGrp = groupsFor(day,direction).find(([gid,g])=>g.driverFamilyId===myId);
+    const cars = effectiveCars(day,direction);
+    const daughterIdx = cars.findIndex(c=>c.girlIds.includes(myId));
+    const drivingIdx = cars.findIndex(c=>c.driverFamilyId===myId);
     const parts=[];
     if(s){
-      if(daughterGrp){
-        const [,g]=daughterGrp;
+      if(daughterIdx>=0){
+        const g=cars[daughterIdx];
         const dep=g.departureTime||'?';
         const isMe=g.driverFamilyId===myId;
         const driverName=g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'geen chauffeur';
@@ -612,11 +652,14 @@ function renderMyWeek(){
     }
     // Show the parent's own driving duty separately whenever it's a DIFFERENT car than the
     // daughter's ride (or the daughter isn't travelling that shift at all) — these are not the same thing.
-    if(drivingGrp && (!daughterGrp || drivingGrp[0]!==daughterGrp[0])){
-      const [,dg]=drivingGrp;
+    if(drivingIdx>=0 && drivingIdx!==daughterIdx){
+      const dg=cars[drivingIdx];
       const dep=dg.departureTime||'?';
       const names=dg.girlIds.map(id=>girlName(id)).join(', ');
       parts.push(`<div style="margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);font-size:11px;color:var(--accent);font-weight:700">🚗 Jij rijdt om ${dep}<br><span style="font-weight:400">${names}</span></div>`);
+    }
+    if(activeDeviation(day,direction)){
+      parts.push(`<div style="margin-top:4px;font-size:10px;color:var(--warn)">⚠️ afwijking deze week</div>`);
     }
     return parts.length? parts.join('') : '<span class="muted">–</span>';
   }
@@ -634,6 +677,117 @@ function renderMyWeek(){
     </table></div>
     <p class="muted" style="margin-top:8px">👧 = de rit van je dochter (🚗 ernaast als jij die zelf rijdt). Los daarvan: 🚗 <em>Jij rijdt om …</em> = jouw eigen chauffeursbeurt, ook als dat een andere auto is dan die van je dochter.</p>
   </div>`;
+}
+
+// ---------- Dagafwijking tab: one-off changes, open to every parent, week-scoped ----------
+let deviationDay=null;
+async function saveDeviationCars(day,direction,cars){
+  if(!db){showToast("Geen verbinding met opslag.");return;}
+  try{ await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars}); }
+  catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); }
+}
+function renderDeviationTab(){
+  const box=document.getElementById('tab-deviation');
+  if(!box) return;
+  if(!me){ box.innerHTML=`<div class="card"><h2>Dagafwijking</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`; return; }
+  if(!deviationDay){
+    box.innerHTML = `<div class="card">
+      <h2>Dagafwijking</h2>
+      <p class="muted">Voor een eenmalige wijziging deze week (ziek, rijbeurt ruilen, etc). Dit verandert niets aan het standaard Rooster en wordt elk weekend automatisch gewist — kies eerst een dag.</p>
+      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0">${label}</button>`).join('')}</div>
+    </div>`;
+    document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; renderDeviationTab(); });
+    return;
+  }
+  const dayLabel = DAYS.find(([k])=>k===deviationDay)[1];
+  box.innerHTML = `<div class="card">
+      <div class="rowflex"><h2 style="margin:0">Dagafwijking — ${dayLabel}</h2>
+        <button type="button" class="btn small secondary" id="devBackBtn">← Andere dag</button></div>
+      <p class="muted" style="margin-top:6px">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
+    </div>
+    ${renderDevDirection(deviationDay,'heen','Naar Alkmaar (heen)')}
+    ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}`;
+  const backBtn=document.getElementById('devBackBtn');
+  if(backBtn) backBtn.onclick=()=>{ deviationDay=null; renderDeviationTab(); };
+  attachDeviationHandlers();
+}
+function renderDevDirection(day,direction,title){
+  const cars = effectiveCars(day,direction);
+  const dev = activeDeviation(day,direction);
+  const allFamilies = Object.entries(families);
+  if(!cars.length){
+    return `<div class="card"><span class="badge">${title}</span><p class="muted" style="margin-top:8px">Geen ritten gepland in het standaard Rooster voor dit moment.</p></div>`;
+  }
+  const cardsHtml = cars.map((c,idx)=>{
+    const carKey = `${day}|${direction}|${idx}`;
+    const driverOk = c.driverFamilyId? isAvailable(fam(c.driverFamilyId),day,direction) : true;
+    const driverOptions = `<option value="" ${!c.driverFamilyId?'selected':''}>-- geen chauffeur --</option>` +
+      allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isAvailable(f,day,direction)?'':' ⚠️'}</option>`).join('');
+    const otherIdxs = cars.map((_,i)=>i).filter(i=>i!==idx);
+    const moveOptions = otherIdxs.map(i=>`<option value="${i}">Auto: ${esc(fam(cars[i].driverFamilyId).parentName||'?')}</option>`).join('');
+    const pills = c.girlIds.map(id=>`<span class="pill">${girlName(id)}
+        <button type="button" class="btn small secondary" data-devsick="${carKey}|${id}" style="margin-left:2px;padding:1px 5px;font-size:10px" aria-label="${girlName(id)} ziek melden">🤒</button>
+        ${otherIdxs.length? `<select data-devmove="${carKey}|${id}" style="display:inline;width:auto;font-size:10px;border:none;background:none;color:inherit" aria-label="${girlName(id)} verplaatsen"><option value="">↔</option>${moveOptions}</select>` : ''}
+      </span>`).join('') || '<span class="muted">Geen passagiers meer in deze auto.</span>';
+    return `<div class="group" data-devcar="${carKey}">
+      <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
+      <div class="time">${c.departureTime||'--:--'} <input type="time" data-devdeptime="${carKey}" value="${c.departureTime||''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px"></div>
+      <label style="margin-top:8px">Chauffeur</label>
+      <select data-devdriver="${carKey}">${driverOptions}</select>
+      ${!driverOk? `<p class="fitbad" style="font-size:11px;margin-top:2px">⚠️ Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven — controleer of dit echt klopt.</p>` : ''}
+      <div style="margin-top:8px">${pills}</div>
+    </div>`;
+  }).join('');
+  return `<div class="card">
+    <span class="badge">${title}</span>
+    ${cardsHtml}
+    ${dev? `<button type="button" class="btn small secondary" data-devreset="${day}|${direction}">↩ Terug naar standaard rooster</button>` : ''}
+  </div>`;
+}
+function attachDeviationHandlers(){
+ try{
+  document.querySelectorAll('[data-devdriver]').forEach(sel=>sel.onchange=async ()=>{
+    const [day,direction,idxStr]=sel.dataset.devdriver.split('|'); const idx=+idxStr;
+    const cars=effectiveCars(day,direction);
+    cars[idx]={...cars[idx], driverFamilyId: sel.value||null};
+    await saveDeviationCars(day,direction,cars);
+  });
+  document.querySelectorAll('[data-devdeptime]').forEach(inp=>inp.onchange=async ()=>{
+    const [day,direction,idxStr]=inp.dataset.devdeptime.split('|'); const idx=+idxStr;
+    const cars=effectiveCars(day,direction);
+    cars[idx]={...cars[idx], departureTime: inp.value};
+    await saveDeviationCars(day,direction,cars);
+  });
+  document.querySelectorAll('[data-devsick]').forEach(btn=>btn.onclick=async ()=>{
+    const [carKey,girlId]=btn.dataset.devsick.split('|');
+    const [day,direction,idxStr]=carKey.split('|'); const idx=+idxStr;
+    const cars=effectiveCars(day,direction);
+    const newGirlIds=cars[idx].girlIds.filter(id=>id!==girlId);
+    cars[idx]={...cars[idx], girlIds:newGirlIds, departureTime: computeDepartureTime(day,direction,newGirlIds)};
+    await saveDeviationCars(day,direction,cars);
+    showToast(girlName(girlId)+" gemarkeerd als niet meegaand vandaag.");
+  });
+  document.querySelectorAll('[data-devmove]').forEach(sel=>sel.onchange=async ()=>{
+    if(!sel.value) return;
+    const [carKey,girlId]=sel.dataset.devmove.split('|');
+    const [day,direction,idxStr]=carKey.split('|'); const fromIdx=+idxStr; const toIdx=+sel.value;
+    const cars=effectiveCars(day,direction);
+    const newFrom=cars[fromIdx].girlIds.filter(id=>id!==girlId);
+    const newTo=[...cars[toIdx].girlIds, girlId];
+    const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
+    if(toSeatsAvail!=null && newTo.length>toSeatsAvail){
+      showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — verplaatsing is wel doorgevoerd.`);
+    }
+    cars[fromIdx]={...cars[fromIdx], girlIds:newFrom, departureTime: computeDepartureTime(day,direction,newFrom)};
+    cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
+    await saveDeviationCars(day,direction,cars);
+  });
+  document.querySelectorAll('[data-devreset]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,"Zeker? Terug naar standaard rooster",async ()=>{
+    const [day,direction]=btn.dataset.devreset.split('|');
+    try{ await db.doc("deviations/"+deviationKey(day,direction)).delete(); showToast("Teruggezet naar standaard ✓"); }
+    catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+  }));
+ }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
 }
 
 // ---------- Beheer tab ----------
@@ -1032,25 +1186,55 @@ function scoreSplitPrefs(c1,c2,gap){
 // Greedy time+capacity clustering: as many cars as actually needed, not capped at 2.
 // A new car starts whenever the next girl would push the current car's time span past the
 // threshold, OR whenever no available driver has enough seats for one more passenger.
+// Splits into the FEWEST cars whose sizes can actually be matched to available seats,
+// splitting at the LARGEST natural time gaps for that count — never just "fill to capacity
+// in chronological order", which ignores where the real breaks in the schedule are.
 function planClusters(day,direction,list){
   if(!list.length) return [];
   const gapLimit = (settings.gapThresholdHours||3)*60;
   const avail = availableDrivers(day,direction);
-  const maxSeats = avail.length? Math.max(...avail.map(([id,f])=>seats(f))) : 0;
+  const seatCounts = avail.map(([id,f])=>seats(f));
   const withMin = list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
-  const clusters=[]; let cur=[];
-  withMin.forEach(item=>{
-    const exceedsGap = cur.length && (item.min-cur[0].min>gapLimit);
-    const exceedsSeats = maxSeats>0 && cur.length>=maxSeats;
-    if(cur.length && (exceedsGap||exceedsSeats)){ clusters.push(cur); cur=[]; }
-    cur.push(item);
-  });
-  if(cur.length) clusters.push(cur);
-  let result = clusters.map(c=>c.map(x=>x.id));
-  result = enforceTogetherPrefs(result, day, direction, maxSeats);
-  return result;
+  const n = withMin.length;
+
+  const gaps=[]; for(let i=1;i<n;i++) gaps.push({idx:i, size:withMin[i].min-withMin[i-1].min});
+  const gapsByDesc = [...gaps].sort((a,b)=>b.size-a.size);
+
+  function splitAt(boundaryIdxs){
+    const sorted=[...boundaryIdxs].sort((a,b)=>a-b);
+    const clusters=[]; let start=0;
+    sorted.forEach(idx=>{ clusters.push(withMin.slice(start,idx)); start=idx; });
+    clusters.push(withMin.slice(start));
+    return clusters;
+  }
+  // Can every cluster (by size) be matched to a DISTINCT available driver with enough seats?
+  // Sort both descending and compare pairwise — correct and sufficient test for this shape of problem.
+  function seatsFeasible(clusters){
+    const sizesDesc = clusters.map(c=>c.length).sort((a,b)=>b-a);
+    const seatsDesc = [...seatCounts].sort((a,b)=>b-a);
+    if(sizesDesc.length>seatsDesc.length) return false;
+    for(let i=0;i<sizesDesc.length;i++){ if(seatsDesc[i]<sizesDesc[i]) return false; }
+    return true;
+  }
+  function gapsFeasible(clusters){
+    return clusters.every(c=> c[c.length-1].min-c[0].min <= gapLimit);
+  }
+
+  for(let K=1; K<=n; K++){
+    const boundaries = K===1? [] : gapsByDesc.slice(0,K-1).map(g=>g.idx);
+    const clusters = splitAt(boundaries);
+    if(seatsFeasible(clusters) && gapsFeasible(clusters)){
+      let result = clusters.map(c=>c.map(x=>x.id));
+      return enforceTogetherPrefs(result, day, direction, seatCounts.length?Math.max(...seatCounts):0);
+    }
+  }
+  // Truly not enough seats anywhere, however split — show the best-effort split (as many cars
+  // as there are available drivers) so the coordinator can see and adjust manually.
+  const K = Math.min(n, Math.max(1, avail.length));
+  const boundaries = gapsByDesc.slice(0, Math.max(0,K-1)).map(g=>g.idx);
+  return splitAt(boundaries).map(c=>c.map(x=>x.id));
 }
-// Post-pass: if a "samen reizen" rule got split across cars by the greedy pass above, pull
+// Post-pass: if a "samen reizen" rule got split across cars by the pass above, pull
 // the minority members into whichever car holds the majority, as long as that car has room.
 function enforceTogetherPrefs(clusters, day, direction, maxSeats){
   (prefs.rules||[]).filter(r=>r.type==='together').forEach(r=>{
@@ -1070,21 +1254,28 @@ function enforceTogetherPrefs(clusters, day, direction, maxSeats){
   });
   return clusters.filter(c=>c.length);
 }
-// Assigns each cluster to the highest-priority available driver with enough seats who
-// hasn't already been used for another cluster this shift — generalizes to any car count.
+// Assigns each cluster to a driver: largest clusters first (so a driver with barely-enough
+// seats isn't "used up" on a smaller car first), preferring whichever eligible driver's own
+// daughter is actually in that cluster, then falling back to shift-priority order.
 function planPrimaryOption(day,direction,list){
   if(!list.length) return null;
   const clusters = planClusters(day,direction,list);
   if(!clusters.length) return null;
   const priorityOrder = sortByShiftPriority(day,direction, availableDrivers(day,direction));
   if(!priorityOrder.length) return null;
-  const used=new Set(); const assignment=[];
-  for(const cluster of clusters){
-    const driver = priorityOrder.find(([id,f])=> !used.has(id) && seats(f)>=cluster.length);
-    if(!driver) return null;
+  const used=new Set();
+  const order = clusters.map((c,i)=>i).sort((a,b)=>clusters[b].length-clusters[a].length);
+  const byIndex = {};
+  for(const i of order){
+    const cluster = clusters[i];
+    const eligible = priorityOrder.filter(([id,f])=> !used.has(id) && seats(f)>=cluster.length);
+    if(!eligible.length) return null;
+    const ownParent = eligible.find(([id])=>cluster.includes(id));
+    const driver = ownParent || eligible[0];
     used.add(driver[0]);
-    assignment.push({driverId:driver[0], girlIds:cluster});
+    byIndex[i] = {driverId:driver[0], girlIds:cluster};
   }
+  const assignment = clusters.map((c,i)=>byIndex[i]);
   const label = assignment.map(a=>esc(fam(a.driverId).parentName)).join(' &amp; ');
   return {label, assignment};
 }
@@ -1239,7 +1430,8 @@ function renderDirection(day,direction,title){
   } else if(canEdit){
     pickerHtml = `<p class="muted">Iedereen is ingedeeld.</p>`;
   }
-  return `<div style="margin-bottom:10px"><span class="badge">${title}</span>${groupHtml}${suggestHtml}${pickerHtml}</div>`;
+  const devNote = activeDeviation(day,direction)? `<p class="fitbad" style="margin:4px 0">⚠️ Voor deze rit is een tijdelijke wijziging actief in "Dagafwijking" — dit Rooster blijft het standaard schema tonen.</p>` : '';
+  return `<div style="margin-bottom:10px"><span class="badge">${title}</span>${devNote}${groupHtml}${suggestHtml}${pickerHtml}</div>`;
 }
 
 function attachScheduleHandlers(){
