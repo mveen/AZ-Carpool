@@ -33,7 +33,7 @@
   /* Light mode surface tokens */
   --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
   --accent:var(--az-red); --accent2:var(--az-red-light);
-  --ok:#059669; --ok2:#d1fae5; --warn:#d97706; --warn2:#fef3c7;
+  --ok:#059669; --ok2:#d1fae5; --warn:#d97706; --warn2:#fef3c7; --warn-text:#92400e;
   --backup:#64748b; --info:#2563eb; --info2:#dbeafe; --pill:#334155; --pill2:#f1f5f9;
 
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -41,7 +41,7 @@
 :root[data-theme="dark"]{
   --bg:#020617; --card:#0f172a; --text:#f8fafc; --muted:#94a3b8; --border:#1e293b;
   --accent:var(--az-red); --accent2:#3a1414;
-  --ok:#34d399; --ok2:#0f2b21; --warn:#fbbf24; --warn2:#3a2e0f;
+  --ok:#34d399; --ok2:#0f2b21; --warn:#fbbf24; --warn2:#3a2e0f; --warn-text:#fbbf24;
   --backup:#94a3b8; --info:#60a5fa; --info2:#122036; --pill:#cbd5e1; --pill2:#1e293b;
 }
 *{box-sizing:border-box}
@@ -132,7 +132,7 @@ table.avail th,table.avail td{padding:6px 4px}
 .dayCard .dayCardHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .dayCard .dayBadge{width:28px;height:28px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
 .dayCard.today .dayBadge{background:var(--accent);color:#fff}
-.dayCard .dayCardTitle{font-size:14px;font-weight:800;flex:1}
+.dayCard .dayCardTitle{font-size:14px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dayCard .todayTag{background:var(--accent2);color:var(--accent);font-size:9px;font-weight:800;padding:3px 8px;border-radius:var(--radius-sm)}
 .dayCard .dayTimes{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
 .subride{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 10px;margin-top:6px}
@@ -143,8 +143,8 @@ table.avail th,table.avail td{padding:6px 4px}
 /* ---------- Dagafwijking (amber "warning" theme) ---------- */
 .devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
 :root[data-theme="dark"] .devAlert{border-color:#78350f}
-.devAlert .devAlertTitle{font-size:13px;font-weight:800;color:var(--warn);margin:0}
-.devAlert .devAlertBody{font-size:11px;color:var(--warn);opacity:.85;margin:4px 0 0}
+.devAlert .devAlertTitle{font-size:13px;font-weight:800;color:var(--warn-text);margin:0}
+.devAlert .devAlertBody{font-size:11px;color:var(--warn-text);margin:4px 0 0}
 .devCard{border-color:var(--warn) !important}
 </style>
 </head>
