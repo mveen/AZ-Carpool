@@ -65,13 +65,16 @@ function gapsFeasible(clusters, gapLimitMinutes) {
 
 // How well a candidate clustering respects "samen reizen" (hard-ish: heavily
 // penalised if broken) and "voorkeur" (soft: small bonus if satisfied) rules.
-function scorePrefsForClusters(clusters, togetherRules, preferRules) {
-  let broken = 0, satisfied = 0;
+// Counts how many togetherRules/preferRules a candidate clustering SATISFIES.
+// Deliberately no penalty for breaking one — "when possible" means these are
+// a bonus to chase, never an obligation to enforce regardless of cost.
+function countSatisfiedPrefs(clusters, togetherRules, preferRules) {
+  let satisfied = 0;
   (togetherRules || []).forEach(r => {
     const ids = (r.ids || []).filter(gid => clusters.some(c => c.some(x => x.id === gid)));
     if (ids.length < 2) return;
     const clusterIdxs = new Set(ids.map(gid => clusters.findIndex(c => c.some(x => x.id === gid))));
-    if (clusterIdxs.size > 1) broken++;
+    if (clusterIdxs.size === 1) satisfied++;
   });
   (preferRules || []).forEach(r => {
     const girlIdx = clusters.findIndex(c => c.some(x => x.id === r.girlId));
@@ -79,7 +82,13 @@ function scorePrefsForClusters(clusters, togetherRules, preferRules) {
     const anySame = (r.withAny || []).some(id => clusters[girlIdx].some(x => x.id === id));
     if (anySame) satisfied++;
   });
-  return { broken, satisfied };
+  return satisfied;
+}
+// Total minutes of "spread" across all clusters combined — the real cost a
+// family experiences (arriving too early for heen, or waiting for the last
+// passenger for terug) when people with different times share a car.
+function totalWaitingMinutes(clusters) {
+  return clusters.reduce((sum, c) => sum + (c[c.length - 1].min - c[0].min), 0);
 }
 
 /**
@@ -88,14 +97,22 @@ function scorePrefsForClusters(clusters, togetherRules, preferRules) {
  * make that many cuts (not just the single largest time gaps) so a feasible
  * split is never missed just because it wasn't the most "obvious" one.
  *
+ * Among the feasible splits for that car count, the one with the LEAST total
+ * waiting time normally wins — except a togetherRules/preferRules match adds
+ * a bonus worth `prefWindowMinutes` of "extra acceptable waiting" per rule
+ * satisfied. This is a genuinely SOFT preference: it can tip a close call,
+ * but a rule is never honored at a cost larger than that budget. There is no
+ * penalty for breaking a rule — only a bonus for satisfying one.
+ *
  * @param {{id:string,min:number}[]} girls
  * @param {number[]} driverSeats - passenger-seat counts of every AVAILABLE driver this shift
- * @param {number} gapLimitMinutes
+ * @param {number} gapLimitMinutes - hard ceiling: no cluster may ever exceed this span
  * @param {{ids:string[]}[]} togetherRules
  * @param {{girlId:string,withAny:string[]}[]} preferRules
+ * @param {number} prefWindowMinutes - "Voorkeur-marge": extra waiting minutes one satisfied rule is worth
  * @returns {string[][]} clusters of girl ids, in ascending start-time order
  */
-export function planClusters({ girls, driverSeats, gapLimitMinutes, togetherRules = [], preferRules = [] }) {
+export function planClusters({ girls, driverSeats, gapLimitMinutes, togetherRules = [], preferRules = [], prefWindowMinutes = 30 }) {
   if (!girls.length) return [];
   const sorted = [...girls].sort((a, b) => a.min - b.min);
   const n = sorted.length;
@@ -109,9 +126,6 @@ export function planClusters({ girls, driverSeats, gapLimitMinutes, togetherRule
     clusters.push(sorted.slice(start));
     return clusters;
   }
-  function boundaryGapSum(boundaryIdxs) {
-    return boundaryIdxs.reduce((sum, idx) => sum + (sorted[idx].min - sorted[idx - 1].min), 0);
-  }
 
   for (let K = 1; K <= n; K++) {
     const need = K - 1;
@@ -123,8 +137,8 @@ export function planClusters({ girls, driverSeats, gapLimitMinutes, togetherRule
       const sizes = clusters.map(c => c.length);
       if (!seatsFeasible(sizes, driverSeats)) continue;
       if (!gapsFeasible(clusters, gapLimitMinutes)) continue;
-      const { broken, satisfied } = scorePrefsForClusters(clusters, togetherRules, preferRules);
-      const score = -broken * 100000 + satisfied * 500 + boundaryGapSum(combo) * 0.01;
+      const satisfied = countSatisfiedPrefs(clusters, togetherRules, preferRules);
+      const score = -totalWaitingMinutes(clusters) + satisfied * prefWindowMinutes;
       if (score > bestScore) { bestScore = score; best = clusters; }
     }
     if (best) return best.map(c => c.map(x => x.id));

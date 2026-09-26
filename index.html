@@ -1280,7 +1280,8 @@ function planClusters(day,direction,list){
   const togetherRules = (prefs.rules||[]).filter(r=>r.type==='together');
   const preferRules = (prefs.rules||[]).filter(r=>r.type==='prefer');
   const gapLimitMinutes = (settings.gapThresholdHours||3)*60;
-  return pureplanClusters({ girls: girlsInput, driverSeats, gapLimitMinutes, togetherRules, preferRules });
+  const prefWindowMinutes = settings.prefWindowMinutes!=null? settings.prefWindowMinutes : 30;
+  return pureplanClusters({ girls: girlsInput, driverSeats, gapLimitMinutes, togetherRules, preferRules, prefWindowMinutes });
 }
 function planPrimaryOption(day,direction,list){
   const clusters = planClusters(day,direction,list);
