@@ -83,7 +83,6 @@ table.avail th,table.avail td{padding:6px 4px}
   <div>
     <h1>🚗 AZ Carpool Aalsmeer–Alkmaar</h1>
     <p id="whoami">Laden…</p>
-    <p id="myUidLine" class="muted" style="font-size:10px;opacity:.8"></p>
   </div>
   <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
 </header>
@@ -149,6 +148,7 @@ const db = { doc: docRef, collection: collRef };
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
 let families={}, groups={}, links={}, deviations={};
+let lastUpdateRooster=null, lastUpdateDeviation=null;
 // ISO week (e.g. "2026-W14") — deviations are tagged with this so they can never apply to
 // any week but the one they were made for, regardless of when the app happens to be opened.
 function getISOWeekKey(date){
@@ -191,6 +191,28 @@ function fam(id){return families[id]||{parentName:"?",girlName:"?",capacity:4,sc
 function seats(f){ return Math.max(0, (f.capacity||0) - 1); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function girlName(id){ return esc(fam(id).girlName||fam(id).parentName||id); }
+// Who's making this change right now, for the "laatst bijgewerkt door" footers.
+function myDisplayInfo(){
+  const linked = !!(links[me] && links[me].familyId) || !!impersonateFamilyId;
+  if(linked){
+    const f = fam(myFamilyId());
+    return { name: f.parentName||'Onbekend', phone: f.parentPhone1||f.parentPhone2||'' };
+  }
+  return { name: canEdit? 'Coördinator' : 'Onbekend', phone: '' };
+}
+async function recordLastUpdate(kind){
+  if(!db) return;
+  try{
+    const info=myDisplayInfo();
+    await db.doc("settings/lastUpdate"+kind).set({by:info.name, phone:info.phone, at:Date.now()});
+  }catch(e){ /* best-effort only — never block the real action on this */ }
+}
+function lastUpdateFooter(info){
+  if(!info || !info.at) return '';
+  const d = new Date(info.at);
+  const dateStr = d.toLocaleString('nl-NL', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return `<p class="muted" style="margin-top:10px;font-size:11px">Laatst bijgewerkt door: ${esc(info.by||'onbekend')}${info.phone?` (${esc(info.phone)})`:''} — ${dateStr}</p>`;
+}
 function myFamilyId(){ return impersonateFamilyId || (links[me] && links[me].familyId) || me; }
 function shiftKeyOf(day,direction){ return day+'_'+direction; }
 function shiftPriorityOf(day,direction,id){
@@ -265,8 +287,6 @@ async function init(){
   try{
     const cred = await signInAnonymously(fbAuth);
     me = cred.user.uid;
-    const uidEl=document.getElementById('myUidLine');
-    if(uidEl) uidEl.textContent = "Mijn account-ID (bewaar dit voor herstel): "+me;
   }catch(e){
     setStatus("⚠️ Niet verbonden.");
     showConnectionError(e);
@@ -283,7 +303,7 @@ async function init(){
     return;
   }
   recomputeCanEdit();
-  setStatus(canEdit? "Coördinator (kan rooster bewerken)" : "Ouder (alleen-lezen rooster)");
+  // (status line itself is now set by recomputeCanEdit() -> updateStatusLine(), always in sync)
   const navB=document.getElementById('navBeheer');
   if(navB) navB.style.display = canEdit? 'inline-block':'none';
   renderAll();
@@ -308,6 +328,10 @@ async function init(){
       purgeStaleDeviations();
       renderSchedule(); renderMyWeek(); renderDeviationTab();
     }, err=>{ setStatus("⚠️ Fout bij laden dagafwijkingen: "+(err&&err.message||err)); });
+    db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
+      err=>{});
+    db.doc("settings/lastUpdateDeviation").onSnapshot(snap=>{ lastUpdateDeviation = snap.exists? snap.data() : null; renderDeviationTab(); renderMyWeek(); },
+      err=>{});
   }catch(e){ setStatus("⚠️ Kon niet live verbinden: "+(e&&e.message||e)); }
   adjustMainPadding();
 }
@@ -467,11 +491,28 @@ function renderClaimCoordinator(){
 // coordinator designates one in Beheer — to whichever family is linked as "coordinator gezin",
 // so it survives clearing browser data as long as that family re-verifies through the gate.
 function recomputeCanEdit(){
-  if(impersonateFamilyId){ canEdit=false; return; } // testing as a parent always overrides real coordinator status
-  if(!coordinatorConfig){ canEdit=false; return; }
-  if(coordinatorConfig.uid && coordinatorConfig.uid===me){ canEdit=true; return; }
-  if(coordinatorConfig.familyId && links[me] && links[me].familyId===coordinatorConfig.familyId){ canEdit=true; return; }
-  canEdit=false;
+  if(impersonateFamilyId){ canEdit=false; updateStatusLine(); return; } // testing as a parent always overrides real coordinator status
+  if(!coordinatorConfig){ canEdit=false; updateStatusLine(); return; }
+  if(coordinatorConfig.uid && coordinatorConfig.uid===me){ canEdit=true; updateStatusLine(); return; }
+  if(coordinatorConfig.familyId && links[me] && links[me].familyId===coordinatorConfig.familyId){ canEdit=true; updateStatusLine(); return; }
+  canEdit=false; updateStatusLine();
+}
+// Single source of truth for the header line, so it can never go stale relative to the real
+// permission state — always recomputed together with canEdit, from wherever that changes.
+function updateStatusLine(){
+  const linked = !!(links[me] && links[me].familyId) || !!impersonateFamilyId;
+  let text;
+  if(linked){
+    const f = fam(myFamilyId());
+    text = (f.parentName||'Ouder') + (canEdit? ' (Coördinator)' : '');
+  } else if(canEdit){
+    text = 'Coördinator';
+  } else if(me){
+    text = 'Nog niet gekoppeld — ga naar Mijn gezin';
+  } else {
+    text = '';
+  }
+  setStatus(text);
 }
 
 // ---------- Access gate: phone + daughter + coordinator-issued code, before anything else shows ----------
@@ -610,6 +651,7 @@ function renderProfile(){
       };
     }
   }
+  updateStatusLine();
   renderGateOrApp();
 }
 async function saveProfile(){
@@ -676,6 +718,7 @@ function renderMyWeek(){
       ${rows}
     </table></div>
     <p class="muted" style="margin-top:8px">👧 = de rit van je dochter (🚗 ernaast als jij die zelf rijdt). Los daarvan: 🚗 <em>Jij rijdt om …</em> = jouw eigen chauffeursbeurt, ook als dat een andere auto is dan die van je dochter.</p>
+    ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   </div>`;
 }
 
@@ -683,7 +726,7 @@ function renderMyWeek(){
 let deviationDay=null;
 async function saveDeviationCars(day,direction,cars){
   if(!db){showToast("Geen verbinding met opslag.");return;}
-  try{ await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars}); }
+  try{ await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars}); recordLastUpdate('Deviation'); }
   catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); }
 }
 function renderDeviationTab(){
@@ -695,6 +738,7 @@ function renderDeviationTab(){
       <h2>Dagafwijking</h2>
       <p class="muted">Voor een eenmalige wijziging deze week (ziek, rijbeurt ruilen, etc). Dit verandert niets aan het standaard Rooster en wordt elk weekend automatisch gewist — kies eerst een dag.</p>
       <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0">${label}</button>`).join('')}</div>
+      ${lastUpdateFooter(lastUpdateDeviation)}
     </div>`;
     document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; renderDeviationTab(); });
     return;
@@ -706,7 +750,8 @@ function renderDeviationTab(){
       <p class="muted" style="margin-top:6px">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
     </div>
     ${renderDevDirection(deviationDay,'heen','Naar Alkmaar (heen)')}
-    ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}`;
+    ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}
+    ${lastUpdateDeviation? `<div class="card">${lastUpdateFooter(lastUpdateDeviation)}</div>` : ''}`;
   const backBtn=document.getElementById('devBackBtn');
   if(backBtn) backBtn.onclick=()=>{ deviationDay=null; renderDeviationTab(); };
   attachDeviationHandlers();
@@ -715,65 +760,77 @@ function renderDevDirection(day,direction,title){
   const cars = effectiveCars(day,direction);
   const dev = activeDeviation(day,direction);
   const allFamilies = Object.entries(families);
-  if(!cars.length){
-    return `<div class="card"><span class="badge">${title}</span><p class="muted" style="margin-top:8px">Geen ritten gepland in het standaard Rooster voor dit moment.</p></div>`;
-  }
+  const assignedIds = new Set(cars.flatMap(c=>c.girlIds));
+  const unassigned = allFamilies.filter(([id])=>!assignedIds.has(id));
+
   const cardsHtml = cars.map((c,idx)=>{
-    const carKey = `${day}|${direction}|${idx}`;
     const driverOk = c.driverFamilyId? isAvailable(fam(c.driverFamilyId),day,direction) : true;
     const driverOptions = `<option value="" ${!c.driverFamilyId?'selected':''}>-- geen chauffeur --</option>` +
       allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isAvailable(f,day,direction)?'':' ⚠️'}</option>`).join('');
     const otherIdxs = cars.map((_,i)=>i).filter(i=>i!==idx);
-    const moveOptions = otherIdxs.map(i=>`<option value="${i}">Auto: ${esc(fam(cars[i].driverFamilyId).parentName||'?')}</option>`).join('');
-    const pills = c.girlIds.map(id=>`<span class="pill">${girlName(id)}
-        <button type="button" class="btn small secondary" data-devsick="${carKey}|${id}" style="margin-left:2px;padding:1px 5px;font-size:10px" aria-label="${girlName(id)} ziek melden">🤒</button>
-        ${otherIdxs.length? `<select data-devmove="${carKey}|${id}" style="display:inline;width:auto;font-size:10px;border:none;background:none;color:inherit" aria-label="${girlName(id)} verplaatsen"><option value="">↔</option>${moveOptions}</select>` : ''}
-      </span>`).join('') || '<span class="muted">Geen passagiers meer in deze auto.</span>';
-    return `<div class="group" data-devcar="${carKey}">
+    const swapOptions = `<option value="">Verplaats naar…</option>` + otherIdxs.map(i=>`<option value="${i}">Auto: ${esc(fam(cars[i].driverFamilyId).parentName||'?')}</option>`).join('');
+    const passengerRows = c.girlIds.map(id=>`
+      <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
+        <span style="flex:1">${girlName(id)}</span>
+        ${otherIdxs.length? `<select class="devSwapSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" style="width:auto;font-size:12px" aria-label="${girlName(id)} verplaatsen naar andere auto">${swapOptions}</select>` : ''}
+        <button type="button" class="btn small secondary devRemoveBtn" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}">Verwijder uit auto</button>
+      </div>`).join('') || '<p class="muted">Geen passagiers meer in deze auto.</p>';
+    return `<div class="group" data-devcar="${day}|${direction}|${idx}">
       <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
-      <div class="time">${c.departureTime||'--:--'} <input type="time" data-devdeptime="${carKey}" value="${c.departureTime||''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px"></div>
+      <div class="time">${c.departureTime||'--:--'} <input type="time" class="devDeptimeInp" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" value="${c.departureTime||''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px"></div>
       <label style="margin-top:8px">Chauffeur</label>
-      <select data-devdriver="${carKey}">${driverOptions}</select>
+      <select class="devDriverSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${driverOptions}</select>
       ${!driverOk? `<p class="fitbad" style="font-size:11px;margin-top:2px">⚠️ Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven — controleer of dit echt klopt.</p>` : ''}
-      <div style="margin-top:8px">${pills}</div>
+      <div style="margin-top:8px">${passengerRows}</div>
     </div>`;
-  }).join('');
+  }).join('') || `<p class="muted">Geen ritten gepland in het standaard Rooster voor dit moment.</p>`;
+
+  const addOptions = cars.length? `<option value="">Voeg toe aan auto…</option>` + cars.map((c,i)=>`<option value="${i}">Auto: ${esc(fam(c.driverFamilyId).parentName||'?')}</option>`).join('') : '';
+  const unassignedHtml = unassigned.length? `<div class="group" style="border-style:dashed">
+      <h3 style="margin-bottom:6px">Overige dochters</h3>
+      <p class="muted" style="margin-top:0">Ook meiden zonder tijd voor dit moment kun je hier alsnog aan een auto toevoegen.</p>
+      ${unassigned.map(([id,f])=>`
+        <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
+          <span style="flex:1">${esc(f.girlName||f.parentName||id)}</span>
+          ${cars.length? `<select class="devAddSel" data-day="${day}" data-direction="${direction}" data-girl="${id}" style="width:auto;font-size:12px">${addOptions}</select>` : '<span class="muted">Nog geen auto</span>'}
+        </div>`).join('')}
+    </div>` : '';
+
   return `<div class="card">
     <span class="badge">${title}</span>
     ${cardsHtml}
-    ${dev? `<button type="button" class="btn small secondary" data-devreset="${day}|${direction}">↩ Terug naar standaard rooster</button>` : ''}
+    ${unassignedHtml}
+    ${dev? `<button type="button" class="btn small secondary" data-devreset="${day}|${direction}">Terug naar standaard rooster</button>` : ''}
   </div>`;
 }
 function attachDeviationHandlers(){
  try{
-  document.querySelectorAll('[data-devdriver]').forEach(sel=>sel.onchange=async ()=>{
-    const [day,direction,idxStr]=sel.dataset.devdriver.split('|'); const idx=+idxStr;
+  document.querySelectorAll('.devDriverSel').forEach(sel=>sel.onchange=async ()=>{
+    const {day,direction,caridx}=sel.dataset; const idx=+caridx;
     const cars=effectiveCars(day,direction);
     cars[idx]={...cars[idx], driverFamilyId: sel.value||null};
     await saveDeviationCars(day,direction,cars);
   });
-  document.querySelectorAll('[data-devdeptime]').forEach(inp=>inp.onchange=async ()=>{
-    const [day,direction,idxStr]=inp.dataset.devdeptime.split('|'); const idx=+idxStr;
+  document.querySelectorAll('.devDeptimeInp').forEach(inp=>inp.onchange=async ()=>{
+    const {day,direction,caridx}=inp.dataset; const idx=+caridx;
     const cars=effectiveCars(day,direction);
     cars[idx]={...cars[idx], departureTime: inp.value};
     await saveDeviationCars(day,direction,cars);
   });
-  document.querySelectorAll('[data-devsick]').forEach(btn=>btn.onclick=async ()=>{
-    const [carKey,girlId]=btn.dataset.devsick.split('|');
-    const [day,direction,idxStr]=carKey.split('|'); const idx=+idxStr;
+  document.querySelectorAll('.devRemoveBtn').forEach(btn=>btn.onclick=async ()=>{
+    const {day,direction,caridx,girl}=btn.dataset; const idx=+caridx;
     const cars=effectiveCars(day,direction);
-    const newGirlIds=cars[idx].girlIds.filter(id=>id!==girlId);
+    const newGirlIds=cars[idx].girlIds.filter(id=>id!==girl);
     cars[idx]={...cars[idx], girlIds:newGirlIds, departureTime: computeDepartureTime(day,direction,newGirlIds)};
     await saveDeviationCars(day,direction,cars);
-    showToast(girlName(girlId)+" gemarkeerd als niet meegaand vandaag.");
+    showToast(girlName(girl)+" verwijderd uit deze auto.");
   });
-  document.querySelectorAll('[data-devmove]').forEach(sel=>sel.onchange=async ()=>{
+  document.querySelectorAll('.devSwapSel').forEach(sel=>sel.onchange=async ()=>{
     if(!sel.value) return;
-    const [carKey,girlId]=sel.dataset.devmove.split('|');
-    const [day,direction,idxStr]=carKey.split('|'); const fromIdx=+idxStr; const toIdx=+sel.value;
+    const {day,direction,caridx,girl}=sel.dataset; const fromIdx=+caridx; const toIdx=+sel.value;
     const cars=effectiveCars(day,direction);
-    const newFrom=cars[fromIdx].girlIds.filter(id=>id!==girlId);
-    const newTo=[...cars[toIdx].girlIds, girlId];
+    const newFrom=cars[fromIdx].girlIds.filter(id=>id!==girl);
+    const newTo=[...cars[toIdx].girlIds, girl];
     const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
     if(toSeatsAvail!=null && newTo.length>toSeatsAvail){
       showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — verplaatsing is wel doorgevoerd.`);
@@ -781,10 +838,24 @@ function attachDeviationHandlers(){
     cars[fromIdx]={...cars[fromIdx], girlIds:newFrom, departureTime: computeDepartureTime(day,direction,newFrom)};
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
     await saveDeviationCars(day,direction,cars);
+    showToast(girlName(girl)+" verplaatst.");
+  });
+  document.querySelectorAll('.devAddSel').forEach(sel=>sel.onchange=async ()=>{
+    if(!sel.value) return;
+    const {day,direction,girl}=sel.dataset; const toIdx=+sel.value;
+    const cars=effectiveCars(day,direction);
+    const newTo=[...cars[toIdx].girlIds, girl];
+    const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
+    if(toSeatsAvail!=null && newTo.length>toSeatsAvail){
+      showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — toevoeging is wel doorgevoerd.`);
+    }
+    cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
+    await saveDeviationCars(day,direction,cars);
+    showToast(girlName(girl)+" toegevoegd.");
   });
   document.querySelectorAll('[data-devreset]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,"Zeker? Terug naar standaard rooster",async ()=>{
     const [day,direction]=btn.dataset.devreset.split('|');
-    try{ await db.doc("deviations/"+deviationKey(day,direction)).delete(); showToast("Teruggezet naar standaard ✓"); }
+    try{ await db.doc("deviations/"+deviationKey(day,direction)).delete(); recordLastUpdate('Deviation'); showToast("Teruggezet naar standaard ✓"); }
     catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
   }));
  }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
@@ -1324,7 +1395,7 @@ async function createGroupWithDriver(day,direction,girlIds,driverId,extraExclude
   const reserveIds = eligibleDrivers(day,direction,girlIds.length).map(([id])=>id).filter(id=>!exclude.has(id));
   const gid=`${day}_${direction}_${Date.now()}_${Math.random().toString(36).slice(2,6)}`;
   const departureTime=computeDepartureTime(day,direction,girlIds);
-  try{ await db.doc("groups/"+gid).set({day,direction,girlIds,driverFamilyId:driverId||null,reserveFamilyIds:reserveIds,departureTime}); }
+  try{ await db.doc("groups/"+gid).set({day,direction,girlIds,driverFamilyId:driverId||null,reserveFamilyIds:reserveIds,departureTime}); recordLastUpdate('Rooster'); }
   catch(e){showToast("Kon groep niet opslaan (alleen coördinator kan bewerken): "+(e&&e.message||e));}
 }
 async function useOption(day,direction,assignment){
@@ -1340,7 +1411,7 @@ async function createGroupCustom(day,direction,ids){
 function renderSchedule(){
   const box=document.getElementById('tab-schedule');
   if(!box) return;
-  box.innerHTML = DAYS.map(([k,label])=>renderDay(k,label)).join('');
+  box.innerHTML = DAYS.map(([k,label])=>renderDay(k,label)).join('') + lastUpdateFooter(lastUpdateRooster);
   attachScheduleHandlers();
 }
 function renderDay(day,label){
@@ -1449,7 +1520,7 @@ function attachScheduleHandlers(){
     if(opt) await useOption(day,direction,opt.assignment);
   });
   document.querySelectorAll('[data-delgroup]').forEach(btn=>btn.onclick=async ()=>{
-    try{ await db.doc("groups/"+btn.dataset.delgroup).delete(); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
+    try{ await db.doc("groups/"+btn.dataset.delgroup).delete(); recordLastUpdate('Rooster'); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
   });
   document.querySelectorAll('[data-swap]').forEach(sel=>sel.onchange=async ()=>{
     const gid=sel.dataset.swap; const g=groups[gid]; if(!g)return;
@@ -1464,11 +1535,12 @@ function attachScheduleHandlers(){
         await db.doc("groups/"+oid).update({driverFamilyId: alt||null});
       }
       showToast(siblings.length? "Chauffeur gewisseld — dubbele boeking automatisch opgelost ✓" : "Chauffeur gewisseld ✓");
+      recordLastUpdate('Rooster');
     }catch(e){showToast("Wisselen mislukt: "+(e&&e.message||e));}
   });
   document.querySelectorAll('[data-deptime]').forEach(inp=>inp.onchange=async ()=>{
     const gid=inp.dataset.deptime;
-    try{ await db.doc("groups/"+gid).update({departureTime:inp.value}); }catch(e){showToast("Aanpassen mislukt: "+(e&&e.message||e));}
+    try{ await db.doc("groups/"+gid).update({departureTime:inp.value}); recordLastUpdate('Rooster'); }catch(e){showToast("Aanpassen mislukt: "+(e&&e.message||e));}
   });
   document.querySelectorAll('[data-moveConfirm]').forEach(btn=>btn.onclick=async ()=>{
     const gid=btn.dataset.moveconfirm;
@@ -1496,6 +1568,7 @@ function attachScheduleHandlers(){
       if(newFrom.length){ await db.doc("groups/"+gid).update({girlIds:newFrom, departureTime: fromDeparture}); }
       else { await db.doc("groups/"+gid).delete(); }
       await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime: toDeparture});
+      recordLastUpdate('Rooster');
       showToast("Verplaatst ✓");
     }catch(e){showToast("Verplaatsen mislukt: "+(e&&e.message||e));}
   });
