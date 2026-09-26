@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
-<script>(function(){try{var p=localStorage.getItem('theme-pref');if(p==='light')document.documentElement.setAttribute('data-theme','light');else if(p==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}})();</script>
+<script>(function(){try{var p=localStorage.getItem('theme-pref');document.documentElement.setAttribute('data-theme', p==='dark'?'dark':'light');}catch(e){}})();</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -15,9 +15,8 @@
   --backup:#4b5563;--info:#2563eb;--info2:#dbeafe;--pill:#1d4ed8;--pill2:#dbeafe;
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){--bg:#15171a;--card:#1f2226;--text:#eceef0;--muted:#9aa1ab;--border:#2c2f34;--accent:#ef4444;--accent2:#3a1414;--ok:#34d399;--ok2:#0f2b21;--warn:#fbbf24;--warn2:#3a2e0f;--backup:#9aa1ab;--info:#60a5fa;--info2:#122036;--pill:#60a5fa;--pill2:#122036;}
-}
+/* data-theme is now always explicitly "light" or "dark" (see the head script and initTheme()),
+   so the old prefers-color-scheme media query is dead code and has been removed. */
 :root[data-theme="dark"]{--bg:#15171a;--card:#1f2226;--text:#eceef0;--muted:#9aa1ab;--border:#2c2f34;--accent:#ef4444;--accent2:#3a1414;--ok:#34d399;--ok2:#0f2b21;--warn:#fbbf24;--warn2:#3a2e0f;--backup:#9aa1ab;--info:#60a5fa;--info2:#122036;--pill:#60a5fa;--pill2:#122036;}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
@@ -114,6 +113,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import { firebaseConfig } from "./firebase-config.js";
+import {
+  timeToMinutes as pureTimeToMinutes, minutesToTime as pureMinutesToTime,
+  computeDepartureTime as pureComputeDepartureTime,
+  planClusters as pureplanClusters, planPrimaryAssignment, planAlternativeAssignments
+} from "./planning.js";
 
 const fbApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(fbApp);
@@ -228,25 +232,20 @@ function isAvailable(f,day,direction){
   return !!(a[direction] || a[backupField(direction)]);
 }
 
-// ---------- Theme: Systeem (default) / Licht / Donker, overrides prefers-color-scheme ----------
+// ---------- Theme: Licht / Donker only. New users start on Licht; their choice is remembered. ----------
 function applyTheme(pref){
-  if(pref==='light') document.documentElement.setAttribute('data-theme','light');
-  else if(pref==='dark') document.documentElement.setAttribute('data-theme','dark');
-  else document.documentElement.removeAttribute('data-theme');
+  document.documentElement.setAttribute('data-theme', pref==='dark'?'dark':'light');
   const btn=document.getElementById('themeToggle');
-  if(btn){
-    const icons={auto:'🌓 Systeem',light:'☀️ Licht',dark:'🌙 Donker'};
-    btn.textContent = icons[pref]||icons.auto;
-  }
+  if(btn) btn.textContent = pref==='dark' ? '🌙 Donker' : '☀️ Licht';
 }
 function cycleTheme(){
-  const cur = (()=>{ try{ return localStorage.getItem('theme-pref')||'auto'; }catch(e){ return 'auto'; } })();
-  const next = cur==='auto'?'light':cur==='light'?'dark':'auto';
+  const cur = (()=>{ try{ return localStorage.getItem('theme-pref')||'light'; }catch(e){ return 'light'; } })();
+  const next = cur==='light' ? 'dark' : 'light';
   try{ localStorage.setItem('theme-pref',next); }catch(e){}
   applyTheme(next);
 }
 (function initTheme(){
-  let pref='auto'; try{ pref=localStorage.getItem('theme-pref')||'auto'; }catch(e){}
+  let pref='light'; try{ pref=localStorage.getItem('theme-pref')||'light'; }catch(e){}
   applyTheme(pref);
   const btn=document.getElementById('themeToggle');
   if(btn) btn.onclick=cycleTheme;
@@ -696,18 +695,15 @@ function renderMyWeek(){
         const dep=g.departureTime||'?';
         const isMe=g.driverFamilyId===myId;
         const driverName=g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'geen chauffeur';
-        const passengers=g.girlIds.filter(id=>id!==myId).map(id=>girlName(id)).join(', ');
-        const line = isMe
-          ? `👧 Jij rijdt haar!${passengers? `<br><span style="font-weight:400">Passagiers: ${passengers}</span>` : ''}`
-          : `👧 ${driverName}`;
-        parts.push(`<div><div style="font-weight:700;font-size:14px">${dep}</div><div style="font-size:11px;${isMe? 'color:var(--accent);font-weight:700' : 'color:var(--muted)'}">${line}</div></div>`);
+        parts.push(`<div><div style="font-weight:700;font-size:14px">${dep}</div><div style="font-size:11px;color:var(--muted)">👧 ${isMe? 'Jij' : driverName}</div></div>`);
       } else {
         parts.push(`<div><div style="font-weight:700;font-size:14px">${s}</div><div class="fitbad" style="font-size:11px">nog niet ingepland</div></div>`);
       }
     }
-    // Show the parent's own driving duty separately whenever it's a DIFFERENT car than the
-    // daughter's ride (or the daughter isn't travelling that shift at all) — these are not the same thing.
-    if(drivingIdx>=0 && drivingIdx!==daughterIdx){
+    // The car icon ALWAYS appears whenever you're driving this shift, including when it's
+    // your own daughter's car — the 👧 line above already shows who's with her; this line is
+    // specifically "which shift do I need to drive", so it must never be silently skipped.
+    if(drivingIdx>=0){
       const dg=cars[drivingIdx];
       const dep=dg.departureTime||'?';
       const names=dg.girlIds.map(id=>girlName(id)).join(', ');
@@ -730,7 +726,7 @@ function renderMyWeek(){
       <tr><th style="text-align:left;padding:6px">Dag</th><th style="padding:6px">Heen</th><th style="padding:6px">Terug</th></tr>
       ${rows}
     </table></div>
-    <p class="muted" style="margin-top:8px">👧 = de rit van je dochter (🚗 ernaast als jij die zelf rijdt). Los daarvan: 🚗 <em>Jij rijdt om …</em> = jouw eigen chauffeursbeurt, ook als dat een andere auto is dan die van je dochter.</p>
+    <p class="muted" style="margin-top:8px">👧 = de rit van je dochter (met wie ze meerijdt). 🚗 = elke shift waarin jij zelf rijdt, ook als dat je eigen dochters auto is.</p>
     ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   </div>`;
 }
@@ -757,8 +753,9 @@ function sendWhatsAppUpdate(){
   const msg = buildWhatsAppMessage();
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank', 'noopener,noreferrer');
 }
+const WHATSAPP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7zm-2.8 2.6c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.4s.6 1.6.7 1.7c.1.1 1.2 1.9 3 2.6 1.5.6 1.8.5 2.1.4.3 0 1-.4 1.1-.8.1-.4.1-.8.1-.9-.1-.1-.2-.1-.4-.2l-1.2-.6c-.2-.1-.3-.1-.4.1l-.5.6c-.1.1-.2.2-.4.1-.2-.1-.8-.3-1.5-.9-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.4c.1-.1.1-.2.2-.4 0-.1 0-.3 0-.4l-.5-1.3c-.1-.3-.3-.3-.4-.3h-.3z"/></svg>`;
 function whatsAppButtonHtml(){
-  return `<button type="button" class="btn secondary" id="waUpdateBtn">Stuur update via WhatsApp</button>`;
+  return `<button type="button" class="btn secondary" id="waUpdateBtn" style="display:inline-flex;align-items:center">${WHATSAPP_SVG}Deel update via WhatsApp</button>`;
 }
 function wireWhatsAppButton(){
   const btn=document.getElementById('waUpdateBtn');
@@ -997,19 +994,20 @@ function renderBeheer(){
   const dupGroups = Object.values(byName).filter(list=>list.length>1);
   const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
       <div class="fitbad">⚠️ Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:</div>
-      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px">Verwijder</button></span>`).join(' ')}</div>`).join('')}
+      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px" aria-label="Verwijder" title="Verwijder">🗑️</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
   const rows = Object.entries(families).map(([id,fd])=>{
     const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
     const selfLinked = !!(links[me] && links[me].familyId===id);
-    const toggleLabel = isCoord? '✓ Coördinator (intrekken)' : (selfLinked? '★ Maak coördinator' : '⚠️ Maak coördinator (niet jouw account)');
+    const toggleIcon = isCoord? '✓' : (selfLinked? '★' : '⚠️');
+    const toggleAria = isCoord? 'Coördinator-rol intrekken' : (selfLinked? 'Maak coördinator' : 'Maak coördinator (let op: niet jouw account)');
     return `
     <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border)">
       <span>${esc(fd.girlName||'(naam?)')} <span class="muted">– ${esc(fd.parentName||'(ouder?)')}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}
         <br><span class="muted">${fd.parentPhone1? `Tel 1: <strong>${esc(fd.parentPhone1)}</strong> · `:''}${fd.parentPhone2? `Tel 2: <strong>${esc(fd.parentPhone2)}</strong> · `:''}${!fd.parentPhone1&&!fd.parentPhone2? 'Tel: <span class="fitbad">niet ingesteld</span> · ':''}${fd.inviteCode? `Code: <strong>${esc(fd.inviteCode)}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
-      <span><button type="button" class="btn small secondary" data-coordedit="${id}">Bewerken</button>
-      <button type="button" class="btn small secondary" data-togglecoord="${id}">${toggleLabel}</button>
-      <button type="button" class="btn small secondary" data-coorddel="${id}">Verwijder</button></span>
+      <span><button type="button" class="btn small secondary" data-coordedit="${id}" aria-label="Bewerken" title="Bewerken">✏️</button>
+      <button type="button" class="btn small secondary" data-togglecoord="${id}" aria-label="${toggleAria}" title="${toggleAria}">${toggleIcon}</button>
+      <button type="button" class="btn small secondary" data-coorddel="${id}" aria-label="Verwijder" title="Verwijder">🗑️</button></span>
     </div>`;
   }).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
 
@@ -1263,157 +1261,41 @@ function eligibleDrivers(day,direction,count){
 function availableDrivers(day,direction){
   return Object.entries(families).filter(([id,f])=> isAvailable(f,day,direction));
 }
-function timeToMinutes(t){ if(!t) return null; const p=t.split(':'); return (+p[0])*60+(+p[1]); }
-function minutesToTime(min){ min=((Math.round(min)%1440)+1440)%1440; const h=Math.floor(min/60), m=min%60; return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0'); }
+// timeToMinutes/minutesToTime/computeDepartureTime/planClusters/planPrimaryOption/planOptions
+// are now thin wrappers around the tested, standalone planning.js module (see that file's
+// own test suite — planning.test.js — for the actual algorithm's correctness guarantees).
+function timeToMinutes(t){ return pureTimeToMinutes(t); }
+function minutesToTime(min){ return pureMinutesToTime(min); }
 function computeDepartureTime(day,direction,girlIds){
-  const times = girlIds.map(id=>timeToMinutes(fam(id).schedule[day]&&fam(id).schedule[day][direction])).filter(v=>v!=null);
-  if(!times.length) return '';
-  // Heen: leave early enough for the earliest arrival requirement. Terug: can't leave Alkmaar
-  // until the LAST passenger is actually ready, so use the latest "klaar" time, not the earliest.
-  return direction==='heen' ? minutesToTime(Math.min(...times) - (settings.travelLeadMinutes||60)) : minutesToTime(Math.max(...times));
+  const minutesList = girlIds.map(id=>pureTimeToMinutes(fam(id).schedule[day] && fam(id).schedule[day][direction]));
+  return pureComputeDepartureTime(direction, minutesList, settings.travelLeadMinutes||60);
 }
-function scoreSplitPrefs(c1,c2,gap){
-  let broken=0, satisfied=0;
-  (prefs.rules||[]).forEach(r=>{
-    if(r.type==='together'){
-      const ids=r.ids||[];
-      const present = ids.filter(id=>c1.includes(id)||c2.includes(id));
-      if(present.length<2) return;
-      const inC1=ids.filter(id=>c1.includes(id)).length, inC2=ids.filter(id=>c2.includes(id)).length;
-      if(inC1>0 && inC2>0) broken++;
-    } else if(r.type==='prefer'){
-      const girlIn1=c1.includes(r.girlId), girlIn2=c2.includes(r.girlId);
-      if(!girlIn1 && !girlIn2) return;
-      const anyIn1=(r.withAny||[]).some(id=>c1.includes(id));
-      const anyIn2=(r.withAny||[]).some(id=>c2.includes(id));
-      if((girlIn1&&anyIn1)||(girlIn2&&anyIn2)) satisfied++;
-    }
-  });
-  const prefWindow = settings.prefWindowMinutes!=null? settings.prefWindowMinutes : 30;
-  const prefWeight = gap<=prefWindow ? 500 : 10;
-  return {broken,satisfied,prefWeight};
-}
-// Greedy time+capacity clustering: as many cars as actually needed, not capped at 2.
-// A new car starts whenever the next girl would push the current car's time span past the
-// threshold, OR whenever no available driver has enough seats for one more passenger.
-// Splits into the FEWEST cars whose sizes can actually be matched to available seats,
-// splitting at the LARGEST natural time gaps for that count — never just "fill to capacity
-// in chronological order", which ignores where the real breaks in the schedule are.
 function planClusters(day,direction,list){
-  if(!list.length) return [];
-  const gapLimit = (settings.gapThresholdHours||3)*60;
-  const avail = availableDrivers(day,direction);
-  const seatCounts = avail.map(([id,f])=>seats(f));
-  const withMin = list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
-  const n = withMin.length;
-
-  const gaps=[]; for(let i=1;i<n;i++) gaps.push({idx:i, size:withMin[i].min-withMin[i-1].min});
-  const gapsByDesc = [...gaps].sort((a,b)=>b.size-a.size);
-
-  function splitAt(boundaryIdxs){
-    const sorted=[...boundaryIdxs].sort((a,b)=>a-b);
-    const clusters=[]; let start=0;
-    sorted.forEach(idx=>{ clusters.push(withMin.slice(start,idx)); start=idx; });
-    clusters.push(withMin.slice(start));
-    return clusters;
-  }
-  // Can every cluster (by size) be matched to a DISTINCT available driver with enough seats?
-  // Sort both descending and compare pairwise — correct and sufficient test for this shape of problem.
-  function seatsFeasible(clusters){
-    const sizesDesc = clusters.map(c=>c.length).sort((a,b)=>b-a);
-    const seatsDesc = [...seatCounts].sort((a,b)=>b-a);
-    if(sizesDesc.length>seatsDesc.length) return false;
-    for(let i=0;i<sizesDesc.length;i++){ if(seatsDesc[i]<sizesDesc[i]) return false; }
-    return true;
-  }
-  function gapsFeasible(clusters){
-    return clusters.every(c=> c[c.length-1].min-c[0].min <= gapLimit);
-  }
-
-  for(let K=1; K<=n; K++){
-    const boundaries = K===1? [] : gapsByDesc.slice(0,K-1).map(g=>g.idx);
-    const clusters = splitAt(boundaries);
-    if(seatsFeasible(clusters) && gapsFeasible(clusters)){
-      let result = clusters.map(c=>c.map(x=>x.id));
-      return enforceTogetherPrefs(result, day, direction, seatCounts.length?Math.max(...seatCounts):0);
-    }
-  }
-  // Truly not enough seats anywhere, however split — show the best-effort split (as many cars
-  // as there are available drivers) so the coordinator can see and adjust manually.
-  const K = Math.min(n, Math.max(1, avail.length));
-  const boundaries = gapsByDesc.slice(0, Math.max(0,K-1)).map(g=>g.idx);
-  return splitAt(boundaries).map(c=>c.map(x=>x.id));
+  const girlsInput = list.map(([id,f])=>({id, min: pureTimeToMinutes(f.schedule[day][direction])}));
+  const driverSeats = availableDrivers(day,direction).map(([id,f])=>seats(f));
+  const togetherRules = (prefs.rules||[]).filter(r=>r.type==='together');
+  const preferRules = (prefs.rules||[]).filter(r=>r.type==='prefer');
+  const gapLimitMinutes = (settings.gapThresholdHours||3)*60;
+  return pureplanClusters({ girls: girlsInput, driverSeats, gapLimitMinutes, togetherRules, preferRules });
 }
-// Post-pass: if a "samen reizen" rule got split across cars by the pass above, pull
-// the minority members into whichever car holds the majority, as long as that car has room.
-function enforceTogetherPrefs(clusters, day, direction, maxSeats){
-  (prefs.rules||[]).filter(r=>r.type==='together').forEach(r=>{
-    const ids=(r.ids||[]).filter(gid=>clusters.some(c=>c.includes(gid)));
-    if(ids.length<2) return;
-    const counts={};
-    ids.forEach(gid=>{ const i=clusters.findIndex(c=>c.includes(gid)); if(i>=0) counts[i]=(counts[i]||0)+1; });
-    if(Object.keys(counts).length<=1) return;
-    const targetIdx = +Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
-    ids.forEach(gid=>{
-      const curIdx = clusters.findIndex(c=>c.includes(gid));
-      if(curIdx>=0 && curIdx!==targetIdx && (!maxSeats || clusters[targetIdx].length<maxSeats)){
-        clusters[curIdx]=clusters[curIdx].filter(x=>x!==gid);
-        clusters[targetIdx]=[...clusters[targetIdx], gid];
-      }
-    });
-  });
-  return clusters.filter(c=>c.length);
-}
-// Assigns each cluster to a driver: largest clusters first (so a driver with barely-enough
-// seats isn't "used up" on a smaller car first), preferring whichever eligible driver's own
-// daughter is actually in that cluster, then falling back to shift-priority order.
 function planPrimaryOption(day,direction,list){
-  if(!list.length) return null;
   const clusters = planClusters(day,direction,list);
   if(!clusters.length) return null;
-  const priorityOrder = sortByShiftPriority(day,direction, availableDrivers(day,direction));
-  if(!priorityOrder.length) return null;
-  const used=new Set();
-  const order = clusters.map((c,i)=>i).sort((a,b)=>clusters[b].length-clusters[a].length);
-  const byIndex = {};
-  for(const i of order){
-    const cluster = clusters[i];
-    const eligible = priorityOrder.filter(([id,f])=> !used.has(id) && seats(f)>=cluster.length);
-    if(!eligible.length) return null;
-    const ownParent = eligible.find(([id])=>cluster.includes(id));
-    const driver = ownParent || eligible[0];
-    used.add(driver[0]);
-    byIndex[i] = {driverId:driver[0], girlIds:cluster};
-  }
-  const assignment = clusters.map((c,i)=>byIndex[i]);
+  const priorityDrivers = sortByShiftPriority(day,direction, availableDrivers(day,direction))
+    .map(([id,f])=>({id, seats: seats(f)}));
+  const assignment = planPrimaryAssignment(clusters, priorityDrivers);
+  if(!assignment) return null;
   const label = assignment.map(a=>esc(fam(a.driverId).parentName)).join(' &amp; ');
   return {label, assignment};
 }
 function planOptions(day,direction,list){
   const clusters = planClusters(day,direction,list);
-  let opts;
-  if(clusters.length===1){
-    const c=clusters[0];
-    opts = eligibleDrivers(day,direction,c.length).map(([id,f])=>({label:`${esc(f.parentName)} (${c.length}/${seats(f)} pl.)`, assignment:[{driverId:id,girlIds:c}]}));
-  } else if(clusters.length===2){
-    const [c1,c2]=clusters;
-    const avail=availableDrivers(day,direction);
-    opts=[]; const seen=new Set();
-    for(let i=0;i<avail.length;i++)for(let j=i+1;j<avail.length;j++){
-      const [idA,fA]=avail[i], [idB,fB]=avail[j];
-      let pick=null;
-      if(seats(fA)>=c1.length && seats(fB)>=c2.length) pick=[{driverId:idA,girlIds:c1},{driverId:idB,girlIds:c2}];
-      else if(seats(fB)>=c1.length && seats(fA)>=c2.length) pick=[{driverId:idB,girlIds:c1},{driverId:idA,girlIds:c2}];
-      if(pick){
-        const key=[pick[0].driverId,pick[1].driverId].sort().join('+');
-        if(!seen.has(key)){ seen.add(key); opts.push({label:`${esc(fA.parentName)} &amp; ${esc(fB.parentName)}`, assignment:pick}); }
-      }
-    }
-  } else {
-    // 3+ cars needed: the combinatorial alternative search is skipped (would explode with
-    // more clusters); only the priority-driven primary proposal is offered for these shifts.
-    opts=[];
-  }
+  const availForAlts = availableDrivers(day,direction).map(([id,f])=>({id, seats: seats(f)}));
+  const rawAlts = planAlternativeAssignments(clusters, availForAlts);
+  let opts = rawAlts.map(assignment=>({
+    label: assignment.map(a=>esc(fam(a.driverId).parentName)).join(' &amp; '),
+    assignment
+  }));
   opts.sort((a,b)=>{
     const pa=a.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId),0);
     const pb=b.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId),0);
@@ -1511,7 +1393,7 @@ function renderDirection(day,direction,title){
     const options = planOptions(day,direction,ungrouped);
     const clusterLabel = clusters.length===1
       ? `<p class="muted" style="margin:10px 0 4px">Alle ${clusters[0].length} meiden passen logisch in 1 auto. Voorgestelde chauffeur(s):</p>`
-      : `<p class="muted" style="margin:10px 0 4px">Tijdsverschil is te groot voor 1 auto (grens: ${settings.gapThresholdHours} uur) — max. 2 auto's. Optie 1 volgt je selectievolgorde:</p>`;
+      : `<p class="muted" style="margin:10px 0 4px">Meerdere auto's nodig. Optie 1 volgt je selectievolgorde:</p>`;
     if(options.length){
       suggestHtml = clusterLabel + options.map((opt,i)=>{
         const sub = opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
