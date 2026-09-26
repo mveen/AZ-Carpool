@@ -112,12 +112,16 @@ import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { firebaseConfig } from "./firebase-config.js";
+// Absolute URLs here (not "./firebase-config.js" / "./planning.js") on purpose: a relative
+// module specifier triggered a Firefox security error for at least one user ("may not load
+// or link to file:///"), which a fully-qualified URL sidesteps entirely regardless of cause.
+// If this site's URL ever changes, these two lines need to be updated to match.
+import { firebaseConfig } from "https://mveen.github.io/AZ-Carpool/firebase-config.js";
 import {
   timeToMinutes as pureTimeToMinutes, minutesToTime as pureMinutesToTime,
   computeDepartureTime as pureComputeDepartureTime,
   planClusters as pureplanClusters, planPrimaryAssignment, planAlternativeAssignments
-} from "./planning.js";
+} from "https://mveen.github.io/AZ-Carpool/planning.js";
 
 const fbApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(fbApp);
