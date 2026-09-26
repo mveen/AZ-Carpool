@@ -104,27 +104,15 @@ table.avail th,table.avail td{padding:6px 4px}
 
 <script type="module">
 // ============================================================
-// FIREBASE SETUP — paste your own project's config below.
-// Firebase console → gear icon → Project settings → scroll to
-// "Your apps" → the </> (web) icon → copy the firebaseConfig object.
-// These values are meant to be public; real security comes from
-// the Firestore rules you'll paste in the console, not from hiding this.
+// FIREBASE SETUP — the actual config values live in firebase-config.js,
+// a separate file next to this one, so you only ever fill it in once.
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyD06qcffnbm2VFl-3JYEf16BrkTGsqQr70",
-  authDomain: "az-carpool.firebaseapp.com",
-  projectId: "az-carpool",
-  storageBucket: "az-carpool.firebasestorage.app",
-  messagingSenderId: "366961042772",
-  appId: "1:366961042772:web:7bcbf144fa4316146814c1",
-  measurementId: "G-B1VT4T621M"
-};
+import { firebaseConfig } from "./firebase-config.js";
 
 const fbApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(fbApp);
