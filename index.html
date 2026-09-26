@@ -7,72 +7,139 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
+<meta name="theme-color" content="#dc2626">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@600;700;800&display=swap" rel="stylesheet">
 <title>AZ Carpool Aalsmeer</title>
 <style>
+/* ============================================================
+   Design tokens — AZ Carpool Aalsmeer Design System v2.0.0
+   ============================================================ */
 :root{
-  --bg:#f4f5f7;--card:#fff;--text:#1c1e21;--muted:#5b6472;--border:#e3e5e8;
-  --accent:#dc2626;--accent2:#fee2e2;--ok:#059669;--ok2:#d1fae5;--warn:#b45309;--warn2:#fef3c7;
-  --backup:#4b5563;--info:#2563eb;--info2:#dbeafe;--pill:#1d4ed8;--pill2:#dbeafe;
+  /* AZ brand */
+  --az-red:#dc2626; --az-red-dark:#991b1b; --az-red-light:#fee2e2; --az-red-muted:#991b1b;
+  /* fonts */
+  --font-sans:'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono:'JetBrains Mono', ui-monospace, Menlo, monospace;
+  /* radius scale */
+  --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --radius-xl:24px; --radius-full:9999px;
+  /* shadow */
+  --shadow-card:0 2px 8px rgba(15,23,42,0.06);
+
+  /* Light mode surface tokens */
+  --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
+  --accent:var(--az-red); --accent2:var(--az-red-light);
+  --ok:#059669; --ok2:#d1fae5; --warn:#d97706; --warn2:#fef3c7;
+  --backup:#64748b; --info:#2563eb; --info2:#dbeafe; --pill:#334155; --pill2:#f1f5f9;
+
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
 }
-/* data-theme is now always explicitly "light" or "dark" (see the head script and initTheme()),
-   so the old prefers-color-scheme media query is dead code and has been removed. */
-:root[data-theme="dark"]{--bg:#15171a;--card:#1f2226;--text:#eceef0;--muted:#9aa1ab;--border:#2c2f34;--accent:#ef4444;--accent2:#3a1414;--ok:#34d399;--ok2:#0f2b21;--warn:#fbbf24;--warn2:#3a2e0f;--backup:#9aa1ab;--info:#60a5fa;--info2:#122036;--pill:#60a5fa;--pill2:#122036;}
+:root[data-theme="dark"]{
+  --bg:#020617; --card:#0f172a; --text:#f8fafc; --muted:#94a3b8; --border:#1e293b;
+  --accent:var(--az-red); --accent2:#3a1414;
+  --ok:#34d399; --ok2:#0f2b21; --warn:#fbbf24; --warn2:#3a2e0f;
+  --backup:#94a3b8; --info:#60a5fa; --info2:#122036; --pill:#cbd5e1; --pill2:#1e293b;
+}
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;min-height:100%;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100%;-webkit-font-smoothing:antialiased}
 #topbar{position:fixed;top:0;left:0;right:0;z-index:5}
-header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:var(--accent);color:#fff}
-header h1{margin:0;font-size:18px}
+header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));color:#fff}
+header h1{margin:0;font-size:18px;font-weight:800}
 header p{margin:2px 0 0;font-size:12px;opacity:.9}
-nav{display:flex;gap:6px;padding:10px 16px;background:var(--card);border-bottom:1px solid var(--border);overflow-x:auto}
-nav button{border:1px solid var(--border);background:var(--bg);color:var(--text);padding:8px 12px;border-radius:20px;font-size:13px;white-space:nowrap;cursor:pointer;min-height:38px}
-nav button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-main{padding:14px 16px 40px;max-width:760px;margin:0 auto}
-.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px}
-.card h2{margin:0 0 10px;font-size:15px}
+/* ---------- Bottom tab bar (fixed, safe-area aware, thumb-reachable) ---------- */
+#bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px)}
+.navtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:8px 4px 6px;min-height:56px;cursor:pointer;color:var(--muted);position:relative}
+.navtab .navicon{font-size:19px;line-height:1}
+.navtab .navlabel{font-size:10px;font-weight:600;white-space:nowrap}
+.navtab.active{color:var(--accent)}
+.navtab.active .navlabel{font-weight:700}
+.navtab.active::after{content:"";position:absolute;top:2px;left:50%;transform:translateX(-50%);width:20px;height:3px;border-radius:var(--radius-full);background:var(--accent)}
+main{padding:14px 16px calc(84px + env(safe-area-inset-bottom,0px));max-width:760px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow-card)}
+.card h2{margin:0 0 10px;font-size:15px;font-weight:800}
 label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
-input[type=text],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;min-height:38px}
-input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px;width:100%;min-height:38px}
+input[type=text],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;min-height:38px;font-family:var(--font-sans)}
+input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:13px;width:100%;min-height:38px;font-family:var(--font-mono);font-weight:700}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
 .chk input{min-height:18px}
-button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:8px;font-size:13px;cursor:pointer;margin-top:10px;min-height:40px}
+button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;min-height:40px;font-family:var(--font-sans)}
 button.btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
 button.btn.small{padding:8px 12px;font-size:12.5px;margin:0;min-height:36px}
 button.btn:disabled{opacity:.35;cursor:default}
-.daysection{margin-bottom:16px}
-.daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px}
-.group{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg)}
+/* ---------- Day-pill carousel (Rooster) ---------- */
+.daypills{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px}
+.daypill{flex:0 0 auto;min-width:64px;min-height:48px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;padding:6px 10px;position:relative;font-family:var(--font-sans)}
+.daypill .daypillTop{display:block;font-size:12px;font-weight:800}
+.daypill .daypillSub{display:block;font-size:9px;color:var(--muted);margin-top:2px}
+.daypill.active{background:var(--accent);border-color:var(--accent)}
+.daypill.active .daypillTop{color:#fff}
+.daypill.active .daypillSub{color:var(--az-red-light)}
+.daypill .daypillToday{position:absolute;top:4px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px;font-weight:800}
+.group{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin:8px 0;background:var(--card);box-shadow:var(--shadow-card)}
 .group.confirmed{border-left-color:var(--info)}
 .group.suggestion{border-left-color:var(--ok)}
 .group.suggestion.primary{border-left-color:var(--ok);background:var(--ok2)}
 .group.warning{border-left-color:var(--warn)}
-.group .dir{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.03em}
-.group .time{font-size:18px;font-weight:600}
+.group .dir{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.group .time{font-size:18px;font-weight:800;font-family:var(--font-mono)}
 .group .subtime{font-size:12px;color:var(--muted)}
-.pill{display:inline-block;background:var(--pill2);color:var(--pill);border-radius:12px;padding:3px 9px;font-size:12px;margin:2px 3px 0 0}
-.driver{color:var(--ok);font-weight:600;font-size:13px;margin-top:4px}
-.cap{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;background:var(--pill2);color:var(--pill);border-radius:var(--radius-md);padding:5px 10px;font-size:12px;font-weight:600;margin:2px 3px 0 0}
+.driver{color:var(--ok);font-weight:700;font-size:13px;margin-top:6px}
+.cap{font-size:12px;color:var(--muted);font-weight:600}
+.capbadge{display:inline-block;background:var(--ok2);color:var(--ok);font-size:10px;font-weight:700;padding:4px 10px;border-radius:var(--radius-full)}
 .reserve{font-size:12px;color:var(--muted);margin-top:4px}
 .girlchk{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
 .muted{color:var(--muted);font-size:12px}
-.badge{background:var(--ok2);color:var(--ok);font-size:11px;padding:2px 7px;border-radius:10px}
+.badge{background:var(--ok2);color:var(--ok);font-size:11px;padding:2px 7px;border-radius:var(--radius-full)}
 .badge.rec{background:var(--accent2);color:var(--accent);font-weight:700}
 .rowflex{display:flex;justify-content:space-between;align-items:center;gap:8px}
-.fitok{color:var(--ok);font-size:12px;margin-top:4px;font-weight:600}
-.fitbad{color:var(--warn);font-size:12px;margin-top:4px;font-weight:600}
+.fitok{color:var(--ok);font-size:12px;margin-top:4px;font-weight:700}
+.fitbad{color:var(--warn);font-size:12px;margin-top:4px;font-weight:700}
 .chip{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:12px}
 table.avail{width:100%;border-collapse:collapse;font-size:12px}
 table.avail th,table.avail td{padding:6px 4px}
-.dayBlock{border:1px solid var(--border);border-radius:8px;margin-bottom:6px;overflow:hidden}
+.dayBlock{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;overflow:hidden}
 .dayBlockHead{padding:10px 12px;font-size:13px;font-weight:600;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);background:var(--card)}
 .dayBlockHead .sumInfo{font-weight:400;color:var(--muted);font-size:12px}
 .dayDetailsBody{padding:10px 12px}
-.iconbtn{background:none;border:1px solid var(--border);border-radius:8px;min-width:38px;min-height:38px;font-size:14px;cursor:pointer;color:var(--text)}
+.iconbtn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:38px;min-height:38px;font-size:14px;cursor:pointer;color:var(--text)}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+/* ---------- Mijn week hero card ---------- */
+.heroCard{background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));border-radius:var(--radius-xl);padding:18px;color:#fff;margin-bottom:14px;box-shadow:var(--shadow-card)}
+.heroCard .heroTag{display:inline-block;background:rgba(255,255,255,.2);border-radius:var(--radius-full);padding:4px 10px;font-size:9px;font-weight:800;letter-spacing:.04em}
+.heroCard .heroName{font-size:24px;font-weight:800;margin:10px 0 2px}
+.heroCard .heroSub{font-size:12px;color:var(--az-red-light);margin:0}
+.heroCard .heroLegend{border-top:1px solid rgba(255,255,255,.2);margin-top:14px;padding-top:10px;font-size:10px;font-weight:600;display:flex;flex-wrap:wrap;gap:10px}
+.heroCard #wa-hero{background:#fff;color:var(--az-red-dark);border:none;margin-top:12px}
+.dayCard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-card)}
+.dayCard.today{border:2px solid var(--accent)}
+.dayCard .dayCardHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dayCard .dayBadge{width:28px;height:28px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.dayCard.today .dayBadge{background:var(--accent);color:#fff}
+.dayCard .dayCardTitle{font-size:14px;font-weight:800;flex:1}
+.dayCard .todayTag{background:var(--accent2);color:var(--accent);font-size:9px;font-weight:800;padding:3px 8px;border-radius:var(--radius-sm)}
+.dayCard .dayTimes{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
+.subride{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 10px;margin-top:6px}
+.subride .subrideHead{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700}
+.subride .subrideDep{font-family:var(--font-mono);color:var(--accent);font-weight:700}
+.subride .subrideStatus{font-size:10px;color:var(--muted);margin-top:3px}
+.subride .subrideStatus.driving{color:var(--ok);font-weight:700}
+/* ---------- Dagafwijking (amber "warning" theme) ---------- */
+.devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
+:root[data-theme="dark"] .devAlert{border-color:#78350f}
+.devAlert .devAlertTitle{font-size:13px;font-weight:800;color:var(--warn);margin:0}
+.devAlert .devAlertBody{font-size:11px;color:var(--warn);opacity:.85;margin:4px 0 0}
+.devCard{border-color:var(--warn) !important}
 </style>
 </head>
 <body>
@@ -85,14 +152,14 @@ table.avail th,table.avail td{padding:6px 4px}
   </div>
   <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
 </header>
-<nav aria-label="Hoofdnavigatie">
-  <button type="button" data-tab="schedule" class="active">Rooster</button>
-  <button type="button" data-tab="myweek">Mijn week</button>
-  <button type="button" data-tab="deviation">Dagafwijking</button>
-  <button type="button" data-tab="profile">Mijn gezin</button>
-  <button type="button" data-tab="beheer" id="navBeheer" style="display:none">Beheer</button>
-</nav>
 </div>
+<nav id="bottomnav" aria-label="Hoofdnavigatie">
+  <button type="button" data-tab="schedule" class="navtab active"><span class="navicon">📅</span><span class="navlabel">Rooster</span></button>
+  <button type="button" data-tab="myweek" class="navtab"><span class="navicon">👧</span><span class="navlabel">Mijn week</span></button>
+  <button type="button" data-tab="deviation" class="navtab"><span class="navicon">⚡</span><span class="navlabel">Afwijking</span></button>
+  <button type="button" data-tab="profile" class="navtab"><span class="navicon">👨‍👩‍👧</span><span class="navlabel">Mijn gezin</span></button>
+  <button type="button" data-tab="beheer" id="navBeheer" class="navtab" style="display:none"><span class="navicon">⚙️</span><span class="navlabel">Beheer</span></button>
+</nav>
 <main>
   <div id="tab-schedule"></div>
   <div id="tab-myweek" style="display:none"></div>
@@ -154,6 +221,12 @@ const db = { doc: docRef, collection: collRef };
 // ============================================================
 
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
+// Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
+const todayKey = (()=>{ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return map[new Date().getDay()] || "Ma"; })();
+let scheduleDay = todayKey;
+// Real vibration feedback via the Web Vibration API — Android Chrome supports this; iOS
+// Safari has no equivalent API at all, so this silently does nothing there (not faked).
+function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
 let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
 let families={}, groups={}, links={}, deviations={};
 let lastUpdateRooster=null, lastUpdateDeviation=null;
@@ -254,6 +327,41 @@ function cycleTheme(){
   const btn=document.getElementById('themeToggle');
   if(btn) btn.onclick=cycleTheme;
 })();
+
+// ---------- PWA: service worker registration + install prompt (real on Android/Chrome,
+// manual instructions on iOS Safari since it has no install-prompt API at all) ----------
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js').catch(()=>{});
+}
+let deferredInstallPrompt = null;
+let appIsInstalled = false;
+window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); deferredInstallPrompt=e; renderProfile(); });
+window.addEventListener('appinstalled', ()=>{ appIsInstalled=true; deferredInstallPrompt=null; renderProfile(); });
+function isStandaloneDisplay(){
+  try{ return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone===true; }
+  catch(e){ return false; }
+}
+function isIOSDevice(){ return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream; }
+function installCardHtml(){
+  if(appIsInstalled || isStandaloneDisplay()) return '';
+  if(deferredInstallPrompt){
+    return `<div class="card"><h2>Installeer de app</h2><p class="muted">Zet AZ Carpool op je beginscherm voor snelle toegang, net als een echte app.</p><button type="button" class="btn" id="installAppBtn">Installeer app</button></div>`;
+  }
+  if(isIOSDevice()){
+    return `<div class="card"><h2>Installeer de app</h2><p class="muted">Zet AZ Carpool op je beginscherm: tik onderin Safari op het deel-icoon, kies daarna <strong>"Zet op beginscherm"</strong>.</p></div>`;
+  }
+  return '';
+}
+function wireInstallCard(){
+  const btn=document.getElementById('installAppBtn');
+  if(btn) btn.onclick=async ()=>{
+    if(!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    try{ await deferredInstallPrompt.userChoice; }catch(e){}
+    deferredInstallPrompt=null;
+    renderProfile();
+  };
+}
 
 function setStatus(msg){ const el=document.getElementById('whoami'); if(el) el.textContent=msg; adjustMainPadding(); }
 function adjustMainPadding(){
@@ -625,23 +733,23 @@ function normalizePhone(p){
 function renderProfile(){
   const box=document.getElementById('tab-profile');
   if(!box) return;
-  let html='';
+  let html=installCardHtml();
   if(!me){
-    html = `<div class="card"><h2>Mijn gezin</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`;
+    html += `<div class="card"><h2>Mijn gezin</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`;
   } else {
     const linked = !!impersonateFamilyId || !!(links[me] && links[me].familyId);
     if(linked){
       const effId = myFamilyId();
       const lf = fam(effId);
       const unlinkCtl = impersonateFamilyId? '' : ` · <button type="button" class="btn small secondary" id="unlinkBtn">Ontkoppelen</button>`;
-      html = `<div class="card"><h2>Mijn gezin</h2>
+      html += `<div class="card"><h2>Mijn gezin</h2>
         <p class="muted">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong>${unlinkCtl}</p>
         ${familyFormHtml('me', fam(effId))}
         <p class="muted" style="margin-top:8px">Wijzigingen worden automatisch opgeslagen.</p>
       </div>`;
     } else {
       const options = Object.entries(families);
-      html = `<div class="card"><h2>Mijn gezin</h2>
+      html += `<div class="card"><h2>Mijn gezin</h2>
         <p class="muted">Welkom! Selecteer je dochter om haar gegevens te bekijken en bij te werken. (Alleen de coördinator kan nieuwe gezinnen toevoegen; twee ouders kunnen dezelfde dochter selecteren.)</p>
         ${options.length? `<label>Mijn dochter</label><select id="linkSelect">${options.map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>
         <button type="button" class="btn secondary" id="linkBtn">Dit is mijn dochter</button>
@@ -650,6 +758,7 @@ function renderProfile(){
     }
   }
   box.innerHTML = html;
+  wireInstallCard();
   if(me){
     const linked = !!impersonateFamilyId || !!(links[me] && links[me].familyId);
     if(linked){
@@ -687,52 +796,76 @@ function renderMyWeek(){
   const linked = !!(links[me] && links[me].familyId);
   if(!linked){ box.innerHTML=`<div class="card"><h2>Mijn week</h2><p class="muted">Koppel eerst je dochter via 'Mijn gezin' om hier je weekoverzicht te zien.</p></div>`; return; }
   const myId = myFamilyId();
-  function cell(day,direction){
-    const s = fam(myId).schedule && fam(myId).schedule[day] && fam(myId).schedule[day][direction];
+  const myFam = fam(myId);
+
+  function subride(day,direction,label){
+    const s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
+    if(!s) return '';
     const cars = effectiveCars(day,direction);
     const daughterIdx = cars.findIndex(c=>c.girlIds.includes(myId));
     const drivingIdx = cars.findIndex(c=>c.driverFamilyId===myId);
-    const parts=[];
-    if(s){
-      if(daughterIdx>=0){
-        const g=cars[daughterIdx];
-        const dep=g.departureTime||'?';
-        const isMe=g.driverFamilyId===myId;
-        const driverName=g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'geen chauffeur';
-        parts.push(`<div><div style="font-weight:700;font-size:14px">${dep}</div><div style="font-size:11px;color:var(--muted)">👧 ${isMe? 'Jij' : driverName}</div></div>`);
+    let dep = s, statusHtml, statusClass='';
+    if(daughterIdx>=0){
+      const g=cars[daughterIdx];
+      dep = g.departureTime||s;
+      const isMe = g.driverFamilyId===myId;
+      if(isMe){
+        const passengers=g.girlIds.filter(id=>id!==myId).map(id=>girlName(id)).join(', ');
+        statusHtml = `👧🚘 Jij rijdt mee!${passengers? ` · ${passengers}`:''}`; statusClass='driving';
       } else {
-        parts.push(`<div><div style="font-weight:700;font-size:14px">${s}</div><div class="fitbad" style="font-size:11px">nog niet ingepland</div></div>`);
+        const driverName = g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'nog geen chauffeur';
+        statusHtml = `👧 Rijdt mee met: ${driverName}`;
       }
+    } else {
+      statusHtml = 'nog niet ingepland'; statusClass='';
     }
-    // The car icon ALWAYS appears whenever you're driving this shift, including when it's
-    // your own daughter's car — the 👧 line above already shows who's with her; this line is
-    // specifically "which shift do I need to drive", so it must never be silently skipped.
-    if(drivingIdx>=0){
+    // Own driving duty in a DIFFERENT car than the daughter's own ride — shown as a second line.
+    let extraDriving='';
+    if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg=cars[drivingIdx];
-      const dep=dg.departureTime||'?';
       const names=dg.girlIds.map(id=>girlName(id)).join(', ');
-      parts.push(`<div style="margin-top:4px;padding-top:4px;border-top:1px dashed var(--border);font-size:11px;color:var(--accent);font-weight:700">🚗 Jij rijdt om ${dep}<br><span style="font-weight:400">${names}</span></div>`);
+      extraDriving = `<div class="subrideStatus driving">🚘 Jouw rijbeurt om ${dg.departureTime||'?'} · ${names}</div>`;
     }
-    if(activeDeviation(day,direction)){
-      parts.push(`<div style="margin-top:4px;font-size:10px;color:var(--warn)">⚠️ afwijking deze week</div>`);
-    }
-    return parts.length? parts.join('') : '<span class="muted">–</span>';
+    const devTag = activeDeviation(day,direction)? `<div class="subrideStatus" style="color:var(--warn)">⚠️ Dagafwijking actief</div>` : '';
+    return `<div class="subride">
+      <div class="subrideHead"><span>${label}</span><span class="subrideDep">${dep}</span></div>
+      <div class="subrideStatus ${statusClass}">${statusHtml}</div>
+      ${extraDriving}${devTag}
+    </div>`;
   }
-  const rows = DAYS.map(([k,label])=>`
-    <tr style="border-top:1px solid var(--border)">
-      <td style="padding:12px 6px;font-weight:600">${label}</td>
-      <td style="padding:12px 6px;text-align:center">${cell(k,'heen')}</td>
-      <td style="padding:12px 6px;text-align:center">${cell(k,'terug')}</td>
-    </tr>`).join('');
-  box.innerHTML = `<div class="card">
-    <h2>Mijn week — ${fam(myId).girlName||''}</h2>
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr><th style="text-align:left;padding:6px">Dag</th><th style="padding:6px">Heen</th><th style="padding:6px">Terug</th></tr>
-      ${rows}
-    </table></div>
-    <p class="muted" style="margin-top:8px">👧 = de rit van je dochter (met wie ze meerijdt). 🚗 = elke shift waarin jij zelf rijdt, ook als dat je eigen dochters auto is.</p>
+
+  const dayCards = DAYS.map(([k,label])=>{
+    const isToday = k===todayKey;
+    const heenHtml = subride(k,'heen','Heen: Aalsmeer ➔ Alkmaar');
+    const terugHtml = subride(k,'terug','Terug: Alkmaar ➔ Aalsmeer');
+    if(!heenHtml && !terugHtml) return '';
+    const heenTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].heen) || '';
+    const terugTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].terug) || '';
+    return `<div class="dayCard ${isToday?'today':''}">
+      <div class="dayCardHead">
+        <span class="dayBadge">${k}</span>
+        <span class="dayCardTitle">${label}</span>
+        ${isToday? '<span class="todayTag">VANDAAG</span>' : ''}
+        <span class="dayTimes">${heenTime||'–'} / ${terugTime||'–'}</span>
+      </div>
+      ${heenHtml}${terugHtml}
+    </div>`;
+  }).join('') || `<p class="muted">Geen dagen met een tijd ingesteld deze week.</p>`;
+
+  box.innerHTML = `
+    <div class="heroCard">
+      <span class="heroTag">PERSOONLIJK OVERZICHT</span>
+      <div class="heroName">${esc(myFam.girlName||'')}</div>
+      <p class="heroSub">Ouder: ${esc(myFam.parentName||'')} · ${seats(myFam)} passagiersplekken</p>
+      ${whatsAppButtonHtml('wa-hero')}
+      <div class="heroLegend">
+        <span>👧 Rit dochter</span><span>🚘 Jouw rijbeurt</span><span style="color:#fef08a">⚠️ Dagafwijking</span>
+      </div>
+    </div>
+    ${dayCards}
     ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
-  </div>`;
+  `;
+  wireWhatsAppButton('wa-hero');
 }
 
 // ---------- Dagafwijking tab: one-off changes, open to every parent, week-scoped ----------
@@ -758,11 +891,12 @@ function sendWhatsAppUpdate(){
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank', 'noopener,noreferrer');
 }
 const WHATSAPP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7zm-2.8 2.6c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.4s.6 1.6.7 1.7c.1.1 1.2 1.9 3 2.6 1.5.6 1.8.5 2.1.4.3 0 1-.4 1.1-.8.1-.4.1-.8.1-.9-.1-.1-.2-.1-.4-.2l-1.2-.6c-.2-.1-.3-.1-.4.1l-.5.6c-.1.1-.2.2-.4.1-.2-.1-.8-.3-1.5-.9-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.4c.1-.1.1-.2.2-.4 0-.1 0-.3 0-.4l-.5-1.3c-.1-.3-.3-.3-.4-.3h-.3z"/></svg>`;
-function whatsAppButtonHtml(){
-  return `<button type="button" class="btn secondary" id="waUpdateBtn" style="display:inline-flex;align-items:center">${WHATSAPP_SVG}Deel update via WhatsApp</button>`;
+function whatsAppButtonHtml(btnId){
+  btnId = btnId || 'waUpdateBtn';
+  return `<button type="button" class="btn secondary" id="${btnId}" style="display:inline-flex;align-items:center">${WHATSAPP_SVG}Deel update via WhatsApp</button>`;
 }
-function wireWhatsAppButton(){
-  const btn=document.getElementById('waUpdateBtn');
+function wireWhatsAppButton(btnId){
+  const btn=document.getElementById(btnId || 'waUpdateBtn');
   if(btn) btn.onclick=sendWhatsAppUpdate;
 }
 function renderDeviationTab(){
@@ -770,29 +904,32 @@ function renderDeviationTab(){
   if(!box) return;
   if(!me){ box.innerHTML=`<div class="card"><h2>Dagafwijking</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`; return; }
   if(!deviationDay){
-    box.innerHTML = `<div class="card">
-      <h2>Dagafwijking</h2>
-      <p class="muted">Voor een eenmalige wijziging deze week (ziek, rijbeurt ruilen, etc). Dit verandert niets aan het standaard Rooster en wordt elk weekend automatisch gewist — kies eerst een dag.</p>
+    box.innerHTML = `<div class="devAlert">
+      <p class="devAlertTitle">⚡ Weekafwijking (${currentWeekKey})</p>
+      <p class="devAlertBody">Eenmalige ritaanpassing voor deze week (ziek, rijbeurt ruilen, etc). Basisrooster blijft intact en dit wordt elk weekend automatisch gewist.</p>
+    </div>
+    <div class="card">
+      <h2>Kies een dag</h2>
       <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0">${label}</button>`).join('')}</div>
       ${whatsAppButtonHtml()}
       ${lastUpdateFooter(lastUpdateDeviation)}
     </div>`;
-    document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; renderDeviationTab(); });
+    document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
     wireWhatsAppButton();
     return;
   }
   const dayLabel = DAYS.find(([k])=>k===deviationDay)[1];
-  box.innerHTML = `<div class="card">
-      <div class="rowflex"><h2 style="margin:0">Dagafwijking — ${dayLabel}</h2>
+  box.innerHTML = `<div class="devAlert">
+      <div class="rowflex"><p class="devAlertTitle" style="margin:0">⚡ Dagafwijking — ${dayLabel}</p>
         <button type="button" class="btn small secondary" id="devBackBtn">← Andere dag</button></div>
-      <p class="muted" style="margin-top:6px">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
+      <p class="devAlertBody">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
       ${whatsAppButtonHtml()}
     </div>
     ${renderDevDirection(deviationDay,'heen','Naar Alkmaar (heen)')}
     ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}
     ${lastUpdateDeviation? `<div class="card">${lastUpdateFooter(lastUpdateDeviation)}</div>` : ''}`;
   const backBtn=document.getElementById('devBackBtn');
-  if(backBtn) backBtn.onclick=()=>{ deviationDay=null; renderDeviationTab(); };
+  if(backBtn) backBtn.onclick=()=>{ deviationDay=null; hapticTap(); renderDeviationTab(); };
   wireWhatsAppButton();
   attachDeviationHandlers();
 }
@@ -815,7 +952,7 @@ function renderDevDirection(day,direction,title){
         ${otherIdxs.length? `<select class="devSwapSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" style="width:auto;font-size:12px" aria-label="${girlName(id)} verplaatsen naar andere auto">${swapOptions}</select>` : ''}
         <button type="button" class="btn small secondary devRemoveBtn" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}">Verwijder uit auto</button>
       </div>`).join('') || '<p class="muted">Geen passagiers meer in deze auto.</p>';
-    return `<div class="group" data-devcar="${day}|${direction}|${idx}">
+    return `<div class="group devCard" data-devcar="${day}|${direction}|${idx}">
       <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
       <div class="time">${c.departureTime||'--:--'} <input type="time" class="devDeptimeInp" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" value="${c.departureTime||''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px"></div>
       <label style="margin-top:8px">Chauffeur</label>
@@ -1337,7 +1474,22 @@ async function createGroupCustom(day,direction,ids){
 function renderSchedule(){
   const box=document.getElementById('tab-schedule');
   if(!box) return;
-  box.innerHTML = DAYS.map(([k,label])=>renderDay(k,label)).join('') + lastUpdateFooter(lastUpdateRooster);
+  const pillsHtml = DAYS.map(([k,label])=>{
+    const carCount = groupsFor(k,'heen').length + groupsFor(k,'terug').length;
+    const isActive = k===scheduleDay;
+    return `<button type="button" class="daypill ${isActive?'active':''}" data-schedday="${k}" aria-label="${label}">
+      <span class="daypillTop">${label.slice(0,2).toUpperCase()}</span>
+      <span class="daypillSub">${carCount} auto${carCount===1?'':'\u2019s'}</span>
+      ${k===todayKey? '<span class="daypillToday" aria-hidden="true"></span>' : ''}
+    </button>`;
+  }).join('');
+  const label = DAYS.find(([k])=>k===scheduleDay)[1];
+  box.innerHTML = `<div class="daypills" role="tablist" aria-label="Kies een dag">${pillsHtml}</div>`
+    + renderDay(scheduleDay, label)
+    + lastUpdateFooter(lastUpdateRooster);
+  document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
+    scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
+  });
   attachScheduleHandlers();
 }
 function renderDay(day,label){
@@ -1368,11 +1520,19 @@ function renderDirection(day,direction,title){
       return `<option value="${oid}" ${i===0?'selected':''}>Auto: ${dname}</option>`;
     }).join('');
     return `<div class="group confirmed" data-gid="${gid}">
-      <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
-      <div class="time">${departure}${canEdit? ` <input type="time" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px">`:''}</div>
+      <div class="rowflex" style="align-items:flex-start;gap:10px">
+        <div class="rowflex" style="gap:10px;align-items:flex-start;flex:1">
+          <span style="width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${grps.findIndex(([oid])=>oid===gid)+1}</span>
+          <div>
+            <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
+            <div class="time">${departure}${canEdit? ` <input type="time" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px">`:''}</div>
+          </div>
+        </div>
+        ${driver? `<span class="capbadge">${g.girlIds.length}/${seats(driver)} plekken</span>` : ''}
+      </div>
       <div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}` : `Klaar om op te halen: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`}</div>
       <div>${g.girlIds.map(id=>`<span class="pill">${girlName(id)}</span>`).join('')}</div>
-      ${driver? `<div class="driver">🚘 ${esc(driver.parentName)} rijdt <span class="cap">(${g.girlIds.length}/${seats(driver)} bezet)</span></div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
+      ${driver? `<div class="driver">🚘 Chauffeur: ${esc(driver.parentName)}</div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
       ${reserves? `<div class="reserve">Reserve: ${reserves}</div>`:''}
       ${canEdit? `<div class="rowflex" style="margin-top:8px">
           <select data-swap="${gid}" style="flex:1" aria-label="Chauffeur wisselen">${driverOptions||'<option>Geen kandidaten</option>'}</select>
