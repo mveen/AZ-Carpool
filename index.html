@@ -152,6 +152,9 @@ let prefs={rules:[]};
 let shiftPriority={}; // { "Ma_heen": {familyId: rank}, ... }
 
 function fam(id){return families[id]||{parentName:"?",girlName:"?",capacity:4,schedule:{},availability:{}};}
+// "capacity" as entered/stored is the TOTAL car capacity including the driver's own seat.
+// Every scheduling/display calculation needs the PASSENGER seat count, which is one less.
+function seats(f){ return Math.max(0, (f.capacity||0) - 1); }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function girlName(id){ return esc(fam(id).girlName||fam(id).parentName||id); }
 function myFamilyId(){ return impersonateFamilyId || (links[me] && links[me].familyId) || me; }
@@ -334,7 +337,9 @@ function familyFormHtml(prefix,f){
   return `
     <label>Naam ouder</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}">
     <label>Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}">
-    <label>Autocapaciteit (incl. bestuurder)</label><input type="number" id="${prefix}_capacity" min="1" max="9" value="${f.capacity||4}">
+    <label>Totale autocapaciteit (incl. bestuurder — dus bij 5 stoelen totaal is er plek voor 4 passagiers)</label>
+    <input type="number" id="${prefix}_capacity" min="1" max="9" value="${f.capacity||4}" oninput="document.getElementById('${prefix}_capacityHint').textContent = 'Plek voor '+Math.max(0,(parseInt(this.value)||0)-1)+' passagier(s)';">
+    <p class="muted" id="${prefix}_capacityHint" style="margin-top:2px">Plek voor ${Math.max(0,(f.capacity||4)-1)} passagier(s)</p>
     <p class="muted" style="margin-top:10px">Weekschema, beschikbaarheid &amp; back-up:</p>
     ${dayBlocks}`;
 }
@@ -643,14 +648,14 @@ function renderAvailabilityTable(){
     const cells = DAYS.map(([k])=>{
       const a=(f.availability&&f.availability[k])||{};
       const cellFor = (isDefault,isBackup) => isDefault
-        ? `<span style="color:var(--ok);font-weight:700">${f.capacity}</span>`
-        : isBackup ? `<span style="color:var(--backup);font-weight:400">${f.capacity}</span>` : '<span class="muted">–</span>';
+        ? `<span style="color:var(--ok);font-weight:700">${seats(f)}</span>`
+        : isBackup ? `<span style="color:var(--backup);font-weight:400">${seats(f)}</span>` : '<span class="muted">–</span>';
       return `<td style="text-align:center">${cellFor(a.heen,a.backupHeen)}</td><td style="text-align:center">${cellFor(a.terug,a.backupTerug)}</td>`;
     }).join('');
     return `<tr style="border-top:1px solid var(--border)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
   }).join('');
   return `<div style="overflow-x:auto"><table class="avail">${head}${body}</table></div>
-    <p class="muted" style="margin-top:6px"><span style="color:var(--ok);font-weight:700">Vet groen</span> = standaard beschikbaar. <span style="color:var(--backup)">Grijs</span> = back-up (indien nodig). Cijfer = autocapaciteit. H = heen, T = terug.</p>`;
+    <p class="muted" style="margin-top:6px"><span style="color:var(--ok);font-weight:700">Vet groen</span> = standaard beschikbaar. <span style="color:var(--backup)">Grijs</span> = back-up (indien nodig). Cijfer = plek voor passagiers (niet de totale autocapaciteit). H = heen, T = terug.</p>`;
 }
 
 function renderPrefsCard(){
@@ -692,7 +697,7 @@ function renderShiftPriorityRows(shiftKeyVal){
   if(!rows.length){ div.innerHTML=`<p class="muted">Geen beschikbare chauffeurs voor deze shift.</p>`; return; }
   div.innerHTML = rows.map(([id,f],i)=>`
     <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--border)">
-      <span>${i+1}. ${esc(f.parentName||'?')} <span class="muted">(${esc(f.girlName||'')}, ${f.capacity} pl.)</span></span>
+      <span>${i+1}. ${esc(f.parentName||'?')} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} pl.)</span></span>
       <span style="display:flex;gap:4px">
         <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>▲</button>
         <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>▼</button>
@@ -988,7 +993,7 @@ function alreadyGrouped(day,direction){
 }
 function eligibleDrivers(day,direction,count){
   return sortByShiftPriority(day,direction, Object.entries(families).filter(([id,f])=>
-    isAvailable(f,day,direction) && (f.capacity||0)>=count
+    isAvailable(f,day,direction) && seats(f)>=count
   ));
 }
 function availableDrivers(day,direction){
@@ -1024,89 +1029,71 @@ function scoreSplitPrefs(c1,c2,gap){
   const prefWeight = gap<=prefWindow ? 500 : 10;
   return {broken,satisfied,prefWeight};
 }
+// Greedy time+capacity clustering: as many cars as actually needed, not capped at 2.
+// A new car starts whenever the next girl would push the current car's time span past the
+// threshold, OR whenever no available driver has enough seats for one more passenger.
 function planClusters(day,direction,list){
   if(!list.length) return [];
   const gapLimit = (settings.gapThresholdHours||3)*60;
-  const withMin = list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
-  const totalGap = withMin[withMin.length-1].min - withMin[0].min;
-  const oneCarOk = eligibleDrivers(day,direction,withMin.length).length>0;
-  if(oneCarOk && totalGap<=gapLimit) return [withMin.map(x=>x.id)];
   const avail = availableDrivers(day,direction);
-  const splitCoverable = (n1,n2) => avail.some(([idA,fA])=>avail.some(([idB,fB])=> idA!==idB &&
-    ((fA.capacity>=n1 && fB.capacity>=n2) || (fB.capacity>=n1 && fA.capacity>=n2))));
-  let best=null, bestScore=-Infinity;
-  for(let k=1;k<withMin.length;k++){
-    const c1=withMin.slice(0,k).map(x=>x.id), c2=withMin.slice(k).map(x=>x.id);
-    if(!splitCoverable(c1.length,c2.length)) continue;
-    const gap=withMin[k].min-withMin[k-1].min;
-    const {broken,satisfied,prefWeight}=scoreSplitPrefs(c1,c2,gap);
-    const score = -broken*1000 + satisfied*prefWeight + gap*0.01;
-    if(score>bestScore){ bestScore=score; best=[c1,c2]; }
-  }
-  if(best) return best;
-  let bestSplit=1,bestG=-1;
-  for(let k=1;k<withMin.length;k++){ const gap=withMin[k].min-withMin[k-1].min; if(gap>bestG){bestG=gap;bestSplit=k;} }
-  return [withMin.slice(0,bestSplit).map(x=>x.id), withMin.slice(bestSplit).map(x=>x.id)];
+  const maxSeats = avail.length? Math.max(...avail.map(([id,f])=>seats(f))) : 0;
+  const withMin = list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
+  const clusters=[]; let cur=[];
+  withMin.forEach(item=>{
+    const exceedsGap = cur.length && (item.min-cur[0].min>gapLimit);
+    const exceedsSeats = maxSeats>0 && cur.length>=maxSeats;
+    if(cur.length && (exceedsGap||exceedsSeats)){ clusters.push(cur); cur=[]; }
+    cur.push(item);
+  });
+  if(cur.length) clusters.push(cur);
+  let result = clusters.map(c=>c.map(x=>x.id));
+  result = enforceTogetherPrefs(result, day, direction, maxSeats);
+  return result;
 }
-function planPrimaryOption(day,direction,list){
-  if(!list.length) return null;
-  const gapLimit=(settings.gapThresholdHours||3)*60;
-  const withMin=list.map(([id,f])=>({id,min:timeToMinutes(f.schedule[day][direction])})).sort((a,b)=>a.min-b.min);
-  const n=withMin.length;
-  const totalGap=withMin[n-1].min-withMin[0].min;
-  const priorityOrder=sortByShiftPriority(day,direction, availableDrivers(day,direction));
-  if(!priorityOrder.length) return null;
-  const [id1,f1]=priorityOrder[0];
-  if(f1.capacity>=n && totalGap<=gapLimit){
-    return {label:`${esc(f1.parentName)} (${n}/${f1.capacity} pl.)`, assignment:[{driverId:id1,girlIds:withMin.map(x=>x.id)}]};
-  }
-  if(priorityOrder.length<2) return null;
-  const [id2,f2]=priorityOrder[1];
-  const parentWindow = settings.parentPrefWindowMinutes!=null? settings.parentPrefWindowMinutes : 60;
-
-  // Pass 1: best split on time/Reisvoorkeuren alone — this is the bar every split must clear.
-  const candidates=[];
-  let baseBestScore=-Infinity;
-  for(let k=1;k<n;k++){
-    const c1obj=withMin.slice(0,k), c2obj=withMin.slice(k);
-    const c1=c1obj.map(x=>x.id), c2=c2obj.map(x=>x.id);
-    const fitsAB=f1.capacity>=c1.length && f2.capacity>=c2.length;
-    const fitsBA=f2.capacity>=c1.length && f1.capacity>=c2.length;
-    if(!fitsAB && !fitsBA) continue;
-    const gap=withMin[k].min-withMin[k-1].min;
-    const {broken,satisfied,prefWeight}=scoreSplitPrefs(c1,c2,gap);
-    const baseScore=-broken*1000+satisfied*prefWeight+gap*0.01;
-    candidates.push({c1,c2,c1obj,c2obj,fitsAB,fitsBA,baseScore});
-    if(baseScore>baseBestScore) baseBestScore=baseScore;
-  }
-  if(!candidates.length) return null;
-
-  // Pass 2: among splits that are genuinely tied on that bar, prefer whichever lets a girl
-  // ride with her own available parent within the configured wait window — never below it,
-  // so this preference can only break ties, not force an otherwise-worse split.
-  let best=null, bestParentCount=-1;
-  candidates.forEach(cand=>{
-    if(cand.baseScore < baseBestScore - 0.001) return;
-    let parentCount=0;
-    [[cand.c1obj,id1],[cand.c2obj,id2]].forEach(([clusterObj,driverId])=>{
-      if(clusterObj.some(x=>x.id===driverId)){
-        const clusterGap = Math.max(...clusterObj.map(x=>x.min)) - Math.min(...clusterObj.map(x=>x.min));
-        if(clusterGap<=parentWindow) parentCount++;
+// Post-pass: if a "samen reizen" rule got split across cars by the greedy pass above, pull
+// the minority members into whichever car holds the majority, as long as that car has room.
+function enforceTogetherPrefs(clusters, day, direction, maxSeats){
+  (prefs.rules||[]).filter(r=>r.type==='together').forEach(r=>{
+    const ids=(r.ids||[]).filter(gid=>clusters.some(c=>c.includes(gid)));
+    if(ids.length<2) return;
+    const counts={};
+    ids.forEach(gid=>{ const i=clusters.findIndex(c=>c.includes(gid)); if(i>=0) counts[i]=(counts[i]||0)+1; });
+    if(Object.keys(counts).length<=1) return;
+    const targetIdx = +Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+    ids.forEach(gid=>{
+      const curIdx = clusters.findIndex(c=>c.includes(gid));
+      if(curIdx>=0 && curIdx!==targetIdx && (!maxSeats || clusters[targetIdx].length<maxSeats)){
+        clusters[curIdx]=clusters[curIdx].filter(x=>x!==gid);
+        clusters[targetIdx]=[...clusters[targetIdx], gid];
       }
     });
-    if(parentCount>bestParentCount){ bestParentCount=parentCount; best={c1:cand.c1,c2:cand.c2,fitsAB:cand.fitsAB,fitsBA:cand.fitsBA}; }
   });
-  if(!best) return null;
-  let g1=best.c1,g2=best.c2;
-  if(!best.fitsAB && best.fitsBA){ g1=best.c2; g2=best.c1; }
-  return {label:`${esc(f1.parentName)} &amp; ${esc(f2.parentName)}`, assignment:[{driverId:id1,girlIds:g1},{driverId:id2,girlIds:g2}]};
+  return clusters.filter(c=>c.length);
+}
+// Assigns each cluster to the highest-priority available driver with enough seats who
+// hasn't already been used for another cluster this shift — generalizes to any car count.
+function planPrimaryOption(day,direction,list){
+  if(!list.length) return null;
+  const clusters = planClusters(day,direction,list);
+  if(!clusters.length) return null;
+  const priorityOrder = sortByShiftPriority(day,direction, availableDrivers(day,direction));
+  if(!priorityOrder.length) return null;
+  const used=new Set(); const assignment=[];
+  for(const cluster of clusters){
+    const driver = priorityOrder.find(([id,f])=> !used.has(id) && seats(f)>=cluster.length);
+    if(!driver) return null;
+    used.add(driver[0]);
+    assignment.push({driverId:driver[0], girlIds:cluster});
+  }
+  const label = assignment.map(a=>esc(fam(a.driverId).parentName)).join(' &amp; ');
+  return {label, assignment};
 }
 function planOptions(day,direction,list){
   const clusters = planClusters(day,direction,list);
   let opts;
   if(clusters.length===1){
     const c=clusters[0];
-    opts = eligibleDrivers(day,direction,c.length).map(([id,f])=>({label:`${esc(f.parentName)} (${c.length}/${f.capacity} pl.)`, assignment:[{driverId:id,girlIds:c}]}));
+    opts = eligibleDrivers(day,direction,c.length).map(([id,f])=>({label:`${esc(f.parentName)} (${c.length}/${seats(f)} pl.)`, assignment:[{driverId:id,girlIds:c}]}));
   } else if(clusters.length===2){
     const [c1,c2]=clusters;
     const avail=availableDrivers(day,direction);
@@ -1114,14 +1101,18 @@ function planOptions(day,direction,list){
     for(let i=0;i<avail.length;i++)for(let j=i+1;j<avail.length;j++){
       const [idA,fA]=avail[i], [idB,fB]=avail[j];
       let pick=null;
-      if(fA.capacity>=c1.length && fB.capacity>=c2.length) pick=[{driverId:idA,girlIds:c1},{driverId:idB,girlIds:c2}];
-      else if(fB.capacity>=c1.length && fA.capacity>=c2.length) pick=[{driverId:idB,girlIds:c1},{driverId:idA,girlIds:c2}];
+      if(seats(fA)>=c1.length && seats(fB)>=c2.length) pick=[{driverId:idA,girlIds:c1},{driverId:idB,girlIds:c2}];
+      else if(seats(fB)>=c1.length && seats(fA)>=c2.length) pick=[{driverId:idB,girlIds:c1},{driverId:idA,girlIds:c2}];
       if(pick){
         const key=[pick[0].driverId,pick[1].driverId].sort().join('+');
         if(!seen.has(key)){ seen.add(key); opts.push({label:`${esc(fA.parentName)} &amp; ${esc(fB.parentName)}`, assignment:pick}); }
       }
     }
-  } else opts=[];
+  } else {
+    // 3+ cars needed: the combinatorial alternative search is skipped (would explode with
+    // more clusters); only the priority-driven primary proposal is offered for these shifts.
+    opts=[];
+  }
   opts.sort((a,b)=>{
     const pa=a.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId),0);
     const pb=b.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId),0);
@@ -1178,8 +1169,11 @@ function renderDirection(day,direction,title){
     const departure = g.departureTime || departureFallback || '--:--';
     const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
     const reserves = (g.reserveFamilyIds||[]).map(id=>esc(fam(id).parentName)).join(', ');
-    const eligible = eligibleDrivers(day,direction,g.girlIds.length);
-    const driverOptions = `<option value="" disabled ${!g.driverFamilyId?'selected':''}>-- kies chauffeur --</option>` + eligible.map(([id,f])=>`<option value="${id}" ${id===g.driverFamilyId?'selected':''}>${esc(f.parentName)} (${f.capacity} pl.)</option>`).join('');
+    // Only offer drivers who aren't already committed to another car this same shift —
+    // prevents double-booking instead of fixing it up after the fact.
+    const busyElsewhere = new Set(grps.filter(([oid])=>oid!==gid).map(([,og])=>og.driverFamilyId).filter(Boolean));
+    const eligible = eligibleDrivers(day,direction,g.girlIds.length).filter(([id])=>!busyElsewhere.has(id));
+    const driverOptions = `<option value="" disabled ${!g.driverFamilyId?'selected':''}>-- kies chauffeur --</option>` + eligible.map(([id,f])=>`<option value="${id}" ${id===g.driverFamilyId?'selected':''}>${esc(f.parentName)} (${seats(f)} pl.)</option>`).join('');
     const otherGroups = grps.filter(([oid])=>oid!==gid);
     const moveOptions = otherGroups.map(([oid,og],i)=>{
       const dname = og.driverFamilyId? esc(fam(og.driverFamilyId).parentName) : 'geen chauffeur';
@@ -1190,7 +1184,7 @@ function renderDirection(day,direction,title){
       <div class="time">${departure}${canEdit? ` <input type="time" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px">`:''}</div>
       <div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}` : `Klaar om op te halen: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`}</div>
       <div>${g.girlIds.map(id=>`<span class="pill">${girlName(id)}</span>`).join('')}</div>
-      ${driver? `<div class="driver">🚘 ${esc(driver.parentName)} rijdt <span class="cap">(${g.girlIds.length}/${driver.capacity} bezet)</span></div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
+      ${driver? `<div class="driver">🚘 ${esc(driver.parentName)} rijdt <span class="cap">(${g.girlIds.length}/${seats(driver)} bezet)</span></div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
       ${reserves? `<div class="reserve">Reserve: ${reserves}</div>`:''}
       ${canEdit? `<div class="rowflex" style="margin-top:8px">
           <select data-swap="${gid}" style="flex:1" aria-label="Chauffeur wisselen">${driverOptions||'<option>Geen kandidaten</option>'}</select>
@@ -1219,7 +1213,7 @@ function renderDirection(day,direction,title){
       : `<p class="muted" style="margin:10px 0 4px">Tijdsverschil is te groot voor 1 auto (grens: ${settings.gapThresholdHours} uur) — max. 2 auto's. Optie 1 volgt je selectievolgorde:</p>`;
     if(options.length){
       suggestHtml = clusterLabel + options.map((opt,i)=>{
-        const sub = opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${fam(a.driverId).capacity} pl.)`).join(' · ');
+        const sub = opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
         return `<div class="group suggestion${i===0?' primary':''}">
           <div class="fitok">${i===0?'<span class="badge rec">AANBEVOLEN</span> ':'✅ '}Optie ${i+1}: ${opt.label}</div>
           <div class="subtime">${sub}</div>
@@ -1293,12 +1287,23 @@ function attachScheduleHandlers(){
     if(!girlId||!toGid){ showToast("Kies eerst een dochter én een bestemming."); return; }
     const from=groups[gid], to=groups[toGid];
     if(!from||!to) return;
+    // The destination car must actually have a free passenger seat.
+    if(to.driverFamilyId){
+      const toSeats = seats(fam(to.driverFamilyId));
+      if(to.girlIds.length >= toSeats){
+        showToast(`Geen plek meer in die auto (${to.girlIds.length}/${toSeats} bezet).`);
+        return;
+      }
+    }
     try{
       const newFrom=from.girlIds.filter(id=>id!==girlId);
       const newTo=[...to.girlIds, girlId];
-      if(newFrom.length){ await db.doc("groups/"+gid).update({girlIds:newFrom}); }
+      // Both cars' departure times depend on who's actually in them — recalculate both.
+      const fromDeparture = computeDepartureTime(from.day, from.direction, newFrom);
+      const toDeparture = computeDepartureTime(to.day, to.direction, newTo);
+      if(newFrom.length){ await db.doc("groups/"+gid).update({girlIds:newFrom, departureTime: fromDeparture}); }
       else { await db.doc("groups/"+gid).delete(); }
-      await db.doc("groups/"+toGid).update({girlIds:newTo});
+      await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime: toDeparture});
       showToast("Verplaatst ✓");
     }catch(e){showToast("Verplaatsen mislukt: "+(e&&e.message||e));}
   });
