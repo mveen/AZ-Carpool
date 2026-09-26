@@ -165,7 +165,7 @@ let shiftPriority={}; // { "Ma_heen": {familyId: rank}, ... }
 
 function fam(id){return families[id]||{parentName:"?",girlName:"?",capacity:4,schedule:{},availability:{}};}
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function girlName(id){ return esc(girlName(id)||id); }
+function girlName(id){ return esc(fam(id).girlName||fam(id).parentName||id); }
 function myFamilyId(){ return impersonateFamilyId || (links[me] && links[me].familyId) || me; }
 function shiftKeyOf(day,direction){ return day+'_'+direction; }
 function shiftPriorityOf(day,direction,id){
