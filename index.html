@@ -375,6 +375,19 @@ document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener(
     if(el) el.style.display = (b.dataset.tab===t)?'block':'none';
   });
 }));
+// A link like #myweek (used by the WhatsApp update message) opens straight to that tab
+// instead of always defaulting to Rooster.
+(function applyInitialHashTab(){
+  try{
+    const hash=(location.hash||'').replace('#','');
+    if(!/^[a-z]+$/i.test(hash)) return; // only ever expect plain tab names — anything else is ignored, not risked
+    const btn=document.querySelector(`nav button[data-tab="${hash}"]`);
+    if(btn){
+      document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+    }
+  }catch(e){ /* a malformed hash must never be able to break the rest of the app's startup */ }
+})();
 
 // ---------- Shared family form: per-day <details> instead of a 5-column grid, so it's usable on phones ----------
 function familyFormHtml(prefix,f){
@@ -729,6 +742,28 @@ async function saveDeviationCars(day,direction,cars){
   try{ await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars}); recordLastUpdate('Deviation'); }
   catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); }
 }
+// ---------- WhatsApp update button: opens a pre-filled draft, coordinator/parent still sends it ----------
+const APP_URL = "https://mveen.github.io/AZ-Carpool/";
+function activeDeviationDayLabel(){
+  const labels = DAYS.filter(([k])=>['heen','terug'].some(dir=>activeDeviation(k,dir))).map(([,label])=>label);
+  return labels.length? labels.join(' en ') : 'deze week';
+}
+function buildWhatsAppMessage(){
+  // WhatsApp messages are plain text — there's no way to make "Mijn week" itself a hidden
+  // hyperlink. The raw link is placed right after it and WhatsApp auto-linkifies it.
+  return `Het schema is bijgewerkt voor ${activeDeviationDayLabel()}. Zie Mijn week voor de impact: ${APP_URL}#myweek`;
+}
+function sendWhatsAppUpdate(){
+  const msg = buildWhatsAppMessage();
+  window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank', 'noopener,noreferrer');
+}
+function whatsAppButtonHtml(){
+  return `<button type="button" class="btn secondary" id="waUpdateBtn">Stuur update via WhatsApp</button>`;
+}
+function wireWhatsAppButton(){
+  const btn=document.getElementById('waUpdateBtn');
+  if(btn) btn.onclick=sendWhatsAppUpdate;
+}
 function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
   if(!box) return;
@@ -738,9 +773,11 @@ function renderDeviationTab(){
       <h2>Dagafwijking</h2>
       <p class="muted">Voor een eenmalige wijziging deze week (ziek, rijbeurt ruilen, etc). Dit verandert niets aan het standaard Rooster en wordt elk weekend automatisch gewist — kies eerst een dag.</p>
       <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0">${label}</button>`).join('')}</div>
+      ${whatsAppButtonHtml()}
       ${lastUpdateFooter(lastUpdateDeviation)}
     </div>`;
     document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; renderDeviationTab(); });
+    wireWhatsAppButton();
     return;
   }
   const dayLabel = DAYS.find(([k])=>k===deviationDay)[1];
@@ -748,12 +785,14 @@ function renderDeviationTab(){
       <div class="rowflex"><h2 style="margin:0">Dagafwijking — ${dayLabel}</h2>
         <button type="button" class="btn small secondary" id="devBackBtn">← Andere dag</button></div>
       <p class="muted" style="margin-top:6px">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
+      ${whatsAppButtonHtml()}
     </div>
     ${renderDevDirection(deviationDay,'heen','Naar Alkmaar (heen)')}
     ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}
     ${lastUpdateDeviation? `<div class="card">${lastUpdateFooter(lastUpdateDeviation)}</div>` : ''}`;
   const backBtn=document.getElementById('devBackBtn');
   if(backBtn) backBtn.onclick=()=>{ deviationDay=null; renderDeviationTab(); };
+  wireWhatsAppButton();
   attachDeviationHandlers();
 }
 function renderDevDirection(day,direction,title){
