@@ -46,7 +46,8 @@
 }
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100%;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100%;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+html{overflow-x:hidden}
 #topbar{position:fixed;top:0;left:0;right:0;z-index:5}
 header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));color:#fff}
 header h1{margin:0;font-size:18px;font-weight:800}
@@ -69,6 +70,7 @@ input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:va
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid5>button{min-width:0;padding:8px 4px;font-size:12px;white-space:normal;word-break:break-word;line-height:1.2}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
 .chk input{min-height:18px}
 button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;min-height:40px;font-family:var(--font-sans)}
