@@ -53,8 +53,8 @@ header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:li
 header h1{margin:0;font-size:18px;font-weight:800}
 header p{margin:2px 0 0;font-size:12px;opacity:.9}
 /* ---------- Bottom tab bar (fixed, safe-area aware, thumb-reachable) ---------- */
-#bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px)}
-.navtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:8px 4px 6px;min-height:56px;cursor:pointer;color:var(--muted);position:relative}
+#bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);height:calc(56px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+.navtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:0 4px;height:56px;cursor:pointer;color:var(--muted);position:relative}
 .navtab .navicon{font-size:19px;line-height:1}
 .navtab .navicon svg{width:22px;height:22px}
 .navtab .navicon .ph-fill{display:none}
@@ -302,6 +302,7 @@ const PH_PATHS = {
   'arrow-left': `<line x1="216" y1="128" x2="40" y2="128" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="104,64 40,128 104,192" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
   sun: `<circle cx="128" cy="128" r="42" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
   moon: `<path d="M216 136A88 88 0 1 1 120 40a70 70 0 0 0 96 96Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
+  eye: `<path d="M16 128 Q128 32 240 128 Q128 224 16 128 Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><circle cx="128" cy="128" r="32" fill="none" stroke="currentColor" stroke-width="16"/>`,
 };
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 // Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
@@ -318,6 +319,190 @@ function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e
 let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
 let families={}, groups={}, links={}, deviations={};
 let lastUpdateRooster=null, lastUpdateDeviation=null;
+
+// ---------- Match feeds (Sportlink iCal) ----------
+// Fetched from data.sportlink.com, which is not expected to allow direct browser fetches
+// (CORS) — routed through a public CORS-proxy. If that proxy service ever goes down, this
+// is the one line to swap for a replacement.
+const MATCH_PROXY = "https://api.allorigins.win/raw?url=";
+const DEFAULT_MATCH_FEEDS = [
+  {label:"Jong AZ", url:"https://data.sportlink.com/ical-team?token=nbgacrfdeqllnhhemrnimcr0bm"},
+  {label:"O18", url:"https://data.sportlink.com/ical-team?token=tgd7nqr820cgq0og1b55v6gcps"},
+  {label:"O17", url:"https://data.sportlink.com/ical-team?token=c36eg5u9mlfdktvmb76t7chogo"},
+];
+let matchFeeds = [];              // live from settings/matchFeeds, falls back to DEFAULT_MATCH_FEEDS
+let matches = [];                 // successfully fetched THIS session (empty until a live fetch succeeds)
+let matchesSource = null;         // 'live' | 'cache' | null
+let matchesFetchedAt = null;
+let matchFetchFailedTeams = [];
+let cachedMatches = [];           // from settings/matchCache, used only when a live fetch hasn't succeeded
+let cachedMatchesAt = null;
+
+function activeMatchFeeds(){ return matchFeeds.length? matchFeeds : DEFAULT_MATCH_FEEDS; }
+
+// Minimal, purpose-built iCal parser — just enough for Sportlink's simple, consistent VEVENT
+// shape (SUMMARY/DTSTART;TZID=.../LOCATION), not a full RFC5545 implementation.
+function parseICS(text, teamLabel){
+  const events = [];
+  text.split('BEGIN:VEVENT').slice(1).forEach(block=>{
+    const body = block.split('END:VEVENT')[0];
+    const lines = body.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    const get = (prefix)=>{ const line=lines.find(l=>l.startsWith(prefix)); return line? line.slice(line.indexOf(':')+1) : ''; };
+    const summary = get('SUMMARY');
+    const dtstartLine = lines.find(l=>l.startsWith('DTSTART'));
+    const location = get('LOCATION');
+    if(!dtstartLine || !summary) return;
+    const dtValue = dtstartLine.slice(dtstartLine.indexOf(':')+1);
+    const m = dtValue.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
+    if(!m) return;
+    const [,y,mo,d,h,mi] = m;
+    // Sportlink times are already Europe/Amsterdam wall-clock time (TZID=Europe/Amsterdam, no
+    // trailing Z) — parsed as plain local-time components, correct for Dutch parents' phones.
+    const start = new Date(+y, +mo-1, +d, +h, +mi);
+    events.push({ teamLabel, summary, location, start });
+  });
+  return events;
+}
+// "TeamA-TeamB" — whichever side contains "AZ" is us; the other is the opponent. Every AZ
+// team name we know of (Jong AZ, AZ O18, AZ O17) contains "AZ", so this is a reliable, simple heuristic.
+function analyzeMatch(summary){
+  const parts = summary.split('-');
+  if(parts.length<2) return {opponent:summary, isHome:null, home:summary, away:''};
+  const home = parts[0].trim(), away = parts.slice(1).join('-').trim();
+  const homeIsAZ = /az/i.test(home), awayIsAZ = /az/i.test(away);
+  if(homeIsAZ && !awayIsAZ) return {opponent:away, isHome:true, home, away};
+  if(!homeIsAZ && awayIsAZ) return {opponent:home, isHome:false, home, away};
+  return {opponent: awayIsAZ? home : away, isHome:homeIsAZ, home, away};
+}
+function matchSlug(m){ return (m.teamLabel+'_'+m.start.getTime()).toLowerCase().replace(/[^a-z0-9_]/g,''); }
+function startOfWeek(d){ const day=(d.getDay()+6)%7; const s=new Date(d); s.setHours(0,0,0,0); s.setDate(d.getDate()-day); return s; }
+function startOfWeekend(d){ const s=startOfWeek(d); const sat=new Date(s); sat.setDate(s.getDate()+5); return sat; }
+function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(now); const e=new Date(s); e.setDate(s.getDate()+7); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
+function matchesThisWeekend(list){ const now=new Date(); const s=startOfWeekend(now); const e=new Date(s); e.setDate(s.getDate()+2); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
+async function fetchTeamMatches(feed){
+  try{
+    const res = await fetch(MATCH_PROXY + encodeURIComponent(feed.url));
+    if(!res.ok) throw new Error('HTTP '+res.status);
+    const text = await res.text();
+    return parseICS(text, feed.label);
+  }catch(e){ return null; } // null = this team's fetch failed, distinct from [] = fetched but no matches
+}
+async function loadAllMatches(){
+  const feeds = activeMatchFeeds();
+  const results = await Promise.all(feeds.map(fetchTeamMatches));
+  const failed = [];
+  let combined = [];
+  results.forEach((evts,i)=>{ if(evts===null) failed.push(feeds[i].label); else combined = combined.concat(evts); });
+  if(combined.length || !matchFetchFailedTeams.length){
+    matches = combined; matchesSource='live'; matchesFetchedAt=Date.now(); matchFetchFailedTeams=failed;
+    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
+  }
+  renderMyWeek(); renderDeviationTab();
+}
+function currentMatchList(){
+  if(matches.length || matchesSource==='live') return matches;
+  return cachedMatches;
+}
+function matchInfoHtml(m){
+  const a = analyzeMatch(m.summary);
+  const dayLabel = m.start.toLocaleDateString('nl-NL',{weekday:'long', day:'numeric', month:'long'});
+  const timeLabel = m.start.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+  const homeAway = a.isHome===true? ' (Thuis)' : a.isHome===false? ' (Uit)' : '';
+  return `<div style="padding:4px 0">
+    <div style="font-weight:700;font-size:13px">${esc(m.teamLabel)}${homeAway} vs ${esc(a.opponent)}</div>
+    <div class="muted" style="font-size:12px">${dayLabel} · ${timeLabel}${m.location? ' · '+esc(m.location):''}</div>
+  </div>`;
+}
+function suggestedMatchDeparture(matchDate){
+  const t = new Date(matchDate.getTime() - 210*60000); // 3.5 hours before
+  return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+}
+// ---------- Weekend match carpools: any parent can set one up per match ----------
+let matchCarpools = {};          // matchSlug -> {teamLabel,summary,location,startMs,cars:[...]}
+let weekendMatchBySlug = {};     // matchSlug -> full match object (for saving denormalized info)
+let openMatchCarpoolForm = null; // the one match currently showing its "add car" form, or null
+async function purgeStaleMatchCarpools(){
+  const cutoff = Date.now() - 24*60*60*1000; // 1 day grace period after the match
+  for(const [slug,d] of Object.entries(matchCarpools)){
+    if((d.startMs||0) < cutoff){ try{ await db.doc("matchCarpools/"+slug).delete(); }catch(e){} }
+  }
+}
+function renderWeekendMatchCarpoolCard(){
+  const weekendMatches = matchesThisWeekend(currentMatchList());
+  weekendMatchBySlug = {};
+  if(!weekendMatches.length){
+    return `<div class="card"><h2>Wedstrijdcarpool dit weekend</h2><p class="muted">Geen wedstrijden gevonden voor dit weekend.</p></div>`;
+  }
+  const allFamilies = Object.entries(families);
+  const matchesHtml = weekendMatches.map(m=>{
+    const slug = matchSlug(m);
+    weekendMatchBySlug[slug] = m;
+    const doc = matchCarpools[slug];
+    const cars = (doc && doc.cars) || [];
+    const carsHtml = cars.length? cars.map((c,idx)=>`
+      <div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:12.5px">${phIcon('car')} ${esc(fam(c.driverFamilyId).parentName)} · ${c.girlIds.map(id=>girlName(id)).join(', ')} · vertrek ${esc(c.departureTime)}</span>
+        <button type="button" class="btn small secondary" data-delmatchcar="${slug}|${idx}" aria-label="Verwijder carpool">${phIcon('trash')}</button>
+      </div>`).join('') : '<p class="muted" style="font-size:12px">Nog geen carpool ingesteld.</p>';
+    const isOpen = openMatchCarpoolForm===slug;
+    let formHtml;
+    if(isOpen){
+      const suggestedDep = suggestedMatchDeparture(m.start);
+      const girlOptions = allFamilies.map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}">${esc(f.girlName||f.parentName||id)}</label>`).join('');
+      const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}">${esc(f.parentName)}</option>`).join('');
+      formHtml = `<div class="dayFormCard" style="margin-top:8px">
+        <label style="margin-top:0">Chauffeur</label>
+        <select id="matchCarDriver_${slug}"><option value="">-- kies --</option>${driverOptions}</select>
+        <label>Welke dochters?</label>
+        <div>${girlOptions}</div>
+        <label>Vertrektijd</label>
+        <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
+        <p class="muted" style="font-size:11px;margin-top:2px">Voorstel: 3,5 uur voor aanvang (${suggestedDep})</p>
+        <button type="button" class="btn small secondary" data-savematchcar="${slug}">Opslaan</button>
+        <button type="button" class="btn small secondary" data-cancelmatchcar="${slug}">Annuleren</button>
+      </div>`;
+    } else {
+      formHtml = `<button type="button" class="btn small secondary" data-addmatchcar="${slug}" style="margin-top:6px">+ Auto toevoegen</button>`;
+    }
+    return `<div class="group" style="border-left-color:var(--info)">${matchInfoHtml(m)}${carsHtml}${formHtml}</div>`;
+  }).join('');
+  return `<div class="card">
+    <h2>Wedstrijdcarpool dit weekend</h2>
+    <p class="muted">Zet een carpool op voor een wedstrijd dit weekend. Iedereen kan dit doen en aanpassen.</p>
+    ${matchesHtml}
+  </div>`;
+}
+function wireWeekendMatchCarpool(){
+  document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{ openMatchCarpoolForm=b.dataset.addmatchcar; hapticTap(); renderDeviationTab(); });
+  document.querySelectorAll('[data-cancelmatchcar]').forEach(b=>b.onclick=()=>{ openMatchCarpoolForm=null; renderDeviationTab(); });
+  document.querySelectorAll('[data-savematchcar]').forEach(b=>b.onclick=async ()=>{
+    const slug=b.dataset.savematchcar;
+    const driverSel=document.getElementById('matchCarDriver_'+slug);
+    const timeInp=document.getElementById('matchCarTime_'+slug);
+    const girlIds=[...document.querySelectorAll('.matchCarGirlPick:checked')].map(c=>c.value);
+    if(!driverSel || !driverSel.value){ showToast("Kies een chauffeur."); return; }
+    if(!girlIds.length){ showToast("Kies minstens 1 dochter."); return; }
+    const m = weekendMatchBySlug[slug];
+    if(!m){ showToast("Kon deze wedstrijd niet vinden — herlaad de pagina."); return; }
+    const existing = matchCarpools[slug];
+    const newCar = {driverFamilyId:driverSel.value, girlIds, departureTime:timeInp.value};
+    const cars = existing? [...existing.cars, newCar] : [newCar];
+    try{
+      await db.doc("matchCarpools/"+slug).set({matchSlug:slug, teamLabel:m.teamLabel, summary:m.summary, location:m.location||'', startMs:m.start.getTime(), cars});
+      openMatchCarpoolForm=null;
+      showToast("Carpool toegevoegd ✓");
+    }catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); }
+  });
+  document.querySelectorAll('[data-delmatchcar]').forEach(b=>b.onclick=async ()=>{
+    const [slug,idxStr]=b.dataset.delmatchcar.split('|'); const idx=+idxStr;
+    const existing=matchCarpools[slug]; if(!existing) return;
+    const cars = existing.cars.filter((_,i)=>i!==idx);
+    try{
+      if(cars.length) await db.doc("matchCarpools/"+slug).set({...existing, cars});
+      else await db.doc("matchCarpools/"+slug).delete();
+    }catch(e){ showToast("Verwijderen mislukt: "+(e&&e.message||e)); }
+  });
+}
 // ISO week (e.g. "2026-W14") — deviations are tagged with this so they can never apply to
 // any week but the one they were made for, regardless of when the app happens to be opened.
 function getISOWeekKey(date){
@@ -527,10 +712,34 @@ async function init(){
       purgeStaleDeviations();
       renderSchedule(); renderMyWeek(); renderDeviationTab();
     }, err=>{ setStatus("⚠️ Fout bij laden dagafwijkingen: "+(err&&err.message||err)); });
+    db.collection("matchCarpools").onSnapshot(snap=>{
+      matchCarpools={}; snap.docs.forEach(d=>matchCarpools[d.id]=d.data());
+      purgeStaleMatchCarpools();
+      renderDeviationTab();
+    }, err=>{});
     db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
       err=>{});
     db.doc("settings/lastUpdateDeviation").onSnapshot(snap=>{ lastUpdateDeviation = snap.exists? snap.data() : null; renderDeviationTab(); renderMyWeek(); },
       err=>{});
+    db.doc("settings/matchFeeds").onSnapshot(snap=>{
+      if(snap.exists && snap.data().feeds && snap.data().feeds.length){ matchFeeds = snap.data().feeds; }
+      else {
+        matchFeeds = [];
+        // Auto-seed the given defaults once, so they're genuinely stored, not just hardcoded —
+        // only the coordinator can write here, and only if nothing is stored yet.
+        if(canEdit && db){ db.doc("settings/matchFeeds").set({feeds:DEFAULT_MATCH_FEEDS}).catch(()=>{}); }
+      }
+      renderBeheer();
+    }, err=>{});
+    db.doc("settings/matchCache").onSnapshot(snap=>{
+      if(snap.exists){
+        const d=snap.data();
+        cachedMatches = (d.matches||[]).map(e=>({teamLabel:e.teamLabel, summary:e.summary, location:e.location, start:new Date(e.startMs)}));
+        cachedMatchesAt = d.fetchedAt||null;
+      }
+      renderMyWeek(); renderDeviationTab();
+    }, err=>{});
+    loadAllMatches();
   }catch(e){ setStatus("⚠️ Kon niet live verbinden: "+(e&&e.message||e)); }
   adjustMainPadding();
 }
@@ -614,16 +823,16 @@ function familyFormHtml(prefix,f){
       <p class="muted" style="margin:0 0 4px">Ochtend / heenrit (Aalsmeer → Alkmaar)</p>
       <div class="driveToggleGroup">
         <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_heen" ${a.heen?'checked':''}>
-        <label for="${prefix}_av_${activeDay}_heen" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Ik rijd standaard</label>
+        <label for="${prefix}_av_${activeDay}_heen" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Beschikbaar</label>
         <input type="checkbox" class="driveToggleInput" id="${prefix}_bkH_${activeDay}" ${a.backupHeen?'checked':''}>
-        <label for="${prefix}_bkH_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up (indien nodig)</label>
+        <label for="${prefix}_bkH_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up</label>
       </div>
       <p class="muted" style="margin:14px 0 4px">Middag / terugrit (Alkmaar → Aalsmeer)</p>
       <div class="driveToggleGroup">
         <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_terug" ${a.terug?'checked':''}>
-        <label for="${prefix}_av_${activeDay}_terug" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Ik rijd standaard</label>
+        <label for="${prefix}_av_${activeDay}_terug" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Beschikbaar</label>
         <input type="checkbox" class="driveToggleInput" id="${prefix}_bkT_${activeDay}" ${a.backupTerug?'checked':''}>
-        <label for="${prefix}_bkT_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up (indien nodig)</label>
+        <label for="${prefix}_bkT_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up</label>
       </div>
     </div>`;
   // A hidden input per OTHER day preserves its own read/write ids so readFamilyForm keeps
@@ -1030,6 +1239,17 @@ function renderMyWeek(){
     </div>`;
   }).join('') || `<p class="muted">Geen dagen met een tijd ingesteld deze week.</p>`;
 
+  const weekMatches = matchesThisWeek(currentMatchList());
+  const matchStatusNote = matchesSource==='live'
+    ? ''
+    : (cachedMatchesAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(cachedMatchesAt).toLocaleString('nl-NL')}</p>` : '');
+  const matchFailNote = matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">Kon niet ophalen voor: ${esc(matchFetchFailedTeams.join(', '))}</p>` : '';
+  const matchesCardHtml = `<div class="card">
+    <h2>Wedstrijden deze week</h2>
+    ${weekMatches.length? weekMatches.map(m=>matchInfoHtml(m)).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">') : '<p class="muted">Geen wedstrijden gevonden voor deze week.</p>'}
+    ${matchFailNote}${matchStatusNote}
+  </div>`;
+
   box.innerHTML = `
     <div class="heroCard">
       <span class="heroTag">PERSOONLIJK OVERZICHT</span>
@@ -1041,6 +1261,7 @@ function renderMyWeek(){
       </div>
     </div>
     ${dayCards}
+    ${matchesCardHtml}
     ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   `;
   wireWhatsAppButton('wa-hero');
@@ -1088,12 +1309,14 @@ function renderDeviationTab(){
     </div>
     <div class="card">
       <h2>Kies een dag</h2>
-      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0">${label}</button>`).join('')}</div>
+      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0" aria-label="${label}">${k}</button>`).join('')}</div>
       ${whatsAppButtonHtml()}
       ${lastUpdateFooter(lastUpdateDeviation)}
-    </div>`;
+    </div>
+    ${renderWeekendMatchCarpoolCard()}`;
     document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
     wireWhatsAppButton();
+    wireWeekendMatchCarpool();
     return;
   }
   const dayLabel = DAYS.find(([k])=>k===deviationDay)[1];
@@ -1317,23 +1540,22 @@ function renderBeheer(){
     </div>` : '';
   const rows = Object.entries(families).map(([id,fd])=>{
     const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
-    const selfLinked = !!(links[me] && links[me].familyId===id);
-    const toggleIcon = isCoord? phIcon('check') : (selfLinked? phIcon('star') : phIcon('warning'));
-    const toggleAria = isCoord? 'Coördinator-rol intrekken' : (selfLinked? 'Maak coördinator' : 'Maak coördinator (let op: niet jouw account)');
     return `
-    <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border)">
+    <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
       <span>${esc(fd.girlName||'(naam?)')} <span class="muted">– ${esc(fd.parentName||'(ouder?)')}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}
         <br><span class="muted">${fd.parentPhone1? `Tel 1: <strong>${esc(fd.parentPhone1)}</strong> · `:''}${fd.parentPhone2? `Tel 2: <strong>${esc(fd.parentPhone2)}</strong> · `:''}${!fd.parentPhone1&&!fd.parentPhone2? 'Tel: <span class="fitbad">niet ingesteld</span> · ':''}${fd.inviteCode? `Code: <strong>${esc(fd.inviteCode)}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
-      <span><button type="button" class="btn small secondary" data-coordedit="${id}" aria-label="Bewerken" title="Bewerken">${phIcon('pencil')}</button>
-      <button type="button" class="btn small secondary" data-togglecoord="${id}" aria-label="${toggleAria}" title="${toggleAria}">${toggleIcon}</button>
-      <button type="button" class="btn small secondary" data-coorddel="${id}" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button></span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn small secondary" data-imptest="${id}" style="display:inline-flex;align-items:center;gap:4px">${phIcon('eye')} Testen</button>
+        <button type="button" class="btn small secondary" data-coordedit="${id}">Wijzig</button>
+        <button type="button" class="btn small secondary" data-coorddel="${id}" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button>
+      </span>
     </div>`;
   }).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
 
   box.innerHTML = `
     <div class="card">
       <h2>Gezinnen beheren</h2>
-      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Wijzigingen worden automatisch opgeslagen. Gebruik "Maak coördinator" om coördinator-toegang aan een gezin te koppelen (blijft werken op elk apparaat, zodra dat gezin via de toegangscode inlogt).</p>
+      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Wijzigingen worden automatisch opgeslagen. "Wijzig" opent ook de coördinator-koppeling voor dit gezin.</p>
       ${dupWarning}
       ${rows}
       <button type="button" class="btn secondary" id="coordNew">+ Nieuw gezin toevoegen</button>
@@ -1363,11 +1585,15 @@ function renderBeheer(){
       </div>
     </div>
     <div class="card">
-      <h2>Test als andere ouder</h2>
-      <p class="muted">Bekijk de app zoals een specifieke ouder hem ziet (alleen-lezen Rooster, geen Beheer), zonder je coördinator-rechten echt te verliezen. Klik daarna op "Stop testen" in de balk bovenaan om terug te gaan.</p>
-      ${Object.keys(families).length? `<label>Bekijk als</label>
-      <select id="impersonateSelect">${Object.entries(families).map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>
-      <button type="button" class="btn secondary" id="startImpersonateBtn">Bekijk als deze ouder</button>` : `<p class="muted">Voeg eerst een gezin toe.</p>`}
+      <h2>Wedstrijdkalenders (Sportlink)</h2>
+      <p class="muted">Deze links voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool dit weekend" (Afwijking).</p>
+      ${activeMatchFeeds().map((f,i)=>`
+        <div class="grid2" style="margin-top:6px">
+          <div><label style="margin-top:0">Naam</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
+          <div><label style="margin-top:0">iCal-link</label><input type="text" class="matchFeedUrl" data-feedidx="${i}" value="${esc(f.url)}"></div>
+        </div>`).join('')}
+      <button type="button" class="btn small secondary" id="refreshMatchesBtn" style="margin-top:8px">${phIcon('refresh')} Nu verversen</button>
+      ${matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(matchesFetchedAt).toLocaleString('nl-NL')}${matchFetchFailedTeams.length? ' — mislukt voor: '+esc(matchFetchFailedTeams.join(', ')) : ''}</p>` : ''}
     </div>
     <div class="card">
       <h2>Beheerderstools</h2>
@@ -1410,22 +1636,7 @@ function renderBeheer(){
       const rules=(prefs.rules||[]).filter((_,i)=>i!==idx);
       try{ await db.doc("settings/prefs").set({rules}); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
     });
-    document.querySelectorAll('[data-togglecoord]').forEach(b=>{
-      const id=b.dataset.togglecoord;
-      const isCurrently = coordinatorConfig && coordinatorConfig.familyId===id;
-      const selfLinked = !!(links[me] && links[me].familyId===id);
-      b.onclick = ()=>{
-        // Switching to a family YOU aren't linked to (or revoking outright) would immediately
-        // drop your own Beheer access — require an explicit second tap so it can't happen by accident.
-        if(!isCurrently && !selfLinked){
-          twoStepConfirm(b, "Let op: jij bent hier zelf niet aan gekoppeld — klik nogmaals om toch door te gaan", ()=>doToggleCoord(id,isCurrently));
-        } else if(isCurrently){
-          twoStepConfirm(b, "Zeker? Je verliest direct je eigen coördinator-toegang", ()=>doToggleCoord(id,isCurrently));
-        } else {
-          doToggleCoord(id,isCurrently);
-        }
-      };
-    });
+    document.querySelectorAll('[data-imptest]').forEach(b=>b.onclick=()=>startImpersonate(b.dataset.imptest));
     const shiftSel=document.getElementById('shiftPrioritySelect');
     if(shiftSel){
       shiftSel.onchange = ()=>{ selectedShiftKey=shiftSel.value; renderShiftPriorityRows(selectedShiftKey); };
@@ -1438,11 +1649,16 @@ function renderBeheer(){
       try{ await db.doc("families/"+b.dataset.coorddel).delete(); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
     }));
     if(coordEditId!==undefined) renderCoordEditor();
-    const startImpBtn=document.getElementById('startImpersonateBtn');
-    if(startImpBtn) startImpBtn.onclick=()=>{
-      const sel=document.getElementById('impersonateSelect');
-      if(sel) startImpersonate(sel.value);
+    const saveMatchFeeds = async ()=>{
+      const labels=[...document.querySelectorAll('.matchFeedLabel')];
+      const urls=[...document.querySelectorAll('.matchFeedUrl')];
+      const feeds = labels.map((el,i)=>({label:el.value.trim(), url:(urls[i]&&urls[i].value.trim())||''})).filter(f=>f.url);
+      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Opgeslagen ✓"); loadAllMatches(); }
+      catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
     };
+    document.querySelectorAll('.matchFeedLabel,.matchFeedUrl').forEach(el=>el.onchange=saveMatchFeeds);
+    const refreshBtn=document.getElementById('refreshMatchesBtn');
+    if(refreshBtn) refreshBtn.onclick=()=>{ showToast("Wedstrijden verversen…"); loadAllMatches(); };
     const sd=document.getElementById('seedPdf');
     if(sd) sd.onclick = ()=>twoStepConfirm(sd,"Zeker?! Alles wordt gewist — klik nogmaals",seedFromPdf);
   }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
@@ -1471,8 +1687,16 @@ function renderCoordEditor(){
   const isNew = coordEditId===null;
   const f = isNew? null : fam(coordEditId);
   const currentCode = f? (f.inviteCode||'') : genCode();
+  const isCoordThis = !isNew && coordinatorConfig && coordinatorConfig.familyId===coordEditId;
+  const selfLinkedThis = !isNew && !!(links[me] && links[me].familyId===coordEditId);
+  const coordToggleHtml = isNew? '' : `
+    <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg)">
+      <span style="font-size:13px">${isCoordThis? '<span class="badge rec">COÖRDINATOR</span>' : '<span class="muted">Nog geen coördinator</span>'}</span>
+      <button type="button" class="btn small secondary" id="coordToggleBtn">${isCoordThis? 'Coördinator intrekken' : (selfLinkedThis? 'Maak coördinator' : phIcon('warning')+' Maak coördinator')}</button>
+    </div>`;
   area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
     <h2>${isNew? 'Nieuw gezin toevoegen' : 'Bewerken: '+esc((f.girlName||f.parentName)||'')}</h2>
+    ${coordToggleHtml}
     <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp — meerdere mensen kunnen dezelfde code gebruiken)</label>
     <div class="rowflex" style="gap:6px">
       <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
@@ -1486,6 +1710,18 @@ function renderCoordEditor(){
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
   wireExclusiveAvailability('coord');
   wireFamilyFormExtras('coord', renderCoordEditor);
+  const ctb=document.getElementById('coordToggleBtn');
+  if(ctb) ctb.onclick=()=>{
+    const isCurrently = coordinatorConfig && coordinatorConfig.familyId===coordEditId;
+    const selfLinked = !!(links[me] && links[me].familyId===coordEditId);
+    if(!isCurrently && !selfLinked){
+      twoStepConfirm(ctb, "Let op: jij bent hier zelf niet aan gekoppeld — klik nogmaals om toch door te gaan", ()=>doToggleCoord(coordEditId,isCurrently));
+    } else if(isCurrently){
+      twoStepConfirm(ctb, "Zeker? Je verliest direct je eigen coördinator-toegang", ()=>doToggleCoord(coordEditId,isCurrently));
+    } else {
+      doToggleCoord(coordEditId,isCurrently);
+    }
+  };
   document.getElementById('coordCancel').onclick = ()=>{ coordEditId=undefined; renderBeheer(); };
   const genBtn=document.getElementById('genCodeBtn');
   if(genBtn) genBtn.onclick=()=>{ document.getElementById('coord_inviteCode').value=genCode(); saveCoordFamily(); };
