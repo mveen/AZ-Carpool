@@ -159,9 +159,10 @@ table.avail th,table.avail td{padding:6px 4px}
 .dayCard .todayTag{background:var(--accent2);color:var(--accent);font-size:9px;font-weight:800;padding:3px 8px;border-radius:var(--radius-sm)}
 .dayCard .dayTimes{font-family:var(--font-mono);font-size:11px;color:var(--muted)}
 .subride{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 10px;margin-top:6px}
-.subride .subrideHead{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;font-weight:700}
+.subride.driving{border-color:var(--ok);border-width:2px}
+.subride .subrideHead{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;font-weight:700}
 .subride .subrideDep{font-family:var(--font-mono);color:var(--accent);font-weight:700}
-.subride .subrideStatus{font-size:10px;color:var(--muted);margin-top:3px}
+.subride .subrideStatus{font-size:12px;color:var(--muted);margin-top:3px}
 .subride .subrideStatus.driving{color:var(--ok);font-weight:700}
 /* ---------- Dagafwijking (amber "warning" theme) ---------- */
 .devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
@@ -200,8 +201,8 @@ table.avail th,table.avail td{padding:6px 4px}
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="currentColor"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68Z" fill="currentColor"/><path d="M162 88a44 44 0 0 1 0 88 44 44 0 0 1-10-1.2 68 68 0 0 0 18-42.8 68 68 0 0 0-18-42.8A44 44 0 0 1 162 88Z" fill="currentColor"/><path d="M184 148c26 8 40 32 40 68h-40Z" fill="currentColor"/></svg>
     </span><span class="navlabel">Mijn gezin</span></button>
   <button type="button" data-tab="beheer" id="navBeheer" class="navtab" style="display:none"><span class="navicon">
-      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="36" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
-      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path d="M128 92a36 36 0 1 0 36 36 36 36 0 0 0-36-36Zm100 36a94 94 0 0 1-1.5 16.7l20.6 16a8 8 0 0 1 1.9 10.2l-20 34.6a8 8 0 0 1-9.7 3.5l-24.3-9.8a95.6 95.6 0 0 1-14.5 8.4l-3.7 25.9a8 8 0 0 1-7.9 6.9h-40a8 8 0 0 1-7.9-6.9l-3.7-25.9a95.6 95.6 0 0 1-14.5-8.4l-24.3 9.8a8 8 0 0 1-9.7-3.5l-20-34.6a8 8 0 0 1 1.9-10.2l20.6-16A94 94 0 0 1 28 128a94 94 0 0 1 1.5-16.7l-20.6-16a8 8 0 0 1-1.9-10.2l20-34.6a8 8 0 0 1 9.7-3.5l24.3 9.8a95.6 95.6 0 0 1 14.5-8.4l3.7-25.9A8 8 0 0 1 87.1 14h40a8 8 0 0 1 7.9 6.9l3.7 25.9a95.6 95.6 0 0 1 14.5 8.4l24.3-9.8a8 8 0 0 1 9.7 3.5l20 34.6a8 8 0 0 1-1.9 10.2l-20.6 16A94 94 0 0 1 228 128Z" fill="currentColor"/></svg>
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="128" r="60" fill="none" stroke="currentColor" stroke-width="14"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(45 128 128)"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(90 128 128)"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(135 128 128)"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(180 128 128)"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(225 128 128)"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(270 128 128)"/><line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(315 128 128)"/><circle cx="128" cy="128" r="20" fill="none" stroke="currentColor" stroke-width="12"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path fill-rule="evenodd" fill="currentColor" d="M188,128 A60,60 0 1,0 68,128 A60,60 0 1,0 188,128 Z M148,128 A20,20 0 1,0 108,128 A20,20 0 1,0 148,128 Z"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(45 128 128)"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(90 128 128)"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(135 128 128)"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(180 128 128)"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(225 128 128)"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(270 128 128)"/><rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(315 128 128)"/></svg>
     </span><span class="navlabel">Beheer</span></button>
 </nav>
 
@@ -286,8 +287,15 @@ const PH_PATHS = {
   'users-fill': `<circle cx="88" cy="100" r="44" fill="currentColor"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68Z" fill="currentColor"/><path d="M162 88a44 44 0 0 1 0 88 44 44 0 0 1-10-1.2 68 68 0 0 0 18-42.8 68 68 0 0 0-18-42.8A44 44 0 0 1 162 88Z" fill="currentColor"/><path d="M184 148c26 8 40 32 40 68h-40Z" fill="currentColor"/>`,
   lightning: `<path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
   'lightning-fill': `<path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="currentColor"/>`,
-  gear: `<circle cx="128" cy="128" r="36" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
-  'gear-fill': `<path d="M128 92a36 36 0 1 0 36 36 36 36 0 0 0-36-36Zm100 36a94 94 0 0 1-1.5 16.7l20.6 16a8 8 0 0 1 1.9 10.2l-20 34.6a8 8 0 0 1-9.7 3.5l-24.3-9.8a95.6 95.6 0 0 1-14.5 8.4l-3.7 25.9a8 8 0 0 1-7.9 6.9h-40a8 8 0 0 1-7.9-6.9l-3.7-25.9a95.6 95.6 0 0 1-14.5-8.4l-24.3 9.8a8 8 0 0 1-9.7-3.5l-20-34.6a8 8 0 0 1 1.9-10.2l20.6-16A94 94 0 0 1 28 128a94 94 0 0 1 1.5-16.7l-20.6-16a8 8 0 0 1-1.9-10.2l20-34.6a8 8 0 0 1 9.7-3.5l24.3 9.8a95.6 95.6 0 0 1 14.5-8.4l3.7-25.9A8 8 0 0 1 87.1 14h40a8 8 0 0 1 7.9 6.9l3.7 25.9a95.6 95.6 0 0 1 14.5 8.4l24.3-9.8a8 8 0 0 1 9.7 3.5l20 34.6a8 8 0 0 1-1.9 10.2l-20.6 16A94 94 0 0 1 228 128Z" fill="currentColor"/>`,
+  gear: (()=>{
+    let teeth=''; for(let i=0;i<8;i++) teeth += `<line x1="128" y1="44" x2="128" y2="68" stroke="currentColor" stroke-width="18" stroke-linecap="round" transform="rotate(${i*45} 128 128)"/>`;
+    return `<circle cx="128" cy="128" r="60" fill="none" stroke="currentColor" stroke-width="14"/>${teeth}<circle cx="128" cy="128" r="20" fill="none" stroke="currentColor" stroke-width="12"/>`;
+  })(),
+  'gear-fill': (()=>{
+    let teeth=''; for(let i=0;i<8;i++) teeth += `<rect x="118" y="36" width="20" height="30" rx="6" fill="currentColor" transform="rotate(${i*45} 128 128)"/>`;
+    const ring = `<path fill-rule="evenodd" fill="currentColor" d="M188,128 A60,60 0 1,0 68,128 A60,60 0 1,0 188,128 Z M148,128 A20,20 0 1,0 108,128 A20,20 0 1,0 148,128 Z"/>`;
+    return ring + teeth;
+  })(),
   warning: `<path d="M236 208H20a8 8 0 0 1-7-11.9L121 44.5a8 8 0 0 1 14 0l108 151.6a8 8 0 0 1-7 11.9Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><line x1="128" y1="104" x2="128" y2="144" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><circle cx="128" cy="172" r="10" fill="currentColor"/>`,
   check: `<polyline points="216,72 96,192 40,136" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
   'check-circle': `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><polyline points="172,100 116,156 84,128" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
@@ -302,6 +310,8 @@ const PH_PATHS = {
   'arrow-left': `<line x1="216" y1="128" x2="40" y2="128" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="104,64 40,128 104,192" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
   sun: `<circle cx="128" cy="128" r="42" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
   moon: `<path d="M216 136A88 88 0 1 1 120 40a70 70 0 0 0 96 96Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
+  home: `<path d="M32 128 128 48l96 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><path d="M56 112v88a8 8 0 0 0 8 8h128a8 8 0 0 0 8-8v-88" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
+  away: `<path d="M128 20c-44 0-80 36-80 80 0 60 80 136 80 136s80-76 80-136c0-44-36-80-80-80Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="128" cy="100" r="28" fill="none" stroke="currentColor" stroke-width="14"/>`,
   eye: `<path d="M16 128 Q128 32 240 128 Q128 224 16 128 Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><circle cx="128" cy="128" r="32" fill="none" stroke="currentColor" stroke-width="16"/>`,
 };
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
@@ -357,13 +367,26 @@ function analyzeMatch(summary){
 }
 function matchSlug(m){ return (m.teamLabel+'_'+m.start.getTime()).toLowerCase().replace(/[^a-z0-9_]/g,''); }
 function startOfWeek(d){ const day=(d.getDay()+6)%7; const s=new Date(d); s.setHours(0,0,0,0); s.setDate(d.getDate()-day); return s; }
-function startOfWeekend(d){ const s=startOfWeek(d); const sat=new Date(s); sat.setDate(s.getDate()+5); return sat; }
+// The actual calendar date for a given weekday key, within the CURRENT real-world week —
+// used so day-buttons/cards can show "28" or "28 sep" instead of just "Ma", helping distinguish
+// which literal day is being edited, especially important late in the week.
+function dateForWeekday(dayKey){
+  const idx = DAYS.findIndex(([k])=>k===dayKey);
+  const monday = startOfWeek(new Date());
+  const d = new Date(monday); d.setDate(monday.getDate()+idx);
+  return d;
+}
 function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(now); const e=new Date(s); e.setDate(s.getDate()+7); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
-function matchesThisWeekend(list){ const now=new Date(); const s=startOfWeekend(now); const e=new Date(s); e.setDate(s.getDate()+2); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
-// TEMPORARY testing helper (see the Mijn week card below) — widens the visible window so a
-// successful fetch is easy to confirm even during weeks with nothing on the this-week/weekend
-// filters specifically. Revert renderMyWeek back to matchesThisWeek once the fetch is confirmed healthy.
-function matchesUpcoming(list, weeks){ const now=new Date(); const e=new Date(now); e.setDate(e.getDate()+7*weeks); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
+// Rolling 8-day window (today through 7 days out, inclusive) for the weekend-carpool section —
+// deliberately NOT bound to calendar Sat/Sun, so "next Saturday" is always visible regardless
+// of which day of the week today happens to be (a strict Mon-Sun weekend definition could hide
+// the upcoming Saturday entirely if today was already Sunday).
+function matchesNext8Days(list){
+  const now=new Date();
+  const start=new Date(now); start.setHours(0,0,0,0);
+  const end=new Date(start); end.setDate(start.getDate()+8);
+  return list.filter(m=>m.start>=now && m.start<end).sort((a,b)=>a.start-b.start);
+}
 async function fetchTeamMatches(feed){
   try{
     if(!googleCalendarApiKey) throw new Error('Geen Google Calendar API-key ingesteld in firebase-config.js.');
@@ -415,6 +438,29 @@ function matchInfoHtml(m){
     <div class="muted" style="font-size:12px">${dayLabel} · ${timeLabel}${m.location? ' · '+esc(m.location):''}</div>
   </div>`;
 }
+// Mijn week's "upcoming matches" list: grouped per calendar day, one line per match in
+// "HH:MM - thuisteam vs uitteam - locatie" form, with a home/away icon (no more matches are
+// self-explanatory as (Thuis)/(Uit) text here — the icon carries that instead).
+function renderMatchesGroupedByDay(list){
+  if(!list.length) return '<p class="muted">Geen wedstrijden gevonden.</p>';
+  const groups = {}; const order=[];
+  list.forEach(m=>{
+    const key = m.start.toDateString();
+    if(!groups[key]){ groups[key]=[]; order.push(key); }
+    groups[key].push(m);
+  });
+  return order.map(key=>{
+    const dayMatches = groups[key];
+    const dayLabel = dayMatches[0].start.toLocaleDateString('nl-NL',{weekday:'long', day:'numeric', month:'long'});
+    const rows = dayMatches.map(m=>{
+      const a = analyzeMatch(m.summary);
+      const icon = a.isHome===true? phIcon('home') : a.isHome===false? phIcon('away') : '';
+      const timeLabel = m.start.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+      return `<div style="padding:3px 0;font-size:14px;display:flex;align-items:flex-start;gap:6px"><span style="flex-shrink:0;margin-top:1px">${icon}</span><span>${timeLabel} - ${esc(a.home)} vs ${esc(a.away)}${m.location? ' - '+esc(m.location):''}</span></div>`;
+    }).join('');
+    return `<div style="margin-top:10px"><div style="font-weight:700;font-size:13px">${esc(dayLabel)}</div>${rows}</div>`;
+  }).join('');
+}
 function suggestedMatchDeparture(matchDate){
   const t = new Date(matchDate.getTime() - 210*60000); // 3.5 hours before
   return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
@@ -430,7 +476,7 @@ async function purgeStaleMatchCarpools(){
   }
 }
 function renderWeekendMatchCarpoolCard(){
-  const weekendMatches = matchesThisWeekend(currentMatchList());
+  const weekendMatches = matchesNext8Days(currentMatchList());
   weekendMatchBySlug = {};
   if(!weekendMatches.length){
     return `<div class="card"><h2>Wedstrijdcarpool dit weekend</h2><p class="muted">Geen wedstrijden gevonden voor dit weekend.</p></div>`;
@@ -855,7 +901,7 @@ function familyFormHtml(prefix,f){
       <div><label style="margin-top:0">Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
     </div>
     <div class="grid2">
-      <div><label style="margin-top:8px">Telefoonnummer 1 (WhatsApp)</label><input type="text" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
+      <div><label style="margin-top:8px">Telefoonnummer 1</label><input type="text" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
       <div><label style="margin-top:8px">Telefoonnummer 2 (optioneel)</label><input type="text" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
     </div>
     <label>Totale autocapaciteit (incl. bestuurder)</label>
@@ -1199,8 +1245,9 @@ function renderMyWeek(){
       dep = g.departureTime||s;
       const isMe = g.driverFamilyId===myId;
       if(isMe){
-        const passengers=g.girlIds.filter(id=>id!==myId).map(id=>girlName(id)).join(', ');
-        statusHtml = `${phIcon('user')}${phIcon('car')} Jij rijdt mee!${passengers? ` · ${passengers}`:''}`; statusClass='driving';
+        // Full passenger list, including your own daughter — not just "everyone else".
+        const passengers=g.girlIds.map(id=>girlName(id)).join(', ');
+        statusHtml = `${phIcon('user')}${phIcon('car')} Jij rijdt${passengers? ` · ${passengers}`:''}`; statusClass='driving';
       } else {
         const driverName = g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : 'nog geen chauffeur';
         statusHtml = `${phIcon('user')} Rijdt mee met: ${driverName}`;
@@ -1214,9 +1261,10 @@ function renderMyWeek(){
       const dg=cars[drivingIdx];
       const names=dg.girlIds.map(id=>girlName(id)).join(', ');
       extraDriving = `<div class="subrideStatus driving">${phIcon('car')} Jouw rijbeurt om ${dg.departureTime||'?'} · ${names}</div>`;
+      statusClass = statusClass? statusClass : ''; // the driving BORDER below reflects the daughter's own car only, not this second one
     }
     const devTag = activeDeviation(day,direction)? `<div class="subrideStatus" style="color:var(--warn)">${phIcon('warning')} Dagafwijking actief</div>` : '';
-    return `<div class="subride">
+    return `<div class="subride ${statusClass}">
       <div class="subrideHead"><span>${label}</span><span class="subrideDep">${dep}</span></div>
       <div class="subrideStatus ${statusClass}">${statusHtml}</div>
       ${extraDriving}${devTag}
@@ -1230,10 +1278,11 @@ function renderMyWeek(){
     if(!heenHtml && !terugHtml) return '';
     const heenTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].heen) || '';
     const terugTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].terug) || '';
+    const dateLabel = dateForWeekday(k).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
     return `<div class="dayCard ${isToday?'today':''}">
       <div class="dayCardHead">
         <span class="dayBadge">${k}</span>
-        <span class="dayCardTitle">${label}</span>
+        <span class="dayCardTitle">${dateLabel}</span>
         ${isToday? '<span class="todayTag">VANDAAG</span>' : ''}
         <span class="dayTimes">${heenTime||'–'} / ${terugTime||'–'}</span>
       </div>
@@ -1241,17 +1290,14 @@ function renderMyWeek(){
     </div>`;
   }).join('') || `<p class="muted">Geen dagen met een tijd ingesteld deze week.</p>`;
 
-  // TEMPORARY: showing the next 4 weeks (not just "this week") purely to make it easy to
-  // confirm the fetch itself is working, independent of whether any match happens to fall
-  // within the normal week window right now. Revert to matchesThisWeek(...) once confirmed.
-  const weekMatches = matchesUpcoming(currentMatchList(), 4);
+  const weekMatches = matchesThisWeek(currentMatchList());
   const matchStatusNote = matchesSource==='live'
     ? ''
     : (cachedMatchesAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(cachedMatchesAt).toLocaleString('nl-NL')}</p>` : '');
   const matchFailNote = matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">Kon niet ophalen: ${esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
   const matchesCardHtml = `<div class="card">
-    <h2>Wedstrijden komende 4 weken <span class="muted" style="font-weight:400;font-size:11px">(tijdelijk verbreed voor testen)</span></h2>
-    ${weekMatches.length? weekMatches.map(m=>matchInfoHtml(m)).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">') : '<p class="muted">Geen wedstrijden gevonden.</p>'}
+    <h2>Wedstrijden deze week</h2>
+    ${renderMatchesGroupedByDay(weekMatches)}
     ${matchFailNote}${matchStatusNote}
   </div>`;
 
@@ -1314,7 +1360,7 @@ function renderDeviationTab(){
     </div>
     <div class="card">
       <h2>Kies een dag</h2>
-      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary" data-devday="${k}" style="margin-top:0" aria-label="${label}">${k}</button>`).join('')}</div>
+      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary devDayBtn" data-devday="${k}" style="margin-top:0" aria-label="${label} ${dateForWeekday(k).getDate()}"><span style="display:block;font-weight:700">${k}</span><span style="display:block;font-size:11px;opacity:.85">${dateForWeekday(k).getDate()}</span></button>`).join('')}</div>
       ${whatsAppButtonHtml()}
       ${lastUpdateFooter(lastUpdateDeviation)}
     </div>
@@ -1370,8 +1416,8 @@ function renderDevDirection(day,direction,title){
 
   const addOptions = cars.length? `<option value="">Voeg toe aan auto…</option>` + cars.map((c,i)=>`<option value="${i}">Auto: ${esc(fam(c.driverFamilyId).parentName||'?')}</option>`).join('') : '';
   const unassignedHtml = unassigned.length? `<div class="group" style="border-style:dashed">
-      <h3 style="margin-bottom:6px">Overige dochters</h3>
-      <p class="muted" style="margin-top:0">Ook meiden zonder tijd voor dit moment kun je hier alsnog aan een auto toevoegen.</p>
+      <h3 style="margin-bottom:6px">Andere meiden</h3>
+      <p class="muted" style="margin-top:0">Ook meiden die niet standaard meerijden, kun je hier alsnog aan een auto toevoegen.</p>
       ${unassigned.map(([id,f])=>`
         <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
           <span style="flex:1">${esc(f.girlName||f.parentName||id)}</span>
@@ -1593,10 +1639,14 @@ function renderBeheer(){
       <h2>Wedstrijdkalenders (Google Calendar)</h2>
       <p class="muted">Deze agenda's voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool dit weekend" (Afwijking). Elke agenda moet openbaar ("Make available to public") staan — Google Calendar → tandwiel bij de agenda → Instellingen en delen → Toegangsrechten.</p>
       ${activeMatchFeeds().map((f,i)=>`
-        <div class="grid2" style="margin-top:6px">
-          <div><label style="margin-top:0">Naam</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
-          <div><label style="margin-top:0">Calendar ID</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="xxxx@group.v.calendar.google.com"></div>
+        <div class="rowflex" style="margin-top:6px;align-items:flex-end;gap:6px">
+          <div class="grid2" style="flex:1">
+            <div><label style="margin-top:0">Naam</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
+            <div><label style="margin-top:0">Calendar ID</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="xxxx@group.v.calendar.google.com"></div>
+          </div>
+          <button type="button" class="btn small secondary" data-delfeed="${i}" aria-label="Verwijder kalender" title="Verwijder kalender">${phIcon('trash')}</button>
         </div>`).join('')}
+      <button type="button" class="btn small secondary" id="addMatchFeedBtn" style="margin-top:8px">+ Nieuwe kalender toevoegen</button>
       <button type="button" class="btn small secondary" id="refreshMatchesBtn" style="margin-top:8px">${phIcon('refresh')} Nu verversen</button>
       ${matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(matchesFetchedAt).toLocaleString('nl-NL')}${matchFetchFailedTeams.length? ' — mislukt: '+esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; ')) : ''}</p>` : ''}
     </div>
@@ -1662,6 +1712,14 @@ function renderBeheer(){
       catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
     };
     document.querySelectorAll('.matchFeedLabel,.matchFeedCalId').forEach(el=>el.onchange=saveMatchFeeds);
+    const addFeedBtn=document.getElementById('addMatchFeedBtn');
+    if(addFeedBtn) addFeedBtn.onclick=()=>{ matchFeeds=[...activeMatchFeeds(), {label:'', calendarId:''}]; renderBeheer(); };
+    document.querySelectorAll('[data-delfeed]').forEach(b=>b.onclick=async ()=>{
+      const idx=+b.dataset.delfeed;
+      const feeds = activeMatchFeeds().filter((_,i)=>i!==idx);
+      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Verwijderd ✓"); loadAllMatches(); }
+      catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+    });
     const refreshBtn=document.getElementById('refreshMatchesBtn');
     if(refreshBtn) refreshBtn.onclick=()=>{ showToast("Wedstrijden verversen…"); loadAllMatches(); };
     const sd=document.getElementById('seedPdf');
@@ -1891,7 +1949,7 @@ function renderSchedule(){
     const isActive = k===scheduleDay;
     return `<button type="button" class="daypill ${isActive?'active':''}" data-schedday="${k}" aria-label="${label}">
       <span class="daypillTop">${label.slice(0,2).toUpperCase()}</span>
-      <span class="daypillSub">${carCount} auto${carCount===1?'':'\u2019s'}</span>
+      <span class="daypillSub">${carCount} rit${carCount===1?'':'ten'}</span>
       ${k===todayKey? '<span class="daypillToday" aria-hidden="true"></span>' : ''}
     </button>`;
   }).join('');
@@ -1914,13 +1972,22 @@ function renderDirection(day,direction,title){
   const grps = groupsFor(day,direction);
   const grouped = alreadyGrouped(day,direction);
   const ungrouped = girlsFor(day,direction).filter(([id])=>!grouped.has(id));
+  // Reserves are a SHIFT-wide backup pool, not specific to one car — computed once here
+  // (using the largest car's size, so anyone listed could genuinely cover any car this shift)
+  // and shown identically on every car's card, rather than a per-car stored list that could
+  // end up empty for the 2nd+ car purely because of that car's own smaller passenger count.
+  const largestCarSize = grps.length? Math.max(...grps.map(([,g])=>g.girlIds.length)) : 0;
+  const assignedDriverIds = new Set(grps.map(([,g])=>g.driverFamilyId).filter(Boolean));
+  const shiftReserves = largestCarSize? eligibleDrivers(day,direction,largestCarSize)
+    .filter(([id])=>!assignedDriverIds.has(id))
+    .map(([id,f])=>esc(f.parentName)).join(', ') : '';
 
   const groupHtml = grps.map(([gid,g])=>{
     const times = g.girlIds.map(id=>fam(id).schedule[day][direction]).filter(Boolean).sort();
     const departureFallback = direction==='terug' ? times[times.length-1] : times[0];
     const departure = g.departureTime || departureFallback || '--:--';
     const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
-    const reserves = (g.reserveFamilyIds||[]).map(id=>esc(fam(id).parentName)).join(', ');
+    const reserves = shiftReserves;
     // Only offer drivers who aren't already committed to another car this same shift —
     // prevents double-booking instead of fixing it up after the fact.
     const busyElsewhere = new Set(grps.filter(([oid])=>oid!==gid).map(([,og])=>og.driverFamilyId).filter(Boolean));
