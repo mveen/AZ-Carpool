@@ -45,15 +45,23 @@
   --backup:#94a3b8; --info:#60a5fa; --info2:#122036; --pill:#cbd5e1; --pill2:#1e293b;
 }
 *{box-sizing:border-box}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);min-height:100%;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-html{overflow-x:hidden}
-#topbar{position:fixed;top:0;left:0;right:0;z-index:5}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;overflow:hidden}
+/* ---------- Flex-shell layout (deliberately NOT position:fixed for header/nav) ----------
+   Firefox for Android has a confirmed, still-open bug where position:fixed elements ride up
+   and down with the page during its own dynamic address-bar show/hide animation, then "snap"
+   back (Mozilla bugzilla #1760924, #1712280, and others — still reproducing in current Firefox
+   versions as of this writing). The robust fix is architectural, not a CSS value tweak: make
+   header/nav normal flex children of a 100dvh column instead of fixed overlays, with ONLY the
+   middle content area scrolling internally. Since nothing here is fixed anymore, Firefox's
+   buggy fixed-position-during-toolbar-transition code path never gets involved at all. */
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans);-webkit-font-smoothing:antialiased;overflow-x:hidden;
+  height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+#topbar{flex-shrink:0}
 header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));color:#fff}
 header h1{margin:0;font-size:18px;font-weight:800}
 header p{margin:2px 0 0;font-size:12px;opacity:.9}
-/* ---------- Bottom tab bar (fixed, safe-area aware, thumb-reachable) ---------- */
-#bottomnav{position:fixed;left:0;right:0;bottom:0;z-index:5;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);height:calc(56px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
+/* ---------- Bottom tab bar (flex item, safe-area aware, thumb-reachable) ---------- */
+#bottomnav{flex-shrink:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);height:calc(56px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
 .navtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:0 4px;height:56px;cursor:pointer;color:var(--muted);position:relative}
 .navtab .navicon{font-size:19px;line-height:1}
 .navtab .navicon svg{width:22px;height:22px}
@@ -64,7 +72,7 @@ header p{margin:2px 0 0;font-size:12px;opacity:.9}
 .navtab.active{color:var(--accent)}
 .navtab.active .navlabel{font-weight:700}
 .navtab.active::after{content:"";position:absolute;top:2px;left:50%;transform:translateX(-50%);width:20px;height:3px;border-radius:var(--radius-full);background:var(--accent)}
-main{padding:14px 16px calc(84px + env(safe-area-inset-bottom,0px));max-width:760px;margin:0 auto}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;max-width:760px;margin:0 auto;width:100%}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow-card)}
 .card h2{margin:0 0 10px;font-size:15px;font-weight:800}
 label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
@@ -716,12 +724,11 @@ function wireInstallCard(){
 }
 
 function setStatus(msg){ const el=document.getElementById('whoami'); if(el) el.textContent=msg; adjustMainPadding(); }
-function adjustMainPadding(){
-  const topbar=document.getElementById('topbar');
-  const main=document.querySelector('main');
-  if(topbar && main) main.style.paddingTop = (topbar.offsetHeight + 14) + 'px';
-}
-window.addEventListener('resize', adjustMainPadding);
+// No-op now: header/nav are normal flex children (not position:fixed) in the new flex-shell
+// layout, so `main` never needs JS-computed compensating padding — normal flex flow already
+// places it correctly between them. Left in place (rather than removed) since it's still called
+// from many render functions; safe to no-op there instead of hunting down every call site.
+function adjustMainPadding(){}
 function showToast(msg){
   let t=document.getElementById('toast');
   if(!t){ t=document.createElement('div'); t.id='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite');
