@@ -502,7 +502,7 @@ function renderWeekendMatchCarpoolCard(){
   const weekendMatches = matchesNext8Days(currentMatchList());
   weekendMatchBySlug = {};
   if(!weekendMatches.length){
-    return `<div class="card"><h2>Wedstrijdcarpool dit weekend</h2><p class="muted">Geen wedstrijden gevonden voor dit weekend.</p></div>`;
+    return `<div class="card"><h2>Wedstrijdcarpool komende dagen</h2><p class="muted">Geen wedstrijden gevonden.</p></div>`;
   }
   const allFamilies = Object.entries(families);
   const matchesHtml = weekendMatches.map(m=>{
@@ -524,11 +524,10 @@ function renderWeekendMatchCarpoolCard(){
       formHtml = `<div class="dayFormCard" style="margin-top:8px">
         <label style="margin-top:0">Chauffeur</label>
         <select id="matchCarDriver_${slug}"><option value="">-- kies --</option>${driverOptions}</select>
-        <label>Welke dochters?</label>
+        <label>Welke passagiers?</label>
         <div>${girlOptions}</div>
         <label>Vertrektijd</label>
         <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
-        <p class="muted" style="font-size:11px;margin-top:2px">Voorstel: 3,5 uur voor aanvang (${suggestedDep})</p>
         <button type="button" class="btn small secondary" data-savematchcar="${slug}">Opslaan</button>
         <button type="button" class="btn small secondary" data-cancelmatchcar="${slug}">Annuleren</button>
       </div>`;
@@ -538,8 +537,8 @@ function renderWeekendMatchCarpoolCard(){
     return `<div class="group" style="border-left-color:var(--info)">${matchInfoHtml(m)}${carsHtml}${formHtml}</div>`;
   }).join('');
   return `<div class="card">
-    <h2>Wedstrijdcarpool dit weekend</h2>
-    <p class="muted">Zet een carpool op voor een wedstrijd dit weekend. Iedereen kan dit doen en aanpassen.</p>
+    <h2>Wedstrijdcarpool komende dagen</h2>
+    <p class="muted">Zet een carpool op voor een wedstrijd. Iedereen kan dit doen en aanpassen</p>
     ${matchesHtml}
   </div>`;
 }
@@ -939,14 +938,14 @@ function familyFormHtml(prefix,f){
       <div><label style="margin-top:0">Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
     </div>
     <div class="grid2">
-      <div><label style="margin-top:8px">Telefoonnummer 1</label><input type="text" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
-      <div><label style="margin-top:8px">Telefoonnummer 2 (optioneel)</label><input type="text" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
+      <div><label style="margin-top:8px">Tel.nr. 1</label><input type="text" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
+      <div><label style="margin-top:8px">Tel.nr. 2</label><input type="text" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
     </div>
     <label>Totale autocapaciteit (incl. bestuurder)</label>
     <div class="stepperCard">
       <div class="stepperInfo">${phIcon('car')}<div>
         <div class="stepperTitle" id="${prefix}_capacityTitle">${f.capacity||4} zitplaatsen totaal</div>
-        <div class="stepperSub">Plek voor <strong id="${prefix}_capacityHint">${seats}</strong> passagiersdochters</div>
+        <div class="stepperSub">Plek voor <strong id="${prefix}_capacityHint">${seats}</strong> passagiers</div>
       </div></div>
       <div class="stepperControls">
         <button type="button" class="stepperBtn" data-stepdown="${prefix}" aria-label="Minder zitplaatsen">−</button>
@@ -1359,9 +1358,20 @@ function renderMyWeek(){
 // ---------- Dagafwijking tab: one-off changes, open to every parent, week-scoped ----------
 let deviationDay=null;
 async function saveDeviationCars(day,direction,cars){
-  if(!db){showToast("Geen verbinding met opslag.");return;}
-  try{ await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars}); recordLastUpdate('Deviation'); }
-  catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); }
+  if(!db){showToast("Geen verbinding met opslag.");return false;}
+  // Strip baseGroupId (an internal marker effectiveCars() adds when falling back to the default
+  // schedule — it was never meant to be persisted into a deviation document) and any literal
+  // `undefined` field, which Firestore's SDK rejects outright with a thrown error.
+  const cleanCars = cars.map(c=>{
+    const {baseGroupId, ...rest} = c;
+    Object.keys(rest).forEach(k=>{ if(rest[k]===undefined) delete rest[k]; });
+    return rest;
+  });
+  try{
+    await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars:cleanCars});
+    recordLastUpdate('Deviation');
+    return true;
+  }catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); return false; }
 }
 // ---------- WhatsApp update button: opens a pre-filled draft, coordinator/parent still sends it ----------
 const APP_URL = "https://mveen.github.io/AZ-Carpool/";
@@ -1489,8 +1499,8 @@ function attachDeviationHandlers(){
     const cars=effectiveCars(day,direction);
     const newGirlIds=cars[idx].girlIds.filter(id=>id!==girl);
     cars[idx]={...cars[idx], girlIds:newGirlIds, departureTime: computeDepartureTime(day,direction,newGirlIds)};
-    await saveDeviationCars(day,direction,cars);
-    showToast(girlName(girl)+" verwijderd uit deze auto.");
+    const ok = await saveDeviationCars(day,direction,cars);
+    if(ok) showToast(girlName(girl)+" verwijderd uit deze auto.");
   });
   document.querySelectorAll('.devSwapSel').forEach(sel=>sel.onchange=async ()=>{
     if(!sel.value) return;
@@ -1499,13 +1509,14 @@ function attachDeviationHandlers(){
     const newFrom=cars[fromIdx].girlIds.filter(id=>id!==girl);
     const newTo=[...cars[toIdx].girlIds, girl];
     const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
-    if(toSeatsAvail!=null && newTo.length>toSeatsAvail){
-      showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — verplaatsing is wel doorgevoerd.`);
-    }
+    const overfull = toSeatsAvail!=null && newTo.length>toSeatsAvail;
     cars[fromIdx]={...cars[fromIdx], girlIds:newFrom, departureTime: computeDepartureTime(day,direction,newFrom)};
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
-    await saveDeviationCars(day,direction,cars);
-    showToast(girlName(girl)+" verplaatst.");
+    const ok = await saveDeviationCars(day,direction,cars);
+    if(ok){
+      if(overfull) showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — verplaatsing is wel doorgevoerd.`);
+      else showToast(girlName(girl)+" verplaatst.");
+    }
   });
   document.querySelectorAll('.devAddSel').forEach(sel=>sel.onchange=async ()=>{
     if(!sel.value) return;
@@ -1513,12 +1524,13 @@ function attachDeviationHandlers(){
     const cars=effectiveCars(day,direction);
     const newTo=[...cars[toIdx].girlIds, girl];
     const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
-    if(toSeatsAvail!=null && newTo.length>toSeatsAvail){
-      showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — toevoeging is wel doorgevoerd.`);
-    }
+    const overfull = toSeatsAvail!=null && newTo.length>toSeatsAvail;
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
-    await saveDeviationCars(day,direction,cars);
-    showToast(girlName(girl)+" toegevoegd.");
+    const ok = await saveDeviationCars(day,direction,cars);
+    if(ok){
+      if(overfull) showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — toevoeging is wel doorgevoerd.`);
+      else showToast(girlName(girl)+" toegevoegd.");
+    }
   });
   document.querySelectorAll('[data-devreset]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,"Zeker? Terug naar standaard rooster",async ()=>{
     const [day,direction]=btn.dataset.devreset.split('|');
@@ -1669,13 +1681,13 @@ function renderBeheer(){
       <div class="grid4">
         <div><label>Max. tijdsverschil voor 1 auto (uur)</label><input type="number" id="setGap" min="0.5" step="0.5" value="${settings.gapThresholdHours}"></div>
         <div><label>Rijtijd Aalsmeer→Alkmaar (min, vertrektijd heen)</label><input type="number" id="setLead" min="0" step="5" value="${settings.travelLeadMinutes}"></div>
-        <div><label>Voorkeur-marge (min)</label><input type="number" id="setPrefWindow" min="0" step="5" value="${settings.prefWindowMinutes}"></div>
+        <div><label>Marge reisvookeuren (min)</label><input type="number" id="setPrefWindow" min="0" step="5" value="${settings.prefWindowMinutes}"></div>
         <div><label>Max. wachttijd om met eigen ouder te rijden (min)</label><input type="number" id="setParentPrefWindow" min="0" step="5" value="${settings.parentPrefWindowMinutes}"></div>
       </div>
     </div>
     <div class="card">
       <h2>Wedstrijdkalenders (Google Calendar)</h2>
-      <p class="muted">Deze agenda's voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool dit weekend" (Afwijking). Elke agenda moet openbaar ("Make available to public") staan — Google Calendar → tandwiel bij de agenda → Instellingen en delen → Toegangsrechten.</p>
+      <p class="muted">Deze agenda's voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool komende dagen" (Afwijking). Elke agenda moet openbaar ("Make available to public") staan — Google Calendar → tandwiel bij de agenda → Instellingen en delen → Toegangsrechten.</p>
       ${activeMatchFeeds().map((f,i)=>`
         <div class="rowflex" style="margin-top:6px;align-items:flex-end;gap:6px">
           <div class="grid2" style="flex:1">
@@ -1798,7 +1810,7 @@ function renderCoordEditor(){
   area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
     <h2>${isNew? 'Nieuw gezin toevoegen' : 'Bewerken: '+esc((f.girlName||f.parentName)||'')}</h2>
     ${coordToggleHtml}
-    <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp — meerdere mensen kunnen dezelfde code gebruiken)</label>
+    <label>Uitnodigingscode (meerdere mensen kunnen dezelfde code gebruiken)</label>
     <div class="rowflex" style="gap:6px">
       <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
       <button type="button" class="btn small secondary" id="genCodeBtn">${phIcon('dice')} Nieuwe code</button>
