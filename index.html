@@ -75,6 +75,29 @@ input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:va
 .grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .grid5>button{min-width:0;padding:8px 4px;font-size:12px;white-space:normal;word-break:break-word;line-height:1.2}
+/* ---------- Mijn gezin: day tabs, capacity stepper, drive-toggle buttons ---------- */
+.dayTabBtn{min-width:0;padding:10px 2px;font-size:13px;font-weight:700;border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:var(--radius-sm);cursor:pointer;min-height:40px}
+.dayTabBtn.active{background:var(--card);color:var(--accent);border-color:var(--accent)}
+.dayFormCard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-top:8px}
+.stepperCard{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-top:6px}
+.stepperInfo{display:flex;align-items:center;gap:10px}
+.stepperInfo svg{width:22px;height:22px;color:var(--accent);flex-shrink:0}
+.stepperTitle{font-size:13px;font-weight:700}
+.stepperSub{font-size:11px;color:var(--muted)}
+.stepperControls{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.stepperBtn{width:36px;height:36px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--card);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.stepperValue{font-size:16px;font-weight:800;font-family:var(--font-mono);min-width:1.5em;text-align:center}
+.driveToggleInput{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.driveToggleGroup{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.driveToggleBtn{display:flex;align-items:center;gap:8px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--card);font-size:12.5px;font-weight:600;cursor:pointer;min-height:44px;color:var(--text)}
+.driveToggleCheck{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg)}
+.driveToggleCheck svg{width:12px;height:12px;color:transparent}
+.driveToggleInput:checked+.driveToggleBtn-standard{border-color:var(--ok);background:var(--ok2);color:var(--ok)}
+.driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck{background:var(--ok);border-color:var(--ok)}
+.driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck svg{color:#fff}
+.driveToggleInput:checked+.driveToggleBtn-backup{border-color:var(--info);background:var(--info2);color:var(--info)}
+.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck{background:var(--info);border-color:var(--info)}
+.driveToggleInput:focus-visible+.driveToggleBtn{outline:2px solid var(--accent);outline-offset:2px}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
 .chk input{min-height:18px}
 button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;min-height:40px;font-family:var(--font-sans)}
@@ -225,7 +248,7 @@ function docRef(path){
   const ref = doc(firestoreDb, ...path.split('/'));
   return {
     get: ()=>getDoc(ref).then(wrapDocSnap),
-    set: (data)=>setDoc(ref, data),
+    set: (data,opts)=>setDoc(ref, data, opts),
     update: (data)=>updateDoc(ref, data),
     delete: ()=>deleteDoc(ref),
     onSnapshot: (onNext,onErr)=>onSnapshot(ref, s=>onNext(wrapDocSnap(s)), onErr)
@@ -566,34 +589,117 @@ document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener(
 })();
 
 // ---------- Shared family form: per-day <details> instead of a 5-column grid, so it's usable on phones ----------
+// Which day-tab is currently open, per form instance ('me' = Mijn gezin, 'coord' = Beheer editor)
+// — kept separate so switching days in one doesn't affect the other.
+let formSelectedDay = {me:'Ma', coord:'Ma'};
 function familyFormHtml(prefix,f){
   f = f || {parentName:"",girlName:"",capacity:4,schedule:{},availability:{}};
-  const dayBlocks = DAYS.map(([k,label])=>{
-    const s=(f.schedule&&f.schedule[k])||{};
-    const a=(f.availability&&f.availability[k])||{};
-    const summary = (s.heen||s.terug) ? `${s.heen||'–'} / ${s.terug||'–'}` : 'geen rit';
-    return `<div class="dayBlock">
-      <div class="dayBlockHead">${label} <span class="sumInfo">${summary}</span></div>
-      <div class="dayDetailsBody">
-        <div class="grid2">
-          <div><label style="margin-top:0">Heen aank.</label><input type="time" id="${prefix}_sch_${k}_heen" value="${s.heen||''}"></div>
-          <div><label style="margin-top:0">Terug klaar</label><input type="time" id="${prefix}_sch_${k}_terug" value="${s.terug||''}"></div>
-        </div>
-        <div class="chk"><input type="checkbox" id="${prefix}_av_${k}_heen" ${a.heen?'checked':''}><label for="${prefix}_av_${k}_heen" style="margin:0;color:inherit;font-size:12px">Rijdt heen</label></div>
-        <div class="chk"><input type="checkbox" id="${prefix}_av_${k}_terug" ${a.terug?'checked':''}><label for="${prefix}_av_${k}_terug" style="margin:0;color:inherit;font-size:12px">Rijdt terug</label></div>
-        <div class="chk"><input type="checkbox" id="${prefix}_bkH_${k}" ${a.backupHeen?'checked':''}><label for="${prefix}_bkH_${k}" style="margin:0;color:inherit;font-size:12px">Back-up heen</label></div>
-        <div class="chk"><input type="checkbox" id="${prefix}_bkT_${k}" ${a.backupTerug?'checked':''}><label for="${prefix}_bkT_${k}" style="margin:0;color:inherit;font-size:12px">Back-up terug</label></div>
+  const activeDay = formSelectedDay[prefix]||'Ma';
+  const dayTabs = DAYS.map(([k,label])=>
+    `<button type="button" class="dayTabBtn ${k===activeDay?'active':''}" data-daytab="${prefix}|${k}">${k}</button>`
+  ).join('');
+  const s=(f.schedule&&f.schedule[activeDay])||{};
+  const a=(f.availability&&f.availability[activeDay])||{};
+  const dayLabel = DAYS.find(([k])=>k===activeDay)[1];
+  const dayDetail = `<div class="dayFormCard">
+      <div class="rowflex" style="align-items:baseline">
+        <h3 style="margin:0;font-size:15px;font-weight:800">${dayLabel}</h3>
+        <span class="muted" style="font-family:var(--font-mono)">${s.heen? 'Aankomst: '+s.heen : ''}${s.heen&&s.terug? ' · ':''}${s.terug? 'Klaar: '+s.terug : ''}</span>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div><label style="margin-top:0">Heen: aankomst Alkmaar nodig</label><input type="time" id="${prefix}_sch_${activeDay}_heen" value="${s.heen||''}"></div>
+        <div><label style="margin-top:0">Terug: klaar om op te halen</label><input type="time" id="${prefix}_sch_${activeDay}_terug" value="${s.terug||''}"></div>
+      </div>
+      <p style="margin:14px 0 6px;font-size:13px;font-weight:700">Kan jij deze dag rijden?</p>
+      <p class="muted" style="margin:0 0 4px">Ochtend / heenrit (Aalsmeer → Alkmaar)</p>
+      <div class="driveToggleGroup">
+        <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_heen" ${a.heen?'checked':''}>
+        <label for="${prefix}_av_${activeDay}_heen" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Ik rijd standaard</label>
+        <input type="checkbox" class="driveToggleInput" id="${prefix}_bkH_${activeDay}" ${a.backupHeen?'checked':''}>
+        <label for="${prefix}_bkH_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up (indien nodig)</label>
+      </div>
+      <p class="muted" style="margin:14px 0 4px">Middag / terugrit (Alkmaar → Aalsmeer)</p>
+      <div class="driveToggleGroup">
+        <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_terug" ${a.terug?'checked':''}>
+        <label for="${prefix}_av_${activeDay}_terug" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Ik rijd standaard</label>
+        <input type="checkbox" class="driveToggleInput" id="${prefix}_bkT_${activeDay}" ${a.backupTerug?'checked':''}>
+        <label for="${prefix}_bkT_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up (indien nodig)</label>
       </div>
     </div>`;
+  // A hidden input per OTHER day preserves its own read/write ids so readFamilyForm keeps
+  // working unchanged even though only the active day's inputs are visible at once.
+  const hiddenOtherDays = DAYS.filter(([k])=>k!==activeDay).map(([k])=>{
+    const os=(f.schedule&&f.schedule[k])||{}; const oa=(f.availability&&f.availability[k])||{};
+    return `<input type="hidden" id="${prefix}_sch_${k}_heen" value="${os.heen||''}">
+      <input type="hidden" id="${prefix}_sch_${k}_terug" value="${os.terug||''}">
+      <input type="checkbox" style="display:none" id="${prefix}_av_${k}_heen" ${oa.heen?'checked':''}>
+      <input type="checkbox" style="display:none" id="${prefix}_av_${k}_terug" ${oa.terug?'checked':''}>
+      <input type="checkbox" style="display:none" id="${prefix}_bkH_${k}" ${oa.backupHeen?'checked':''}>
+      <input type="checkbox" style="display:none" id="${prefix}_bkT_${k}" ${oa.backupTerug?'checked':''}>`;
   }).join('');
+  const seats = Math.max(0,(f.capacity||4)-1);
   return `
-    <label>Naam ouder</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}">
-    <label>Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}">
-    <label>Totale autocapaciteit (incl. bestuurder — dus bij 5 stoelen totaal is er plek voor 4 passagiers)</label>
-    <input type="number" id="${prefix}_capacity" min="1" max="9" value="${f.capacity||4}" oninput="document.getElementById('${prefix}_capacityHint').textContent = 'Plek voor '+Math.max(0,(parseInt(this.value)||0)-1)+' passagier(s)';">
-    <p class="muted" id="${prefix}_capacityHint" style="margin-top:2px">Plek voor ${Math.max(0,(f.capacity||4)-1)} passagier(s)</p>
-    <p class="muted" style="margin-top:10px">Weekschema, beschikbaarheid &amp; back-up:</p>
-    ${dayBlocks}`;
+    <div class="grid2">
+      <div><label style="margin-top:0">Naam ouder</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}"></div>
+      <div><label style="margin-top:0">Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
+    </div>
+    <div class="grid2">
+      <div><label style="margin-top:8px">Telefoonnummer 1 (WhatsApp)</label><input type="text" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
+      <div><label style="margin-top:8px">Telefoonnummer 2 (optioneel)</label><input type="text" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
+    </div>
+    <label>Totale autocapaciteit (incl. bestuurder)</label>
+    <div class="stepperCard">
+      <div class="stepperInfo">${phIcon('car')}<div>
+        <div class="stepperTitle" id="${prefix}_capacityTitle">${f.capacity||4} zitplaatsen totaal</div>
+        <div class="stepperSub">Plek voor <strong id="${prefix}_capacityHint">${seats}</strong> passagiersdochters</div>
+      </div></div>
+      <div class="stepperControls">
+        <button type="button" class="stepperBtn" data-stepdown="${prefix}" aria-label="Minder zitplaatsen">−</button>
+        <span class="stepperValue" id="${prefix}_capacityValue">${f.capacity||4}</span>
+        <button type="button" class="stepperBtn" data-stepup="${prefix}" aria-label="Meer zitplaatsen">+</button>
+      </div>
+    </div>
+    <input type="hidden" id="${prefix}_capacity" value="${f.capacity||4}">
+    <div class="rowflex" style="margin-top:16px;align-items:baseline">
+      <p style="margin:0;font-size:14px;font-weight:700">Weekschema &amp; beschikbaarheid per dag</p>
+      <span class="muted" style="font-size:11px">Wordt direct bewaard</span>
+    </div>
+    <div class="grid5" style="margin-top:8px">${dayTabs}</div>
+    ${dayDetail}
+    ${hiddenOtherDays}`;
+}
+function wireFamilyFormExtras(prefix, rerenderFn){
+  DAYS.forEach(([k])=>{
+    const btn=document.querySelector(`[data-daytab="${prefix}|${k}"]`);
+    if(btn) btn.onclick=()=>{
+      // Merge in whatever's currently typed (even not-yet-blurred edits) before switching
+      // days, so a fast tab-switch can never silently discard an in-progress edit.
+      try{
+        const live = readFamilyForm(prefix);
+        const targetId = prefix==='me'? myFamilyId() : coordEditId;
+        if(targetId!=null && families[targetId]) families[targetId] = {...families[targetId], ...live};
+      }catch(e){ /* nothing persisted yet to merge with (e.g. brand new family) — safe to skip */ }
+      formSelectedDay[prefix]=k; hapticTap(); rerenderFn();
+    };
+  });
+  const hidden=document.getElementById(`${prefix}_capacity`);
+  const valueEl=document.getElementById(`${prefix}_capacityValue`);
+  const titleEl=document.getElementById(`${prefix}_capacityTitle`);
+  const hintEl=document.getElementById(`${prefix}_capacityHint`);
+  function step(delta){
+    let v=(parseInt(hidden.value)||4)+delta;
+    v=Math.max(1,Math.min(9,v));
+    hidden.value=v;
+    if(valueEl) valueEl.textContent=v;
+    if(titleEl) titleEl.textContent=v+' zitplaatsen totaal';
+    if(hintEl) hintEl.textContent=Math.max(0,v-1);
+    hapticTap();
+    hidden.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  const downBtn=document.querySelector(`[data-stepdown="${prefix}"]`);
+  const upBtn=document.querySelector(`[data-stepup="${prefix}"]`);
+  if(downBtn) downBtn.onclick=()=>step(-1);
+  if(upBtn) upBtn.onclick=()=>step(1);
 }
 // "Rijdt X" and "Back-up X" are mutually exclusive: ticking one unticks the other.
 function wireExclusiveAvailability(prefix){
@@ -626,6 +732,8 @@ function readFamilyForm(prefix){
   return {
     parentName:document.getElementById(`${prefix}_parentName`).value.trim(),
     girlName:document.getElementById(`${prefix}_girlName`).value.trim(),
+    parentPhone1:document.getElementById(`${prefix}_parentPhone1`).value.trim(),
+    parentPhone2:document.getElementById(`${prefix}_parentPhone2`).value.trim(),
     capacity:parseInt(document.getElementById(`${prefix}_capacity`).value)||4,
     schedule, availability
   };
@@ -807,8 +915,12 @@ function renderProfile(){
       const effId = myFamilyId();
       const lf = fam(effId);
       const unlinkCtl = impersonateFamilyId? '' : ` · <button type="button" class="btn small secondary" id="unlinkBtn">Ontkoppelen</button>`;
-      html += `<div class="card"><h2>Mijn gezin</h2>
-        <p class="muted">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong>${unlinkCtl}</p>
+      html += `<div class="card">
+        <div class="rowflex" style="align-items:flex-start">
+          <div><h2 style="margin-bottom:2px">Mijn gezin</h2><p class="muted" style="margin:0">Contactgegevens &amp; autocapaciteit</p></div>
+          ${lf.inviteCode? `<span class="badge" style="font-family:var(--font-mono);white-space:nowrap">Code: ${esc(lf.inviteCode)}</span>` : ''}
+        </div>
+        <p class="muted" style="margin-top:8px">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong>${unlinkCtl}</p>
         ${familyFormHtml('me', fam(effId))}
         <p class="muted" style="margin-top:8px">Wijzigingen worden automatisch opgeslagen.</p>
       </div>`;
@@ -830,6 +942,7 @@ function renderProfile(){
       const card=box.querySelector('.card');
       if(card) card.addEventListener('change', ()=>saveProfile());
       wireExclusiveAvailability('me');
+      wireFamilyFormExtras('me', renderProfile);
       const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=async ()=>{
         try{ await db.doc("links/"+me).delete(); showToast("Ontkoppeld ✓"); }catch(e){showToast("Mislukt: "+(e&&e.message||e));}
       };
@@ -849,7 +962,7 @@ async function saveProfile(){
   if(!me){showToast("Je account kon niet herkend worden. Herlaad de pagina.");return;}
   const effId = myFamilyId();
   const data = readFamilyForm('me');
-  try{ await db.doc("families/"+effId).set(data); showToast("Opgeslagen ✓"); }
+  try{ await db.doc("families/"+effId).set(data,{merge:true}); showToast("Opgeslagen ✓"); }
   catch(e){showToast("Opslaan mislukt: "+(e&&e.message||e));}
 }
 
@@ -1360,10 +1473,6 @@ function renderCoordEditor(){
   const currentCode = f? (f.inviteCode||'') : genCode();
   area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
     <h2>${isNew? 'Nieuw gezin toevoegen' : 'Bewerken: '+esc((f.girlName||f.parentName)||'')}</h2>
-    <label>Telefoonnummer ouder 1 (NL, voor toegangscontrole)</label>
-    <input type="text" id="coord_parentPhone1" value="${esc(f&&f.parentPhone1||'')}" placeholder="06-12345678">
-    <label>Telefoonnummer ouder 2 (optioneel)</label>
-    <input type="text" id="coord_parentPhone2" value="${esc(f&&f.parentPhone2||'')}" placeholder="06-12345678">
     <label>Uitnodigingscode (deel dit samen met de link, bijv. via WhatsApp — meerdere mensen kunnen dezelfde code gebruiken)</label>
     <div class="rowflex" style="gap:6px">
       <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
@@ -1376,6 +1485,7 @@ function renderCoordEditor(){
   const card=area.querySelector('.card');
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
   wireExclusiveAvailability('coord');
+  wireFamilyFormExtras('coord', renderCoordEditor);
   document.getElementById('coordCancel').onclick = ()=>{ coordEditId=undefined; renderBeheer(); };
   const genBtn=document.getElementById('genCodeBtn');
   if(genBtn) genBtn.onclick=()=>{ document.getElementById('coord_inviteCode').value=genCode(); saveCoordFamily(); };
@@ -1384,11 +1494,7 @@ async function saveCoordFamily(){
   if(!db){showToast("Geen verbinding met opslag.");return;}
   const data = readFamilyForm('coord');
   const codeEl=document.getElementById('coord_inviteCode');
-  const phone1El=document.getElementById('coord_parentPhone1');
-  const phone2El=document.getElementById('coord_parentPhone2');
   data.inviteCode = codeEl? codeEl.value.trim() : '';
-  data.parentPhone1 = phone1El? phone1El.value.trim() : '';
-  data.parentPhone2 = phone2El? phone2El.value.trim() : '';
   if(coordEditId==null){
     const slug = (data.girlName||data.parentName||'gezin').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30) || 'gezin';
     coordEditId = 'manual-'+slug+'-'+Date.now().toString(36);
@@ -1396,7 +1502,7 @@ async function saveCoordFamily(){
     const dup = dupName && Object.entries(families).some(([fid,fd])=> fid!==coordEditId && (fd.girlName||'').trim().toLowerCase()===dupName);
     if(dup) showToast("Let op: er bestaat al een gezin met de naam '"+data.girlName+"' — controleer op dubbelen.");
   }
-  try{ await db.doc("families/"+coordEditId).set(data); showToast("Opgeslagen ✓"); }
+  try{ await db.doc("families/"+coordEditId).set(data,{merge:true}); showToast("Opgeslagen ✓"); }
   catch(e){showToast("Opslaan mislukt: "+(e&&e.message||e));}
 }
 
