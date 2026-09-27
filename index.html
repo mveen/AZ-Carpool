@@ -370,16 +370,28 @@ function analyzeMatch(summary){
 }
 function matchSlug(m){ return (m.teamLabel+'_'+m.start.getTime()).toLowerCase().replace(/[^a-z0-9_]/g,''); }
 function startOfWeek(d){ const day=(d.getDay()+6)%7; const s=new Date(d); s.setHours(0,0,0,0); s.setDate(d.getDate()-day); return s; }
-// The actual calendar date for a given weekday key, within the CURRENT real-world week —
-// used so day-buttons/cards can show "28" or "28 sep" instead of just "Ma", helping distinguish
-// which literal day is being edited, especially important late in the week.
+// The week everything week-scoped (Dagafwijking, "wedstrijden deze week") is currently FOR:
+// Monday-Friday of the actual current week on a weekday, but the UPCOMING week once the
+// weekend starts. On a Saturday/Sunday, the outgoing week's Mon-Fri is already over and its
+// deviations are meant to be purged — so "this week" should mean what's coming, not what just
+// ended. This is deliberately separate from todayKey/scheduleDay, which stay about literal today.
+function effectivePlanningDate(){
+  const now = new Date();
+  const dow = now.getDay(); // 0=Sun, 6=Sat
+  if(dow===0){ const d=new Date(now); d.setDate(now.getDate()+1); return d; } // Sun -> tomorrow's Monday
+  if(dow===6){ const d=new Date(now); d.setDate(now.getDate()+2); return d; } // Sat -> Monday after next
+  return now;
+}
+// The actual calendar date for a given weekday key, within the CURRENT (or, on a weekend, the
+// UPCOMING) real-world week — used so day-buttons/cards can show "28" or "28 sep" instead of
+// just "Ma", helping distinguish which literal day is being edited, especially late in the week.
 function dateForWeekday(dayKey){
   const idx = DAYS.findIndex(([k])=>k===dayKey);
-  const monday = startOfWeek(new Date());
+  const monday = startOfWeek(effectivePlanningDate());
   const d = new Date(monday); d.setDate(monday.getDate()+idx);
   return d;
 }
-function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(now); const e=new Date(s); e.setDate(s.getDate()+7); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
+function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(effectivePlanningDate()); const e=new Date(s); e.setDate(s.getDate()+7); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
 // Rolling 8-day window (today through 7 days out, inclusive) for the weekend-carpool section —
 // deliberately NOT bound to calendar Sat/Sun, so "next Saturday" is always visible regardless
 // of which day of the week today happens to be (a strict Mon-Sun weekend definition could hide
@@ -564,7 +576,7 @@ function getISOWeekKey(date){
   const weekNum = 1+Math.round(((d-firstThursday)/86400000-3+((firstThursday.getUTCDay()+6)%7))/7);
   return d.getUTCFullYear()+'-W'+String(weekNum).padStart(2,'0');
 }
-const currentWeekKey = getISOWeekKey(new Date());
+const currentWeekKey = getISOWeekKey(effectivePlanningDate());
 function deviationKey(day,direction){ return day+'_'+direction; }
 function activeDeviation(day,direction){
   const dev = deviations[deviationKey(day,direction)];
