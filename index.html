@@ -323,6 +323,9 @@ const todayKey = (()=>{ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return m
 // default to on first view" — Monday is a reasonable default on a weekend, but that does NOT
 // make Monday "today".
 let scheduleDay = todayKey || "Ma";
+// When a Rooster move-passenger action hits a full destination car, this holds the pending
+// request so the destination car's own card can offer a real swap instead of just blocking.
+let pendingSwapRequest = null; // {fromGid, girlId, toGid} | null
 // Real vibration feedback via the Web Vibration API — Android Chrome supports this; iOS
 // Safari has no equivalent API at all, so this silently does nothing there (not faked).
 function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
@@ -624,7 +627,23 @@ function shiftPriorityOf(day,direction,id){
 function sortByShiftPriority(day,direction,entries){
   return [...entries].sort((a,b)=>shiftPriorityOf(day,direction,a[0])-shiftPriorityOf(day,direction,b[0]));
 }
+// Standaard-beschikbaar drivers are preferred as a whole GROUP over back-up-only drivers when
+// actually filling a shift — Selectievolgorde rank only decides order WITHIN each tier. This is
+// deliberately separate from the reserve-list display, which stays pure Selectievolgorde order
+// regardless of standaard/back-up (that distinction doesn't matter for "who could step in").
+function sortByAvailabilityTier(day,direction,entries){
+  return [...entries].sort((a,b)=>{
+    const aTier = isStandaardAvailable(a[1],day,direction)? 0 : 1;
+    const bTier = isStandaardAvailable(b[1],day,direction)? 0 : 1;
+    if(aTier!==bTier) return aTier-bTier;
+    return shiftPriorityOf(day,direction,a[0])-shiftPriorityOf(day,direction,b[0]);
+  });
+}
 function backupField(direction){ return direction==='heen' ? 'backupHeen' : 'backupTerug'; }
+function isStandaardAvailable(f,day,direction){
+  const a=(f.availability&&f.availability[day])||{};
+  return !!a[direction];
+}
 function isAvailable(f,day,direction){
   const a=(f.availability&&f.availability[day])||{};
   return !!(a[direction] || a[backupField(direction)]);
@@ -1893,7 +1912,7 @@ function planClusters(day,direction,list){
 function planPrimaryOption(day,direction,list){
   const clusters = planClusters(day,direction,list);
   if(!clusters.length) return null;
-  const priorityDrivers = sortByShiftPriority(day,direction, availableDrivers(day,direction))
+  const priorityDrivers = sortByAvailabilityTier(day,direction, availableDrivers(day,direction))
     .map(([id,f])=>({id, seats: seats(f)}));
   const assignment = planPrimaryAssignment(clusters, priorityDrivers);
   if(!assignment) return null;
@@ -2027,6 +2046,14 @@ function renderDirection(day,direction,title){
           </select>
           <button type="button" class="btn small" data-moveConfirm="${gid}">Verplaats</button>
         </div>`:''}
+      ${pendingSwapRequest && pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
+          <p class="fitbad" style="margin:0 0 6px">Geen plek meer in deze auto (${g.girlIds.length}/${seats(driver)} bezet). Wil je ${girlName(pendingSwapRequest.girlId)} wisselen met een andere passagier?</p>
+          <select id="swapPickGirl" aria-label="Wissel met welke passagier">${g.girlIds.map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
+          <div class="rowflex" style="margin-top:8px;gap:6px">
+            <button type="button" class="btn small" data-swapconfirm="${gid}">Wissel</button>
+            <button type="button" class="btn small secondary" data-swapcancel="${gid}">Annuleren</button>
+          </div>
+        </div>`:''}
     </div>`;
   }).join('') || `<p class="muted">Nog geen ritten ingepland.</p>`;
 
@@ -2116,11 +2143,13 @@ function attachScheduleHandlers(){
     if(!girlId||!toGid){ showToast("Kies eerst een dochter én een bestemming."); return; }
     const from=groups[gid], to=groups[toGid];
     if(!from||!to) return;
-    // The destination car must actually have a free passenger seat.
+    // The destination car must actually have a free passenger seat — if not, offer a real
+    // swap (right there on the destination car's own card) instead of just blocking.
     if(to.driverFamilyId){
       const toSeats = seats(fam(to.driverFamilyId));
       if(to.girlIds.length >= toSeats){
-        showToast(`Geen plek meer in die auto (${to.girlIds.length}/${toSeats} bezet).`);
+        pendingSwapRequest = {fromGid:gid, girlId, toGid};
+        renderSchedule();
         return;
       }
     }
@@ -2137,6 +2166,28 @@ function attachScheduleHandlers(){
       showToast("Verplaatst ✓");
     }catch(e){showToast("Verplaatsen mislukt: "+(e&&e.message||e));}
   });
+  document.querySelectorAll('[data-swapconfirm]').forEach(btn=>btn.onclick=async ()=>{
+    if(!pendingSwapRequest) return;
+    const swapSel=document.getElementById('swapPickGirl');
+    const swapWithId = swapSel && swapSel.value;
+    if(!swapWithId){ showToast("Kies wie je wilt wisselen."); return; }
+    const {fromGid, girlId, toGid} = pendingSwapRequest;
+    const from=groups[fromGid], to=groups[toGid];
+    if(!from||!to){ pendingSwapRequest=null; renderSchedule(); return; }
+    const newFrom = from.girlIds.filter(id=>id!==girlId).concat([swapWithId]);
+    const newTo = to.girlIds.filter(id=>id!==swapWithId).concat([girlId]);
+    try{
+      const fromDeparture = computeDepartureTime(from.day, from.direction, newFrom);
+      const toDeparture = computeDepartureTime(to.day, to.direction, newTo);
+      await db.doc("groups/"+fromGid).update({girlIds:newFrom, departureTime:fromDeparture});
+      await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime:toDeparture});
+      recordLastUpdate('Rooster');
+      showToast("Gewisseld ✓");
+    }catch(e){ showToast("Wisselen mislukt: "+(e&&e.message||e)); }
+    pendingSwapRequest=null;
+    renderSchedule();
+  });
+  document.querySelectorAll('[data-swapcancel]').forEach(btn=>btn.onclick=()=>{ pendingSwapRequest=null; renderSchedule(); });
  }catch(e){ setStatus("⚠️ Fout bij koppelen roosterknoppen: "+(e&&e.message||e)); }
 }
 

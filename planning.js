@@ -160,10 +160,11 @@ export function planClusters({ girls, driverSeats, gapLimitMinutes, togetherRule
 
 /**
  * Assigns each cluster to a driver: largest clusters first (so a driver with
- * barely-enough seats isn't "used up" on a smaller car first), preferring
- * whichever ELIGIBLE driver's own daughter is actually in that cluster, then
- * falling back to shift-priority order (drivers[] must already be sorted by
- * priority ascending — best first).
+ * barely-enough seats isn't "used up" on a smaller car first), then strictly
+ * by shift-priority order (drivers[] must already be sorted the way the
+ * caller wants — e.g. availability tier first, then Selectievolgorde rank).
+ * Deliberately has NO "own parent" preference here — that belongs at
+ * cluster-formation time only, weighed against real cost.
  *
  * @param {string[][]} clusters
  * @param {{id:string,seats:number}[]} priorityDrivers - sorted best-first
@@ -177,10 +178,14 @@ export function planPrimaryAssignment(clusters, priorityDrivers) {
   const byIndex = {};
   for (const i of order) {
     const cluster = clusters[i];
+    // Pure shift-priority order — priorityDrivers is expected to already be sorted the way the
+    // caller wants (availability tier first, then Selectievolgorde rank). No "own parent" override
+    // here: that preference belongs at cluster-FORMATION time (weighed against real waiting-time
+    // cost via prefWindowMinutes), never at driver-selection time where it would otherwise let an
+    // own-parent match jump the queue over a strictly higher-priority eligible driver for free.
     const eligible = priorityDrivers.filter(d => !used.has(d.id) && d.seats >= cluster.length);
     if (!eligible.length) return null;
-    const ownParent = eligible.find(d => cluster.includes(d.id));
-    const driver = ownParent || eligible[0];
+    const driver = eligible[0];
     used.add(driver.id);
     byIndex[i] = { driverId: driver.id, girlIds: cluster };
   }
