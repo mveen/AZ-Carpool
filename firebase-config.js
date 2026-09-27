@@ -21,3 +21,12 @@ export const firebaseConfig = {
   appId: "1:366961042772:web:7bcbf144fa4316146814c1",
   measurementId: "G-B1VT4T621M"
 };
+
+// Google Calendar API key, used to fetch the AZ match schedules (Mijn week + Afwijking's
+// weekend carpool section). Google Cloud console → APIs & Services → Credentials → Create
+// credentials → API key. Then: Enable the "Google Calendar API" for that project, and — for
+// security — restrict this key's "Application restrictions" to HTTP referrers matching your
+// own site (e.g. https://mveen.github.io/*), same idea as the Firebase key restriction.
+// This key is NOT secret either (same reasoning as firebaseConfig above) — it only grants
+// read access to whichever calendars are public, nothing account-wide.
+export const googleCalendarApiKey = "AIzaSyBxLbG-osWKvzzmPS_njfHvtFjxS-i5urg";
