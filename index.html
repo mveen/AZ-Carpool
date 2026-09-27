@@ -228,7 +228,7 @@ import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/1
 // module specifier triggered a Firefox security error for at least one user ("may not load
 // or link to file:///"), which a fully-qualified URL sidesteps entirely regardless of cause.
 // If this site's URL ever changes, these two lines need to be updated to match.
-import { firebaseConfig } from "https://mveen.github.io/AZ-Carpool/firebase-config.js";
+import { firebaseConfig, googleCalendarApiKey } from "https://mveen.github.io/AZ-Carpool/firebase-config.js";
 import {
   timeToMinutes as pureTimeToMinutes, minutesToTime as pureMinutesToTime,
   computeDepartureTime as pureComputeDepartureTime,
@@ -320,15 +320,16 @@ let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appRead
 let families={}, groups={}, links={}, deviations={};
 let lastUpdateRooster=null, lastUpdateDeviation=null;
 
-// ---------- Match feeds (Sportlink iCal) ----------
-// Fetched from data.sportlink.com, which is not expected to allow direct browser fetches
-// (CORS) — routed through a public CORS-proxy. If that proxy service ever goes down, this
-// is the one line to swap for a replacement.
-const MATCH_PROXY = "https://api.allorigins.win/raw?url=";
+// ---------- Match feeds (Google Calendar API) ----------
+// Fetched via Google's Calendar API (JSON), which genuinely supports direct browser fetches
+// with just an API key — verified this works from client-side JS before building on it,
+// unlike the raw Sportlink iCal links (which needed a fragile third-party CORS proxy and got
+// dropped for exactly that reason). The API key itself lives in firebase-config.js, filled in
+// once, same pattern as the Firebase config.
 const DEFAULT_MATCH_FEEDS = [
-  {label:"Jong AZ", url:"https://data.sportlink.com/ical-team?token=nbgacrfdeqllnhhemrnimcr0bm"},
-  {label:"O18", url:"https://data.sportlink.com/ical-team?token=tgd7nqr820cgq0og1b55v6gcps"},
-  {label:"O17", url:"https://data.sportlink.com/ical-team?token=c36eg5u9mlfdktvmb76t7chogo"},
+  {label:"Jong AZ", calendarId:"s8pvlt88lfjogtvfl112j60mfvi1blgr@import.calendar.google.com"},
+  {label:"O18", calendarId:"65b3t3cr5noo0b1mv0h6io3mnikbcnd5@import.calendar.google.com"},
+  {label:"O17", calendarId:"mm99m5kb3fmlb62ko33p3dulod1vvl19@import.calendar.google.com"},
 ];
 let matchFeeds = [];              // live from settings/matchFeeds, falls back to DEFAULT_MATCH_FEEDS
 let matches = [];                 // successfully fetched THIS session (empty until a live fetch succeeds)
@@ -340,35 +341,15 @@ let cachedMatchesAt = null;
 
 function activeMatchFeeds(){ return matchFeeds.length? matchFeeds : DEFAULT_MATCH_FEEDS; }
 
-// Minimal, purpose-built iCal parser — just enough for Sportlink's simple, consistent VEVENT
-// shape (SUMMARY/DTSTART;TZID=.../LOCATION), not a full RFC5545 implementation.
-function parseICS(text, teamLabel){
-  const events = [];
-  text.split('BEGIN:VEVENT').slice(1).forEach(block=>{
-    const body = block.split('END:VEVENT')[0];
-    const lines = body.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    const get = (prefix)=>{ const line=lines.find(l=>l.startsWith(prefix)); return line? line.slice(line.indexOf(':')+1) : ''; };
-    const summary = get('SUMMARY');
-    const dtstartLine = lines.find(l=>l.startsWith('DTSTART'));
-    const location = get('LOCATION');
-    if(!dtstartLine || !summary) return;
-    const dtValue = dtstartLine.slice(dtstartLine.indexOf(':')+1);
-    const m = dtValue.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})/);
-    if(!m) return;
-    const [,y,mo,d,h,mi] = m;
-    // Sportlink times are already Europe/Amsterdam wall-clock time (TZID=Europe/Amsterdam, no
-    // trailing Z) — parsed as plain local-time components, correct for Dutch parents' phones.
-    const start = new Date(+y, +mo-1, +d, +h, +mi);
-    events.push({ teamLabel, summary, location, start });
-  });
-  return events;
-}
-// "TeamA-TeamB" — whichever side contains "AZ" is us; the other is the opponent. Every AZ
-// team name we know of (Jong AZ, AZ O18, AZ O17) contains "AZ", so this is a reliable, simple heuristic.
+// "TeamA-TeamB" — but team names can themselves contain a hyphen (e.g. "NFC O15-1",
+// "AZ MO17-1" is a common Dutch youth-team numbering convention), so the real separator is
+// specifically the hyphen immediately followed by a LETTER (the start of the next team's
+// name) — a same-team numbering hyphen is always followed by a digit, never a letter.
 function analyzeMatch(summary){
-  const parts = summary.split('-');
-  if(parts.length<2) return {opponent:summary, isHome:null, home:summary, away:''};
-  const home = parts[0].trim(), away = parts.slice(1).join('-').trim();
+  const sep = summary.match(/-(?=[A-Za-z])/);
+  if(!sep) return {opponent:summary, isHome:null, home:summary, away:''};
+  const home = summary.slice(0, sep.index).trim();
+  const away = summary.slice(sep.index+1).trim();
   const homeIsAZ = /az/i.test(home), awayIsAZ = /az/i.test(away);
   if(homeIsAZ && !awayIsAZ) return {opponent:away, isHome:true, home, away};
   if(!homeIsAZ && awayIsAZ) return {opponent:home, isHome:false, home, away};
@@ -381,10 +362,22 @@ function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(now); 
 function matchesThisWeekend(list){ const now=new Date(); const s=startOfWeekend(now); const e=new Date(s); e.setDate(s.getDate()+2); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
 async function fetchTeamMatches(feed){
   try{
-    const res = await fetch(MATCH_PROXY + encodeURIComponent(feed.url));
+    if(!googleCalendarApiKey) throw new Error('Geen Google Calendar API-key ingesteld in firebase-config.js.');
+    const timeMin = new Date(); timeMin.setDate(timeMin.getDate()-1);
+    const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(feed.calendarId)}/events`
+      + `?key=${encodeURIComponent(googleCalendarApiKey)}&singleEvents=true&orderBy=startTime`
+      + `&timeMin=${encodeURIComponent(timeMin.toISOString())}&maxResults=25`;
+    const res = await fetch(url);
     if(!res.ok) throw new Error('HTTP '+res.status);
-    const text = await res.text();
-    return parseICS(text, feed.label);
+    const data = await res.json();
+    return (data.items||[]).map(ev=>{
+      const startStr = ev.start && (ev.start.dateTime || ev.start.date);
+      if(!startStr || !ev.summary) return null;
+      // Google returns an ISO timestamp with its own explicit UTC offset already included
+      // (the calendar's own Europe/Amsterdam timezone), so this is unambiguous regardless
+      // of what timezone the viewing browser happens to be in.
+      return { teamLabel: feed.label, summary: ev.summary, location: ev.location||'', start: new Date(startStr) };
+    }).filter(Boolean);
   }catch(e){ return null; } // null = this team's fetch failed, distinct from [] = fetched but no matches
 }
 async function loadAllMatches(){
@@ -1585,12 +1578,12 @@ function renderBeheer(){
       </div>
     </div>
     <div class="card">
-      <h2>Wedstrijdkalenders (Sportlink)</h2>
-      <p class="muted">Deze links voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool dit weekend" (Afwijking).</p>
+      <h2>Wedstrijdkalenders (Google Calendar)</h2>
+      <p class="muted">Deze agenda's voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool dit weekend" (Afwijking). Elke agenda moet openbaar ("Make available to public") staan — Google Calendar → tandwiel bij de agenda → Instellingen en delen → Toegangsrechten.</p>
       ${activeMatchFeeds().map((f,i)=>`
         <div class="grid2" style="margin-top:6px">
           <div><label style="margin-top:0">Naam</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
-          <div><label style="margin-top:0">iCal-link</label><input type="text" class="matchFeedUrl" data-feedidx="${i}" value="${esc(f.url)}"></div>
+          <div><label style="margin-top:0">Calendar ID</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="xxxx@group.v.calendar.google.com"></div>
         </div>`).join('')}
       <button type="button" class="btn small secondary" id="refreshMatchesBtn" style="margin-top:8px">${phIcon('refresh')} Nu verversen</button>
       ${matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(matchesFetchedAt).toLocaleString('nl-NL')}${matchFetchFailedTeams.length? ' — mislukt voor: '+esc(matchFetchFailedTeams.join(', ')) : ''}</p>` : ''}
@@ -1651,12 +1644,12 @@ function renderBeheer(){
     if(coordEditId!==undefined) renderCoordEditor();
     const saveMatchFeeds = async ()=>{
       const labels=[...document.querySelectorAll('.matchFeedLabel')];
-      const urls=[...document.querySelectorAll('.matchFeedUrl')];
-      const feeds = labels.map((el,i)=>({label:el.value.trim(), url:(urls[i]&&urls[i].value.trim())||''})).filter(f=>f.url);
+      const calIds=[...document.querySelectorAll('.matchFeedCalId')];
+      const feeds = labels.map((el,i)=>({label:el.value.trim(), calendarId:(calIds[i]&&calIds[i].value.trim())||''})).filter(f=>f.calendarId);
       try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Opgeslagen ✓"); loadAllMatches(); }
       catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
     };
-    document.querySelectorAll('.matchFeedLabel,.matchFeedUrl').forEach(el=>el.onchange=saveMatchFeeds);
+    document.querySelectorAll('.matchFeedLabel,.matchFeedCalId').forEach(el=>el.onchange=saveMatchFeeds);
     const refreshBtn=document.getElementById('refreshMatchesBtn');
     if(refreshBtn) refreshBtn.onclick=()=>{ showToast("Wedstrijden verversen…"); loadAllMatches(); };
     const sd=document.getElementById('seedPdf');
