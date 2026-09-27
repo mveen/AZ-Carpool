@@ -360,6 +360,10 @@ function startOfWeek(d){ const day=(d.getDay()+6)%7; const s=new Date(d); s.setH
 function startOfWeekend(d){ const s=startOfWeek(d); const sat=new Date(s); sat.setDate(s.getDate()+5); return sat; }
 function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(now); const e=new Date(s); e.setDate(s.getDate()+7); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
 function matchesThisWeekend(list){ const now=new Date(); const s=startOfWeekend(now); const e=new Date(s); e.setDate(s.getDate()+2); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
+// TEMPORARY testing helper (see the Mijn week card below) — widens the visible window so a
+// successful fetch is easy to confirm even during weeks with nothing on the this-week/weekend
+// filters specifically. Revert renderMyWeek back to matchesThisWeek once the fetch is confirmed healthy.
+function matchesUpcoming(list, weeks){ const now=new Date(); const e=new Date(now); e.setDate(e.getDate()+7*weeks); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
 async function fetchTeamMatches(feed){
   try{
     if(!googleCalendarApiKey) throw new Error('Geen Google Calendar API-key ingesteld in firebase-config.js.');
@@ -368,9 +372,13 @@ async function fetchTeamMatches(feed){
       + `?key=${encodeURIComponent(googleCalendarApiKey)}&singleEvents=true&orderBy=startTime`
       + `&timeMin=${encodeURIComponent(timeMin.toISOString())}&maxResults=25`;
     const res = await fetch(url);
-    if(!res.ok) throw new Error('HTTP '+res.status);
+    if(!res.ok){
+      let detail='';
+      try{ const body=await res.json(); detail = body && body.error && body.error.message ? ' — '+body.error.message : ''; }catch(e){}
+      throw new Error('HTTP '+res.status+detail);
+    }
     const data = await res.json();
-    return (data.items||[]).map(ev=>{
+    const events = (data.items||[]).map(ev=>{
       const startStr = ev.start && (ev.start.dateTime || ev.start.date);
       if(!startStr || !ev.summary) return null;
       // Google returns an ISO timestamp with its own explicit UTC offset already included
@@ -378,14 +386,15 @@ async function fetchTeamMatches(feed){
       // of what timezone the viewing browser happens to be in.
       return { teamLabel: feed.label, summary: ev.summary, location: ev.location||'', start: new Date(startStr) };
     }).filter(Boolean);
-  }catch(e){ return null; } // null = this team's fetch failed, distinct from [] = fetched but no matches
+    return { ok:true, events };
+  }catch(e){ return { ok:false, error: (e&&e.message)||String(e) }; }
 }
 async function loadAllMatches(){
   const feeds = activeMatchFeeds();
   const results = await Promise.all(feeds.map(fetchTeamMatches));
   const failed = [];
   let combined = [];
-  results.forEach((evts,i)=>{ if(evts===null) failed.push(feeds[i].label); else combined = combined.concat(evts); });
+  results.forEach((r,i)=>{ if(!r.ok) failed.push({label:feeds[i].label, error:r.error}); else combined = combined.concat(r.events); });
   if(combined.length || !matchFetchFailedTeams.length){
     matches = combined; matchesSource='live'; matchesFetchedAt=Date.now(); matchFetchFailedTeams=failed;
     if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
@@ -1232,14 +1241,17 @@ function renderMyWeek(){
     </div>`;
   }).join('') || `<p class="muted">Geen dagen met een tijd ingesteld deze week.</p>`;
 
-  const weekMatches = matchesThisWeek(currentMatchList());
+  // TEMPORARY: showing the next 4 weeks (not just "this week") purely to make it easy to
+  // confirm the fetch itself is working, independent of whether any match happens to fall
+  // within the normal week window right now. Revert to matchesThisWeek(...) once confirmed.
+  const weekMatches = matchesUpcoming(currentMatchList(), 4);
   const matchStatusNote = matchesSource==='live'
     ? ''
     : (cachedMatchesAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(cachedMatchesAt).toLocaleString('nl-NL')}</p>` : '');
-  const matchFailNote = matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">Kon niet ophalen voor: ${esc(matchFetchFailedTeams.join(', '))}</p>` : '';
+  const matchFailNote = matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">Kon niet ophalen: ${esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
   const matchesCardHtml = `<div class="card">
-    <h2>Wedstrijden deze week</h2>
-    ${weekMatches.length? weekMatches.map(m=>matchInfoHtml(m)).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">') : '<p class="muted">Geen wedstrijden gevonden voor deze week.</p>'}
+    <h2>Wedstrijden komende 4 weken <span class="muted" style="font-weight:400;font-size:11px">(tijdelijk verbreed voor testen)</span></h2>
+    ${weekMatches.length? weekMatches.map(m=>matchInfoHtml(m)).join('<hr style="border:none;border-top:1px solid var(--border);margin:8px 0">') : '<p class="muted">Geen wedstrijden gevonden.</p>'}
     ${matchFailNote}${matchStatusNote}
   </div>`;
 
@@ -1586,7 +1598,7 @@ function renderBeheer(){
           <div><label style="margin-top:0">Calendar ID</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="xxxx@group.v.calendar.google.com"></div>
         </div>`).join('')}
       <button type="button" class="btn small secondary" id="refreshMatchesBtn" style="margin-top:8px">${phIcon('refresh')} Nu verversen</button>
-      ${matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(matchesFetchedAt).toLocaleString('nl-NL')}${matchFetchFailedTeams.length? ' — mislukt voor: '+esc(matchFetchFailedTeams.join(', ')) : ''}</p>` : ''}
+      ${matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(matchesFetchedAt).toLocaleString('nl-NL')}${matchFetchFailedTeams.length? ' — mislukt: '+esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; ')) : ''}</p>` : ''}
     </div>
     <div class="card">
       <h2>Beheerderstools</h2>
