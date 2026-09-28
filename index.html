@@ -183,6 +183,27 @@ table.avail th,table.avail td{padding:6px 4px}
 .devAlert .devAlertTitle{font-size:13px;font-weight:800;color:var(--warn-text);margin:0}
 .devAlert .devAlertBody{font-size:11px;color:var(--warn-text);margin:4px 0 0}
 .devCard{border-color:var(--warn) !important}
+/* ---------- Wedstrijdcarpool (violet "match" theme + football icon) ----------
+   Deliberately a different color family than the weekday carpool (red/green) and the
+   Dagafwijking (amber), so a match ride is recognisable at a glance everywhere it shows up. */
+:root{--match:#7c3aed;--match2:#ede9fe;--match-text:#5b21b6}
+:root[data-theme="dark"]{--match:#a78bfa;--match2:#221a3a;--match-text:#c4b5fd}
+.group.matchGroup{border-left-color:var(--match)}
+.matchTitle{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px}
+.matchTitle .matchBall{color:var(--match);display:inline-flex}
+.matchTag{display:inline-flex;align-items:center;gap:4px;background:var(--match2);color:var(--match-text);font-size:9px;font-weight:800;letter-spacing:.04em;padding:3px 8px;border-radius:var(--radius-sm);text-transform:uppercase}
+.matchCarRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12.5px}
+.matchCarRow .matchCarDep{font-family:var(--font-mono);font-weight:700;color:var(--match-text);flex-shrink:0}
+.matchCarRow.mine{background:var(--match2);border-radius:var(--radius-sm);padding:6px 8px;border-top-color:transparent}
+.matchCapWarn{color:var(--warn);font-size:12px;font-weight:700;margin-top:6px}
+.subride.matchRide{background:var(--match2);border:2px solid var(--match)}
+.subride.matchRide .subrideHead{color:var(--match-text)}
+.subride.matchRide .subrideDep{color:var(--match-text)}
+.subride.matchRide .subrideStatus{color:var(--match-text)}
+.subride.matchRide .subrideStatus.driving{font-weight:700}
+.dayCard.matchDay{border-color:var(--match)}
+.dayCard.matchOnly .dayBadge{background:var(--match);color:#fff}
+.trashBtn{color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -329,6 +350,7 @@ const PH_PATHS = {
   moon: `<path d="M216 136A88 88 0 1 1 120 40a70 70 0 0 0 96 96Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
   home: `<path d="M32 128 128 48l96 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><path d="M56 112v88a8 8 0 0 0 8 8h128a8 8 0 0 0 8-8v-88" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
   away: `<path d="M128 20c-44 0-80 36-80 80 0 60 80 136 80 136s80-76 80-136c0-44-36-80-80-80Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="128" cy="100" r="28" fill="none" stroke="currentColor" stroke-width="14"/>`,
+  soccer: `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><polygon points="128,92 162,117 149,157 107,157 94,117" fill="currentColor"/><path d="M128 92V32M162 117l57-19M149 157l35 49M107 157l-35 49M94 117 37 98" stroke="currentColor" stroke-width="14" stroke-linecap="round"/>`,
   eye: `<path d="M16 128 Q128 32 240 128 Q128 224 16 128 Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><circle cx="128" cy="128" r="32" fill="none" stroke="currentColor" stroke-width="16"/>`,
 };
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
@@ -472,32 +494,53 @@ function matchInfoHtml(m){
   const timeLabel = m.start.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
   const homeAway = a.isHome===true? ' (Thuis)' : a.isHome===false? ' (Uit)' : '';
   return `<div style="padding:4px 0">
-    <div style="font-weight:700;font-size:13px">${esc(m.teamLabel)}${homeAway} vs ${esc(a.opponent)}</div>
+    <div class="matchTitle"><span class="matchBall">${phIcon('soccer',{size:'16px'})}</span><span>${esc(m.teamLabel)}${homeAway} vs ${esc(a.opponent)}</span></div>
     <div class="muted" style="font-size:12px">${dayLabel} · ${timeLabel}${m.location? ' · '+esc(m.location):''}</div>
   </div>`;
 }
-// Mijn week's "upcoming matches" list: grouped per calendar day, one line per match in
-// "HH:MM - thuisteam vs uitteam - locatie" form, with a home/away icon (no more matches are
-// self-explanatory as (Thuis)/(Uit) text here — the icon carries that instead).
-function renderMatchesGroupedByDay(list){
-  if(!list.length) return '<p class="muted">Geen wedstrijden gevonden.</p>';
-  const groups = {}; const order=[];
-  list.forEach(m=>{
-    const key = m.start.toDateString();
-    if(!groups[key]){ groups[key]=[]; order.push(key); }
-    groups[key].push(m);
+// ---------- Shared match-carpool rendering (Afwijking, Mijn week, Dagafwijking) ----------
+// A stored matchCarpools doc carries its own denormalized match info — turn it back into the
+// same shape as a fetched match so matchInfoHtml() can render both identically.
+function docToMatch(d){ return {teamLabel:d.teamLabel||'', summary:d.summary||'', location:d.location||'', start:new Date(d.startMs)}; }
+// One car of a match carpool. `editable` adds the delete button (Afwijking only); `highlightId`
+// tints the row when that family drives it or has its daughter in it.
+function matchCarRowHtml(c, opts){
+  opts = opts||{};
+  const girlIds = c.girlIds||[];
+  const driver = c.driverFamilyId? esc(fam(c.driverFamilyId).parentName) : 'nog geen chauffeur';
+  const cap = c.driverFamilyId? seats(fam(c.driverFamilyId)) : null;
+  const over = cap!=null && girlIds.length>cap;
+  const mine = !!opts.highlightId && (c.driverFamilyId===opts.highlightId || girlIds.includes(opts.highlightId));
+  const overHtml = over? ` <span class="fitbad" style="white-space:nowrap" title="Meer passagiers dan plekken">${phIcon('warning')} ${girlIds.length}/${cap}</span>` : '';
+  const delHtml = opts.editable? `<button type="button" class="iconbtn trashBtn" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="Verwijder carpool">${phIcon('trash')}</button>` : '';
+  return `<div class="matchCarRow${mine?' mine':''}">
+    <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
+    <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${girlIds.map(id=>girlName(id)).join(', ')||'geen passagiers'}${overHtml}</span>
+    ${delHtml}
+  </div>`;
+}
+// Stored match carpools (with at least one car) whose match is on the given calendar date.
+function matchCarpoolsOnDate(date){
+  const key = date.toDateString();
+  return Object.entries(matchCarpools)
+    .filter(([,d])=>d && d.startMs && d.cars && d.cars.length && new Date(d.startMs).toDateString()===key)
+    .sort((a,b)=>a[1].startMs-b[1].startMs);
+}
+// Every match-carpool car this family is involved in (as driver and/or via the daughter),
+// from the start of today up to the end of the current planning week.
+function myMatchRides(myId){
+  const from = new Date(); from.setHours(0,0,0,0);
+  const to = startOfWeek(effectivePlanningDate()); to.setDate(to.getDate()+7);
+  const out = [];
+  Object.entries(matchCarpools).forEach(([slug,d])=>{
+    if(!d || !d.startMs || d.startMs<from.getTime() || d.startMs>=to.getTime()) return;
+    (d.cars||[]).forEach(c=>{
+      const driving = c.driverFamilyId===myId;
+      const daughter = (c.girlIds||[]).includes(myId);
+      if(driving || daughter) out.push({slug, doc:d, car:c, driving, daughter});
+    });
   });
-  return order.map(key=>{
-    const dayMatches = groups[key];
-    const dayLabel = dayMatches[0].start.toLocaleDateString('nl-NL',{weekday:'long', day:'numeric', month:'long'});
-    const rows = dayMatches.map(m=>{
-      const a = analyzeMatch(m.summary);
-      const icon = a.isHome===true? phIcon('home') : a.isHome===false? phIcon('away') : '';
-      const timeLabel = m.start.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
-      return `<div style="padding:3px 0;font-size:14px;display:flex;align-items:flex-start;gap:6px"><span style="flex-shrink:0;margin-top:1px">${icon}</span><span>${timeLabel} - ${esc(a.home)} vs ${esc(a.away)}${m.location? ' - '+esc(m.location):''}</span></div>`;
-    }).join('');
-    return `<div style="margin-top:10px"><div style="font-weight:700;font-size:13px">${esc(dayLabel)}</div>${rows}</div>`;
-  }).join('');
+  return out.sort((a,b)=>a.doc.startMs-b.doc.startMs || (a.car.departureTime||'').localeCompare(b.car.departureTime||''));
 }
 function suggestedMatchDeparture(matchDate){
   const t = new Date(matchDate.getTime() - 210*60000); // 3.5 hours before
@@ -525,22 +568,19 @@ function renderWeekendMatchCarpoolCard(){
     weekendMatchBySlug[slug] = m;
     const doc = matchCarpools[slug];
     const cars = (doc && doc.cars) || [];
-    const carsHtml = cars.length? cars.map((c,idx)=>`
-      <div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)">
-        <span style="font-size:12.5px">${phIcon('car')} ${esc(fam(c.driverFamilyId).parentName)} · ${c.girlIds.map(id=>girlName(id)).join(', ')} · vertrek ${esc(c.departureTime)}</span>
-        <button type="button" class="btn small secondary" data-delmatchcar="${slug}|${idx}" aria-label="Verwijder carpool">${phIcon('trash')}</button>
-      </div>`).join('') : '<p class="muted" style="font-size:12px">Nog geen carpool ingesteld.</p>';
+    const carsHtml = cars.length? cars.map((c,idx)=>matchCarRowHtml(c,{editable:true, slug, idx})).join('') : '<p class="muted" style="font-size:12px;margin:4px 0 0">Nog geen carpool ingesteld.</p>';
     const isOpen = openMatchCarpoolForm===slug;
     let formHtml;
     if(isOpen){
       const suggestedDep = suggestedMatchDeparture(m.start);
       const girlOptions = allFamilies.map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}">${esc(f.girlName||f.parentName||id)}</label>`).join('');
-      const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}">${esc(f.parentName)}</option>`).join('');
+      const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}">${esc(f.parentName)} (${seats(f)} ${seats(f)===1?'plek':'plekken'})</option>`).join('');
       formHtml = `<div class="dayFormCard" style="margin-top:8px">
         <label style="margin-top:0">Chauffeur</label>
         <select id="matchCarDriver_${slug}"><option value="">-- kies --</option>${driverOptions}</select>
-        <label>Welke passagiers?</label>
+        <label>Welke passagiers? <span id="matchCarCount_${slug}"></span></label>
         <div>${girlOptions}</div>
+        <div id="matchCarCapWarn_${slug}" class="matchCapWarn" role="status" aria-live="polite"></div>
         <label>Vertrektijd</label>
         <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
         <button type="button" class="btn small secondary" data-savematchcar="${slug}">Opslaan</button>
@@ -549,7 +589,7 @@ function renderWeekendMatchCarpoolCard(){
     } else {
       formHtml = `<button type="button" class="btn small secondary" data-addmatchcar="${slug}" style="margin-top:6px">+ Auto toevoegen</button>`;
     }
-    return `<div class="group" style="border-left-color:var(--info)">${matchInfoHtml(m)}${carsHtml}${formHtml}</div>`;
+    return `<div class="group matchGroup">${matchInfoHtml(m)}${carsHtml}${formHtml}</div>`;
   }).join('');
   return `<div class="card">
     <h2>Wedstrijdcarpool komende dagen</h2>
@@ -557,7 +597,34 @@ function renderWeekendMatchCarpoolCard(){
     ${matchesHtml}
   </div>`;
 }
+// Capacity check for the "add car" form: compares the chosen passengers with the driver's
+// passenger seats (capacity minus the driver). Only a warning — saving stays possible.
+function matchCarCapacityState(slug){
+  const driverSel=document.getElementById('matchCarDriver_'+slug);
+  const n=document.querySelectorAll('.matchCarGirlPick:checked').length;
+  const driverId = driverSel && driverSel.value;
+  const cap = driverId? seats(fam(driverId)) : null;
+  return {n, cap, driverId, over: cap!=null && n>cap};
+}
+function updateMatchCarCapacityWarning(slug){
+  const st = matchCarCapacityState(slug);
+  const cnt=document.getElementById('matchCarCount_'+slug);
+  if(cnt) cnt.textContent = st.n? `(${st.n} gekozen${st.cap!=null?` / ${st.cap} ${st.cap===1?'plek':'plekken'}`:''})` : '';
+  const warn=document.getElementById('matchCarCapWarn_'+slug);
+  if(warn) warn.innerHTML = st.over
+    ? `${phIcon('warning')} ${esc(fam(st.driverId).parentName)} heeft ${st.cap} ${st.cap===1?'passagiersplek':'passagiersplekken'}, maar je hebt ${st.n} passagiers gekozen.`
+    : '';
+  // Any change to the selection cancels a pending "toch opslaan" confirmation.
+  const saveBtn=document.querySelector(`[data-savematchcar="${slug}"]`);
+  if(saveBtn && saveBtn.dataset.confirmOver==='1'){ saveBtn.dataset.confirmOver=''; saveBtn.textContent='Opslaan'; }
+}
 function wireWeekendMatchCarpool(){
+  if(openMatchCarpoolForm){
+    const slug=openMatchCarpoolForm;
+    const driverSel=document.getElementById('matchCarDriver_'+slug);
+    if(driverSel) driverSel.onchange=()=>updateMatchCarCapacityWarning(slug);
+    document.querySelectorAll('.matchCarGirlPick').forEach(c=>c.onchange=()=>updateMatchCarCapacityWarning(slug));
+  }
   document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{ openMatchCarpoolForm=b.dataset.addmatchcar; hapticTap(); renderDeviationTab(); });
   document.querySelectorAll('[data-cancelmatchcar]').forEach(b=>b.onclick=()=>{ openMatchCarpoolForm=null; renderDeviationTab(); });
   document.querySelectorAll('[data-savematchcar]').forEach(b=>b.onclick=async ()=>{
@@ -567,6 +634,12 @@ function wireWeekendMatchCarpool(){
     const girlIds=[...document.querySelectorAll('.matchCarGirlPick:checked')].map(c=>c.value);
     if(!driverSel || !driverSel.value){ showToast("Kies een chauffeur."); return; }
     if(!girlIds.length){ showToast("Kies minstens 1 dochter."); return; }
+    const capState = matchCarCapacityState(slug);
+    if(capState.over && b.dataset.confirmOver!=='1'){
+      b.dataset.confirmOver='1'; b.textContent='Toch opslaan';
+      showToast(`⚠️ Te veel passagiers (${capState.n}/${capState.cap}). Tik nogmaals op "Toch opslaan" om door te gaan.`);
+      return;
+    }
     const m = weekendMatchBySlug[slug];
     if(!m){ showToast("Kon deze wedstrijd niet vinden — herlaad de pagina."); return; }
     const existing = matchCarpools[slug];
@@ -845,7 +918,7 @@ async function init(){
     db.collection("matchCarpools").onSnapshot(snap=>{
       matchCarpools={}; snap.docs.forEach(d=>matchCarpools[d.id]=d.data());
       purgeStaleMatchCarpools();
-      renderDeviationTab();
+      renderDeviationTab(); renderMyWeek();
     }, err=>{});
     db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
       err=>{});
@@ -1001,7 +1074,6 @@ function familyFormHtml(prefix,f){
     <input type="hidden" id="${prefix}_capacity" value="${f.capacity||4}">
     <div class="rowflex" style="margin-top:16px;align-items:baseline">
       <p style="margin:0;font-size:14px;font-weight:700">Weekschema &amp; beschikbaarheid per dag</p>
-      <span class="muted" style="font-size:11px">Wordt direct bewaard</span>
     </div>
     <div class="grid5" style="margin-top:8px">${dayTabs}</div>
     ${dayDetail}
@@ -1364,33 +1436,93 @@ function renderMyWeek(){
     </div>`;
   }
 
+  // Wedstrijdcarpool rides (spontaneous, per match) — violet + football so they never get
+  // mistaken for the regular weekday carpool. Grouped per calendar date.
+  const matchRidesByDate = {}, matchDateByKey = {};
+  myMatchRides(myId).forEach(r=>{
+    const d=new Date(r.doc.startMs); d.setHours(0,0,0,0); const k=d.toDateString();
+    matchDateByKey[k]=d; (matchRidesByDate[k]=matchRidesByDate[k]||[]).push(r);
+  });
+  function matchRideHtml(r){
+    const a = analyzeMatch(r.doc.summary||'');
+    const kickoff = new Date(r.doc.startMs).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
+    const homeAway = a.isHome===true? ' (Thuis)' : a.isHome===false? ' (Uit)' : '';
+    const passengers = (r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
+    const status = r.driving
+      ? `${r.daughter? phIcon('user'):''}${phIcon('car')} Jij rijdt${passengers? ` · ${passengers}`:''}`
+      : `${phIcon('user')} Rijdt mee met: ${r.car.driverFamilyId? esc(fam(r.car.driverFamilyId).parentName) : 'nog geen chauffeur'}`;
+    return `<div class="subride matchRide">
+      <div class="subrideHead"><span style="display:inline-flex;align-items:center;gap:5px">${phIcon('soccer')} Wedstrijd: ${esc(r.doc.teamLabel)}${homeAway} vs ${esc(a.opponent)}</span><span class="subrideDep">${esc(r.car.departureTime||'--:--')}</span></div>
+      <div class="subrideStatus ${r.driving?'driving':''}">${status}</div>
+      <div class="subrideStatus" style="font-size:11px">Aftrap ${kickoff}${r.doc.location? ' · '+esc(r.doc.location):''}</div>
+    </div>`;
+  }
+  function matchRidesFor(date){ return (matchRidesByDate[date.toDateString()]||[]).map(matchRideHtml).join(''); }
+  const matchTagHtml = `<span class="matchTag">${phIcon('soccer')} Wedstrijd</span>`;
+  const todayStr = new Date().toDateString();
+
+  const weekdayDates = new Set(DAYS.map(([k])=>dateForWeekday(k).toDateString()));
   const dayCards = DAYS.map(([k,label])=>{
     const isToday = k===todayKey;
     const heenHtml = subride(k,'heen','Heen: Aalsmeer ➔ Alkmaar');
     const terugHtml = subride(k,'terug','Terug: Alkmaar ➔ Aalsmeer');
-    if(!heenHtml && !terugHtml) return '';
+    const matchHtml = matchRidesFor(dateForWeekday(k));
+    if(!heenHtml && !terugHtml && !matchHtml) return '';
     const heenTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].heen) || '';
     const terugTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].terug) || '';
     const dateLabel = dateForWeekday(k).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
-    return `<div class="dayCard ${isToday?'today':''}">
+    const onlyMatch = !heenHtml && !terugHtml;
+    return `<div class="dayCard ${isToday?'today':''} ${matchHtml?'matchDay':''} ${onlyMatch?'matchOnly':''}">
       <div class="dayCardHead">
         <span class="dayBadge">${k}</span>
         <span class="dayCardTitle">${dateLabel}</span>
         ${isToday? '<span class="todayTag">VANDAAG</span>' : ''}
-        <span class="dayTimes">${heenTime||'–'} / ${terugTime||'–'}</span>
+        ${matchHtml? matchTagHtml : ''}
+        ${onlyMatch? '' : `<span class="dayTimes">${heenTime||'–'} / ${terugTime||'–'}</span>`}
       </div>
-      ${heenHtml}${terugHtml}
+      ${heenHtml}${terugHtml}${matchHtml}
     </div>`;
-  }).join('') || `<p class="muted">Geen dagen met een tijd ingesteld deze week.</p>`;
+  });
+  // Match rides on days outside Ma–Vr of the planning week (the weekend) get their own card.
+  const extraCard = (key)=>{
+    const d = matchDateByKey[key];
+    const badge = d.toLocaleDateString('nl-NL',{weekday:'short'}).replace('.','');
+    const dateLabel = d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
+    const isToday = key===todayStr;
+    return `<div class="dayCard matchDay matchOnly ${isToday?'today':''}">
+      <div class="dayCardHead">
+        <span class="dayBadge">${esc(badge.charAt(0).toUpperCase()+badge.slice(1,2))}</span>
+        <span class="dayCardTitle">${dateLabel}</span>
+        ${isToday? '<span class="todayTag">VANDAAG</span>' : ''}
+        ${matchTagHtml}
+      </div>
+      ${matchRidesFor(d)}
+    </div>`;
+  };
+  const planningMonday = startOfWeek(effectivePlanningDate());
+  const extraKeys = Object.keys(matchRidesByDate).filter(k=>!weekdayDates.has(k)).sort((a,b)=>matchDateByKey[a]-matchDateByKey[b]);
+  const beforeCards = extraKeys.filter(k=>matchDateByKey[k]<planningMonday).map(extraCard).join('');
+  const afterCards = extraKeys.filter(k=>matchDateByKey[k]>=planningMonday).map(extraCard).join('');
+  const allDayCards = beforeCards + dayCards.join('') + afterCards;
+  const dayCardsHtml = allDayCards || `<p class="muted">Geen dagen met een tijd ingesteld deze week.</p>`;
 
   const weekMatches = matchesThisWeek(currentMatchList());
   const matchStatusNote = matchesSource==='live'
     ? ''
     : (cachedMatchesAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(cachedMatchesAt).toLocaleString('nl-NL')}</p>` : '');
   const matchFailNote = matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">Kon niet ophalen: ${esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
+  const weekMatchesHtml = weekMatches.length? weekMatches.map(m=>{
+    const d = matchCarpools[matchSlug(m)];
+    const cars = (d && d.cars) || [];
+    const carsHtml = cars.length
+      ? cars.map(c=>matchCarRowHtml(c,{highlightId:myId})).join('')
+      : '<p class="muted" style="font-size:12px;margin:4px 0 0">Nog geen carpool ingesteld.</p>';
+    return `<div class="group matchGroup">${matchInfoHtml(m)}${carsHtml}</div>`;
+  }).join('') : '<p class="muted">Geen wedstrijden gevonden.</p>';
   const matchesCardHtml = `<div class="card">
     <h2>Wedstrijden deze week</h2>
-    ${renderMatchesGroupedByDay(weekMatches)}
+    <p class="muted">Carpool voor een wedstrijd regel je via Afwijking → "Wedstrijdcarpool komende dagen".</p>
+    ${weekMatchesHtml}
     ${matchFailNote}${matchStatusNote}
   </div>`;
 
@@ -1401,10 +1533,10 @@ function renderMyWeek(){
       <p class="heroSub">Ouder: ${esc(myFam.parentName||'')} · ${seats(myFam)} passagiersplekken</p>
       ${whatsAppButtonHtml('wa-hero')}
       <div class="heroLegend">
-        <span>${phIcon('user')} Rit dochter</span><span>${phIcon('car')} Jouw rijbeurt</span><span style="color:#fef08a">${phIcon('warning')} Dagafwijking</span>
+        <span>${phIcon('user')} Rit dochter</span><span>${phIcon('car')} Jouw rijbeurt</span><span style="color:#fef08a">${phIcon('warning')} Dagafwijking</span><span style="color:#ddd6fe">${phIcon('soccer')} Wedstrijdrit</span>
       </div>
     </div>
-    ${dayCards}
+    ${dayCardsHtml}
     ${matchesCardHtml}
     ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   `;
@@ -1464,8 +1596,15 @@ function buildMyWeekWhatsAppMessage(){
     const dev = (activeDeviation(k,'heen')||activeDeviation(k,'terug'))? ' (afwijking)' : '';
     return `${waDayLabel(k)}${dev} — heen: ${part(k,'heen')} | terug: ${part(k,'terug')}`;
   }).filter(Boolean);
+  const matchLines = myMatchRides(myId).map(r=>{
+    const d = new Date(r.doc.startMs);
+    const dl = d.toLocaleDateString('nl-NL',{weekday:'short'}).replace('.','')+' '+d.getDate();
+    const a = analyzeMatch(r.doc.summary||'');
+    const who = r.driving? 'jij rijdt' : 'met '+plainDriverName(r.car.driverFamilyId);
+    return `⚽ ${dl} — wedstrijd ${r.doc.teamLabel} vs ${a.opponent}: vertrek ${r.car.departureTime||'?'} ${who}`;
+  });
   const header = `Carpool deze week – ${myFam.girlName||myFam.parentName||''}:`;
-  return [header, ...(lines.length? lines : ['Geen ritten ingesteld deze week.']), '', `${APP_URL}#myweek`].join('\n');
+  return [header, ...(lines.length||matchLines.length? [...lines, ...matchLines] : ['Geen ritten ingesteld deze week.']), '', `${APP_URL}#myweek`].join('\n');
 }
 // Dagafwijking: the full (effective) schedule of one day — every car, its driver and passengers.
 function buildDayWhatsAppMessage(day){
@@ -1515,13 +1654,11 @@ function renderDeviationTab(){
     </div>
     <div class="card">
       <h2>Kies een dag</h2>
-      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary devDayBtn" data-devday="${k}" style="margin-top:0" aria-label="${label} ${dateForWeekday(k).getDate()}"><span style="display:block;font-weight:700">${k}</span><span style="display:block;font-size:11px;opacity:.85">${dateForWeekday(k).getDate()}</span></button>`).join('')}</div>
-      ${whatsAppButtonHtml()}
+      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary devDayBtn" data-devday="${k}" style="margin-top:0" aria-label="${label} ${dateForWeekday(k).getDate()}"><span style="display:block;font-weight:700">${k}</span><span style="display:block;font-size:11px;opacity:.85">${dateForWeekday(k).getDate()}${matchCarpoolsOnDate(dateForWeekday(k)).length? ` <span style="color:var(--match)" title="Wedstrijdcarpool op deze dag">${phIcon('soccer')}</span>`:''}</span></button>`).join('')}</div>
       ${lastUpdateFooter(lastUpdateDeviation)}
     </div>
     ${renderWeekendMatchCarpoolCard()}`;
     document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
-    wireWhatsAppButton(null, lastDeviationEditDay? ()=>buildDayWhatsAppMessage(lastDeviationEditDay) : buildWhatsAppMessage);
     wireWeekendMatchCarpool();
     return;
   }
@@ -1532,6 +1669,7 @@ function renderDeviationTab(){
       <p class="devAlertBody">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
       ${whatsAppButtonHtml()}
     </div>
+    ${renderDevMatchCarpoolsReadOnly(deviationDay)}
     ${renderDevDirection(deviationDay,'heen','Naar Alkmaar (heen)')}
     ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}
     ${lastUpdateDeviation? `<div class="card">${lastUpdateFooter(lastUpdateDeviation)}</div>` : ''}`;
@@ -1540,6 +1678,18 @@ function renderDeviationTab(){
   const waDay = deviationDay;
   wireWhatsAppButton(null, ()=>buildDayWhatsAppMessage(waDay));
   attachDeviationHandlers();
+}
+// Match carpools that happen to fall on this weekday — shown for context only; they are
+// managed in "Wedstrijdcarpool komende dagen" on the day-picker screen, not here.
+function renderDevMatchCarpoolsReadOnly(day){
+  const list = matchCarpoolsOnDate(dateForWeekday(day));
+  if(!list.length) return '';
+  const myId = myFamilyId();
+  return `<div class="card" style="border-color:var(--match)">
+    <div class="rowflex"><span class="matchTag">${phIcon('soccer')} Wedstrijdcarpool</span><span class="muted" style="font-size:11px;display:inline-flex;align-items:center;gap:4px">${phIcon('eye')} Alleen lezen</span></div>
+    <p class="muted" style="margin:8px 0 0">Extra ritten naar een wedstrijd op deze dag. Aanpassen kan via "Wedstrijdcarpool komende dagen" (knop "Andere dag").</p>
+    ${list.map(([,d])=>`<div class="group matchGroup">${matchInfoHtml(docToMatch(d))}${d.cars.map(c=>matchCarRowHtml(c,{highlightId:myId})).join('')}</div>`).join('')}
+  </div>`;
 }
 function renderDevDirection(day,direction,title){
   const cars = effectiveCars(day,direction);
@@ -1558,7 +1708,7 @@ function renderDevDirection(day,direction,title){
       <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
         <span style="flex:1">${girlName(id)}</span>
         ${otherIdxs.length? `<select class="devSwapSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" style="width:auto;font-size:12px" aria-label="${girlName(id)} verplaatsen naar andere auto">${swapOptions}</select>` : ''}
-        <button type="button" class="btn small secondary devRemoveBtn" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}">Verwijder uit auto</button>
+        <button type="button" class="iconbtn trashBtn devRemoveBtn" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" aria-label="Verwijder ${girlName(id)} uit auto" title="Verwijder uit auto">${phIcon('trash')}</button>
       </div>`).join('') || '<p class="muted">Geen passagiers meer in deze auto.</p>';
     return `<div class="group devCard" data-devcar="${day}|${direction}|${idx}">
       <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
