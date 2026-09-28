@@ -1590,21 +1590,30 @@ function buildMyWeekWhatsAppMessage(){
     if(!car) return `${s} (nog niet ingepland)`;
     return `${car.departureTime||s} met ${plainDriverName(car.driverFamilyId)}`;
   }
-  const lines = DAYS.map(([k])=>{
+  // Each line gets a sort key (its calendar date) so match rides land right under their own
+  // day instead of in a block at the end; weekend matches naturally follow Friday.
+  const entries = [];
+  DAYS.forEach(([k])=>{
     const sch = myFam.schedule && myFam.schedule[k];
-    if(!sch || (!sch.heen && !sch.terug)) return null;
+    if(!sch || (!sch.heen && !sch.terug)) return;
     const dev = (activeDeviation(k,'heen')||activeDeviation(k,'terug'))? ' (afwijking)' : '';
-    return `${waDayLabel(k)}${dev} — heen: ${part(k,'heen')} | terug: ${part(k,'terug')}`;
-  }).filter(Boolean);
-  const matchLines = myMatchRides(myId).map(r=>{
-    const d = new Date(r.doc.startMs);
-    const dl = d.toLocaleDateString('nl-NL',{weekday:'short'}).replace('.','')+' '+d.getDate();
-    const a = analyzeMatch(r.doc.summary||'');
-    const who = r.driving? 'jij rijdt' : 'met '+plainDriverName(r.car.driverFamilyId);
-    return `⚽ ${dl} — wedstrijd ${r.doc.teamLabel} vs ${a.opponent}: vertrek ${r.car.departureTime||'?'} ${who}`;
+    const d = dateForWeekday(k); d.setHours(0,0,0,0);
+    entries.push({sort:d.getTime(), order:0, text:`${waDayLabel(k)}${dev} — heen: ${part(k,'heen')} | terug: ${part(k,'terug')}`});
   });
+  myMatchRides(myId).forEach(r=>{
+    const d = new Date(r.doc.startMs);
+    const wd = d.toLocaleDateString('nl-NL',{weekday:'short'}).replace('.','');
+    const dl = wd.charAt(0).toUpperCase()+wd.slice(1)+' '+d.getDate();
+    const a = analyzeMatch(r.doc.summary||'');
+    const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
+    // Plain text only (no emoji): WhatsApp's share link doesn't reliably carry them.
+    entries.push({sort:dayStart.getTime(), order:1+r.doc.startMs/1e13,
+      text:`${dl} — wedstrijd ${r.doc.teamLabel} vs ${a.opponent}: vertrek ${r.car.departureTime||'?'} met ${plainDriverName(r.car.driverFamilyId)}`});
+  });
+  entries.sort((x,y)=>x.sort-y.sort || x.order-y.order);
+  const lines = entries.map(e=>e.text);
   const header = `Carpool deze week – ${myFam.girlName||myFam.parentName||''}:`;
-  return [header, ...(lines.length||matchLines.length? [...lines, ...matchLines] : ['Geen ritten ingesteld deze week.']), '', `${APP_URL}#myweek`].join('\n');
+  return [header, ...(lines.length? lines : ['Geen ritten ingesteld deze week.']), '', `${APP_URL}#myweek`].join('\n');
 }
 // Dagafwijking: the full (effective) schedule of one day — every car, its driver and passengers.
 function buildDayWhatsAppMessage(day){
@@ -1621,9 +1630,9 @@ function buildDayWhatsAppMessage(day){
   return [
     `Aangepast schema ${dayLabel} ${dateLabel}:`,
     '',
-    block('heen','Heen (Aalsmeer ➔ Alkmaar)'),
+    block('heen','Heen (Aalsmeer → Alkmaar)'),
     '',
-    block('terug','Terug (Alkmaar ➔ Aalsmeer)'),
+    block('terug','Terug (Alkmaar → Aalsmeer)'),
     '',
     `${APP_URL}#myweek`
   ].join('\n');
