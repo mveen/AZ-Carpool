@@ -384,12 +384,14 @@ let lastPendingChangeCount = null; // null until the first families snapshot has
 // unlike the raw Sportlink iCal links (which needed a fragile third-party CORS proxy and got
 // dropped for exactly that reason). The API key itself lives in firebase-config.js, filled in
 // once, same pattern as the Firebase config.
-const DEFAULT_MATCH_FEEDS = [
-  {label:"Jong AZ", calendarId:"s8pvlt88lfjogtvfl112j60mfvi1blgr@import.calendar.google.com"},
-  {label:"O18", calendarId:"65b3t3cr5noo0b1mv0h6io3mnikbcnd5@import.calendar.google.com"},
-  {label:"O17", calendarId:"mm99m5kb3fmlb62ko33p3dulod1vvl19@import.calendar.google.com"},
-];
-let matchFeeds = [];              // live from settings/matchFeeds, falls back to DEFAULT_MATCH_FEEDS
+// The calendars (and their team names) come ONLY from settings/matchFeeds, as entered by the
+// coordinator in Beheer → Wedstrijdkalenders. There are deliberately no hard-coded defaults:
+// on a fresh load those defaults used to be fetched before the stored feeds had arrived,
+// which showed the wrong team names and broke the link to existing match carpools.
+let matchFeeds = [];              // live from settings/matchFeeds
+let matchFeedsLoaded = false;     // true once the first settings/matchFeeds snapshot is in
+let matchFeedsSig = null;         // JSON of the feeds the current match list was fetched for
+let matchLoadSeq = 0;             // guards against an older, slower fetch overwriting a newer one
 let matches = [];                 // successfully fetched THIS session (empty until a live fetch succeeds)
 let matchesSource = null;         // 'live' | 'cache' | null
 let matchesFetchedAt = null;
@@ -397,7 +399,14 @@ let matchFetchFailedTeams = [];
 let cachedMatches = [];           // from settings/matchCache, used only when a live fetch hasn't succeeded
 let cachedMatchesAt = null;
 
-function activeMatchFeeds(){ return matchFeeds.length? matchFeeds : DEFAULT_MATCH_FEEDS; }
+function activeMatchFeeds(){ return matchFeeds; }
+// Team name for a calendar, always looked up live from the Beheer settings (by calendar ID),
+// so renaming a team in Beheer immediately shows everywhere — also for stored carpools.
+function feedLabel(calendarId){
+  const f = calendarId && matchFeeds.find(x=>x.calendarId===calendarId);
+  return f? (f.label||'') : '';
+}
+function matchLabel(m){ return feedLabel(m && m.calendarId) || (m && m.teamLabel) || ''; }
 
 // "TeamA-TeamB" — but team names can themselves contain a hyphen (e.g. "NFC O15-1",
 // "AZ MO17-1" is a common Dutch youth-team numbering convention), so the real separator is
@@ -413,7 +422,36 @@ function analyzeMatch(summary){
   if(!homeIsAZ && awayIsAZ) return {opponent:home, isHome:false, home, away};
   return {opponent: awayIsAZ? home : away, isHome:homeIsAZ, home, away};
 }
-function matchSlug(m){ return (m.teamLabel+'_'+m.start.getTime()).toLowerCase().replace(/[^a-z0-9_]/g,''); }
+function idPart(s){ return String(s||'').replace(/[^A-Za-z0-9_-]/g,'_'); }
+// Firestore document ID for a match's carpool: calendar ID + Google Calendar event ID.
+function matchSlug(m){
+  if(m.calendarId && m.eventId) return 'ev_'+idPart(m.calendarId)+'__'+idPart(m.eventId);
+  return legacyMatchSlug(m, matchLabel(m));
+}
+// Old documents (before IDs were used) were keyed on "teamname_starttime".
+function legacyMatchSlug(m, label){ return (label+'_'+m.start.getTime()).toLowerCase().replace(/[^a-z0-9_]/g,''); }
+// The stored carpool for a match: by ID first, then an old name-keyed document as fallback.
+function carpoolFor(m){
+  const id = matchSlug(m);
+  if(matchCarpools[id]) return {id, doc:matchCarpools[id]};
+  // Same calendar + same kick-off, but a different event ID (Google can re-issue IDs when it
+  // re-imports a calendar feed): still the same match.
+  if(m.calendarId){
+    const sameCal = Object.entries(matchCarpools).find(([,d])=>d && d.calendarId===m.calendarId && d.startMs===m.start.getTime());
+    if(sameCal) return {id:sameCal[0], doc:sameCal[1]};
+  }
+  const candidates = [matchLabel(m), m.teamLabel].filter(Boolean);
+  for(const label of candidates){
+    const lid = legacyMatchSlug(m, label);
+    const d = matchCarpools[lid];
+    if(d && !d.eventId) return {id:lid, doc:d, legacy:true};
+  }
+  // Old document saved under a different (e.g. wrong) team name: accept it only when it is the
+  // single old-style document with exactly this kick-off time, so it can't be mixed up.
+  const sameTime = Object.entries(matchCarpools).filter(([,d])=>d && !d.eventId && d.startMs===m.start.getTime());
+  if(sameTime.length===1) return {id:sameTime[0][0], doc:sameTime[0][1], legacy:true};
+  return {id, doc:null};
+}
 function startOfWeek(d){ const day=(d.getDay()+6)%7; const s=new Date(d); s.setHours(0,0,0,0); s.setDate(d.getDate()-day); return s; }
 // The week everything week-scoped (Dagafwijking, "wedstrijden deze week") is currently FOR:
 // Monday-Friday of the actual current week on a weekday, but the UPCOMING week once the
@@ -467,20 +505,24 @@ async function fetchTeamMatches(feed){
       // Google returns an ISO timestamp with its own explicit UTC offset already included
       // (the calendar's own Europe/Amsterdam timezone), so this is unambiguous regardless
       // of what timezone the viewing browser happens to be in.
-      return { teamLabel: feed.label, summary: ev.summary, location: ev.location||'', start: new Date(startStr) };
+      return { calendarId: feed.calendarId, eventId: ev.id||'', teamLabel: feed.label, summary: ev.summary, location: ev.location||'', start: new Date(startStr) };
     }).filter(Boolean);
     return { ok:true, events };
   }catch(e){ return { ok:false, error: (e&&e.message)||String(e) }; }
 }
 async function loadAllMatches(){
-  const feeds = activeMatchFeeds();
+  if(!matchFeedsLoaded) return; // wait for the coordinator's calendars; the snapshot calls this
+  const seq = ++matchLoadSeq;
+  const feeds = activeMatchFeeds().filter(f=>f.calendarId);
+  matchFeedsSig = JSON.stringify(activeMatchFeeds());
   const results = await Promise.all(feeds.map(fetchTeamMatches));
+  if(seq!==matchLoadSeq) return; // a newer load was started meanwhile
   const failed = [];
   let combined = [];
   results.forEach((r,i)=>{ if(!r.ok) failed.push({label:feeds[i].label, error:r.error}); else combined = combined.concat(r.events); });
   if(combined.length || !matchFetchFailedTeams.length){
     matches = combined; matchesSource='live'; matchesFetchedAt=Date.now(); matchFetchFailedTeams=failed;
-    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
+    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
   }
   renderMyWeek(); renderDeviationTab();
 }
@@ -494,14 +536,14 @@ function matchInfoHtml(m){
   const timeLabel = m.start.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'});
   const homeAway = a.isHome===true? ' (Thuis)' : a.isHome===false? ' (Uit)' : '';
   return `<div style="padding:4px 0">
-    <div class="matchTitle"><span class="matchBall">${phIcon('soccer',{size:'16px'})}</span><span>${esc(m.teamLabel)}${homeAway} vs ${esc(a.opponent)}</span></div>
+    <div class="matchTitle"><span class="matchBall">${phIcon('soccer',{size:'16px'})}</span><span>${esc(matchLabel(m))}${homeAway} vs ${esc(a.opponent)}</span></div>
     <div class="muted" style="font-size:12px">${dayLabel} · ${timeLabel}${m.location? ' · '+esc(m.location):''}</div>
   </div>`;
 }
 // ---------- Shared match-carpool rendering (Afwijking, Mijn week, Dagafwijking) ----------
 // A stored matchCarpools doc carries its own denormalized match info — turn it back into the
 // same shape as a fetched match so matchInfoHtml() can render both identically.
-function docToMatch(d){ return {teamLabel:d.teamLabel||'', summary:d.summary||'', location:d.location||'', start:new Date(d.startMs)}; }
+function docToMatch(d){ return {calendarId:d.calendarId||'', eventId:d.eventId||'', teamLabel:d.teamLabel||'', summary:d.summary||'', location:d.location||'', start:new Date(d.startMs)}; }
 // One car of a match carpool. `editable` adds the delete button (Afwijking only); `highlightId`
 // tints the row when that family drives it or has its daughter in it.
 function matchCarRowHtml(c, opts){
@@ -566,9 +608,9 @@ function renderWeekendMatchCarpoolCard(){
   const matchesHtml = weekendMatches.map(m=>{
     const slug = matchSlug(m);
     weekendMatchBySlug[slug] = m;
-    const doc = matchCarpools[slug];
-    const cars = (doc && doc.cars) || [];
-    const carsHtml = cars.length? cars.map((c,idx)=>matchCarRowHtml(c,{editable:true, slug, idx})).join('') : '<p class="muted" style="font-size:12px;margin:4px 0 0">Nog geen carpool ingesteld.</p>';
+    const cp = carpoolFor(m);
+    const cars = (cp.doc && cp.doc.cars) || [];
+    const carsHtml = cars.length? cars.map((c,idx)=>matchCarRowHtml(c,{editable:true, slug:cp.id, idx})).join('') : '<p class="muted" style="font-size:12px;margin:4px 0 0">Nog geen carpool ingesteld.</p>';
     const isOpen = openMatchCarpoolForm===slug;
     let formHtml;
     if(isOpen){
@@ -642,11 +684,13 @@ function wireWeekendMatchCarpool(){
     }
     const m = weekendMatchBySlug[slug];
     if(!m){ showToast("Kon deze wedstrijd niet vinden — herlaad de pagina."); return; }
-    const existing = matchCarpools[slug];
+    const cp = carpoolFor(m);
     const newCar = {driverFamilyId:driverSel.value, girlIds, departureTime:timeInp.value};
-    const cars = existing? [...existing.cars, newCar] : [newCar];
+    const cars = cp.doc? [...(cp.doc.cars||[]), newCar] : [newCar];
     try{
-      await db.doc("matchCarpools/"+slug).set({matchSlug:slug, teamLabel:m.teamLabel, summary:m.summary, location:m.location||'', startMs:m.start.getTime(), cars});
+      await db.doc("matchCarpools/"+slug).set({matchSlug:slug, calendarId:m.calendarId||'', eventId:m.eventId||'', teamLabel:matchLabel(m), summary:m.summary, location:m.location||'', startMs:m.start.getTime(), cars});
+      // An old name-keyed document is moved over to the ID-keyed one.
+      if(cp.doc && cp.id!==slug){ try{ await db.doc("matchCarpools/"+cp.id).delete(); }catch(e){} }
       openMatchCarpoolForm=null;
       showToast("Carpool toegevoegd ✓");
     }catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); }
@@ -925,24 +969,20 @@ async function init(){
     db.doc("settings/lastUpdateDeviation").onSnapshot(snap=>{ lastUpdateDeviation = snap.exists? snap.data() : null; renderDeviationTab(); renderMyWeek(); },
       err=>{});
     db.doc("settings/matchFeeds").onSnapshot(snap=>{
-      if(snap.exists && snap.data().feeds && snap.data().feeds.length){ matchFeeds = snap.data().feeds; }
-      else {
-        matchFeeds = [];
-        // Auto-seed the given defaults once, so they're genuinely stored, not just hardcoded —
-        // only the coordinator can write here, and only if nothing is stored yet.
-        if(canEdit && db){ db.doc("settings/matchFeeds").set({feeds:DEFAULT_MATCH_FEEDS}).catch(()=>{}); }
-      }
-      renderBeheer();
+      matchFeeds = (snap.exists && snap.data().feeds) || [];
+      matchFeedsLoaded = true;
+      if(JSON.stringify(matchFeeds)!==matchFeedsSig) loadAllMatches();
+      renderBeheer(); renderMyWeek(); renderDeviationTab();
     }, err=>{});
     db.doc("settings/matchCache").onSnapshot(snap=>{
       if(snap.exists){
         const d=snap.data();
-        cachedMatches = (d.matches||[]).map(e=>({teamLabel:e.teamLabel, summary:e.summary, location:e.location, start:new Date(e.startMs)}));
+        // Only entries with a calendar ID: older cache entries carried a possibly wrong team name.
+        cachedMatches = (d.matches||[]).filter(e=>e.calendarId).map(e=>({calendarId:e.calendarId, eventId:e.eventId||'', teamLabel:e.teamLabel, summary:e.summary, location:e.location, start:new Date(e.startMs)}));
         cachedMatchesAt = d.fetchedAt||null;
       }
       renderMyWeek(); renderDeviationTab();
     }, err=>{});
-    loadAllMatches();
   }catch(e){ setStatus("⚠️ Kon niet live verbinden: "+(e&&e.message||e)); }
   adjustMainPadding();
 }
@@ -1452,7 +1492,7 @@ function renderMyWeek(){
       ? `${r.daughter? phIcon('user'):''}${phIcon('car')} Jij rijdt${passengers? ` · ${passengers}`:''}`
       : `${phIcon('user')} Rijdt mee met: ${r.car.driverFamilyId? esc(fam(r.car.driverFamilyId).parentName) : 'nog geen chauffeur'}`;
     return `<div class="subride matchRide">
-      <div class="subrideHead"><span style="display:inline-flex;align-items:center;gap:5px">${phIcon('soccer')} Wedstrijd: ${esc(r.doc.teamLabel)}${homeAway} vs ${esc(a.opponent)}</span><span class="subrideDep">${esc(r.car.departureTime||'--:--')}</span></div>
+      <div class="subrideHead"><span style="display:inline-flex;align-items:center;gap:5px">${phIcon('soccer')} Wedstrijd: ${esc(matchLabel(r.doc))}${homeAway} vs ${esc(a.opponent)}</span><span class="subrideDep">${esc(r.car.departureTime||'--:--')}</span></div>
       <div class="subrideStatus ${r.driving?'driving':''}">${status}</div>
       <div class="subrideStatus" style="font-size:11px">Aftrap ${kickoff}${r.doc.location? ' · '+esc(r.doc.location):''}</div>
     </div>`;
@@ -1512,7 +1552,7 @@ function renderMyWeek(){
     : (cachedMatchesAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(cachedMatchesAt).toLocaleString('nl-NL')}</p>` : '');
   const matchFailNote = matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">Kon niet ophalen: ${esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
   const weekMatchesHtml = weekMatches.length? weekMatches.map(m=>{
-    const d = matchCarpools[matchSlug(m)];
+    const d = carpoolFor(m).doc;
     const cars = (d && d.cars) || [];
     const carsHtml = cars.length
       ? cars.map(c=>matchCarRowHtml(c,{highlightId:myId})).join('')
@@ -1608,7 +1648,7 @@ function buildMyWeekWhatsAppMessage(){
     const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
     // Plain text only (no emoji): WhatsApp's share link doesn't reliably carry them.
     entries.push({sort:dayStart.getTime(), order:1+r.doc.startMs/1e13,
-      text:`${dl} — wedstrijd ${r.doc.teamLabel} vs ${a.opponent}: vertrek ${r.car.departureTime||'?'} met ${plainDriverName(r.car.driverFamilyId)}`});
+      text:`${dl} — wedstrijd ${matchLabel(r.doc)} vs ${a.opponent}: vertrek ${r.car.departureTime||'?'} met ${plainDriverName(r.car.driverFamilyId)}`});
   });
   entries.sort((x,y)=>x.sort-y.sort || x.order-y.order);
   const lines = entries.map(e=>e.text);
@@ -2038,7 +2078,7 @@ function renderBeheer(){
       const labels=[...document.querySelectorAll('.matchFeedLabel')];
       const calIds=[...document.querySelectorAll('.matchFeedCalId')];
       const feeds = labels.map((el,i)=>({label:el.value.trim(), calendarId:(calIds[i]&&calIds[i].value.trim())||''})).filter(f=>f.calendarId);
-      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Opgeslagen ✓"); loadAllMatches(); }
+      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Opgeslagen ✓"); }
       catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
     };
     document.querySelectorAll('.matchFeedLabel,.matchFeedCalId').forEach(el=>el.onchange=saveMatchFeeds);
@@ -2047,7 +2087,7 @@ function renderBeheer(){
     document.querySelectorAll('[data-delfeed]').forEach(b=>b.onclick=async ()=>{
       const idx=+b.dataset.delfeed;
       const feeds = activeMatchFeeds().filter((_,i)=>i!==idx);
-      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Verwijderd ✓"); loadAllMatches(); }
+      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast("Verwijderd ✓"); }
       catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
     });
     const refreshBtn=document.getElementById('refreshMatchesBtn');
