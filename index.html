@@ -188,6 +188,10 @@ button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .group.mineDriving{border-left-color:var(--ok)}
 .timeBig{font-size:18px!important;font-weight:800;font-family:var(--font-mono);width:auto!important;min-height:36px!important;padding:4px 8px!important}
 .tripReserve{font-size:12px;color:var(--muted);margin:2px 0 10px 2px}
+/* Tap-to-WhatsApp names (Rooster "Deze week": chauffeur + reserve) */
+a.waLink{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;display:inline-flex;align-items:center;gap:3px;min-height:24px}
+a.waLink:hover{text-decoration-style:solid}
+a.waLink svg{width:13px;height:13px;flex-shrink:0}
 .reserve{font-size:12px;color:var(--muted);margin-top:4px}
 .girlchk{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
 .muted{color:var(--muted);font-size:12px}
@@ -2640,24 +2644,64 @@ function renderDay(day,label){
 function renderDirection(day,direction){
   return roosterMode==='week'? renderDirectionWeek(day,direction) : renderDirectionStandard(day,direction);
 }
-// Reserve drivers are a TRIP-wide backup pool, not specific to one car — shown once per trip,
-// using the largest car's size so anyone listed could cover any car of this trip.
-function tripReserveHtml(day,direction,cars){
-  const largest = cars.length? Math.max(...cars.map(c=>(c.girlIds||[]).length)) : 0;
-  if(!largest) return '';
+// ---------- Tap-to-WhatsApp (Rooster "Deze week") ----------
+// wa.me wants the number in international format, digits only: 06-12345678 -> 31612345678.
+function waPhone(p){
+  let d = normalizePhone(p);             // Dutch numbers normalised to 06…
+  if(!d) return '';
+  if(d.startsWith('00')) return d.slice(2);  // other international numbers: 0044… -> 44…
+  if(d.startsWith('0')) return '31'+d.slice(1);
+  return d;
+}
+const WA_ICON_SMALL = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7z"/></svg>`;
+// A parent's name as a WhatsApp link to their Tel.nr. 1 with a pre-filled message; plain text
+// when no Tel.nr. 1 is set (nothing to link to).
+function waNameHtml(familyId, text){
+  const f = fam(familyId);
+  const name = esc(f.parentName||'?');
+  const num = waPhone(f.parentPhone1);
+  if(!num) return name;
+  const href = 'https://wa.me/'+num+'?text='+encodeURIComponent(text);
+  return `<a class="waLink" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp ${name}">${name}${WA_ICON_SMALL}</a>`;
+}
+// "maandag 28 september" for a weekday key in the current planning week.
+function waDayDate(day){ return dateForWeekday(day).toLocaleDateString('nl-NL',{weekday:'long', day:'numeric', month:'long'}); }
+function reserveAskText(day,direction,time){
+  return `Hi! Zou jij de rit ${direction==='heen'?'heen':'terug'} van ${waDayDate(day)} om ${time||'?'} kunnen doen?`;
+}
+function driverAskText(day,time){
+  return `Hi! Je rijdt de rit van ${waDayDate(day)} om ${time||'?'}. `;
+}
+// Reserve drivers are a TRIP-wide backup pool, shown once per trip: everyone available for this
+// trip (standaard or back-up) who isn't already driving it and has room for at least the
+// SMALLEST car of the trip, so they could take over at least one of the rides.
+// (Previously the LARGEST car's size was required, which hid every reserve on trips with one
+// big car — e.g. a 5- or 6-passenger car — even when 4-seat back-ups could cover the other car.)
+function tripReserveIds(day,direction,cars){
+  const sizes = cars.map(c=>(c.girlIds||[]).length).filter(n=>n>0);
+  if(!sizes.length) return [];
+  const smallest = Math.min(...sizes);
   const assigned = new Set(cars.map(c=>c.driverFamilyId).filter(Boolean));
-  const names = eligibleDrivers(day,direction,largest).filter(([id])=>!assigned.has(id)).map(([,f])=>esc(f.parentName));
-  return names.length? `<div class="tripReserve">Reserve: ${names.join(', ')}</div>` : '';
+  return eligibleDrivers(day,direction,smallest).map(([id])=>id).filter(id=>!assigned.has(id));
+}
+// withWhatsApp: names become WhatsApp links asking to take over `askTime`'s ride ("Deze week").
+function tripReserveHtml(day,direction,cars,withWhatsApp,askTime){
+  const ids = tripReserveIds(day,direction,cars);
+  if(!ids.length) return '';
+  const names = ids.map(id=> withWhatsApp? waNameHtml(id, reserveAskText(day,direction,askTime)) : esc(fam(id).parentName));
+  return `<div class="tripReserve">Reserve: ${names.join(', ')}</div>`;
 }
 function neededTimesHtml(day,direction,girlIds){
   const times = girlIds.map(id=>fam(id).schedule && fam(id).schedule[day] && fam(id).schedule[day][direction]).filter(Boolean).sort();
   const range = `${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`;
   return `<div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${range}` : `Klaar om op te halen: ${range}`}</div>`;
 }
-function driverLineHtml(driverId,myId){
+function driverLineHtml(driverId,myId,wa){
   if(!driverId) return `<div class="driver" style="color:var(--danger)">${phIcon('warning')} Geen chauffeur</div>`;
   if(myId && driverId===myId) return `<div class="driver me">${phIcon('car')} Jij rijdt</div>`;
-  return `<div class="driver">${phIcon('car')} Chauffeur: ${esc(fam(driverId).parentName)}</div>`;
+  // wa = {day,time}: "Deze week" — the chauffeur's name opens WhatsApp to them.
+  const name = wa? waNameHtml(driverId, driverAskText(wa.day, wa.time)) : esc(fam(driverId).parentName);
+  return `<div class="driver">${phIcon('car')} Chauffeur: ${name}</div>`;
 }
 function pillsHtml(girlIds,myId){
   return girlIds.map(id=>`<span class="pill${id===myId?' mine':''}">${girlName(id)}</span>`).join('');
@@ -2680,13 +2724,15 @@ function renderDirectionWeek(day,direction){
       </div>
       ${neededTimesHtml(day,direction,c.girlIds)}
       <div>${pillsHtml(c.girlIds,myId)}</div>
-      ${driverLineHtml(c.driverFamilyId,myId)}
+      ${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}
     </div>`;
   }).join('') || `<p class="muted">Geen ritten.</p>`;
+  // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
+  const askCar = cars.find(c=>myId && c.driverFamilyId===myId) || cars.find(c=>myId && (c.girlIds||[]).includes(myId)) || cars[0];
   return `<div style="margin-bottom:10px">
     <div class="rowflex" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${dirLabelHtml(direction)}${dev? `<span class="changedTag">${phIcon('lightning')} gewijzigd</span>`:''}</div>
     ${cardsHtml}
-    ${tripReserveHtml(day,direction,cars)}
+    ${tripReserveHtml(day,direction,cars,true,askCar&&askCar.departureTime)}
   </div>`;
 }
 // "Standaardrooster": the fixed schedule; the coordinator edits it here.
