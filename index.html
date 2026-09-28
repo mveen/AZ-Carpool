@@ -1353,7 +1353,7 @@ function renderMyWeek(){
     ${matchesCardHtml}
     ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   `;
-  wireWhatsAppButton('wa-hero');
+  wireWhatsAppButton('wa-hero', buildMyWeekWhatsAppMessage);
 }
 
 // ---------- Dagafwijking tab: one-off changes, open to every parent, week-scoped ----------
@@ -1370,6 +1370,7 @@ async function saveDeviationCars(day,direction,cars){
   });
   try{
     await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars:cleanCars});
+    lastDeviationEditDay = day;
     recordLastUpdate('Deviation');
     return true;
   }catch(e){ showToast("Opslaan mislukt: "+(e&&e.message||e)); return false; }
@@ -1380,13 +1381,62 @@ function activeDeviationDayLabel(){
   const labels = DAYS.filter(([k])=>['heen','terug'].some(dir=>activeDeviation(k,dir))).map(([,label])=>label);
   return labels.length? labels.join(' en ') : 'deze week';
 }
+function plainGirlName(id){ const f=fam(id); return f.girlName||f.parentName||id; }
+function plainDriverName(id){ return id? (fam(id).parentName||'?') : 'nog geen chauffeur'; }
+function waDayLabel(k){ return k+' '+dateForWeekday(k).getDate(); }
+// Generic fallback (used only when no specific day/family context is available).
 function buildWhatsAppMessage(){
   // WhatsApp messages are plain text — there's no way to make "Mijn week" itself a hidden
   // hyperlink. The raw link is placed right after it and WhatsApp auto-linkifies it.
   return `Het schema is bijgewerkt voor ${activeDeviationDayLabel()}. Zie Mijn week voor de impact: ${APP_URL}#myweek`;
 }
-function sendWhatsAppUpdate(){
-  const msg = buildWhatsAppMessage();
+// Mijn week: one line per day for THIS family's daughter —
+// "Ma 28 — heen: 07:15 met Jan | terug: 17:30 met Piet"
+function buildMyWeekWhatsAppMessage(){
+  const myId = myFamilyId();
+  const myFam = fam(myId);
+  function part(day,direction){
+    const s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
+    if(!s) return '–';
+    const car = effectiveCars(day,direction).find(c=>c.girlIds.includes(myId));
+    if(!car) return `${s} (nog niet ingepland)`;
+    return `${car.departureTime||s} met ${plainDriverName(car.driverFamilyId)}`;
+  }
+  const lines = DAYS.map(([k])=>{
+    const sch = myFam.schedule && myFam.schedule[k];
+    if(!sch || (!sch.heen && !sch.terug)) return null;
+    const dev = (activeDeviation(k,'heen')||activeDeviation(k,'terug'))? ' (afwijking)' : '';
+    return `${waDayLabel(k)}${dev} — heen: ${part(k,'heen')} | terug: ${part(k,'terug')}`;
+  }).filter(Boolean);
+  const header = `Carpool deze week – ${myFam.girlName||myFam.parentName||''}:`;
+  return [header, ...(lines.length? lines : ['Geen ritten ingesteld deze week.']), '', `${APP_URL}#myweek`].join('\n');
+}
+// Dagafwijking: the full (effective) schedule of one day — every car, its driver and passengers.
+function buildDayWhatsAppMessage(day){
+  const dayLabel = DAYS.find(([k])=>k===day)[1];
+  const dateLabel = dateForWeekday(day).toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
+  function block(direction,title){
+    const cars = effectiveCars(day,direction).filter(c=>c.girlIds && c.girlIds.length);
+    const carLines = cars.length
+      ? [...cars].sort((a,b)=>(a.departureTime||'').localeCompare(b.departureTime||'')).map(c=>
+          `• ${c.departureTime||'--:--'} – ${plainDriverName(c.driverFamilyId)}: ${c.girlIds.map(plainGirlName).join(', ')}`)
+      : ['• geen ritten'];
+    return [`${title}${activeDeviation(day,direction)? ' (aangepast)' : ''}:`, ...carLines].join('\n');
+  }
+  return [
+    `Aangepast schema ${dayLabel} ${dateLabel}:`,
+    '',
+    block('heen','Heen (Aalsmeer ➔ Alkmaar)'),
+    '',
+    block('terug','Terug (Alkmaar ➔ Aalsmeer)'),
+    '',
+    `${APP_URL}#myweek`
+  ].join('\n');
+}
+// Last day edited via Dagafwijking in this session — used by the day-picker screen's button.
+let lastDeviationEditDay = null;
+function sendWhatsAppUpdate(buildFn){
+  const msg = (typeof buildFn==='function'? buildFn : buildWhatsAppMessage)();
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank', 'noopener,noreferrer');
 }
 const WHATSAPP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7zm-2.8 2.6c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.4s.6 1.6.7 1.7c.1.1 1.2 1.9 3 2.6 1.5.6 1.8.5 2.1.4.3 0 1-.4 1.1-.8.1-.4.1-.8.1-.9-.1-.1-.2-.1-.4-.2l-1.2-.6c-.2-.1-.3-.1-.4.1l-.5.6c-.1.1-.2.2-.4.1-.2-.1-.8-.3-1.5-.9-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.4c.1-.1.1-.2.2-.4 0-.1 0-.3 0-.4l-.5-1.3c-.1-.3-.3-.3-.4-.3h-.3z"/></svg>`;
@@ -1394,9 +1444,9 @@ function whatsAppButtonHtml(btnId){
   btnId = btnId || 'waUpdateBtn';
   return `<button type="button" class="btn secondary" id="${btnId}" style="display:inline-flex;align-items:center">${WHATSAPP_SVG}Deel update via WhatsApp</button>`;
 }
-function wireWhatsAppButton(btnId){
+function wireWhatsAppButton(btnId, buildFn){
   const btn=document.getElementById(btnId || 'waUpdateBtn');
-  if(btn) btn.onclick=sendWhatsAppUpdate;
+  if(btn) btn.onclick=()=>sendWhatsAppUpdate(buildFn);
 }
 function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
@@ -1415,7 +1465,7 @@ function renderDeviationTab(){
     </div>
     ${renderWeekendMatchCarpoolCard()}`;
     document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
-    wireWhatsAppButton();
+    wireWhatsAppButton(null, lastDeviationEditDay? ()=>buildDayWhatsAppMessage(lastDeviationEditDay) : buildWhatsAppMessage);
     wireWeekendMatchCarpool();
     return;
   }
@@ -1431,7 +1481,8 @@ function renderDeviationTab(){
     ${lastUpdateDeviation? `<div class="card">${lastUpdateFooter(lastUpdateDeviation)}</div>` : ''}`;
   const backBtn=document.getElementById('devBackBtn');
   if(backBtn) backBtn.onclick=()=>{ deviationDay=null; hapticTap(); renderDeviationTab(); };
-  wireWhatsAppButton();
+  const waDay = deviationDay;
+  wireWhatsAppButton(null, ()=>buildDayWhatsAppMessage(waDay));
   attachDeviationHandlers();
 }
 function renderDevDirection(day,direction,title){
@@ -1535,7 +1586,7 @@ function attachDeviationHandlers(){
   });
   document.querySelectorAll('[data-devreset]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,"Zeker? Terug naar standaard rooster",async ()=>{
     const [day,direction]=btn.dataset.devreset.split('|');
-    try{ await db.doc("deviations/"+deviationKey(day,direction)).delete(); recordLastUpdate('Deviation'); showToast("Teruggezet naar standaard ✓"); }
+    try{ await db.doc("deviations/"+deviationKey(day,direction)).delete(); lastDeviationEditDay = day; recordLastUpdate('Deviation'); showToast("Teruggezet naar standaard ✓"); }
     catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
   }));
  }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
