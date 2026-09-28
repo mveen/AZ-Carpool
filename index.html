@@ -33,7 +33,10 @@
   /* Light mode surface tokens */
   --bg:#f8fafc; --card:#ffffff; --text:#0f172a; --muted:#64748b; --border:#e2e8f0;
   --accent:var(--az-red); --accent2:var(--az-red-light);
-  --ok:#059669; --ok2:#d1fae5; --warn:#d97706; --warn2:#fef3c7; --warn-text:#92400e;
+  /* Color language: green = ok / you're driving · amber = a change · neutral = labels.
+     --ok and --warn-text are dark enough for small text (>= 4.5:1 on white and on their tints). */
+  --ok:#047857; --ok2:#d1fae5; --warn:#d97706; --warn2:#fef3c7; --warn-text:#92400e;
+  --danger:#b91c1c;
   --backup:#64748b; --info:#2563eb; --info2:#dbeafe; --pill:#334155; --pill2:#f1f5f9;
 
   box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
@@ -43,6 +46,7 @@
   --accent:var(--az-red); --accent2:#3a1414;
   --ok:#34d399; --ok2:#0f2b21; --warn:#fbbf24; --warn2:#3a2e0f; --warn-text:#fbbf24;
   --backup:#94a3b8; --info:#60a5fa; --info2:#122036; --pill:#cbd5e1; --pill2:#1e293b;
+  --danger:#f87171;
 }
 *{box-sizing:border-box}
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;overflow:hidden}
@@ -58,8 +62,9 @@ body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-sans
   height:100dvh;display:flex;flex-direction:column;overflow:hidden}
 #topbar{flex-shrink:0}
 header{padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));color:#fff}
-header h1{margin:0;font-size:18px;font-weight:800}
-header p{margin:2px 0 0;font-size:12px;opacity:.9}
+header h1{margin:0;font-size:20px;font-weight:800;white-space:nowrap}
+header p{margin:2px 0 0;font-size:12px;opacity:.95}
+#themeToggle{width:40px;height:40px;min-width:40px;display:flex;align-items:center;justify-content:center;font-size:18px;padding:0}
 /* ---------- Bottom tab bar (flex item, safe-area aware, thumb-reachable) ---------- */
 #bottomnav{flex-shrink:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);height:calc(56px + env(safe-area-inset-bottom,0px));box-sizing:border-box}
 .navtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:0 4px;height:56px;cursor:pointer;color:var(--muted);position:relative}
@@ -81,7 +86,7 @@ main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 2
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow-card)}
 .card h2{margin:0 0 10px;font-size:15px;font-weight:800}
 label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
-input[type=text],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;min-height:38px;font-family:var(--font-sans)}
+input[type=text],input[type=tel],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;min-height:38px;font-family:var(--font-sans)}
 input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:13px;width:100%;min-height:38px;font-family:var(--font-mono);font-weight:700}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
@@ -105,11 +110,15 @@ input[type=time]{padding:8px 7px;border:1px solid var(--border);border-radius:va
 .driveToggleBtn{display:flex;align-items:center;gap:8px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--border);background:var(--card);font-size:12.5px;font-weight:600;cursor:pointer;min-height:44px;color:var(--text)}
 .driveToggleCheck{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg)}
 .driveToggleCheck svg{width:12px;height:12px;color:transparent}
+/* Back-up keeps its own look (blue, dashed, round box) so it never reads as "Beschikbaar",
+   but shows a real check mark when selected, just like Beschikbaar does. */
+.driveToggleBtn-backup .driveToggleCheck{border-style:dashed;border-radius:50%}
 .driveToggleInput:checked+.driveToggleBtn-standard{border-color:var(--ok);background:var(--ok2);color:var(--ok)}
 .driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck{background:var(--ok);border-color:var(--ok)}
 .driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck svg{color:#fff}
 .driveToggleInput:checked+.driveToggleBtn-backup{border-color:var(--info);background:var(--info2);color:var(--info)}
-.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck{background:var(--info);border-color:var(--info)}
+.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck{background:var(--info);border-color:var(--info);border-style:solid}
+.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck svg{color:#fff}
 .driveToggleInput:focus-visible+.driveToggleBtn{outline:2px solid var(--accent);outline-offset:2px}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
 .chk input{min-height:18px}
@@ -117,6 +126,35 @@ button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;bor
 button.btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
 button.btn.small{padding:8px 12px;font-size:12.5px;margin:0;min-height:36px}
 button.btn:disabled{opacity:.35;cursor:default}
+/* Button roles: primary = solid red (.btn) · destructive = red outline + red text (.danger)
+   · everything else = secondary (.btn.secondary). */
+button.btn.danger{background:var(--card);color:var(--danger);border:1px solid var(--danger)}
+.iconbtn.danger{color:var(--danger);border-color:var(--danger);display:inline-flex;align-items:center;justify-content:center;background:var(--card)}
+.linkbtn{background:none;border:none;padding:8px 0;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.linkbtn.danger{color:var(--danger)}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center}
+.iconbtn:disabled{opacity:.35;cursor:default}
+/* Neutral direction label: "Heen · Aalsmeer → Alkmaar" */
+.dirLabel{display:inline-flex;align-items:center;gap:6px;background:var(--pill2);color:var(--pill);font-size:12px;font-weight:700;padding:4px 10px;border-radius:var(--radius-full)}
+.changedTag{display:inline-flex;align-items:center;gap:4px;background:var(--warn2);color:var(--warn-text);font-size:11px;font-weight:800;padding:3px 8px;border-radius:var(--radius-full)}
+/* Shared small square badge: weekday in Mijn week and the car number in Rooster */
+.dayBadge{width:28px;height:28px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.dayBadge.accent{background:var(--accent);color:#fff}
+/* Segmented control (Rooster: Deze week / Standaardrooster) */
+.segmented{display:flex;background:var(--pill2);border-radius:var(--radius-full);padding:3px;margin-bottom:12px}
+.segmented button{flex:1;border:none;background:none;padding:8px 6px;border-radius:var(--radius-full);font:inherit;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;min-height:36px}
+.segmented button.active{background:var(--card);color:var(--text);box-shadow:var(--shadow-card)}
+/* Alert for rides without a car */
+.unplacedAlert{background:var(--accent2);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:12px;color:var(--text)}
+.unplacedAlert .ttl{display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--danger)}
+.unplacedAlert .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid rgba(185,28,28,.2);font-size:13px}
+.unplacedAlert .row:first-of-type{border-top:none}
+/* Bottom sheet (Rooster: tap a passenger to move her) */
+.sheetOverlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);color:var(--text);width:100%;max-width:520px;border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 24px rgba(0,0,0,.2)}
+.sheet h3{margin:0 0 4px;font-size:16px;font-weight:800}
+.sheet .sheetItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);color:var(--text);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
+.sheet .sheetItem .sub{font-size:12px;color:var(--muted)}
 /* ---------- Day-pill carousel (Rooster) ---------- */
 .daypills{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px}
 .daypill{flex:0 0 auto;min-width:64px;min-height:48px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;padding:6px 10px;position:relative;font-family:var(--font-sans)}
@@ -125,7 +163,10 @@ button.btn:disabled{opacity:.35;cursor:default}
 .daypill.active{background:var(--accent);border-color:var(--accent)}
 .daypill.active .daypillTop{color:#fff}
 .daypill.active .daypillSub{color:var(--az-red-light)}
-.daypill .daypillToday{position:absolute;top:4px;right:6px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.daypill .daypillToday{position:absolute;top:5px;left:7px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.daypill.active .daypillToday{background:#fff}
+.daypill .daypillAlert{position:absolute;top:-6px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center;border:2px solid var(--bg)}
+.daypills{padding-top:8px;padding-right:8px}
 .daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px;font-weight:800}
 .group{border:1px solid var(--border);border-left:4px solid var(--border);border-radius:var(--radius-lg);padding:12px;margin:8px 0;background:var(--card);box-shadow:var(--shadow-card)}
 .group.confirmed{border-left-color:var(--info)}
@@ -135,10 +176,18 @@ button.btn:disabled{opacity:.35;cursor:default}
 .group .dir{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 .group .time{font-size:18px;font-weight:800;font-family:var(--font-mono)}
 .group .subtime{font-size:12px;color:var(--muted)}
-.pill{display:inline-block;background:var(--pill2);color:var(--pill);border-radius:var(--radius-md);padding:5px 10px;font-size:12px;font-weight:600;margin:2px 3px 0 0}
-.driver{color:var(--ok);font-weight:700;font-size:13px;margin-top:6px}
+.pill{display:inline-block;background:var(--pill2);color:var(--pill);border-radius:var(--radius-full);padding:5px 11px;font-size:12px;font-weight:600;margin:2px 3px 0 0;border:1px solid transparent;font-family:var(--font-sans)}
+.pill.mine{background:var(--accent2);color:var(--danger);border-color:var(--accent);font-weight:800}
+button.pill{cursor:pointer;min-height:32px}
+button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.driver{color:var(--text);font-weight:600;font-size:13px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.driver.me{color:var(--ok);font-weight:800}
+.driver select{flex:1;min-height:36px;font-weight:600}
 .cap{font-size:12px;color:var(--muted);font-weight:600}
-.capbadge{display:inline-block;background:var(--ok2);color:var(--ok);font-size:10px;font-weight:700;padding:4px 10px;border-radius:var(--radius-full)}
+.capbadge{display:inline-block;background:var(--pill2);color:var(--pill);font-size:11px;font-weight:700;padding:4px 10px;border-radius:var(--radius-full);white-space:nowrap}
+.group.mineDriving{border-left-color:var(--ok)}
+.timeBig{font-size:18px!important;font-weight:800;font-family:var(--font-mono);width:auto!important;min-height:36px!important;padding:4px 8px!important}
+.tripReserve{font-size:12px;color:var(--muted);margin:2px 0 10px 2px}
 .reserve{font-size:12px;color:var(--muted);margin-top:4px}
 .girlchk{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
 .muted{color:var(--muted);font-size:12px}
@@ -146,7 +195,7 @@ button.btn:disabled{opacity:.35;cursor:default}
 .badge.rec{background:var(--accent2);color:var(--accent);font-weight:700}
 .rowflex{display:flex;justify-content:space-between;align-items:center;gap:8px}
 .fitok{color:var(--ok);font-size:12px;margin-top:4px;font-weight:700}
-.fitbad{color:var(--warn);font-size:12px;margin-top:4px;font-weight:700}
+.fitbad{color:var(--warn-text);font-size:12px;margin-top:4px;font-weight:700}
 .chip{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:12px}
 table.avail{width:100%;border-collapse:collapse;font-size:12px}
 table.avail th,table.avail td{padding:6px 4px}
@@ -155,9 +204,20 @@ table.avail th,table.avail td{padding:6px 4px}
 .dayBlockHead .sumInfo{font-weight:400;color:var(--muted);font-size:12px}
 .dayDetailsBody{padding:10px 12px}
 .iconbtn{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);min-width:38px;min-height:38px;font-size:14px;cursor:pointer;color:var(--text)}
+.availStd{display:inline-block;min-width:22px;padding:2px 4px;border-radius:6px;background:var(--ok);color:#fff;font-weight:800}
+:root[data-theme="dark"] .availStd{color:#022c22}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
 /* ---------- Mijn week hero card ---------- */
 .heroCard{background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));border-radius:var(--radius-xl);padding:18px;color:#fff;margin-bottom:14px;box-shadow:var(--shadow-card)}
+/* Compact hero: one row — daughter + parent on the left, WhatsApp icon button on the right */
+.heroCard.compact{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--radius-lg)}
+.heroCard.compact .heroText{flex:1;min-width:0}
+.heroCard.compact .heroName{font-size:17px;margin:0;line-height:1.25}
+.heroCard.compact .heroSub{font-size:12px;color:#fff;opacity:.95;margin:2px 0 0}
+.waIconBtn{width:44px;height:44px;border-radius:50%;border:none;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;padding:0}
+.waIconBtn svg{margin:0!important;width:26px;height:26px}
+.legendLine{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin:4px 2px 12px}
+.legendLine span{display:inline-flex;align-items:center;gap:4px}
 .heroCard .heroTag{display:inline-block;background:rgba(255,255,255,.2);border-radius:var(--radius-full);padding:4px 10px;font-size:9px;font-weight:800;letter-spacing:.04em}
 .heroCard .heroName{font-size:24px;font-weight:800;margin:10px 0 2px}
 .heroCard .heroSub{font-size:12px;color:var(--az-red-light);margin:0}
@@ -177,12 +237,17 @@ table.avail th,table.avail td{padding:6px 4px}
 .subride .subrideDep{font-family:var(--font-mono);color:var(--accent);font-weight:700}
 .subride .subrideStatus{font-size:12px;color:var(--muted);margin-top:3px}
 .subride .subrideStatus.driving{color:var(--ok);font-weight:700}
+.subride.unplanned{border-color:var(--danger);border-width:2px;background:var(--accent2)}
+.subride .subrideStatus.unplanned{color:var(--danger);font-weight:800;font-size:13px;display:flex;align-items:center;gap:4px}
+.subride .subrideStatus.changed{color:var(--warn-text);font-weight:600}
 /* ---------- Dagafwijking (amber "warning" theme) ---------- */
 .devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
 :root[data-theme="dark"] .devAlert{border-color:#78350f}
 .devAlert .devAlertTitle{font-size:13px;font-weight:800;color:var(--warn-text);margin:0}
 .devAlert .devAlertBody{font-size:11px;color:var(--warn-text);margin:4px 0 0}
 .devCard{border-color:var(--warn) !important}
+.devDayDot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block}
+.devDayBtn.changed{border-color:var(--warn)}
 /* ---------- Wedstrijdcarpool (violet "match" theme + football icon) ----------
    Deliberately a different color family than the weekday carpool (red/green) and the
    Dagafwijking (amber), so a match ride is recognisable at a glance everywhere it shows up. */
@@ -211,10 +276,10 @@ table.avail th,table.avail td{padding:6px 4px}
 <div id="impersonateBanner" style="display:none"></div>
 <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
   <div>
-    <h1><svg viewBox="0 0 256 256" style="width:1em;height:1em;vertical-align:-0.15em;margin-right:4px" aria-hidden="true"><path d="M48 176v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h96v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h8a8 8 0 0 0 8-8v-40a24 24 0 0 0-16.8-22.9l-9.6-32A24 24 0 0 0 178 56H78a24 24 0 0 0-23.6 17.1l-9.6 32A24 24 0 0 0 24 128v40a8 8 0 0 0 8 8Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="80" cy="152" r="12" fill="currentColor"/><circle cx="176" cy="152" r="12" fill="currentColor"/></svg>AZ Carpool Aalsmeer–Alkmaar</h1>
-    <p id="whoami">Laden…</p>
+    <h1><svg viewBox="0 0 256 256" style="width:1em;height:1em;vertical-align:-0.15em;margin-right:4px" aria-hidden="true"><path d="M48 176v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h96v16a8 8 0 0 0 8 8h16a8 8 0 0 0 8-8v-16h8a8 8 0 0 0 8-8v-40a24 24 0 0 0-16.8-22.9l-9.6-32A24 24 0 0 0 178 56H78a24 24 0 0 0-23.6 17.1l-9.6 32A24 24 0 0 0 24 128v40a8 8 0 0 0 8 8Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="80" cy="152" r="12" fill="currentColor"/><circle cx="176" cy="152" r="12" fill="currentColor"/></svg>AZ Carpool</h1>
+    <p>Aalsmeer – Alkmaar · <span id="whoami">Laden…</span></p>
   </div>
-  <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
+  <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Donker thema aanzetten"></button>
 </header>
 </div>
 
@@ -238,7 +303,7 @@ table.avail th,table.avail td{padding:6px 4px}
   <button type="button" data-tab="deviation" class="navtab"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="currentColor"/></svg>
-    </span><span class="navlabel">Afwijking</span></button>
+    </span><span class="navlabel">Wijzigen</span></button>
   <button type="button" data-tab="profile" class="navtab"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M162 88a44 44 0 0 1 0 88" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M184 148c26 8 40 32 40 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="currentColor"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68Z" fill="currentColor"/><path d="M162 88a44 44 0 0 1 0 88 44 44 0 0 1-10-1.2 68 68 0 0 0 18-42.8 68 68 0 0 0-18-42.8A44 44 0 0 1 162 88Z" fill="currentColor"/><path d="M184 148c26 8 40 32 40 68h-40Z" fill="currentColor"/></svg>
@@ -346,6 +411,9 @@ const PH_PATHS = {
   x: `<line x1="200" y1="56" x2="56" y2="200" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><line x1="200" y1="200" x2="56" y2="56" stroke="currentColor" stroke-width="18" stroke-linecap="round"/>`,
   star: `<path d="M128 32l30 64 70 10-51 50 12 70-61-32-61 32 12-70-51-50 70-10Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/>`,
   'arrow-left': `<line x1="216" y1="128" x2="40" y2="128" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="104,64 40,128 104,192" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'arrow-up': `<line x1="128" y1="216" x2="128" y2="40" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="64,104 128,40 192,104" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'arrow-down': `<line x1="128" y1="40" x2="128" y2="216" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="64,152 128,216 192,152" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'arrow-right': `<line x1="40" y1="128" x2="216" y2="128" stroke="currentColor" stroke-width="18" stroke-linecap="round"/><polyline points="152,64 216,128 152,192" fill="none" stroke="currentColor" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
   sun: `<circle cx="128" cy="128" r="42" fill="none" stroke="currentColor" stroke-width="16"/><path d="M128 24v24M128 208v24M232 128h-24M48 128H24M197 59l-17 17M76 180l-17 17M197 197l-17-17M76 76 59 59" stroke="currentColor" stroke-width="16" stroke-linecap="round"/>`,
   moon: `<path d="M216 136A88 88 0 1 1 120 40a70 70 0 0 0 96 96Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
   home: `<path d="M32 128 128 48l96 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><path d="M56 112v88a8 8 0 0 0 8 8h128a8 8 0 0 0 8-8v-88" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/>`,
@@ -354,6 +422,28 @@ const PH_PATHS = {
   eye: `<path d="M16 128 Q128 32 240 128 Q128 224 16 128 Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><circle cx="128" cy="128" r="32" fill="none" stroke="currentColor" stroke-width="16"/>`,
 };
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
+// Day labels are always shown in capitals ("MA"); the keys themselves ("Ma") stay as stored data.
+function dayUp(k){ return String(k||'').toUpperCase(); }
+// One wording for the two directions, everywhere in the app.
+const DIR_TEXT = { heen:'Heen · Aalsmeer → Alkmaar', terug:'Terug · Alkmaar → Aalsmeer' };
+function dirLabelHtml(direction, extra){ return `<span class="dirLabel">${DIR_TEXT[direction]}</span>${extra||''}`; }
+// Small bottom sheet with a list of choices (used to move a passenger in Rooster).
+function openSheet(title, subtitle, items){
+  closeSheet();
+  const ov=document.createElement('div'); ov.className='sheetOverlay'; ov.id='sheetOverlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">${title}</h3>${subtitle? `<p class="muted" style="margin:0">${subtitle}</p>`:''}
+    ${items.map((it,i)=>`<button type="button" class="sheetItem" data-sheetidx="${i}"><span>${it.label}${it.sub? `<br><span class="sub">${it.sub}</span>`:''}</span>${phIcon('arrow-right')}</button>`).join('')}
+    <button type="button" class="btn secondary" id="sheetCancel" style="width:100%;margin-top:12px">Annuleren</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e=>{ if(e.target===ov) closeSheet(); });
+  ov.querySelector('#sheetCancel').onclick=closeSheet;
+  ov.querySelectorAll('[data-sheetidx]').forEach(b=>b.onclick=()=>{ const it=items[+b.dataset.sheetidx]; closeSheet(); it.onClick(); });
+  const first=ov.querySelector('.sheetItem')||ov.querySelector('#sheetCancel'); if(first) first.focus();
+}
+function closeSheet(){ const ov=document.getElementById('sheetOverlay'); if(ov) ov.remove(); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSheet(); });
 // Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
 // True weekday-or-null: null on Sat/Sun means "no day is actually today" — used ONLY for
 // real "is this today" indicators (green dot, VANDAAG badge). Never falls back to a weekday.
@@ -362,6 +452,9 @@ const todayKey = (()=>{ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return m
 // default to on first view" — Monday is a reasonable default on a weekend, but that does NOT
 // make Monday "today".
 let scheduleDay = todayKey || "Ma";
+// Rooster shows either this week's real rides ('week': standard schedule with this week's
+// Wijzigingen applied) or the standard schedule itself ('standard', where the coordinator edits).
+let roosterMode = 'week';
 // When a Rooster move-passenger action hits a full destination car, this holds the pending
 // request so the destination car's own card can offer a real swap instead of just blocking.
 let pendingSwapRequest = null; // {fromGid, girlId, toGid} | null
@@ -554,7 +647,7 @@ function matchCarRowHtml(c, opts){
   const over = cap!=null && girlIds.length>cap;
   const mine = !!opts.highlightId && (c.driverFamilyId===opts.highlightId || girlIds.includes(opts.highlightId));
   const overHtml = over? ` <span class="fitbad" style="white-space:nowrap" title="Meer passagiers dan plekken">${phIcon('warning')} ${girlIds.length}/${cap}</span>` : '';
-  const delHtml = opts.editable? `<button type="button" class="iconbtn trashBtn" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="Verwijder carpool">${phIcon('trash')}</button>` : '';
+  const delHtml = opts.editable? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="Verwijder carpool">${phIcon('trash')}</button>` : '';
   return `<div class="matchCarRow${mine?' mine':''}">
     <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
     <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${girlIds.map(id=>girlName(id)).join(', ')||'geen passagiers'}${overHtml}</span>
@@ -602,7 +695,7 @@ function renderWeekendMatchCarpoolCard(){
   const weekendMatches = matchesNext8Days(currentMatchList());
   weekendMatchBySlug = {};
   if(!weekendMatches.length){
-    return `<div class="card"><h2>Wedstrijdcarpool komende dagen</h2><p class="muted">Geen wedstrijden gevonden.</p></div>`;
+    return `<div class="card" id="matchCarpoolCard"><h2>Wedstrijdcarpool komende dagen</h2><p class="muted">Geen wedstrijden gevonden.</p></div>`;
   }
   const allFamilies = Object.entries(families);
   const matchesHtml = weekendMatches.map(m=>{
@@ -633,7 +726,7 @@ function renderWeekendMatchCarpoolCard(){
     }
     return `<div class="group matchGroup">${matchInfoHtml(m)}${carsHtml}${formHtml}</div>`;
   }).join('');
-  return `<div class="card">
+  return `<div class="card" id="matchCarpoolCard">
     <h2>Wedstrijdcarpool komende dagen</h2>
     <p class="muted">Zet een carpool op voor een wedstrijd. Iedereen kan dit doen en aanpassen</p>
     ${matchesHtml}
@@ -679,7 +772,7 @@ function wireWeekendMatchCarpool(){
     const capState = matchCarCapacityState(slug);
     if(capState.over && b.dataset.confirmOver!=='1'){
       b.dataset.confirmOver='1'; b.textContent='Toch opslaan';
-      showToast(`⚠️ Te veel passagiers (${capState.n}/${capState.cap}). Tik nogmaals op "Toch opslaan" om door te gaan.`);
+      showToast(`Te veel passagiers (${capState.n}/${capState.cap}). Tik nogmaals op "Toch opslaan" om door te gaan.`, {icon:'warning'});
       return;
     }
     const m = weekendMatchBySlug[slug];
@@ -735,9 +828,9 @@ function activeDeviation(day,direction){
   return (dev && dev.weekKey===currentWeekKey && dev.cars && dev.cars.length) ? dev : null;
 }
 // The single source of truth for "what cars actually run today" — the default Rooster groups,
-// unless a still-current-week deviation overrides them. Used by Mijn week and the editor itself;
-// Rooster always shows the real default groups regardless, per the requirement that deviations
-// never touch the default schedule.
+// unless a still-current-week deviation overrides them. Used by Mijn week, the Wijzigen editor
+// and Rooster's "Deze week" view. Rooster's "Standaardrooster" view shows the default groups,
+// and deviations never touch those.
 function effectiveCars(day,direction){
   const dev = activeDeviation(day,direction);
   if(dev) return dev.cars.map(c=>({...c}));
@@ -779,14 +872,15 @@ async function recordLastUpdate(kind){
   if(!db) return;
   try{
     const info=myDisplayInfo();
-    await db.doc("settings/lastUpdate"+kind).set({by:info.name, phone:info.phone, at:Date.now()});
+    // Name only — phone numbers are not shown to every parent.
+    await db.doc("settings/lastUpdate"+kind).set({by:info.name, at:Date.now()});
   }catch(e){ /* best-effort only — never block the real action on this */ }
 }
 function lastUpdateFooter(info){
   if(!info || !info.at) return '';
   const d = new Date(info.at);
   const dateStr = d.toLocaleString('nl-NL', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  return `<p class="muted" style="margin-top:10px;font-size:11px">Laatst bijgewerkt door: ${esc(info.by||'onbekend')}${info.phone?` (${esc(info.phone)})`:''} — ${dateStr}</p>`;
+  return `<p class="muted" style="margin-top:10px;font-size:11px">Laatst bijgewerkt door: ${esc(info.by||'onbekend')} — ${dateStr}</p>`;
 }
 function myFamilyId(){ return impersonateFamilyId || (links[me] && links[me].familyId) || me; }
 function shiftKeyOf(day,direction){ return day+'_'+direction; }
@@ -823,7 +917,12 @@ function isAvailable(f,day,direction){
 function applyTheme(pref){
   document.documentElement.setAttribute('data-theme', pref==='dark'?'dark':'light');
   const btn=document.getElementById('themeToggle');
-  if(btn) btn.innerHTML = pref==='dark' ? phIcon('moon')+' Donker' : phIcon('sun')+' Licht';
+  // Icon only: shows what you switch TO (moon in light mode, sun in dark mode).
+  if(btn){
+    btn.innerHTML = pref==='dark' ? phIcon('sun') : phIcon('moon');
+    const lbl = pref==='dark' ? 'Licht thema aanzetten' : 'Donker thema aanzetten';
+    btn.setAttribute('aria-label', lbl); btn.title = lbl;
+  }
 }
 function cycleTheme(){
   const cur = (()=>{ try{ return localStorage.getItem('theme-pref')||'light'; }catch(e){ return 'light'; } })();
@@ -880,19 +979,21 @@ function wireInstallCard(){
   };
 }
 
-function setStatus(msg){ const el=document.getElementById('whoami'); if(el) el.textContent=msg; adjustMainPadding(); }
+// `warn` puts the SVG warning icon in front (instead of an emoji).
+function setStatus(msg, warn){ const el=document.getElementById('whoami'); if(el) el.innerHTML=(warn? phIcon('warning')+' ':'')+esc(msg); adjustMainPadding(); }
 // No-op now: header/nav are normal flex children (not position:fixed) in the new flex-shell
 // layout, so `main` never needs JS-computed compensating padding — normal flex flow already
 // places it correctly between them. Left in place (rather than removed) since it's still called
 // from many render functions; safe to no-op there instead of hunting down every call site.
 function adjustMainPadding(){}
-function showToast(msg){
+// opts.icon: name of a phIcon shown before the text (e.g. 'warning'), instead of an emoji.
+function showToast(msg, opts){
   let t=document.getElementById('toast');
   if(!t){ t=document.createElement('div'); t.id='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite');
     t.style.cssText='position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 16px;border-radius:20px;font-size:13px;max-width:90%;text-align:center;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2)';
     document.body.appendChild(t);
   }
-  t.textContent=msg; t.style.display='block';
+  t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg); t.style.display='block';
   clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},4000);
 }
 function twoStepConfirm(btn, confirmLabel, action){
@@ -915,7 +1016,7 @@ async function init(){
     const cred = await signInAnonymously(fbAuth);
     me = cred.user.uid;
   }catch(e){
-    setStatus("⚠️ Niet verbonden.");
+    setStatus("Niet verbonden.", true);
     showConnectionError(e);
     return;
   }
@@ -925,7 +1026,7 @@ async function init(){
     coordinatorConfig = coordSnap.exists? coordSnap.data() : null;
     appReady = true;
   }catch(e){
-    setStatus("⚠️ Niet verbonden.");
+    setStatus("Niet verbonden.", true);
     showConnectionError(e);
     return;
   }
@@ -940,25 +1041,26 @@ async function init(){
         snap.docs.forEach(d=>{ families[d.id]=d.data(); serverSchedules[d.id]=JSON.parse(JSON.stringify(d.data().schedule||{})); });
         notifyCoordinatorOfNewTimeChanges();
         renderAll(); },
-      err=>{ setStatus("⚠️ Fout bij laden gezinnen: "+(err&&err.message||err)); });
+      err=>{ setStatus("Fout bij laden gezinnen: "+(err&&err.message||err), true); });
     db.collection("groups").onSnapshot(snap=>{ groups={}; snap.docs.forEach(d=>groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
-      err=>{ setStatus("⚠️ Fout bij laden rooster: "+(err&&err.message||err)); });
+      err=>{ setStatus("Fout bij laden rooster: "+(err&&err.message||err), true); });
     db.collection("links").onSnapshot(snap=>{ links={}; snap.docs.forEach(d=>links[d.id]=d.data());
       const navB=document.getElementById('navBeheer');
       recomputeCanEdit(); if(navB) navB.style.display = canEdit?'':'none';
+      chooseDefaultTab();
       renderProfile(); renderBeheer(); renderMyWeek(); },
-      err=>{ setStatus("⚠️ Fout bij laden koppelingen: "+(err&&err.message||err)); });
+      err=>{ setStatus("Fout bij laden koppelingen: "+(err&&err.message||err), true); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) settings={...settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus("⚠️ Fout bij laden instellingen: "+(err&&err.message||err)); });
+      err=>{ setStatus("Fout bij laden instellingen: "+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!prefs.rules) prefs.rules=[]; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus("⚠️ Fout bij laden voorkeuren: "+(err&&err.message||err)); });
+      err=>{ setStatus("Fout bij laden voorkeuren: "+(err&&err.message||err), true); });
     db.doc("settings/priority").onSnapshot(snap=>{ shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus("⚠️ Fout bij laden prioriteit: "+(err&&err.message||err)); });
+      err=>{ setStatus("Fout bij laden prioriteit: "+(err&&err.message||err), true); });
     db.collection("deviations").onSnapshot(snap=>{
       deviations={}; snap.docs.forEach(d=>deviations[d.id]=d.data());
       purgeStaleDeviations();
       renderSchedule(); renderMyWeek(); renderDeviationTab();
-    }, err=>{ setStatus("⚠️ Fout bij laden dagafwijkingen: "+(err&&err.message||err)); });
+    }, err=>{ setStatus("Fout bij laden wijzigingen: "+(err&&err.message||err), true); });
     db.collection("matchCarpools").onSnapshot(snap=>{
       matchCarpools={}; snap.docs.forEach(d=>matchCarpools[d.id]=d.data());
       purgeStaleMatchCarpools();
@@ -983,7 +1085,7 @@ async function init(){
       }
       renderMyWeek(); renderDeviationTab();
     }, err=>{});
-  }catch(e){ setStatus("⚠️ Kon niet live verbinden: "+(e&&e.message||e)); }
+  }catch(e){ setStatus("Kon niet live verbinden: "+(e&&e.message||e), true); }
   adjustMainPadding();
 }
 function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderImpersonateBanner(); adjustMainPadding(); }
@@ -1008,26 +1110,37 @@ function startImpersonate(familyId){
   recomputeCanEdit();
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display='none';
   showToast("Testweergave gestart ✓");
+  roosterMode='week';
   renderAll();
+  activateTab('myweek');
 }
 function stopImpersonate(){
   impersonateFamilyId=null;
   recomputeCanEdit();
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'':'none';
   showToast("Terug naar coördinatorweergave ✓");
+  roosterMode='standard';
   renderAll();
+  activateTab('beheer');
 }
 
-document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
-  b.classList.add('active');
-  ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
-    const el=document.getElementById('tab-'+t);
-    if(el) el.style.display = (b.dataset.tab===t)?'block':'none';
-  });
-}));
-// A link like #myweek (used by the WhatsApp update message) opens straight to that tab
-// instead of always defaulting to Rooster.
+// Switches the visible tab; every switch starts at the top of the new tab.
+function activateTab(tab){
+  const btn=document.querySelector(`nav button[data-tab="${tab}"]`);
+  if(!btn) return;
+  document.querySelectorAll('nav button[data-tab]').forEach(x=>{ x.classList.remove('active'); x.removeAttribute('aria-current'); });
+  btn.classList.add('active'); btn.setAttribute('aria-current','page');
+  if(document.getElementById('tab-gate').style.display!=='block'){
+    ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
+      const el=document.getElementById('tab-'+t);
+      if(el) el.style.display = (tab===t)?'block':'none';
+    });
+  }
+  const m=document.querySelector('main'); if(m) m.scrollTop=0;
+}
+document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>activateTab(b.dataset.tab)));
+// A link like #myweek (used by the WhatsApp update message) opens straight to that tab.
+let hashTabApplied = false;
 (function applyInitialHashTab(){
   try{
     const hash=(location.hash||'').replace('#','');
@@ -1036,9 +1149,20 @@ document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener(
     if(btn){
       document.querySelectorAll('nav button[data-tab]').forEach(x=>x.classList.remove('active'));
       btn.classList.add('active');
+      hashTabApplied = true;
     }
   }catch(e){ /* a malformed hash must never be able to break the rest of the app's startup */ }
 })();
+// Without a #tab in the link: parents start on Mijn week, the coordinator on Rooster.
+// Decided once, as soon as we know who this is (after the first links snapshot).
+let defaultTabChosen = false;
+function chooseDefaultTab(){
+  if(defaultTabChosen || !appReady) return;
+  defaultTabChosen = true;
+  roosterMode = canEdit? 'standard' : 'week';
+  if(!hashTabApplied) activateTab(canEdit? 'schedule' : 'myweek');
+  renderSchedule();
+}
 
 // ---------- Shared family form: per-day <details> instead of a 5-column grid, so it's usable on phones ----------
 // Which day-tab is currently open, per form instance ('me' = Mijn gezin, 'coord' = Beheer editor)
@@ -1048,7 +1172,7 @@ function familyFormHtml(prefix,f){
   f = f || {parentName:"",girlName:"",capacity:4,schedule:{},availability:{}};
   const activeDay = formSelectedDay[prefix]||'Ma';
   const dayTabs = DAYS.map(([k,label])=>
-    `<button type="button" class="dayTabBtn ${k===activeDay?'active':''}" data-daytab="${prefix}|${k}">${k}</button>`
+    `<button type="button" class="dayTabBtn ${k===activeDay?'active':''}" data-daytab="${prefix}|${k}" aria-label="${label}">${dayUp(k)}</button>`
   ).join('');
   const s=(f.schedule&&f.schedule[activeDay])||{};
   const a=(f.availability&&f.availability[activeDay])||{};
@@ -1063,19 +1187,19 @@ function familyFormHtml(prefix,f){
         <div><label style="margin-top:0">Terug: klaar om op te halen</label><input type="time" id="${prefix}_sch_${activeDay}_terug" value="${s.terug||''}"></div>
       </div>
       <p style="margin:14px 0 6px;font-size:13px;font-weight:700">Kan jij deze dag rijden?</p>
-      <p class="muted" style="margin:0 0 4px">Ochtend / heenrit (Aalsmeer → Alkmaar)</p>
+      <p class="muted" style="margin:0 0 4px">${DIR_TEXT.heen}</p>
       <div class="driveToggleGroup">
         <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_heen" ${a.heen?'checked':''}>
         <label for="${prefix}_av_${activeDay}_heen" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Beschikbaar</label>
         <input type="checkbox" class="driveToggleInput" id="${prefix}_bkH_${activeDay}" ${a.backupHeen?'checked':''}>
-        <label for="${prefix}_bkH_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up</label>
+        <label for="${prefix}_bkH_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck">${phIcon('check')}</span>Back-up</label>
       </div>
-      <p class="muted" style="margin:14px 0 4px">Middag / terugrit (Alkmaar → Aalsmeer)</p>
+      <p class="muted" style="margin:14px 0 4px">${DIR_TEXT.terug}</p>
       <div class="driveToggleGroup">
         <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_terug" ${a.terug?'checked':''}>
         <label for="${prefix}_av_${activeDay}_terug" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>Beschikbaar</label>
         <input type="checkbox" class="driveToggleInput" id="${prefix}_bkT_${activeDay}" ${a.backupTerug?'checked':''}>
-        <label for="${prefix}_bkT_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck"></span>Back-up</label>
+        <label for="${prefix}_bkT_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck">${phIcon('check')}</span>Back-up</label>
       </div>
     </div>`;
   // A hidden input per OTHER day preserves its own read/write ids so readFamilyForm keeps
@@ -1096,8 +1220,8 @@ function familyFormHtml(prefix,f){
       <div><label style="margin-top:0">Naam dochter</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
     </div>
     <div class="grid2">
-      <div><label style="margin-top:8px">Tel.nr. 1</label><input type="text" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
-      <div><label style="margin-top:8px">Tel.nr. 2</label><input type="text" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
+      <div><label style="margin-top:8px">Tel.nr. 1</label><input type="tel" inputmode="tel" autocomplete="off" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
+      <div><label style="margin-top:8px">Tel.nr. 2</label><input type="tel" inputmode="tel" autocomplete="off" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
     </div>
     <label>Totale autocapaciteit (incl. bestuurder)</label>
     <div class="stepperCard">
@@ -1314,11 +1438,11 @@ function renderGate(){
       <h2>Toegang tot AZ Carpool</h2>
       <p class="muted">Vul je gegevens in. De coördinator heeft je samen met deze link ook een code gegeven.</p>
       <label>Telefoonnummer</label>
-      <input type="text" id="gatePhone" placeholder="06-12345678">
+      <input type="tel" id="gatePhone" inputmode="tel" autocomplete="tel" placeholder="06-12345678">
       <label>Mijn dochter</label>
       ${options.length? `<select id="gateGirl">${options.map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>` : `<p class="muted">Er zijn nog geen gezinnen toegevoegd door de coördinator.</p>`}
       <label>Code</label>
-      <input type="text" id="gateCode" placeholder="6-cijferige code">
+      <input type="text" id="gateCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="6-cijferige code">
       <button type="button" class="btn" id="gateSubmit" ${options.length?'':'disabled'}>Toegang aanvragen</button>
       <p id="gateMsg" class="muted" style="margin-top:8px"></p>
     </div>
@@ -1365,15 +1489,16 @@ function renderProfile(){
     if(linked){
       const effId = myFamilyId();
       const lf = fam(effId);
-      const unlinkCtl = impersonateFamilyId? '' : ` · <button type="button" class="btn small secondary" id="unlinkBtn">Ontkoppelen</button>`;
+      const unlinkCtl = impersonateFamilyId? '' : `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">Ontkoppelen van deze dochter</button></div>`;
       html += `<div class="card">
         <div class="rowflex" style="align-items:flex-start">
           <div><h2 style="margin-bottom:2px">Mijn gezin</h2><p class="muted" style="margin:0">Contactgegevens &amp; autocapaciteit</p></div>
-          ${lf.inviteCode? `<span class="badge" style="font-family:var(--font-mono);white-space:nowrap">Code: ${esc(lf.inviteCode)}</span>` : ''}
+          ${lf.inviteCode? `<span class="capbadge" style="font-family:var(--font-mono)">Code: ${esc(lf.inviteCode)}</span>` : ''}
         </div>
-        <p class="muted" style="margin-top:8px">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong>${unlinkCtl}</p>
+        <p class="muted" style="margin-top:8px">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong></p>
         ${familyFormHtml('me', fam(effId))}
         <p class="muted" style="margin-top:8px">Wijzigingen worden automatisch opgeslagen.</p>
+        ${unlinkCtl}
       </div>`;
     } else {
       const options = Object.entries(families);
@@ -1394,9 +1519,9 @@ function renderProfile(){
       if(card) card.addEventListener('change', ()=>saveProfile());
       wireExclusiveAvailability('me');
       wireFamilyFormExtras('me', renderProfile);
-      const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=async ()=>{
+      const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=()=>twoStepConfirm(ub,"Zeker? Tik nogmaals om te ontkoppelen",async ()=>{
         try{ await db.doc("links/"+me).delete(); showToast("Ontkoppeld ✓"); }catch(e){showToast("Mislukt: "+(e&&e.message||e));}
-      };
+      });
     } else {
       const lb=document.getElementById('linkBtn'); if(lb) lb.onclick=async ()=>{
         const sel=document.getElementById('linkSelect'); if(!sel||!db)return;
@@ -1458,7 +1583,7 @@ function renderMyWeek(){
         statusHtml = `${phIcon('user')} Rijdt mee met: ${driverName}`;
       }
     } else {
-      statusHtml = 'nog niet ingepland'; statusClass='';
+      statusHtml = `${phIcon('warning')} niet ingepland`; statusClass='unplanned';
     }
     // Own driving duty in a DIFFERENT car than the daughter's own ride — shown as a second line.
     let extraDriving='';
@@ -1468,7 +1593,7 @@ function renderMyWeek(){
       extraDriving = `<div class="subrideStatus driving">${phIcon('car')} Jouw rijbeurt om ${dg.departureTime||'?'} · ${names}</div>`;
       statusClass = statusClass? statusClass : ''; // the driving BORDER below reflects the daughter's own car only, not this second one
     }
-    const devTag = activeDeviation(day,direction)? `<div class="subrideStatus" style="color:var(--warn)">${phIcon('warning')} Dagafwijking actief</div>` : '';
+    const devTag = activeDeviation(day,direction)? `<div class="subrideStatus changed">${phIcon('lightning')} Wijziging actief</div>` : '';
     return `<div class="subride ${statusClass}">
       <div class="subrideHead"><span>${label}</span><span class="subrideDep">${dep}</span></div>
       <div class="subrideStatus ${statusClass}">${statusHtml}</div>
@@ -1504,8 +1629,8 @@ function renderMyWeek(){
   const weekdayDates = new Set(DAYS.map(([k])=>dateForWeekday(k).toDateString()));
   const dayCards = DAYS.map(([k,label])=>{
     const isToday = k===todayKey;
-    const heenHtml = subride(k,'heen','Heen: Aalsmeer ➔ Alkmaar');
-    const terugHtml = subride(k,'terug','Terug: Alkmaar ➔ Aalsmeer');
+    const heenHtml = subride(k,'heen',DIR_TEXT.heen);
+    const terugHtml = subride(k,'terug',DIR_TEXT.terug);
     const matchHtml = matchRidesFor(dateForWeekday(k));
     if(!heenHtml && !terugHtml && !matchHtml) return '';
     const heenTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].heen) || '';
@@ -1514,7 +1639,7 @@ function renderMyWeek(){
     const onlyMatch = !heenHtml && !terugHtml;
     return `<div class="dayCard ${isToday?'today':''} ${matchHtml?'matchDay':''} ${onlyMatch?'matchOnly':''}">
       <div class="dayCardHead">
-        <span class="dayBadge">${k}</span>
+        <span class="dayBadge">${dayUp(k)}</span>
         <span class="dayCardTitle">${dateLabel}</span>
         ${isToday? '<span class="todayTag">VANDAAG</span>' : ''}
         ${matchHtml? matchTagHtml : ''}
@@ -1531,7 +1656,7 @@ function renderMyWeek(){
     const isToday = key===todayStr;
     return `<div class="dayCard matchDay matchOnly ${isToday?'today':''}">
       <div class="dayCardHead">
-        <span class="dayBadge">${esc(badge.charAt(0).toUpperCase()+badge.slice(1,2))}</span>
+        <span class="dayBadge">${esc(badge.slice(0,2).toUpperCase())}</span>
         <span class="dayCardTitle">${dateLabel}</span>
         ${isToday? '<span class="todayTag">VANDAAG</span>' : ''}
         ${matchTagHtml}
@@ -1560,27 +1685,60 @@ function renderMyWeek(){
     return `<div class="group matchGroup">${matchInfoHtml(m)}${carsHtml}</div>`;
   }).join('') : '<p class="muted">Geen wedstrijden gevonden.</p>';
   const matchesCardHtml = `<div class="card">
-    <h2>Wedstrijden deze week</h2>
-    <p class="muted">Carpool voor een wedstrijd regel je via Afwijking → "Wedstrijdcarpool komende dagen".</p>
-    ${weekMatchesHtml}
+    <div class="rowflex" style="align-items:center"><h2 style="margin:0">Wedstrijden deze week</h2>
+      <button type="button" class="btn small secondary" data-gomatchcarpool="1">${phIcon('soccer')} Carpool regelen</button></div>
+    <div style="margin-top:8px">${weekMatchesHtml}</div>
     ${matchFailNote}${matchStatusNote}
   </div>`;
 
+  // Rides of the daughter that have no car yet — today first, then the rest of the week.
+  const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
+  const unplannedRows = [];
+  DAYS.forEach(([k,label])=>{
+    if(dateForWeekday(k) < todayMidnight) return; // days already past
+    ['heen','terug'].forEach(direction=>{
+      const s = myFam.schedule && myFam.schedule[k] && myFam.schedule[k][direction];
+      if(!s) return;
+      if(effectiveCars(k,direction).some(c=>(c.girlIds||[]).includes(myId))) return;
+      const when = k===todayKey? 'Vandaag' : label;
+      unplannedRows.push(`<div class="row"><span><strong>${when}</strong> · ${direction==='heen'?'Heen':'Terug'} (${s}): niet ingepland</span>
+        <button type="button" class="btn small" data-gowijzig="${k}">Regelen</button></div>`);
+    });
+  });
+  const unplannedHtml = unplannedRows.length? `<div class="unplacedAlert" role="alert">
+      <div class="ttl">${phIcon('warning')} ${esc(myFam.girlName||'Je dochter')} heeft nog geen rit</div>
+      ${unplannedRows.join('')}
+    </div>` : '';
+
   box.innerHTML = `
-    <div class="heroCard">
-      <span class="heroTag">PERSOONLIJK OVERZICHT</span>
-      <div class="heroName">${esc(myFam.girlName||'')}</div>
-      <p class="heroSub">Ouder: ${esc(myFam.parentName||'')} · ${seats(myFam)} passagiersplekken</p>
-      ${whatsAppButtonHtml('wa-hero')}
-      <div class="heroLegend">
-        <span>${phIcon('user')} Rit dochter</span><span>${phIcon('car')} Jouw rijbeurt</span><span style="color:#fef08a">${phIcon('warning')} Dagafwijking</span><span style="color:#ddd6fe">${phIcon('soccer')} Wedstrijdrit</span>
+    <div class="heroCard compact">
+      <div class="heroText">
+        <div class="heroName">${esc(myFam.girlName||'')}</div>
+        <p class="heroSub">Ouder: ${esc(myFam.parentName||'')} · ${seats(myFam)} passagiersplekken</p>
       </div>
+      <button type="button" class="waIconBtn" id="wa-hero" aria-label="Deel mijn week via WhatsApp" title="Deel via WhatsApp">${WHATSAPP_SVG}</button>
     </div>
+    ${unplannedHtml}
     ${dayCardsHtml}
+    <div class="legendLine"><span>${phIcon('user')} Rit dochter</span><span>${phIcon('car')} Jouw rijbeurt</span><span>${phIcon('lightning')} Wijziging</span><span>${phIcon('soccer')} Wedstrijdrit</span></div>
     ${matchesCardHtml}
     ${lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   `;
   wireWhatsAppButton('wa-hero', buildMyWeekWhatsAppMessage);
+  box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
+  box.querySelectorAll('[data-gomatchcarpool]').forEach(b=>b.onclick=()=>goToMatchCarpool());
+}
+// Jump to the Wijzigen tab, optionally straight into one day.
+function goToWijzigen(day){
+  deviationDay = day || null; openMatchCarpoolForm = null;
+  renderDeviationTab(); activateTab('deviation'); hapticTap();
+}
+// Jump to "Wedstrijdcarpool komende dagen" on the Wijzigen tab.
+function goToMatchCarpool(){
+  goToWijzigen(null);
+  const card=document.getElementById('matchCarpoolCard');
+  const m=document.querySelector('main');
+  if(card && m) m.scrollTop = card.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop - 8;
 }
 
 // ---------- Dagafwijking tab: one-off changes, open to every parent, week-scoped ----------
@@ -1611,7 +1769,7 @@ function activeDeviationDayLabel(){
 }
 function plainGirlName(id){ const f=fam(id); return f.girlName||f.parentName||id; }
 function plainDriverName(id){ return id? (fam(id).parentName||'?') : 'nog geen chauffeur'; }
-function waDayLabel(k){ return k+' '+dateForWeekday(k).getDate(); }
+function waDayLabel(k){ return dayUp(k)+' '+dateForWeekday(k).getDate(); }
 // Generic fallback (used only when no specific day/family context is available).
 function buildWhatsAppMessage(){
   // WhatsApp messages are plain text — there's no way to make "Mijn week" itself a hidden
@@ -1636,14 +1794,14 @@ function buildMyWeekWhatsAppMessage(){
   DAYS.forEach(([k])=>{
     const sch = myFam.schedule && myFam.schedule[k];
     if(!sch || (!sch.heen && !sch.terug)) return;
-    const dev = (activeDeviation(k,'heen')||activeDeviation(k,'terug'))? ' (afwijking)' : '';
+    const dev = (activeDeviation(k,'heen')||activeDeviation(k,'terug'))? ' (gewijzigd)' : '';
     const d = dateForWeekday(k); d.setHours(0,0,0,0);
     entries.push({sort:d.getTime(), order:0, text:`${waDayLabel(k)}${dev} — heen: ${part(k,'heen')} | terug: ${part(k,'terug')}`});
   });
   myMatchRides(myId).forEach(r=>{
     const d = new Date(r.doc.startMs);
     const wd = d.toLocaleDateString('nl-NL',{weekday:'short'}).replace('.','');
-    const dl = wd.charAt(0).toUpperCase()+wd.slice(1)+' '+d.getDate();
+    const dl = wd.slice(0,2).toUpperCase()+' '+d.getDate();
     const a = analyzeMatch(r.doc.summary||'');
     const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
     // Plain text only (no emoji): WhatsApp's share link doesn't reliably carry them.
@@ -1670,9 +1828,9 @@ function buildDayWhatsAppMessage(day){
   return [
     `Aangepast schema ${dayLabel} ${dateLabel}:`,
     '',
-    block('heen','Heen (Aalsmeer → Alkmaar)'),
+    block('heen',DIR_TEXT.heen),
     '',
-    block('terug','Terug (Alkmaar → Aalsmeer)'),
+    block('terug',DIR_TEXT.terug),
     '',
     `${APP_URL}#myweek`
   ].join('\n');
@@ -1695,15 +1853,21 @@ function wireWhatsAppButton(btnId, buildFn){
 function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
   if(!box) return;
-  if(!me){ box.innerHTML=`<div class="card"><h2>Dagafwijking</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`; return; }
+  if(!me){ box.innerHTML=`<div class="card"><h2>Wijzigen</h2><p class="muted">Kon je account niet herkennen. Herlaad de pagina.</p></div>`; return; }
   if(!deviationDay){
+    const changedDays = DAYS.filter(([k])=>activeDeviation(k,'heen')||activeDeviation(k,'terug')).map(([k])=>k);
     box.innerHTML = `<div class="devAlert">
-      <p class="devAlertTitle">⚡ Weekafwijking (${currentWeekKey})</p>
-      <p class="devAlertBody">Eenmalige ritaanpassing voor deze week (ziek, rijbeurt ruilen, etc). Basisrooster blijft intact en dit wordt elk weekend automatisch gewist.</p>
+      <p class="devAlertTitle">${phIcon('lightning')} Wijzigingen · ${weekRangeLabel()}</p>
+      <p class="devAlertBody">Eenmalige ritaanpassing voor deze week (ziek, rijbeurt ruilen, etc). Het standaardrooster blijft intact; wijzigingen worden elk weekend automatisch gewist.</p>
     </div>
     <div class="card">
       <h2>Kies een dag</h2>
-      <div class="grid5">${DAYS.map(([k,label])=>`<button type="button" class="btn secondary devDayBtn" data-devday="${k}" style="margin-top:0" aria-label="${label} ${dateForWeekday(k).getDate()}"><span style="display:block;font-weight:700">${k}</span><span style="display:block;font-size:11px;opacity:.85">${dateForWeekday(k).getDate()}${matchCarpoolsOnDate(dateForWeekday(k)).length? ` <span style="color:var(--match)" title="Wedstrijdcarpool op deze dag">${phIcon('soccer')}</span>`:''}</span></button>`).join('')}</div>
+      <div class="grid5">${DAYS.map(([k,label])=>{
+        const changed = changedDays.includes(k);
+        const hasMatch = matchCarpoolsOnDate(dateForWeekday(k)).length>0;
+        return `<button type="button" class="btn secondary devDayBtn${changed?' changed':''}" data-devday="${k}" style="margin-top:0;position:relative" aria-label="${label} ${dateForWeekday(k).getDate()}${changed?', gewijzigd':''}${hasMatch?', wedstrijdcarpool':''}">${changed?'<span class="devDayDot" aria-hidden="true"></span>':''}<span style="display:block;font-weight:700">${dayUp(k)}</span><span style="display:block;font-size:11px;opacity:.85">${dateForWeekday(k).getDate()}${hasMatch? ` <span style="color:var(--match)" title="Wedstrijdcarpool op deze dag">${phIcon('soccer')}</span>`:''}</span></button>`;
+      }).join('')}</div>
+      ${changedDays.length? `<p class="muted" style="margin:8px 0 0;display:flex;align-items:center;gap:6px"><span class="devDayDot" style="position:static" aria-hidden="true"></span> = deze week gewijzigd</p>` : ''}
       ${lastUpdateFooter(lastUpdateDeviation)}
     </div>
     ${renderWeekendMatchCarpoolCard()}`;
@@ -1713,20 +1877,27 @@ function renderDeviationTab(){
   }
   const dayLabel = DAYS.find(([k])=>k===deviationDay)[1];
   box.innerHTML = `<div class="devAlert">
-      <div class="rowflex"><p class="devAlertTitle" style="margin:0">⚡ Dagafwijking — ${dayLabel}</p>
+      <div class="rowflex"><p class="devAlertTitle" style="margin:0">${phIcon('lightning')} Wijziging — ${dayLabel}</p>
         <button type="button" class="btn small secondary" id="devBackBtn">${phIcon('arrow-left')} Andere dag</button></div>
       <p class="devAlertBody">Wijzigingen hier gelden alleen voor ${dayLabel} deze week en verdwijnen dit weekend vanzelf.</p>
       ${whatsAppButtonHtml()}
     </div>
     ${renderDevMatchCarpoolsReadOnly(deviationDay)}
-    ${renderDevDirection(deviationDay,'heen','Naar Alkmaar (heen)')}
-    ${renderDevDirection(deviationDay,'terug','Terug naar Aalsmeer')}
+    ${renderDevDirection(deviationDay,'heen')}
+    ${renderDevDirection(deviationDay,'terug')}
     ${lastUpdateDeviation? `<div class="card">${lastUpdateFooter(lastUpdateDeviation)}</div>` : ''}`;
   const backBtn=document.getElementById('devBackBtn');
   if(backBtn) backBtn.onclick=()=>{ deviationDay=null; hapticTap(); renderDeviationTab(); };
   const waDay = deviationDay;
   wireWhatsAppButton(null, ()=>buildDayWhatsAppMessage(waDay));
+  box.querySelectorAll('[data-gomatchcarpool]').forEach(b=>b.onclick=()=>goToMatchCarpool());
   attachDeviationHandlers();
+}
+// "Week 40 · 28 sep – 2 okt"
+function weekRangeLabel(){
+  const mon=dateForWeekday('Ma'), fri=dateForWeekday('Vr');
+  const f=d=>d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'}).replace('.','');
+  return `Week ${+currentWeekKey.split('-W')[1]} · ${f(mon)} – ${f(fri)}`;
 }
 // Match carpools that happen to fall on this weekday — shown for context only; they are
 // managed in "Wedstrijdcarpool komende dagen" on the day-picker screen, not here.
@@ -1736,32 +1907,34 @@ function renderDevMatchCarpoolsReadOnly(day){
   const myId = myFamilyId();
   return `<div class="card" style="border-color:var(--match)">
     <div class="rowflex"><span class="matchTag">${phIcon('soccer')} Wedstrijdcarpool</span><span class="muted" style="font-size:11px;display:inline-flex;align-items:center;gap:4px">${phIcon('eye')} Alleen lezen</span></div>
-    <p class="muted" style="margin:8px 0 0">Extra ritten naar een wedstrijd op deze dag. Aanpassen kan via "Wedstrijdcarpool komende dagen" (knop "Andere dag").</p>
+    <p class="muted" style="margin:8px 0 0">Extra ritten naar een wedstrijd op deze dag.</p>
     ${list.map(([,d])=>`<div class="group matchGroup">${matchInfoHtml(docToMatch(d))}${d.cars.map(c=>matchCarRowHtml(c,{highlightId:myId})).join('')}</div>`).join('')}
+    <button type="button" class="btn small secondary" data-gomatchcarpool="1" style="margin-top:4px">${phIcon('soccer')} Wedstrijdcarpool aanpassen</button>
   </div>`;
 }
-function renderDevDirection(day,direction,title){
+function renderDevDirection(day,direction){
   const cars = effectiveCars(day,direction);
   const dev = activeDeviation(day,direction);
   const allFamilies = Object.entries(families);
   const assignedIds = new Set(cars.flatMap(c=>c.girlIds));
   const unassigned = allFamilies.filter(([id])=>!assignedIds.has(id));
 
+  const myIdDev = myFamilyId();
   const cardsHtml = cars.map((c,idx)=>{
     const driverOk = c.driverFamilyId? isAvailable(fam(c.driverFamilyId),day,direction) : true;
     const driverOptions = `<option value="" ${!c.driverFamilyId?'selected':''}>-- geen chauffeur --</option>` +
-      allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isAvailable(f,day,direction)?'':' ⚠️'}</option>`).join('');
+      allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isAvailable(f,day,direction)?'':' (geen beschikbaarheid)'}</option>`).join('');
     const otherIdxs = cars.map((_,i)=>i).filter(i=>i!==idx);
     const swapOptions = `<option value="">Verplaats naar…</option>` + otherIdxs.map(i=>`<option value="${i}">Auto: ${esc(fam(cars[i].driverFamilyId).parentName||'?')}</option>`).join('');
     const passengerRows = c.girlIds.map(id=>`
       <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
-        <span style="flex:1">${girlName(id)}</span>
+        <span style="flex:1${id===myIdDev?';font-weight:800;color:var(--danger)':''}">${girlName(id)}</span>
         ${otherIdxs.length? `<select class="devSwapSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" style="width:auto;font-size:12px" aria-label="${girlName(id)} verplaatsen naar andere auto">${swapOptions}</select>` : ''}
-        <button type="button" class="iconbtn trashBtn devRemoveBtn" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" aria-label="Verwijder ${girlName(id)} uit auto" title="Verwijder uit auto">${phIcon('trash')}</button>
+        <button type="button" class="iconbtn danger devRemoveBtn" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" aria-label="Verwijder ${girlName(id)} uit auto" title="Verwijder uit auto">${phIcon('trash')}</button>
       </div>`).join('') || '<p class="muted">Geen passagiers meer in deze auto.</p>';
     return `<div class="group devCard" data-devcar="${day}|${direction}|${idx}">
-      <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
-      <div class="time">${c.departureTime||'--:--'} <input type="time" class="devDeptimeInp" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" value="${c.departureTime||''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px"></div>
+      <div class="dir">Vertrek</div>
+      <input type="time" class="devDeptimeInp timeBig" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" value="${c.departureTime||''}" aria-label="Vertrektijd">
       <label style="margin-top:8px">Chauffeur</label>
       <select class="devDriverSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${driverOptions}</select>
       ${!driverOk? `<p class="fitbad" style="font-size:11px;margin-top:2px">${phIcon('warning')} Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven — controleer of dit echt klopt.</p>` : ''}
@@ -1781,7 +1954,7 @@ function renderDevDirection(day,direction,title){
     </div>` : '';
 
   return `<div class="card">
-    <span class="badge">${title}</span>
+    ${dirLabelHtml(direction)}
     ${cardsHtml}
     ${unassignedHtml}
     ${dev? `<button type="button" class="btn small secondary" data-devreset="${day}|${direction}">Terug naar standaard rooster</button>` : ''}
@@ -1821,7 +1994,7 @@ function attachDeviationHandlers(){
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
     const ok = await saveDeviationCars(day,direction,cars);
     if(ok){
-      if(overfull) showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — verplaatsing is wel doorgevoerd.`);
+      if(overfull) showToast(`Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — verplaatsing is wel doorgevoerd.`, {icon:'warning'});
       else showToast(girlName(girl)+" verplaatst.");
     }
   });
@@ -1835,7 +2008,7 @@ function attachDeviationHandlers(){
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
     const ok = await saveDeviationCars(day,direction,cars);
     if(ok){
-      if(overfull) showToast(`⚠️ Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — toevoeging is wel doorgevoerd.`);
+      if(overfull) showToast(`Deze auto zit nu vol (${newTo.length}/${toSeatsAvail}) — toevoeging is wel doorgevoerd.`, {icon:'warning'});
       else showToast(girlName(girl)+" toegevoegd.");
     }
   });
@@ -1855,20 +2028,21 @@ let coordEditId;
 function renderAvailabilityTable(){
   const rows = Object.entries(families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
   if(!rows.length) return `<p class="muted">Nog geen gezinnen.</p>`;
-  const head = `<tr><th style="text-align:left">Ouder</th>${DAYS.map(([k])=>`<th colspan="2">${k}</th>`).join('')}</tr>
+  const head = `<tr><th style="text-align:left">Ouder</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
     <tr><th></th>${DAYS.map(()=>`<th style="font-size:11px;color:var(--muted)">H</th><th style="font-size:11px;color:var(--muted)">T</th>`).join('')}</tr>`;
   const body = rows.map(([id,f])=>{
     const cells = DAYS.map(([k])=>{
       const a=(f.availability&&f.availability[k])||{};
+      // Standaard = solid green cell; back-up = plain grey number.
       const cellFor = (isDefault,isBackup) => isDefault
-        ? `<span style="color:var(--ok);font-weight:700">${seats(f)}</span>`
-        : isBackup ? `<span style="color:var(--backup);font-weight:400">${seats(f)}</span>` : '<span class="muted">–</span>';
+        ? `<span class="availStd">${seats(f)}</span>`
+        : isBackup ? `<span style="color:var(--backup);font-weight:500">${seats(f)}</span>` : '<span class="muted">–</span>';
       return `<td style="text-align:center">${cellFor(a.heen,a.backupHeen)}</td><td style="text-align:center">${cellFor(a.terug,a.backupTerug)}</td>`;
     }).join('');
     return `<tr style="border-top:1px solid var(--border)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
   }).join('');
   return `<div style="overflow-x:auto"><table class="avail">${head}${body}</table></div>
-    <p class="muted" style="margin-top:6px"><span style="color:var(--ok);font-weight:700">Vet groen</span> = standaard beschikbaar. <span style="color:var(--backup)">Grijs</span> = back-up (indien nodig). Cijfer = plek voor passagiers (niet de totale autocapaciteit). H = heen, T = terug.</p>`;
+    <p class="muted" style="margin-top:6px"><span class="availStd">4</span> groen vlak = standaard beschikbaar. <span style="color:var(--backup);font-weight:500">4</span> grijs cijfer = back-up (indien nodig). Cijfer = plek voor passagiers (niet de totale autocapaciteit). H = heen, T = terug.</p>`;
 }
 
 function renderPrefsCard(){
@@ -1877,7 +2051,7 @@ function renderPrefsCard(){
     const label = r.type==='together'
       ? `Samen reizen: ${(r.ids||[]).map(girlName).join(' &amp; ')}`
       : `Voorkeur: ${girlName(r.girlId)} met ${(r.withAny||[]).map(girlName).join(' of ')}`;
-    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px">${label}</span><button type="button" class="btn small secondary" data-delpref="${i}" aria-label="Voorkeur verwijderen">${phIcon('x')}</button></div>`;
+    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="Voorkeur verwijderen" title="Verwijder">${phIcon('trash')}</button></div>`;
   }).join('') || `<p class="muted">Nog geen voorkeuren.</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
@@ -1912,8 +2086,8 @@ function renderShiftPriorityRows(shiftKeyVal){
     <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--border)">
       <span>${i+1}. ${esc(f.parentName||'?')} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} pl.)</span></span>
       <span style="display:flex;gap:4px">
-        <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>▲</button>
-        <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>▼</button>
+        <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>${phIcon('arrow-up')}</button>
+        <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>${phIcon('arrow-down')}</button>
       </span>
     </div>`).join('');
   const ids=rows.map(([id])=>id);
@@ -1946,18 +2120,23 @@ function renderBeheer(){
   const dupGroups = Object.values(byName).filter(list=>list.length>1);
   const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
       <div class="fitbad">${phIcon('warning')} Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:</div>
-      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="btn small secondary" data-coorddel="${id}" style="margin-left:4px" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
+      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn danger" data-coorddel="${id}" style="margin-left:4px;min-width:30px;min-height:30px" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
   const rows = Object.entries(families).map(([id,fd])=>{
     const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
+    // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
+    const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !fd.inviteCode? 'code' : ''].filter(Boolean);
     return `
-    <div class="rowflex" style="padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:8px">
-      <span>${esc(fd.girlName||'(naam?)')} <span class="muted">– ${esc(fd.parentName||'(ouder?)')}</span> ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}
-        <br><span class="muted">${fd.parentPhone1? `Tel 1: <strong>${esc(fd.parentPhone1)}</strong> · `:''}${fd.parentPhone2? `Tel 2: <strong>${esc(fd.parentPhone2)}</strong> · `:''}${!fd.parentPhone1&&!fd.parentPhone2? 'Tel: <span class="fitbad">niet ingesteld</span> · ':''}${fd.inviteCode? `Code: <strong>${esc(fd.inviteCode)}</strong>` : '<span class="fitbad">geen code</span>'}</span></span>
-      <span style="display:flex;gap:6px;flex-wrap:wrap">
-        <button type="button" class="btn small secondary" data-imptest="${id}" style="display:inline-flex;align-items:center;gap:4px">${phIcon('eye')} Testen</button>
+    <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:15px;font-weight:800">${esc(fd.girlName||'(naam?)')}</div>
+        <div class="muted">${esc(fd.parentName||'(ouder?)')} ${claimed[id]?'<span class="badge">gekoppeld</span>':''} ${isCoord?'<span class="badge rec">COÖRDINATOR</span>':''}</div>
+        ${missing.length? `<div class="fitbad" style="font-size:11px;margin-top:2px">${phIcon('warning')} Geen ${missing.join(' en ')}</div>` : ''}
+      </div>
+      <span style="display:flex;gap:6px;flex-shrink:0">
         <button type="button" class="btn small secondary" data-coordedit="${id}">Wijzig</button>
-        <button type="button" class="btn small secondary" data-coorddel="${id}" aria-label="Verwijder" title="Verwijder">${phIcon('trash')}</button>
+        <button type="button" class="iconbtn" data-imptest="${id}" aria-label="Test de app als ${esc(fd.parentName||'deze ouder')}" title="Testweergave als deze ouder">${phIcon('eye')}</button>
+        <button type="button" class="iconbtn danger" data-coorddel="${id}" aria-label="Verwijder ${esc(fd.girlName||'gezin')}" title="Verwijder">${phIcon('trash')}</button>
       </span>
     </div>`;
   }).join('') || `<p class="muted">Nog geen gezinnen toegevoegd.</p>`;
@@ -1965,7 +2144,7 @@ function renderBeheer(){
   box.innerHTML = `
     <div class="card">
       <h2>Gezinnen beheren</h2>
-      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Wijzigingen worden automatisch opgeslagen. "Wijzig" opent ook de coördinator-koppeling voor dit gezin.</p>
+      <p class="muted">Vul of wijzig gegevens namens een andere ouder. Telefoonnummers en uitnodigingscode staan onder "Wijzig", net als de coördinator-koppeling. Het oog-icoon toont de app zoals deze ouder hem ziet.</p>
       ${dupWarning}
       ${rows}
       <button type="button" class="btn secondary" id="coordNew">+ Nieuw gezin toevoegen</button>
@@ -1996,14 +2175,14 @@ function renderBeheer(){
     </div>
     <div class="card">
       <h2>Wedstrijdkalenders (Google Calendar)</h2>
-      <p class="muted">Deze agenda's voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool komende dagen" (Afwijking). Elke agenda moet openbaar ("Make available to public") staan — Google Calendar → tandwiel bij de agenda → Instellingen en delen → Toegangsrechten.</p>
+      <p class="muted">Deze agenda's voeden "Wedstrijden deze week" (Mijn week) en "Wedstrijdcarpool komende dagen" (Wijzigen). Elke agenda moet openbaar ("Make available to public") staan — Google Calendar → tandwiel bij de agenda → Instellingen en delen → Toegangsrechten.</p>
       ${activeMatchFeeds().map((f,i)=>`
         <div class="rowflex" style="margin-top:6px;align-items:flex-end;gap:6px">
           <div class="grid2" style="flex:1">
             <div><label style="margin-top:0">Naam</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
             <div><label style="margin-top:0">Calendar ID</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="xxxx@group.v.calendar.google.com"></div>
           </div>
-          <button type="button" class="btn small secondary" data-delfeed="${i}" aria-label="Verwijder kalender" title="Verwijder kalender">${phIcon('trash')}</button>
+          <button type="button" class="iconbtn danger" data-delfeed="${i}" aria-label="Verwijder kalender" title="Verwijder kalender">${phIcon('trash')}</button>
         </div>`).join('')}
       <button type="button" class="btn small secondary" id="addMatchFeedBtn" style="margin-top:8px">+ Nieuwe kalender toevoegen</button>
       <button type="button" class="btn small secondary" id="refreshMatchesBtn" style="margin-top:8px">${phIcon('refresh')} Nu verversen</button>
@@ -2022,7 +2201,7 @@ function renderBeheer(){
     </div>
     <div class="card">
       <h2>Beheerderstools</h2>
-      <button type="button" class="btn secondary" id="seedPdf">${phIcon('refresh')} Alles wissen &amp; PDF-gegevens laden</button>
+      <button type="button" class="btn danger" id="seedPdf">${phIcon('trash')} Alles wissen &amp; PDF-gegevens laden</button>
       <p id="seedMsg" class="muted" style="margin-top:8px"></p>
     </div>`;
 
@@ -2218,9 +2397,9 @@ async function seedFromPdf(){
         if(!expectMissing && !has){ok=false; details.push(f.girlName+" "+k+" mist een tijd");}
       });
     });
-    if(msg) msg.textContent = ok
-      ? `✅ Klaar: ${docs.length} gezinnen aangemaakt, alle dagen ingevuld behalve Robbin/Woensdag (zoals verwacht).`
-      : `⚠️ ${docs.length} gezinnen aangemaakt, maar validatie vond afwijkingen: ${details.join('; ')}`;
+    if(msg) msg.innerHTML = ok
+      ? `${phIcon('check-circle')} Klaar: ${docs.length} gezinnen aangemaakt, alle dagen ingevuld behalve Robbin/Woensdag (zoals verwacht).`
+      : `${phIcon('warning')} ${docs.length} gezinnen aangemaakt, maar validatie vond afwijkingen: ${esc(details.join('; '))}`;
   }catch(e){ if(msg) msg.textContent="Fout tijdens laden: "+(e&&e.message||e); }
 }
 
@@ -2231,7 +2410,7 @@ function timeChangesCardHtml(){
   if(!pending.length) return '';
   const total = pending.reduce((n,f)=>n+f.changes.length,0);
   const famHtml = pending.map(f=>{
-    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary" data-tcday="${esc(c.day)}" style="padding:2px 8px;min-height:26px;margin-right:6px">${esc(c.day)}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
+    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary" data-tcday="${esc(c.day)}" style="padding:2px 8px;min-height:26px;margin-right:6px">${esc(dayUp(c.day))}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
     const when = f.latestAt? new Date(f.latestAt).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     const by = f.changes.find(c=>c.by)?.by || '';
     return `<div class="timeChangeFam">
@@ -2379,95 +2558,182 @@ async function createGroupCustom(day,direction,ids){
   await createGroupWithDriver(day,direction,ids, eligible[0]?eligible[0][0]:null);
 }
 
+// Girls with a time on this day/direction who are in no car. mode 'week' = this week's real
+// rides (Wijzigingen applied); 'standard' = the standard schedule.
+function unplacedFor(day,direction,mode){
+  const cars = mode==='week'? effectiveCars(day,direction) : groupsFor(day,direction).map(([,g])=>g);
+  const placed = new Set(cars.flatMap(c=>c.girlIds||[]));
+  return girlsFor(day,direction).filter(([id])=>!placed.has(id));
+}
+function carsCountFor(day,mode){
+  return ['heen','terug'].reduce((n,d)=> n + (mode==='week'
+    ? effectiveCars(day,d).filter(c=>(c.girlIds||[]).length).length
+    : groupsFor(day,d).length), 0);
+}
+// The logged-in parent's own family (null for a coordinator who isn't linked to a family).
+function myLinkedFamilyId(){ const linked = !!impersonateFamilyId || !!(links[me] && links[me].familyId); return linked? myFamilyId() : null; }
 function renderSchedule(){
   const box=document.getElementById('tab-schedule');
   if(!box) return;
+  const mode = roosterMode;
   const pillsHtml = DAYS.map(([k,label])=>{
-    const carCount = groupsFor(k,'heen').length + groupsFor(k,'terug').length;
+    const carCount = carsCountFor(k,mode);
+    const unplaced = unplacedFor(k,'heen',mode).length + unplacedFor(k,'terug',mode).length;
     const isActive = k===scheduleDay;
-    return `<button type="button" class="daypill ${isActive?'active':''}" data-schedday="${k}" aria-label="${label}">
-      <span class="daypillTop">${label.slice(0,2).toUpperCase()}</span>
+    return `<button type="button" class="daypill ${isActive?'active':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? `, ${unplaced} niet ingedeeld`:''}">
+      <span class="daypillTop">${dayUp(k)}</span>
       <span class="daypillSub">${carCount} rit${carCount===1?'':'ten'}</span>
       ${k===todayKey? '<span class="daypillToday" aria-hidden="true"></span>' : ''}
+      ${unplaced? `<span class="daypillAlert" aria-hidden="true">${unplaced}</span>` : ''}
     </button>`;
   }).join('');
   const label = DAYS.find(([k])=>k===scheduleDay)[1];
+  const segHtml = `<div class="segmented" role="group" aria-label="Welk rooster">
+      <button type="button" data-rmode="week" class="${mode==='week'?'active':''}" aria-pressed="${mode==='week'}">Deze week</button>
+      <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">Standaardrooster</button>
+    </div>
+    <p class="muted" style="margin:-4px 2px 10px">${mode==='week'
+      ? `${weekRangeLabel()} — het standaardrooster mét de wijzigingen van deze week.`
+      : `Het vaste rooster, elke week gelijk.${canEdit? ' Tik op een naam om haar te verplaatsen.' : ''}`}</p>`;
+  const footer = mode==='week'
+    ? lastUpdateFooter([lastUpdateRooster,lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])
+    : lastUpdateFooter(lastUpdateRooster);
   box.innerHTML = timeChangesCardHtml()
-    + `<div class="daypills" role="tablist" aria-label="Kies een dag">${pillsHtml}</div>`
+    + segHtml
+    + `<div class="daypills" role="group" aria-label="Kies een dag">${pillsHtml}</div>`
     + renderDay(scheduleDay, label)
-    + lastUpdateFooter(lastUpdateRooster);
+    + footer;
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
+  });
+  document.querySelectorAll('[data-rmode]').forEach(b=>b.onclick=()=>{
+    roosterMode=b.dataset.rmode; pendingSwapRequest=null; hapticTap(); renderSchedule();
+  });
+  box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
+  box.querySelectorAll('[data-gosugg]').forEach(b=>b.onclick=()=>{
+    const el=document.getElementById('sugg-'+b.dataset.gosugg); const m=document.querySelector('main');
+    if(el && m) m.scrollTop = el.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop - 8;
   });
   wireTimeChangesCard();
   updateTimeChangesBadge();
   attachScheduleHandlers();
 }
 function renderDay(day,label){
+  const mode = roosterMode;
+  const un = ['heen','terug'].map(d=>[d, unplacedFor(day,d,mode)]).filter(([,l])=>l.length);
+  const total = un.reduce((n,[,l])=>n+l.length,0);
+  const alertHtml = un.length? `<div class="unplacedAlert">
+      <div class="ttl">${phIcon('warning')} ${total} niet ingedeeld</div>
+      ${un.map(([d,l])=>{
+        const action = mode==='week'
+          ? `<button type="button" class="btn small" data-gowijzig="${day}">Regelen</button>`
+          : (canEdit? `<button type="button" class="btn small secondary" data-gosugg="${d}">Voorstellen</button>` : '');
+        return `<div class="row"><span><strong>${d==='heen'?'Heen':'Terug'}</strong>: ${l.map(([id])=>girlName(id)).join(', ')}</span>${action}</div>`;
+      }).join('')}
+    </div>` : '';
   return `<div class="daysection"><h3>${label}</h3>
-    ${renderDirection(day,'heen','Naar Alkmaar (heen)')}
-    ${renderDirection(day,'terug','Terug naar Aalsmeer')}
+    ${alertHtml}
+    ${renderDirection(day,'heen')}
+    ${renderDirection(day,'terug')}
   </div>`;
 }
-function renderDirection(day,direction,title){
+function renderDirection(day,direction){
+  return roosterMode==='week'? renderDirectionWeek(day,direction) : renderDirectionStandard(day,direction);
+}
+// Reserve drivers are a TRIP-wide backup pool, not specific to one car — shown once per trip,
+// using the largest car's size so anyone listed could cover any car of this trip.
+function tripReserveHtml(day,direction,cars){
+  const largest = cars.length? Math.max(...cars.map(c=>(c.girlIds||[]).length)) : 0;
+  if(!largest) return '';
+  const assigned = new Set(cars.map(c=>c.driverFamilyId).filter(Boolean));
+  const names = eligibleDrivers(day,direction,largest).filter(([id])=>!assigned.has(id)).map(([,f])=>esc(f.parentName));
+  return names.length? `<div class="tripReserve">Reserve: ${names.join(', ')}</div>` : '';
+}
+function neededTimesHtml(day,direction,girlIds){
+  const times = girlIds.map(id=>fam(id).schedule && fam(id).schedule[day] && fam(id).schedule[day][direction]).filter(Boolean).sort();
+  const range = `${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`;
+  return `<div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${range}` : `Klaar om op te halen: ${range}`}</div>`;
+}
+function driverLineHtml(driverId,myId){
+  if(!driverId) return `<div class="driver" style="color:var(--danger)">${phIcon('warning')} Geen chauffeur</div>`;
+  if(myId && driverId===myId) return `<div class="driver me">${phIcon('car')} Jij rijdt</div>`;
+  return `<div class="driver">${phIcon('car')} Chauffeur: ${esc(fam(driverId).parentName)}</div>`;
+}
+function pillsHtml(girlIds,myId){
+  return girlIds.map(id=>`<span class="pill${id===myId?' mine':''}">${girlName(id)}</span>`).join('');
+}
+// "Deze week": what actually runs this week — read-only; changes go through Wijzigen.
+function renderDirectionWeek(day,direction){
+  const cars = effectiveCars(day,direction).filter(c=>(c.girlIds||[]).length);
+  const dev = activeDeviation(day,direction);
+  const myId = myLinkedFamilyId();
+  const cardsHtml = cars.map((c,i)=>{
+    const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
+    const mineDriving = myId && c.driverFamilyId===myId;
+    return `<div class="group confirmed${mineDriving?' mineDriving':''}">
+      <div class="rowflex" style="align-items:flex-start;gap:10px">
+        <div class="rowflex" style="gap:10px;align-items:flex-start;flex:1">
+          <span class="dayBadge accent">${i+1}</span>
+          <div><div class="dir">Vertrek</div><div class="time">${esc(c.departureTime||'--:--')}</div></div>
+        </div>
+        ${driver? `<span class="capbadge">${c.girlIds.length}/${seats(driver)} plekken</span>` : ''}
+      </div>
+      ${neededTimesHtml(day,direction,c.girlIds)}
+      <div>${pillsHtml(c.girlIds,myId)}</div>
+      ${driverLineHtml(c.driverFamilyId,myId)}
+    </div>`;
+  }).join('') || `<p class="muted">Geen ritten.</p>`;
+  return `<div style="margin-bottom:10px">
+    <div class="rowflex" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${dirLabelHtml(direction)}${dev? `<span class="changedTag">${phIcon('lightning')} gewijzigd</span>`:''}</div>
+    ${cardsHtml}
+    ${tripReserveHtml(day,direction,cars)}
+  </div>`;
+}
+// "Standaardrooster": the fixed schedule; the coordinator edits it here.
+function renderDirectionStandard(day,direction){
   const grps = groupsFor(day,direction);
   const grouped = alreadyGrouped(day,direction);
   const ungrouped = girlsFor(day,direction).filter(([id])=>!grouped.has(id));
-  // Reserves are a SHIFT-wide backup pool, not specific to one car — computed once here
-  // (using the largest car's size, so anyone listed could genuinely cover any car this shift)
-  // and shown identically on every car's card, rather than a per-car stored list that could
-  // end up empty for the 2nd+ car purely because of that car's own smaller passenger count.
-  const largestCarSize = grps.length? Math.max(...grps.map(([,g])=>g.girlIds.length)) : 0;
-  const assignedDriverIds = new Set(grps.map(([,g])=>g.driverFamilyId).filter(Boolean));
-  const shiftReserves = largestCarSize? eligibleDrivers(day,direction,largestCarSize)
-    .filter(([id])=>!assignedDriverIds.has(id))
-    .map(([id,f])=>esc(f.parentName)).join(', ') : '';
+  const myId = myLinkedFamilyId();
 
-  const groupHtml = grps.map(([gid,g])=>{
+  const groupHtml = grps.map(([gid,g],gi)=>{
     const times = g.girlIds.map(id=>fam(id).schedule[day][direction]).filter(Boolean).sort();
     const departureFallback = direction==='terug' ? times[times.length-1] : times[0];
     const departure = g.departureTime || departureFallback || '--:--';
     const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
-    const reserves = shiftReserves;
-    // Only offer drivers who aren't already committed to another car this same shift —
+    const otherGroups = grps.filter(([oid])=>oid!==gid);
+    const mineDriving = myId && g.driverFamilyId===myId;
+    // Only offer drivers who aren't already committed to another car this same trip —
     // prevents double-booking instead of fixing it up after the fact.
-    const busyElsewhere = new Set(grps.filter(([oid])=>oid!==gid).map(([,og])=>og.driverFamilyId).filter(Boolean));
+    const busyElsewhere = new Set(otherGroups.map(([,og])=>og.driverFamilyId).filter(Boolean));
     const eligible = eligibleDrivers(day,direction,g.girlIds.length).filter(([id])=>!busyElsewhere.has(id));
     const driverOptions = `<option value="" disabled ${!g.driverFamilyId?'selected':''}>-- kies chauffeur --</option>` + eligible.map(([id,f])=>`<option value="${id}" ${id===g.driverFamilyId?'selected':''}>${esc(f.parentName)} (${seats(f)} pl.)</option>`).join('');
-    const otherGroups = grps.filter(([oid])=>oid!==gid);
-    const moveOptions = otherGroups.map(([oid,og],i)=>{
-      const dname = og.driverFamilyId? esc(fam(og.driverFamilyId).parentName) : 'geen chauffeur';
-      return `<option value="${oid}" ${i===0?'selected':''}>Auto: ${dname}</option>`;
+    const timeHtml = canEdit
+      ? `<input type="time" class="timeBig" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd auto ${gi+1}">`
+      : `<div class="time">${departure}</div>`;
+    const pills = g.girlIds.map(id=>{
+      const cls = `pill${id===myId?' mine':''}`;
+      return (canEdit && otherGroups.length)
+        ? `<button type="button" class="${cls}" data-movepill="${gid}|${id}" aria-label="Verplaats ${girlName(id)}" aria-haspopup="dialog">${girlName(id)}</button>`
+        : `<span class="${cls}">${girlName(id)}</span>`;
     }).join('');
-    return `<div class="group confirmed" data-gid="${gid}">
+    const driverHtml = canEdit
+      ? `<div class="driver">${phIcon('car')}<select data-swap="${gid}" aria-label="Chauffeur auto ${gi+1}">${driverOptions}</select></div>`
+      : driverLineHtml(g.driverFamilyId,myId);
+    return `<div class="group confirmed${mineDriving?' mineDriving':''}" data-gid="${gid}">
       <div class="rowflex" style="align-items:flex-start;gap:10px">
         <div class="rowflex" style="gap:10px;align-items:flex-start;flex:1">
-          <span style="width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0">${grps.findIndex(([oid])=>oid===gid)+1}</span>
-          <div>
-            <div class="dir">${direction==='heen'?'Vertrek':'Vertrek (terug)'}</div>
-            <div class="time">${departure}${canEdit? ` <input type="time" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd aanpassen" style="display:inline-block;width:auto;font-size:13px;vertical-align:middle;margin-left:6px;min-height:32px">`:''}</div>
-          </div>
+          <span class="dayBadge accent">${gi+1}</span>
+          <div><div class="dir">Vertrek</div>${timeHtml}</div>
         </div>
-        ${driver? `<span class="capbadge">${g.girlIds.length}/${seats(driver)} plekken</span>` : ''}
+        <div style="display:flex;align-items:center;gap:6px">
+          ${driver? `<span class="capbadge">${g.girlIds.length}/${seats(driver)} plekken</span>` : ''}
+          ${canEdit? `<button type="button" class="iconbtn danger" data-delgroup="${gid}" aria-label="Verwijder auto ${gi+1}" title="Verwijder auto">${phIcon('trash')}</button>` : ''}
+        </div>
       </div>
-      <div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}` : `Klaar om op te halen: ${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`}</div>
-      <div>${g.girlIds.map(id=>`<span class="pill">${girlName(id)}</span>`).join('')}</div>
-      ${driver? `<div class="driver">${phIcon('car')} Chauffeur: ${esc(driver.parentName)}</div>` : `<div class="driver" style="color:var(--accent)">Geen chauffeur beschikbaar</div>`}
-      ${reserves? `<div class="reserve">Reserve: ${reserves}</div>`:''}
-      ${canEdit? `<div class="rowflex" style="margin-top:8px">
-          <select data-swap="${gid}" style="flex:1" aria-label="Chauffeur wisselen">${driverOptions||'<option>Geen kandidaten</option>'}</select>
-          <button type="button" class="btn small" data-delgroup="${gid}">Verwijder</button>
-        </div>`:''}
-      ${canEdit && otherGroups.length? `<div class="rowflex" style="margin-top:8px;gap:6px">
-          <select data-moveFromGirl="${gid}" style="flex:1" aria-label="Kies dochter om te verplaatsen">
-            <option value="">Verplaats passagier…</option>
-            ${g.girlIds.map(id=>`<option value="${id}">${girlName(id)}</option>`).join('')}
-          </select>
-          <select data-moveToGroup="${gid}" style="flex:1" aria-label="Kies bestemming auto">
-            <option value="">Naar…</option>${moveOptions}
-          </select>
-          <button type="button" class="btn small" data-moveConfirm="${gid}">Verplaats</button>
-        </div>`:''}
+      ${neededTimesHtml(day,direction,g.girlIds)}
+      <div>${pills}</div>
+      ${driverHtml}
       ${pendingSwapRequest && pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
           <p class="fitbad" style="margin:0 0 6px">Geen plek meer in deze auto (${g.girlIds.length}/${seats(driver)} bezet). Wil je ${girlName(pendingSwapRequest.girlId)} wisselen met een andere passagier?</p>
           <select id="swapPickGirl" aria-label="Wissel met welke passagier">${g.girlIds.map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
@@ -2482,24 +2748,53 @@ function renderDirection(day,direction,title){
   let suggestHtml = '';
   let pickerHtml = '';
   if(canEdit && ungrouped.length){
-    const clusters = planClusters(day,direction,ungrouped);
-    const options = planOptions(day,direction,ungrouped);
-    const clusterLabel = clusters.length===1
-      ? `<p class="muted" style="margin:10px 0 4px">Alle ${clusters[0].length} meiden passen logisch in 1 auto. Voorgestelde chauffeur(s):</p>`
-      : `<p class="muted" style="margin:10px 0 4px">Meerdere auto's nodig. Optie 1 volgt je selectievolgorde:</p>`;
-    if(options.length){
-      suggestHtml = clusterLabel + options.map((opt,i)=>{
-        const sub = opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
+    const n = ungrouped.length;
+    const names = ungrouped.map(([id])=>girlName(id)).join(', ');
+    // 1) Room in cars that already run this trip (and the times fit): usually the simplest fix.
+    //    Each not-yet-placed girl goes to the car with a free seat where her time fits best.
+    const gapLimit = (settings.gapThresholdHours||3)*60;
+    const tMin = id=>timeToMinutes(fam(id).schedule[day]&&fam(id).schedule[day][direction]);
+    const pool = grps.map(([gid,g],gi)=>({gid, num:gi+1, driverId:g.driverFamilyId, ids:[...g.girlIds], cap:g.driverFamilyId? seats(fam(g.driverFamilyId)) : 0}));
+    const placements = [];
+    [...ungrouped].sort((a,b)=>(tMin(a[0])||0)-(tMin(b[0])||0)).forEach(([id])=>{
+      let best=null;
+      pool.forEach(c=>{
+        if(!c.driverId || c.ids.length>=c.cap) return;
+        const mins=[...c.ids,id].map(tMin).filter(v=>v!=null);
+        const spread=Math.max(...mins)-Math.min(...mins);
+        if(spread<=gapLimit && (!best || spread<best.spread)) best={c,spread};
+      });
+      if(best){ best.c.ids.push(id); placements.push({girlId:id, gid:best.c.gid}); }
+    });
+    const addOpts = [];
+    if(placements.length===n){
+      const touched = pool.filter(c=>placements.some(pl=>pl.gid===c.gid));
+      addOpts.push({kind:'add', placements, touched: touched.map(c=>({gid:c.gid, num:c.num, driverId:c.driverId, ids:c.ids, cap:c.cap, dep:computeDepartureTime(day,direction,c.ids)}))});
+    }
+    // 2) New car(s), from the planning engine.
+    // (options that would give a parent a second car on this same trip are left out)
+    const drivingThisTrip = new Set(grps.map(([,g])=>g.driverFamilyId).filter(Boolean));
+    const options = planOptions(day,direction,ungrouped).filter(o=>!o.assignment.some(a=>drivingThisTrip.has(a.driverId)));
+    const all = [...addOpts, ...options.map(o=>({kind:'new', ...o}))];
+    window.__planOptions = window.__planOptions||{};
+    window.__planOptions[day+'|'+direction] = all;
+    const intro = `<p class="muted" style="margin:10px 0 4px" id="sugg-${direction}">${n===1? `Nog niet ingedeeld: ${names}.` : `Nog niet ingedeeld (${n}): ${names}.`} Voorstellen:</p>`;
+    if(all.length){
+      suggestHtml = intro + all.map((opt,i)=>{
+        const title = opt.kind==='add'
+          ? (opt.touched.length===1? `Toevoegen aan auto ${opt.touched[0].num} (${esc(fam(opt.touched[0].driverId).parentName)})` : `Toevoegen aan bestaande auto's`)
+          : `Nieuwe auto: ${opt.label}`;
+        const sub = opt.kind==='add'
+          ? opt.touched.map(c=>`Auto ${c.num}: ${c.ids.map(id=>girlName(id)).join(', ')} (${c.ids.length}/${c.cap} pl., vertrek ${c.dep})`).join(' · ')
+          : opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
         return `<div class="group suggestion${i===0?' primary':''}">
-          <div class="fitok">${i===0?'<span class="badge rec">AANBEVOLEN</span> ':phIcon('check')+' '}Optie ${i+1}: ${opt.label}</div>
+          <div class="fitok">${i===0?'<span class="badge rec">AANBEVOLEN</span> ':''}Optie ${i+1}: ${title}</div>
           <div class="subtime">${sub}</div>
-          <button type="button" class="btn small" data-useoption="${day}|${direction}|${i}">Gebruik deze combinatie</button>
+          <button type="button" class="btn small${i===0?'':' secondary'}" data-useoption="${day}|${direction}|${i}" style="margin-top:8px">Gebruik deze optie</button>
         </div>`;
       }).join('');
-      window.__planOptions = window.__planOptions||{};
-      window.__planOptions[day+'|'+direction] = options;
     } else {
-      suggestHtml = clusterLabel + `<div class="group warning"><div class="fitbad">${phIcon('warning')} Geen enkele chauffeur(scombinatie) heeft genoeg plek voor deze ${ungrouped.length} meiden.</div></div>`;
+      suggestHtml = intro + `<div class="group warning"><div class="fitbad">${phIcon('warning')} Geen enkele chauffeur(scombinatie) heeft genoeg plek voor ${n===1?'deze meid':`deze ${n} meiden`}.</div></div>`;
     }
     const ungroupedSorted = [...ungrouped].sort((a,b)=>{
       const ta=timeToMinutes(a[1].schedule[day][direction]), tb=timeToMinutes(b[1].schedule[day][direction]);
@@ -2510,13 +2805,61 @@ function renderDirection(day,direction,title){
     <div class="group" style="border-style:dashed">
       <h3 style="margin-bottom:6px">Aangepaste combinatie</h3>
       ${ungroupedSorted.map(([id,f])=>`<div class="girlchk"><label style="margin:0;flex:1"><input type="checkbox" class="girlpick" value="${id}"> ${esc(f.girlName||f.parentName)} — ${f.schedule[day][direction]}</label></div>`).join('')}
-      <button type="button" class="btn small" data-makegroup="${day}|${direction}">Groep + chauffeur toewijzen</button>
+      <button type="button" class="btn small secondary" data-makegroup="${day}|${direction}" style="margin-top:8px">Nieuwe auto met deze meiden</button>
     </div>`;
   } else if(canEdit){
     pickerHtml = `<p class="muted">Iedereen is ingedeeld.</p>`;
   }
-  const devNote = activeDeviation(day,direction)? `<p class="fitbad" style="margin:4px 0">${phIcon('warning')} Voor deze rit is een tijdelijke wijziging actief in "Dagafwijking" — dit Rooster blijft het standaard schema tonen.</p>` : '';
-  return `<div style="margin-bottom:10px"><span class="badge">${title}</span>${devNote}${groupHtml}${suggestHtml}${pickerHtml}</div>`;
+  const dev = activeDeviation(day,direction);
+  const cars = grps.map(([,g])=>g);
+  return `<div style="margin-bottom:10px">
+    <div class="rowflex" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${dirLabelHtml(direction)}${dev? `<span class="changedTag" title="Zie 'Deze week'">${phIcon('lightning')} deze week gewijzigd</span>`:''}</div>
+    ${groupHtml}
+    ${tripReserveHtml(day,direction,cars)}
+    ${suggestHtml}${pickerHtml}
+  </div>`;
+}
+// Move a passenger to another car of the same trip (Standaardrooster). A full destination car
+// offers a swap on that car's own card instead of just refusing.
+async function moveGirlToGroup(gid, girlId, toGid){
+  const from=groups[gid], to=groups[toGid];
+  if(!from||!to) return;
+  if(to.driverFamilyId){
+    const toSeats = seats(fam(to.driverFamilyId));
+    if(to.girlIds.length >= toSeats){
+      pendingSwapRequest = {fromGid:gid, girlId, toGid};
+      renderSchedule();
+      const card=document.querySelector(`[data-gid="${toGid}"]`); if(card) card.scrollIntoView({block:'center'});
+      return;
+    }
+  }
+  try{
+    const newFrom=from.girlIds.filter(id=>id!==girlId);
+    const newTo=[...to.girlIds, girlId];
+    // Both cars' departure times depend on who's actually in them — recalculate both.
+    const fromDeparture = computeDepartureTime(from.day, from.direction, newFrom);
+    const toDeparture = computeDepartureTime(to.day, to.direction, newTo);
+    if(newFrom.length){ await db.doc("groups/"+gid).update({girlIds:newFrom, departureTime: fromDeparture}); }
+    else { await db.doc("groups/"+gid).delete(); }
+    await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime: toDeparture});
+    recordLastUpdate('Rooster');
+    showToast(girlName(girlId).replace(/&amp;/g,'&')+" verplaatst ✓");
+  }catch(e){showToast("Verplaatsen mislukt: "+(e&&e.message||e));}
+}
+function openMoveSheet(gid, girlId){
+  const g=groups[gid]; if(!g) return;
+  const trip = groupsFor(g.day,g.direction);
+  const items = trip.map(([oid,og],i)=>[oid,og,i]).filter(([oid])=>oid!==gid).map(([oid,og,i])=>{
+    const drv = og.driverFamilyId? fam(og.driverFamilyId) : null;
+    const cap = drv? seats(drv) : null;
+    const full = cap!=null && og.girlIds.length>=cap;
+    return {
+      label: `Auto ${i+1} · ${drv? esc(drv.parentName) : 'geen chauffeur'}`,
+      sub: `Vertrek ${esc(og.departureTime||'--:--')}${cap!=null? ` · ${og.girlIds.length}/${cap} plekken`:''}${full? ' · vol, je kunt wisselen':''}`,
+      onClick: ()=>moveGirlToGroup(gid, girlId, oid)
+    };
+  });
+  openSheet(`Verplaats ${girlName(girlId)}`, `${g.direction==='heen'?'Heen':'Terug'} · ${DAYS.find(([k])=>k===g.day)[1]} — kies een andere auto:`, items);
 }
 
 function attachScheduleHandlers(){
@@ -2531,7 +2874,22 @@ function attachScheduleHandlers(){
     const [day,direction,idxStr]=btn.dataset.useoption.split('|');
     const opts=(window.__planOptions||{})[day+'|'+direction]||[];
     const opt=opts[+idxStr];
-    if(opt) await useOption(day,direction,opt.assignment);
+    if(!opt) return;
+    if(opt.kind==='add'){
+      // Add the not-yet-placed girls to existing cars (re-read each car, in case it changed meanwhile).
+      try{
+        const byGid={};
+        opt.placements.forEach(pl=>{ (byGid[pl.gid]=byGid[pl.gid]||[]).push(pl.girlId); });
+        for(const [gid,add] of Object.entries(byGid)){
+          const g=groups[gid]; if(!g){ showToast("Een van de auto's bestaat niet meer."); return; }
+          const ids=[...new Set([...g.girlIds, ...add])];
+          await db.doc("groups/"+gid).update({girlIds:ids, departureTime:computeDepartureTime(day,direction,ids)});
+        }
+        recordLastUpdate('Rooster'); showToast("Toegevoegd ✓");
+      }catch(e){ showToast("Toevoegen mislukt: "+(e&&e.message||e)); }
+    } else {
+      await useOption(day,direction,opt.assignment);
+    }
   });
   document.querySelectorAll('[data-delgroup]').forEach(btn=>btn.onclick=async ()=>{
     try{ await db.doc("groups/"+btn.dataset.delgroup).delete(); recordLastUpdate('Rooster'); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
@@ -2556,37 +2914,9 @@ function attachScheduleHandlers(){
     const gid=inp.dataset.deptime;
     try{ await db.doc("groups/"+gid).update({departureTime:inp.value}); recordLastUpdate('Rooster'); }catch(e){showToast("Aanpassen mislukt: "+(e&&e.message||e));}
   });
-  document.querySelectorAll('[data-moveConfirm]').forEach(btn=>btn.onclick=async ()=>{
-    const gid=btn.dataset.moveconfirm;
-    const box=btn.closest('.group');
-    const girlSel=box.querySelector(`[data-moveFromGirl="${gid}"]`);
-    const toSel=box.querySelector(`[data-moveToGroup="${gid}"]`);
-    const girlId=girlSel&&girlSel.value, toGid=toSel&&toSel.value;
-    if(!girlId||!toGid){ showToast("Kies eerst een dochter én een bestemming."); return; }
-    const from=groups[gid], to=groups[toGid];
-    if(!from||!to) return;
-    // The destination car must actually have a free passenger seat — if not, offer a real
-    // swap (right there on the destination car's own card) instead of just blocking.
-    if(to.driverFamilyId){
-      const toSeats = seats(fam(to.driverFamilyId));
-      if(to.girlIds.length >= toSeats){
-        pendingSwapRequest = {fromGid:gid, girlId, toGid};
-        renderSchedule();
-        return;
-      }
-    }
-    try{
-      const newFrom=from.girlIds.filter(id=>id!==girlId);
-      const newTo=[...to.girlIds, girlId];
-      // Both cars' departure times depend on who's actually in them — recalculate both.
-      const fromDeparture = computeDepartureTime(from.day, from.direction, newFrom);
-      const toDeparture = computeDepartureTime(to.day, to.direction, newTo);
-      if(newFrom.length){ await db.doc("groups/"+gid).update({girlIds:newFrom, departureTime: fromDeparture}); }
-      else { await db.doc("groups/"+gid).delete(); }
-      await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime: toDeparture});
-      recordLastUpdate('Rooster');
-      showToast("Verplaatst ✓");
-    }catch(e){showToast("Verplaatsen mislukt: "+(e&&e.message||e));}
+  document.querySelectorAll('[data-movepill]').forEach(btn=>btn.onclick=()=>{
+    const [gid,girlId]=btn.dataset.movepill.split('|');
+    hapticTap(); openMoveSheet(gid,girlId);
   });
   document.querySelectorAll('[data-swapconfirm]').forEach(btn=>btn.onclick=async ()=>{
     if(!pendingSwapRequest) return;
@@ -2610,7 +2940,7 @@ function attachScheduleHandlers(){
     renderSchedule();
   });
   document.querySelectorAll('[data-swapcancel]').forEach(btn=>btn.onclick=()=>{ pendingSwapRequest=null; renderSchedule(); });
- }catch(e){ setStatus("⚠️ Fout bij koppelen roosterknoppen: "+(e&&e.message||e)); }
+ }catch(e){ setStatus("Fout bij koppelen roosterknoppen: "+(e&&e.message||e), true); }
 }
 
 init();
