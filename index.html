@@ -334,7 +334,8 @@ table.avail th,table.avail td{padding:6px 4px}
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {
-  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot
+  getFirestore, collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot,
+  writeBatch, deleteField
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 // Absolute URLs here (not "./firebase-config.js" / "./planning.js") on purpose: a relative
@@ -358,7 +359,11 @@ const fbAuth = getAuth(fbApp);
 // ---- Compatibility shim: gives the rest of this app the exact same
 // db.doc(...)/db.collection(...) API it used with Claude's built-in
 // database, so none of the app logic below had to change. ----
-function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data() }; }
+function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data(), pending:!!(s.metadata&&s.metadata.hasPendingWrites) }; }
+// While startDataListeners() runs, every onSnapshot() made through this shim drops its
+// unsubscribe function in here, so all member-only listeners can be stopped together.
+let listenerSink = null;
+function track(unsub){ if(listenerSink) listenerSink.push(unsub); return unsub; }
 function wrapQuerySnap(s){ return { docs: s.docs.map(wrapDocSnap) }; }
 function docRef(path){
   const ref = doc(firestoreDb, ...path.split('/'));
@@ -367,14 +372,14 @@ function docRef(path){
     set: (data,opts)=>setDoc(ref, data, opts),
     update: (data)=>updateDoc(ref, data),
     delete: ()=>deleteDoc(ref),
-    onSnapshot: (onNext,onErr)=>onSnapshot(ref, s=>onNext(wrapDocSnap(s)), onErr)
+    onSnapshot: (onNext,onErr)=>track(onSnapshot(ref, s=>onNext(wrapDocSnap(s)), onErr))
   };
 }
 function collRef(path){
   const ref = collection(firestoreDb, path);
   return {
     get: ()=>getDocs(ref).then(wrapQuerySnap),
-    onSnapshot: (onNext,onErr)=>onSnapshot(ref, s=>onNext(wrapQuerySnap(s)), onErr),
+    onSnapshot: (onNext,onErr)=>track(onSnapshot(ref, s=>onNext(wrapQuerySnap(s)), onErr)),
     doc: (id)=>docRef(path+'/'+id)
   };
 }
@@ -475,6 +480,9 @@ let pendingSwapRequest = null; // {fromGid, girlId, toGid} | null
 function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
 let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
 let families={}, groups={}, links={}, deviations={};
+let linksLoaded=false;        // true once this browser's own links/{uid} doc has been read
+let invitesByCode={};         // coordinator only: inviteCode -> familyId (from /invites)
+let inviteByFamily={};        // coordinator only: familyId -> inviteCode
 let lastUpdateRooster=null, lastUpdateDeviation=null;
 // ---------- Tijdswijzigingen (coordinator notifications) ----------
 // Last schedule of every family AS STORED IN FIRESTORE — the baseline a parent's edit is
@@ -1048,20 +1056,74 @@ async function init(){
   if(navB) navB.style.display = canEdit?'':'none';
   renderAll();
   try{
+    // Only this browser's OWN link doc is readable before it's a member (Firestore rules).
+    db.doc("links/"+me).onSnapshot(s=>{
+      if(s.exists && s.pending) return; // wait until the server has accepted a new link (rules check the code)
+      if(s.exists) links[me]=s.data(); else delete links[me];
+      afterLinksChanged();
+    }, err=>{ linksLoaded=true; setStatus("Fout bij laden koppeling: "+(err&&err.message||err), true); renderAll(); });
+  }catch(e){ setStatus("Kon niet live verbinden: "+(e&&e.message||e), true); }
+  adjustMainPadding();
+}
+// ---------- Membership + live data ----------
+// Firestore rules only let MEMBERS (the coordinator, or a browser linked to a family through
+// the phone+code gate) read the app's data. A listener that's refused dies for good, so the
+// member-only listeners are started only once we're a member, and stopped when that ends.
+let dataUnsubs = [];        // unsubscribe functions of the member-only listeners
+let linksCollUnsub = null;  // coordinator only: every browser's link (for the "gekoppeld" badges)
+let invitesUnsub = null;    // coordinator only: all invite codes
+// Real coordinator rights, ignoring the "test as parent" view (which only changes what's SHOWN).
+function isRealCoordinator(){
+  if(!coordinatorConfig || !me) return false;
+  if(coordinatorConfig.uid && coordinatorConfig.uid===me) return true;
+  return !!(coordinatorConfig.familyId && links[me] && links[me].familyId===coordinatorConfig.familyId);
+}
+function isMemberNow(){ return isRealCoordinator() || !!(links[me] && links[me].familyId); }
+function afterLinksChanged(){
+  linksLoaded = true;
+  recomputeCanEdit();
+  const navB=document.getElementById('navBeheer'); if(navB) navB.style.display = canEdit?'':'none';
+  syncListeners();
+  chooseDefaultTab();
+  renderAll();
+}
+function syncListeners(){
+  if(!db || !me) return;
+  const member = isMemberNow();
+  if(member && !dataUnsubs.length) startDataListeners();
+  if(!member && dataUnsubs.length) stopDataListeners();
+  const coord = isRealCoordinator();
+  if(coord && !linksCollUnsub){
+    linksCollUnsub = db.collection("links").onSnapshot(snap=>{
+      const next={}; snap.docs.forEach(d=>next[d.id]=d.data());
+      links = next;
+      renderBeheer();
+    }, err=>{});
+  }
+  if(coord && !invitesUnsub){
+    invitesUnsub = db.collection("invites").onSnapshot(snap=>{
+      invitesByCode={}; inviteByFamily={};
+      snap.docs.forEach(d=>{ const fid=d.data().familyId; if(fid){ invitesByCode[d.id]=fid; inviteByFamily[fid]=d.id; } });
+      renderBeheer();
+    }, err=>{});
+  }
+  if(!coord){
+    if(linksCollUnsub){ linksCollUnsub(); linksCollUnsub=null; const mine=links[me]; links={}; if(mine) links[me]=mine; }
+    if(invitesUnsub){ invitesUnsub(); invitesUnsub=null; invitesByCode={}; inviteByFamily={}; }
+  }
+}
+function startDataListeners(){
+  listenerSink = dataUnsubs;
+  try{
     db.collection("families").onSnapshot(snap=>{
         families={}; serverSchedules={};
         snap.docs.forEach(d=>{ families[d.id]=d.data(); serverSchedules[d.id]=JSON.parse(JSON.stringify(d.data().schedule||{})); });
         notifyCoordinatorOfNewTimeChanges();
+        if(isRealCoordinator()) migrateLegacyFamilySecrets();
         renderAll(); },
       err=>{ setStatus("Fout bij laden gezinnen: "+(err&&err.message||err), true); });
     db.collection("groups").onSnapshot(snap=>{ groups={}; snap.docs.forEach(d=>groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
       err=>{ setStatus("Fout bij laden rooster: "+(err&&err.message||err), true); });
-    db.collection("links").onSnapshot(snap=>{ links={}; snap.docs.forEach(d=>links[d.id]=d.data());
-      const navB=document.getElementById('navBeheer');
-      recomputeCanEdit(); if(navB) navB.style.display = canEdit?'':'none';
-      chooseDefaultTab();
-      renderProfile(); renderBeheer(); renderMyWeek(); },
-      err=>{ setStatus("Fout bij laden koppelingen: "+(err&&err.message||err), true); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) settings={...settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
       err=>{ setStatus("Fout bij laden instellingen: "+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!prefs.rules) prefs.rules=[]; renderBeheer(); renderSchedule(); },
@@ -1098,8 +1160,43 @@ async function init(){
       renderMyWeek(); renderDeviationTab();
     }, err=>{});
   }catch(e){ setStatus("Kon niet live verbinden: "+(e&&e.message||e), true); }
-  adjustMainPadding();
+  finally{ listenerSink = null; }
 }
+function stopDataListeners(){
+  dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
+  dataUnsubs = [];
+  families={}; serverSchedules={}; groups={}; deviations={}; matchCarpools={};
+  lastPendingChangeCount = null;
+  updateStatusLine();
+}
+// One-time migration, run from the coordinator's browser: invite codes used to sit on the family
+// doc (readable by everyone). Move each to /invites/{code}, drop it from the family doc, and add
+// `phoneKeys` (normalised phone numbers) so the Firestore rules can check the gate themselves.
+let migratingSecrets=false, migrationFailed=false;
+async function migrateLegacyFamilySecrets(){
+  if(migratingSecrets || migrationFailed || !db) return;
+  const todo = Object.entries(families).filter(([id,f])=> f && (('inviteCode' in f) || (!Array.isArray(f.phoneKeys) && (f.parentPhone1||f.parentPhone2))));
+  if(!todo.length) return;
+  migratingSecrets=true;
+  try{
+    const batch=writeBatch(firestoreDb);
+    for(const [id,f] of todo){
+      const upd={ phoneKeys:[f.parentPhone1,f.parentPhone2].map(normalizePhone).filter(Boolean) };
+      if('inviteCode' in f){
+        const code=String(f.inviteCode||'').trim();
+        if(isValidInviteCode(code)) batch.set(doc(firestoreDb,'invites',code), {familyId:id});
+        upd.inviteCode = deleteField();
+      }
+      batch.update(doc(firestoreDb,'families',id), upd);
+    }
+    await batch.commit();
+    showToast("Uitnodigingscodes beveiligd ✓");
+  }catch(e){
+    migrationFailed=true;
+    showToast("Migratie uitnodigingscodes mislukt: "+(e&&e.message||e));
+  }finally{ migratingSecrets=false; }
+}
+function isValidInviteCode(c){ return /^[A-Za-z0-9-]{4,32}$/.test(c||''); }
 function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderImpersonateBanner(); adjustMainPadding(); }
 
 // ---------- Coordinator test mode: view the app as a specific parent, without losing real rights ----------
@@ -1321,6 +1418,8 @@ function readFamilyForm(prefix){
     girlName:document.getElementById(`${prefix}_girlName`).value.trim(),
     parentPhone1:document.getElementById(`${prefix}_parentPhone1`).value.trim(),
     parentPhone2:document.getElementById(`${prefix}_parentPhone2`).value.trim(),
+    // Normalised copies, checked by the Firestore rules when someone passes the gate.
+    phoneKeys:[`${prefix}_parentPhone1`,`${prefix}_parentPhone2`].map(id=>normalizePhone(document.getElementById(id).value)).filter(Boolean),
     capacity:parseInt(document.getElementById(`${prefix}_capacity`).value)||4,
     schedule, availability
   };
@@ -1400,13 +1499,18 @@ function updateStatusLine(){
 }
 
 // ---------- Access gate: phone + daughter + coordinator-issued code, before anything else shows ----------
-function genCode(){ return String(Math.floor(100000+Math.random()*900000)); }
+// 10 random digits (crypto RNG): anyone can try looking up a code, so it must be too large
+// to guess by brute force. Still digits only, so parents get the numeric keypad.
+function genCode(){
+  const a=new Uint32Array(10); crypto.getRandomValues(a);
+  return String(1+a[0]%9) + Array.from(a.slice(1), n=>n%10).join('');
+}
 function needsGate(){ if(impersonateFamilyId) return false; return !!me && !canEdit && !(links[me] && links[me].familyId); }
 function renderGateOrApp(){
   const nav=document.querySelector('nav');
   const gateDiv=document.getElementById('tab-gate');
   if(!gateDiv) return;
-  if(!appReady){
+  if(!appReady || !linksLoaded){
     // Still determining auth/coordinator state — never show the claim screen (or anything else)
     // until we actually know whether a coordinator already exists.
     if(nav) nav.style.display='none';
@@ -1444,43 +1548,43 @@ function renderGateOrApp(){
 function renderGate(){
   const box=document.getElementById('tab-gate');
   if(!box) return;
-  const options = Object.entries(families);
   box.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
     <div class="card">
       <h2>Toegang tot AZ Carpool</h2>
-      <p class="muted">Vul je gegevens in. De coördinator heeft je samen met deze link ook een code gegeven.</p>
+      <p class="muted">Vul je telefoonnummer en de code in die je van de coördinator hebt gekregen.</p>
       <label>Telefoonnummer</label>
       <input type="tel" id="gatePhone" inputmode="tel" autocomplete="tel" placeholder="06-12345678">
-      <label>Mijn dochter</label>
-      ${options.length? `<select id="gateGirl">${options.map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>` : `<p class="muted">Er zijn nog geen gezinnen toegevoegd door de coördinator.</p>`}
       <label>Code</label>
-      <input type="text" id="gateCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]*" maxlength="6" placeholder="6-cijferige code">
-      <button type="button" class="btn" id="gateSubmit" ${options.length?'':'disabled'}>Toegang aanvragen</button>
+      <input type="text" id="gateCode" inputmode="numeric" autocomplete="one-time-code" maxlength="32" placeholder="Code van de coördinator">
+      <button type="button" class="btn" id="gateSubmit">Toegang aanvragen</button>
       <p id="gateMsg" class="muted" style="margin-top:8px"></p>
     </div>
   </div>`;
   const btn=document.getElementById('gateSubmit');
   if(btn) btn.onclick=submitGate;
 }
+// The real check happens in the Firestore rules: a links/{uid} doc is only accepted when `code`
+// is an existing invite for `familyId` AND `phoneKey` is one of that family's phoneKeys.
 async function submitGate(){
   if(!db||!me){ showToast("Geen verbinding. Herlaad de pagina."); return; }
   const phone=(document.getElementById('gatePhone').value||'').trim();
-  const girlSel=document.getElementById('gateGirl');
-  const girlId=girlSel? girlSel.value : null;
   const code=(document.getElementById('gateCode').value||'').trim();
   const msg=document.getElementById('gateMsg');
-  if(!phone||!girlId||!code){ if(msg) msg.textContent="Vul alle velden in."; return; }
-  const expectedCode=(fam(girlId).inviteCode||'').trim();
-  const expectedPhone1=fam(girlId).parentPhone1||'';
-  const expectedPhone2=fam(girlId).parentPhone2||'';
-  if(!expectedCode||(!expectedPhone1&&!expectedPhone2)){ if(msg) msg.textContent="Voor dit gezin is nog geen code/telefoonnummer ingesteld. Vraag de coördinator."; return; }
-  const enteredNorm=normalizePhone(phone);
-  if(enteredNorm!==normalizePhone(expectedPhone1) && enteredNorm!==normalizePhone(expectedPhone2)){ if(msg) msg.textContent="Telefoonnummer komt niet overeen met dit gezin."; return; }
-  if(code!==expectedCode){ if(msg) msg.textContent="Code klopt niet. Controleer en probeer opnieuw."; return; }
+  const say=t=>{ if(msg) msg.textContent=t; };
+  if(!phone||!code){ say("Vul alle velden in."); return; }
+  if(!isValidInviteCode(code)){ say("Code klopt niet. Controleer en probeer opnieuw."); return; }
+  const btn=document.getElementById('gateSubmit'); if(btn) btn.disabled=true;
   try{
-    await db.doc("links/"+me).set({familyId:girlId, phone});
+    const inv = await db.doc("invites/"+code).get();
+    const familyId = inv.exists? inv.data().familyId : null;
+    if(!familyId){ say("Code klopt niet. Controleer en probeer opnieuw."); return; }
+    await db.doc("links/"+me).set({familyId, code, phoneKey:normalizePhone(phone), linkedAt:Date.now()});
     showToast("Toegang verleend ✓");
-  }catch(e){ if(msg) msg.textContent="Mislukt: "+(e&&e.message||e); }
+  }catch(e){
+    say(e && e.code==='permission-denied'
+      ? "Dit telefoonnummer hoort niet bij deze code. Gebruik het nummer dat de coördinator van je heeft."
+      : "Mislukt: "+(e&&e.message||e));
+  }finally{ if(btn) btn.disabled=false; }
 }
 // Compares Dutch numbers regardless of 06.../ +316.../ 00316... formatting or stray spaces/dashes.
 function normalizePhone(p){
@@ -1505,7 +1609,6 @@ function renderProfile(){
       html += `<div class="card">
         <div class="rowflex" style="align-items:flex-start">
           <div><h2 style="margin-bottom:2px">Mijn gezin</h2><p class="muted" style="margin:0">Contactgegevens &amp; autocapaciteit</p></div>
-          ${lf.inviteCode? `<span class="capbadge" style="font-family:var(--font-mono)">Code: ${esc(lf.inviteCode)}</span>` : ''}
         </div>
         <p class="muted" style="margin-top:8px">Gekoppeld aan: <strong>${esc(lf.girlName||lf.parentName||effId)}</strong></p>
         ${familyFormHtml('me', fam(effId))}
@@ -1537,7 +1640,7 @@ function renderProfile(){
     } else {
       const lb=document.getElementById('linkBtn'); if(lb) lb.onclick=async ()=>{
         const sel=document.getElementById('linkSelect'); if(!sel||!db)return;
-        try{ await db.doc("links/"+me).set({familyId:sel.value}); showToast("Gekoppeld ✓"); }
+        try{ await db.doc("links/"+me).set({familyId:sel.value, linkedAt:Date.now()}); showToast("Gekoppeld ✓"); }
         catch(e){showToast("Koppelen mislukt: "+(e&&e.message||e));}
       };
     }
@@ -2137,7 +2240,7 @@ function renderBeheer(){
   const rows = Object.entries(families).map(([id,fd])=>{
     const isCoord = coordinatorConfig && coordinatorConfig.familyId===id;
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
-    const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !fd.inviteCode? 'code' : ''].filter(Boolean);
+    const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !inviteByFamily[id]? 'code' : ''].filter(Boolean);
     return `
     <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
       <div style="flex:1;min-width:0">
@@ -2262,7 +2365,13 @@ function renderBeheer(){
     if(cn) cn.onclick = ()=>{ coordEditId=null; renderCoordEditor(); };
     document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{ coordEditId=b.dataset.coordedit; renderCoordEditor(); });
     document.querySelectorAll('[data-coorddel]').forEach(b=>b.onclick=()=>twoStepConfirm(b,"Zeker? Nogmaals klikken",async ()=>{
-      try{ await db.doc("families/"+b.dataset.coorddel).delete(); }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
+      try{
+        const fid=b.dataset.coorddel;
+        const batch=writeBatch(firestoreDb);
+        batch.delete(doc(firestoreDb,'families',fid));
+        Object.entries(invitesByCode).forEach(([c,f])=>{ if(f===fid) batch.delete(doc(firestoreDb,'invites',c)); });
+        await batch.commit();
+      }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
     }));
     if(coordEditId!==undefined) renderCoordEditor();
     const saveMatchFeeds = async ()=>{
@@ -2292,8 +2401,9 @@ function renderBeheer(){
 async function doToggleCoord(id,isCurrently){
   try{
     if(isCurrently){
-      await db.doc("config/coordinator").delete();
-      coordinatorConfig=null; coordinatorExists=false;
+      const cfg={uid:me, claimedAt:Date.now()};
+      await db.doc("config/coordinator").set(cfg);
+      coordinatorConfig=cfg; coordinatorExists=true;
     } else {
       const cfg={familyId:id};
       await db.doc("config/coordinator").set(cfg);
@@ -2301,7 +2411,7 @@ async function doToggleCoord(id,isCurrently){
     }
     recomputeCanEdit();
     const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'':'none';
-    showToast(isCurrently? "Coördinator-rol ingetrokken" : "Coördinator ingesteld ✓");
+    showToast(isCurrently? "Coördinator-rol nu alleen via dit apparaat" : "Coördinator ingesteld ✓");
     renderAll();
   }catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
 }
@@ -2312,7 +2422,7 @@ function renderCoordEditor(){
   if(coordEditId===undefined){area.innerHTML='';return;}
   const isNew = coordEditId===null;
   const f = isNew? null : fam(coordEditId);
-  const currentCode = f? (f.inviteCode||'') : genCode();
+  const currentCode = f? (inviteByFamily[coordEditId]||'') : genCode();
   const isCoordThis = !isNew && coordinatorConfig && coordinatorConfig.familyId===coordEditId;
   const selfLinkedThis = !isNew && !!(links[me] && links[me].familyId===coordEditId);
   const coordToggleHtml = isNew? '' : `
@@ -2343,7 +2453,7 @@ function renderCoordEditor(){
     if(!isCurrently && !selfLinked){
       twoStepConfirm(ctb, "Let op: jij bent hier zelf niet aan gekoppeld — klik nogmaals om toch door te gaan", ()=>doToggleCoord(coordEditId,isCurrently));
     } else if(isCurrently){
-      twoStepConfirm(ctb, "Zeker? Je verliest direct je eigen coördinator-toegang", ()=>doToggleCoord(coordEditId,isCurrently));
+      twoStepConfirm(ctb, "Zeker? De coördinator-rol gaat dan alleen nog via dit apparaat", ()=>doToggleCoord(coordEditId,isCurrently));
     } else {
       doToggleCoord(coordEditId,isCurrently);
     }
@@ -2356,7 +2466,7 @@ async function saveCoordFamily(){
   if(!db){showToast("Geen verbinding met opslag.");return;}
   const data = readFamilyForm('coord');
   const codeEl=document.getElementById('coord_inviteCode');
-  data.inviteCode = codeEl? codeEl.value.trim() : '';
+  const newCode = codeEl? codeEl.value.trim() : '';
   if(coordEditId==null){
     const slug = (data.girlName||data.parentName||'gezin').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30) || 'gezin';
     coordEditId = 'manual-'+slug+'-'+Date.now().toString(36);
@@ -2364,8 +2474,26 @@ async function saveCoordFamily(){
     const dup = dupName && Object.entries(families).some(([fid,fd])=> fid!==coordEditId && (fd.girlName||'').trim().toLowerCase()===dupName);
     if(dup) showToast("Let op: er bestaat al een gezin met de naam '"+data.girlName+"' — controleer op dubbelen.");
   }
-  try{ await db.doc("families/"+coordEditId).set(data,{merge:true}); showToast("Opgeslagen ✓"); }
+  try{
+    await db.doc("families/"+coordEditId).set(data,{merge:true});
+    if(await saveInviteCode(coordEditId, newCode)) showToast("Opgeslagen ✓");
+  }
   catch(e){showToast("Opslaan mislukt: "+(e&&e.message||e));}
+}
+// Invite codes live in /invites/{code} (doc id = the code), not on the family doc, so linked
+// parents can't read other families' codes. Returns false (with a toast) when refused.
+async function saveInviteCode(familyId, code){
+  if(code===(inviteByFamily[familyId]||'')) return true;
+  if(code && !isValidInviteCode(code)){ showToast("Code: alleen letters, cijfers en '-', 4–32 tekens."); return false; }
+  if(code){
+    const existing = await db.doc("invites/"+code).get();
+    if(existing.exists && existing.data().familyId!==familyId){ showToast("Deze code is al in gebruik bij een ander gezin — kies een andere."); return false; }
+  }
+  const batch = writeBatch(firestoreDb);
+  if(code) batch.set(doc(firestoreDb,'invites',code), {familyId});
+  Object.entries(invitesByCode).forEach(([c,fid])=>{ if(fid===familyId && c!==code) batch.delete(doc(firestoreDb,'invites',c)); });
+  await batch.commit();
+  return true;
 }
 
 // ---------- Seed from PDF ----------
@@ -2388,6 +2516,8 @@ async function seedFromPdf(){
   try{
     const famSnap = await db.collection("families").get();
     await Promise.all(famSnap.docs.map(d=>db.doc("families/"+d.id).delete()));
+    const invSnap = await db.collection("invites").get();
+    await Promise.all(invSnap.docs.map(d=>db.doc("invites/"+d.id).delete()));
     const grpSnap = await db.collection("groups").get();
     await Promise.all(grpSnap.docs.map(d=>db.doc("groups/"+d.id).delete()));
     if(msg) msg.textContent="Bezig met invullen…";

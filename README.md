@@ -26,3 +26,16 @@ Expected: `23 passed, 0 failed` and `15 passed, 0 failed`.
 1. Change files in the chat, get updated files back.
 2. Upload changed files to the GitHub repo (`main`); GitHub Pages redeploys in ~60 seconds.
 3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
+
+## Access model (since the Sept 2026 security fix)
+- Only **members** can read or write data: the coordinator, or a browser linked to a family through the gate.
+- The gate (phone number + invite code) is enforced by `firestore.rules`, not just in the browser.
+- Invite codes live in the `invites` collection (doc id = the code). They are no longer on the family doc, and only the coordinator can list them.
+- Families store `phoneKeys` (normalised phone numbers) for the gate check.
+
+**Deploying this change (do all steps in one go):**
+1. Upload `index.html` to GitHub and wait about 60 seconds.
+2. Paste `firestore.rules` into the Firebase console → Rules → Publish.
+3. Open the app as coordinator. It moves the old invite codes automatically (toast: "Uitnodigingscodes beveiligd ✓"). Parents can't pass the gate until this has run.
+4. Recommended: in Beheer, press "Nieuwe code" for every family (at least the coordinator family). This gives each family a 10-digit code; the old 6-digit codes were readable by anyone.
+5. Optional: to force everyone to re-verify, delete the `links` collection in the Firebase console. A coordinator who works through the coordinator family then also has to go through the gate again.
