@@ -440,6 +440,9 @@ const PH_PATHS = {
 };
 const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 // Day labels are always shown in capitals ("MA"); the keys themselves ("Ma") stay as stored data.
+// A family's time for one day+direction; '' when the family, its schedule or that day is missing
+// (e.g. a car that still lists a family that was deleted).
+function famTime(id,day,direction){ const sc=fam(id).schedule; return (sc && sc[day] && sc[day][direction]) || ''; }
 function dayUp(k){ return String(k||'').toUpperCase(); }
 // One wording for the two directions, everywhere in the app.
 const DIR_TEXT = { heen:'Heen · Aalsmeer → Alkmaar', terug:'Terug · Alkmaar → Aalsmeer' };
@@ -1578,7 +1581,11 @@ async function submitGate(){
     const inv = await db.doc("invites/"+code).get();
     const familyId = inv.exists? inv.data().familyId : null;
     if(!familyId){ say("Code klopt niet. Controleer en probeer opnieuw."); return; }
-    await db.doc("links/"+me).set({familyId, code, phoneKey:normalizePhone(phone), linkedAt:Date.now()});
+    const link={familyId, code, phoneKey:normalizePhone(phone), linkedAt:Date.now()};
+    await db.doc("links/"+me).set(link);
+    // The server accepted it. Firestore doesn't send a new snapshot for "pending -> confirmed",
+    // so apply it here (the links/{me} listener deliberately ignores the pending version).
+    links[me]=link; afterLinksChanged();
     showToast("Toegang verleend ✓");
   }catch(e){
     say(e && e.code==='permission-denied'
@@ -1640,7 +1647,7 @@ function renderProfile(){
     } else {
       const lb=document.getElementById('linkBtn'); if(lb) lb.onclick=async ()=>{
         const sel=document.getElementById('linkSelect'); if(!sel||!db)return;
-        try{ await db.doc("links/"+me).set({familyId:sel.value, linkedAt:Date.now()}); showToast("Gekoppeld ✓"); }
+        try{ const link={familyId:sel.value, linkedAt:Date.now()}; await db.doc("links/"+me).set(link); links[me]=link; afterLinksChanged(); showToast("Gekoppeld ✓"); }
         catch(e){showToast("Koppelen mislukt: "+(e&&e.message||e));}
       };
     }
@@ -2370,6 +2377,10 @@ function renderBeheer(){
         const batch=writeBatch(firestoreDb);
         batch.delete(doc(firestoreDb,'families',fid));
         Object.entries(invitesByCode).forEach(([c,f])=>{ if(f===fid) batch.delete(doc(firestoreDb,'invites',c)); });
+        Object.entries(groups).forEach(([gid,g])=>{
+          const inCar=(g.girlIds||[]).includes(fid), drives=g.driverFamilyId===fid;
+          if(inCar||drives) batch.update(doc(firestoreDb,'groups',gid), {girlIds:(g.girlIds||[]).filter(x=>x!==fid), ...(drives?{driverFamilyId:null}:{})});
+        });
         await batch.commit();
       }catch(e){showToast("Verwijderen mislukt: "+(e&&e.message||e));}
     }));
@@ -2637,7 +2648,7 @@ function availableDrivers(day,direction){
 function timeToMinutes(t){ return pureTimeToMinutes(t); }
 function minutesToTime(min){ return pureMinutesToTime(min); }
 function computeDepartureTime(day,direction,girlIds){
-  const minutesList = girlIds.map(id=>pureTimeToMinutes(fam(id).schedule[day] && fam(id).schedule[day][direction]));
+  const minutesList = girlIds.map(id=>pureTimeToMinutes(famTime(id,day,direction)));
   return pureComputeDepartureTime(direction, minutesList, settings.travelLeadMinutes||60);
 }
 function planClusters(day,direction,list){
@@ -2830,7 +2841,7 @@ function tripReserveHtml(day,direction,cars,withWhatsApp,askTime){
   return `<div class="tripReserve">Reserve: ${names.join(', ')}</div>`;
 }
 function neededTimesHtml(day,direction,girlIds){
-  const times = girlIds.map(id=>fam(id).schedule && fam(id).schedule[day] && fam(id).schedule[day][direction]).filter(Boolean).sort();
+  const times = girlIds.map(id=>famTime(id,day,direction)).filter(Boolean).sort();
   const range = `${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`;
   return `<div class="subtime">${direction==='heen'? `Aankomst Alkmaar nodig: ${range}` : `Klaar om op te halen: ${range}`}</div>`;
 }
@@ -2881,7 +2892,7 @@ function renderDirectionStandard(day,direction){
   const myId = myLinkedFamilyId();
 
   const groupHtml = grps.map(([gid,g],gi)=>{
-    const times = g.girlIds.map(id=>fam(id).schedule[day][direction]).filter(Boolean).sort();
+    const times = (g.girlIds||[]).map(id=>famTime(id,day,direction)).filter(Boolean).sort();
     const departureFallback = direction==='terug' ? times[times.length-1] : times[0];
     const departure = g.departureTime || departureFallback || '--:--';
     const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
@@ -2937,7 +2948,7 @@ function renderDirectionStandard(day,direction){
     // 1) Room in cars that already run this trip (and the times fit): usually the simplest fix.
     //    Each not-yet-placed girl goes to the car with a free seat where her time fits best.
     const gapLimit = (settings.gapThresholdHours||3)*60;
-    const tMin = id=>timeToMinutes(fam(id).schedule[day]&&fam(id).schedule[day][direction]);
+    const tMin = id=>timeToMinutes(famTime(id,day,direction));
     const pool = grps.map(([gid,g],gi)=>({gid, num:gi+1, driverId:g.driverFamilyId, ids:[...g.girlIds], cap:g.driverFamilyId? seats(fam(g.driverFamilyId)) : 0}));
     const placements = [];
     [...ungrouped].sort((a,b)=>(tMin(a[0])||0)-(tMin(b[0])||0)).forEach(([id])=>{
