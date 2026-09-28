@@ -191,6 +191,15 @@ table.avail th,table.avail td{padding:6px 4px}
   <button type="button" id="themeToggle" class="iconbtn" style="background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);color:#fff;flex-shrink:0" aria-label="Licht/donker thema wisselen"></button>
 </header>
 </div>
+
+<main>
+  <div id="tab-schedule"></div>
+  <div id="tab-myweek" style="display:none"></div>
+  <div id="tab-deviation" style="display:none"></div>
+  <div id="tab-profile" style="display:none"></div>
+  <div id="tab-beheer" style="display:none"></div>
+  <div id="tab-gate" style="display:none"></div>
+</main>
 <nav id="bottomnav" aria-label="Hoofdnavigatie">
   <button type="button" data-tab="schedule" class="navtab active"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
@@ -214,14 +223,6 @@ table.avail th,table.avail td{padding:6px 4px}
     </span><span class="navlabel">Beheer</span></button>
 </nav>
 
-<main>
-  <div id="tab-schedule"></div>
-  <div id="tab-myweek" style="display:none"></div>
-  <div id="tab-deviation" style="display:none"></div>
-  <div id="tab-profile" style="display:none"></div>
-  <div id="tab-beheer" style="display:none"></div>
-  <div id="tab-gate" style="display:none"></div>
-</main>
 
 <script type="module">
 // ============================================================
@@ -774,7 +775,7 @@ async function init(){
   recomputeCanEdit();
   // (status line itself is now set by recomputeCanEdit() -> updateStatusLine(), always in sync)
   const navB=document.getElementById('navBeheer');
-  if(navB) navB.style.display = canEdit? 'inline-block':'none';
+  if(navB) navB.style.display = canEdit?'':'none';
   renderAll();
   try{
     db.collection("families").onSnapshot(snap=>{ families={}; snap.docs.forEach(d=>families[d.id]=d.data()); renderAll(); },
@@ -783,7 +784,7 @@ async function init(){
       err=>{ setStatus("⚠️ Fout bij laden rooster: "+(err&&err.message||err)); });
     db.collection("links").onSnapshot(snap=>{ links={}; snap.docs.forEach(d=>links[d.id]=d.data());
       const navB=document.getElementById('navBeheer');
-      recomputeCanEdit(); if(navB) navB.style.display = canEdit? 'inline-block':'none';
+      recomputeCanEdit(); if(navB) navB.style.display = canEdit?'':'none';
       renderProfile(); renderBeheer(); renderMyWeek(); },
       err=>{ setStatus("⚠️ Fout bij laden koppelingen: "+(err&&err.message||err)); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) settings={...settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
@@ -855,7 +856,7 @@ function startImpersonate(familyId){
 function stopImpersonate(){
   impersonateFamilyId=null;
   recomputeCanEdit();
-  const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+  const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'':'none';
   showToast("Terug naar coördinatorweergave ✓");
   renderAll();
 }
@@ -1072,7 +1073,7 @@ function renderClaimCoordinator(){
       await db.doc("config/coordinator").set(cfg);
       coordinatorConfig=cfg; coordinatorExists=true;
       recomputeCanEdit();
-      const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+      const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'':'none';
       showToast("Je bent nu coördinator ✓");
       renderAll();
     }catch(e){ showToast("Mislukt (mogelijk had iemand anders je net voor): "+(e&&e.message||e)); }
@@ -1787,7 +1788,7 @@ async function doToggleCoord(id,isCurrently){
       coordinatorConfig=cfg; coordinatorExists=true;
     }
     recomputeCanEdit();
-    const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'inline-block':'none';
+    const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=canEdit?'':'none';
     showToast(isCurrently? "Coördinator-rol ingetrokken" : "Coördinator ingesteld ✓");
     renderAll();
   }catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
