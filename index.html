@@ -402,7 +402,7 @@ function effectivePlanningDate(){
   const now = new Date();
   const dow = now.getDay(); // 0=Sun, 6=Sat
   if(dow===0){ const d=new Date(now); d.setDate(now.getDate()+1); return d; } // Sun -> tomorrow's Monday
-  if(dow===6){ const d=new Date(now); d.setDate(now.getDate()+2); return d; } // Sat -> Monday after next
+  if(dow===6){ const d=new Date(now); d.setDate(now.getDate()+2); return d; } // Sat -> the coming Monday
   return now;
 }
 // The actual calendar date for a given weekday key, within the CURRENT (or, on a weekend, the
@@ -598,7 +598,20 @@ function getISOWeekKey(date){
   const weekNum = 1+Math.round(((d-firstThursday)/86400000-3+((firstThursday.getUTCDay()+6)%7))/7);
   return d.getUTCFullYear()+'-W'+String(weekNum).padStart(2,'0');
 }
-const currentWeekKey = getISOWeekKey(effectivePlanningDate());
+// NOT frozen at page load: a tab or installed PWA that stays open across a weekend must roll
+// over to the new week. (A frozen key made such a stale tab treat the new week's deviations as
+// "old" and delete them within seconds of anyone saving one.)
+let currentWeekKey = getISOWeekKey(effectivePlanningDate());
+function refreshWeekKey(){
+  const k = getISOWeekKey(effectivePlanningDate());
+  if(k===currentWeekKey) return false;
+  currentWeekKey = k; return true;
+}
+// When a deviation for the current planning week stops mattering: Saturday 00:00 (local) of
+// that week. Stored on the document as `expiresAt`; firestore.rules refuse deletes before it.
+function deviationExpiryMs(){
+  const s = startOfWeek(effectivePlanningDate()); s.setDate(s.getDate()+5); return s.getTime();
+}
 function deviationKey(day,direction){ return day+'_'+direction; }
 function activeDeviation(day,direction){
   const dev = deviations[deviationKey(day,direction)];
@@ -614,8 +627,14 @@ function effectiveCars(day,direction){
   return groupsFor(day,direction).map(([gid,g])=>({...g, baseGroupId:gid}));
 }
 async function purgeStaleDeviations(){
+  refreshWeekKey();
+  const now = Date.now();
   for(const [key,dev] of Object.entries(deviations)){
-    if(dev.weekKey!==currentWeekKey){
+    // Only ever purge an OLDER week (ISO keys like "2026-W39" sort correctly as strings) and
+    // only once its own expiry has passed — never a newer week's deviation.
+    const olderWeek = !dev.weekKey || dev.weekKey < currentWeekKey;
+    const expired = typeof dev.expiresAt!=='number' || dev.expiresAt <= now;
+    if(olderWeek && expired){
       try{ await db.doc("deviations/"+key).delete(); }catch(e){}
     }
   }
@@ -704,6 +723,13 @@ function cycleTheme(){
 
 // ---------- PWA: service worker registration + install prompt (real on Android/Chrome,
 // manual instructions on iOS Safari since it has no install-prompt API at all) ----------
+// Long-lived tabs/PWAs: when the planning week rolls over (Saturday 00:00) while the app is
+// open or resumed from the background, switch to the new week and purge the old one.
+function checkWeekRollover(){
+  if(refreshWeekKey() && appReady){ purgeStaleDeviations(); renderAll(); }
+}
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkWeekRollover(); });
+setInterval(checkWeekRollover, 60*1000);
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js').catch(()=>{});
 }
@@ -1398,7 +1424,8 @@ async function saveDeviationCars(day,direction,cars){
     return rest;
   });
   try{
-    await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,cars:cleanCars});
+    refreshWeekKey();
+    await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,expiresAt:deviationExpiryMs(),cars:cleanCars});
     lastDeviationEditDay = day;
     recordLastUpdate('Deviation');
     return true;
@@ -1615,7 +1642,9 @@ function attachDeviationHandlers(){
   });
   document.querySelectorAll('[data-devreset]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,"Zeker? Terug naar standaard rooster",async ()=>{
     const [day,direction]=btn.dataset.devreset.split('|');
-    try{ await db.doc("deviations/"+deviationKey(day,direction)).delete(); lastDeviationEditDay = day; recordLastUpdate('Deviation'); showToast("Teruggezet naar standaard ✓"); }
+    // Written as an empty deviation instead of a delete: activeDeviation() ignores empty `cars`,
+    // and deletes of a current-week deviation are refused by firestore.rules until it expires.
+    try{ refreshWeekKey(); await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:currentWeekKey,expiresAt:deviationExpiryMs(),cars:[]}); lastDeviationEditDay = day; recordLastUpdate('Deviation'); showToast("Teruggezet naar standaard ✓"); }
     catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
   }));
  }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
