@@ -71,6 +71,11 @@ header p{margin:2px 0 0;font-size:12px;opacity:.9}
 .navtab .navlabel{font-size:10px;font-weight:600;white-space:nowrap}
 .navtab.active{color:var(--accent)}
 .navtab.active .navlabel{font-weight:700}
+.navbadge{position:absolute;top:4px;left:calc(50% + 6px);min-width:17px;height:17px;padding:0 5px;border-radius:var(--radius-full);background:var(--accent);color:#fff;font-size:10px;font-weight:800;line-height:17px;text-align:center}
+.card.timeChangeCard{border-color:var(--warn);border-left:4px solid var(--warn)}
+.timeChangeFam{padding:8px 0;border-top:1px solid var(--border)}
+.timeChangeFam:first-of-type{border-top:none}
+.timeChangeLine{font-size:13px;font-family:var(--font-mono);margin-top:2px}
 .navtab.active::after{content:"";position:absolute;top:2px;left:50%;transform:translateX(-50%);width:20px;height:3px;border-radius:var(--radius-full);background:var(--accent)}
 main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 16px 24px;max-width:760px;margin:0 auto;width:100%}
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow-card)}
@@ -204,7 +209,7 @@ table.avail th,table.avail td{padding:6px 4px}
   <button type="button" data-tab="schedule" class="navtab active"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="currentColor"/><rect x="40" y="88" width="176" height="20" fill="var(--card)"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
-    </span><span class="navlabel">Rooster</span></button>
+    </span><span class="navlabel">Rooster</span><span id="navRoosterBadge" class="navbadge" style="display:none" aria-live="polite"></span></button>
   <button type="button" data-tab="myweek" class="navtab"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="96" r="52" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="96" r="52" fill="currentColor"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80Z" fill="currentColor"/></svg>
@@ -244,6 +249,9 @@ import {
   computeDepartureTime as pureComputeDepartureTime,
   planClusters as pureplanClusters, planPrimaryAssignment, planAlternativeAssignments
 } from "https://mveen.github.io/AZ-Carpool/planning.js";
+import {
+  diffSchedules, mergePendingChanges, collectPendingChanges, countPendingChanges, describeChange
+} from "https://mveen.github.io/AZ-Carpool/schedule-changes.js";
 
 const fbApp = initializeApp(firebaseConfig);
 const firestoreDb = getFirestore(fbApp);
@@ -341,6 +349,12 @@ function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e
 let me=null,canEdit=false,coordinatorExists=false,coordinatorConfig=null,appReady=false,impersonateFamilyId=null;
 let families={}, groups={}, links={}, deviations={};
 let lastUpdateRooster=null, lastUpdateDeviation=null;
+// ---------- Tijdswijzigingen (coordinator notifications) ----------
+// Last schedule of every family AS STORED IN FIRESTORE — the baseline a parent's edit is
+// compared against. Deliberately separate from `families`, which the day-tab switcher
+// patches locally with not-yet-saved input and so can't be trusted as "what it was before".
+let serverSchedules = {};
+let lastPendingChangeCount = null; // null until the first families snapshot has been seen
 
 // ---------- Match feeds (Google Calendar API) ----------
 // Fetched via Google's Calendar API (JSON), which genuinely supports direct browser fetches
@@ -778,7 +792,11 @@ async function init(){
   if(navB) navB.style.display = canEdit?'':'none';
   renderAll();
   try{
-    db.collection("families").onSnapshot(snap=>{ families={}; snap.docs.forEach(d=>families[d.id]=d.data()); renderAll(); },
+    db.collection("families").onSnapshot(snap=>{
+        families={}; serverSchedules={};
+        snap.docs.forEach(d=>{ families[d.id]=d.data(); serverSchedules[d.id]=JSON.parse(JSON.stringify(d.data().schedule||{})); });
+        notifyCoordinatorOfNewTimeChanges();
+        renderAll(); },
       err=>{ setStatus("⚠️ Fout bij laden gezinnen: "+(err&&err.message||err)); });
     db.collection("groups").onSnapshot(snap=>{ groups={}; snap.docs.forEach(d=>groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
       err=>{ setStatus("⚠️ Fout bij laden rooster: "+(err&&err.message||err)); });
@@ -1257,7 +1275,18 @@ async function saveProfile(){
   if(!me){showToast("Je account kon niet herkend worden. Herlaad de pagina.");return;}
   const effId = myFamilyId();
   const data = readFamilyForm('me');
-  try{ await db.doc("families/"+effId).set(data,{merge:true}); showToast("Opgeslagen ✓"); }
+  // A parent (not the coordinator) changing their daughter's times gets flagged for the
+  // coordinator, stored on the family doc itself as `timeChanges` until marked as seen.
+  const timeChanges = canEdit? [] : diffSchedules(serverSchedules[effId], data.schedule);
+  if(timeChanges.length){
+    data.timeChanges = mergePendingChanges(fam(effId).timeChanges, timeChanges, {at:Date.now(), by:myDisplayInfo().name});
+  }
+  try{
+    await db.doc("families/"+effId).set(data,{merge:true});
+    serverSchedules[effId] = JSON.parse(JSON.stringify(data.schedule));
+    if(data.timeChanges && families[effId]) families[effId] = {...families[effId], timeChanges:data.timeChanges};
+    showToast(timeChanges.length? "Opgeslagen ✓ — de coördinator ziet je gewijzigde tijden" : "Opgeslagen ✓");
+  }
   catch(e){showToast("Opslaan mislukt: "+(e&&e.message||e));}
 }
 
@@ -1753,6 +1782,17 @@ function renderBeheer(){
       ${matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">Laatst opgehaald: ${new Date(matchesFetchedAt).toLocaleString('nl-NL')}${matchFetchFailedTeams.length? ' — mislukt: '+esc(matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; ')) : ''}</p>` : ''}
     </div>
     <div class="card">
+      <h2>Meldingen bij gewijzigde tijden</h2>
+      <p class="muted">Als een ouder de aankomst- of ophaaltijd van een dochter aanpast, zie je dat bovenaan het Rooster (met een teller op het Rooster-tabje). Zet hieronder ook meldingen van je browser aan om een seintje te krijgen terwijl de app open staat op de achtergrond.</p>
+      ${('Notification' in window)
+        ? (Notification.permission==='granted'
+            ? `<p class="fitok">${phIcon('check')} Browsermeldingen staan aan op dit apparaat.</p>`
+            : Notification.permission==='denied'
+              ? `<p class="fitbad">Browsermeldingen zijn geblokkeerd — zet ze aan in de instellingen van je browser.</p>`
+              : `<button type="button" class="btn small secondary" id="enableNotifBtn">Browsermeldingen aanzetten</button>`)
+        : `<p class="muted">Deze browser ondersteunt geen meldingen.</p>`}
+    </div>
+    <div class="card">
       <h2>Beheerderstools</h2>
       <button type="button" class="btn secondary" id="seedPdf">${phIcon('refresh')} Alles wissen &amp; PDF-gegevens laden</button>
       <p id="seedMsg" class="muted" style="margin-top:8px"></p>
@@ -1824,6 +1864,8 @@ function renderBeheer(){
     });
     const refreshBtn=document.getElementById('refreshMatchesBtn');
     if(refreshBtn) refreshBtn.onclick=()=>{ showToast("Wedstrijden verversen…"); loadAllMatches(); };
+    const enb=document.getElementById('enableNotifBtn');
+    if(enb) enb.onclick=async ()=>{ try{ await Notification.requestPermission(); }catch(e){} renderBeheer(); };
     const sd=document.getElementById('seedPdf');
     if(sd) sd.onclick = ()=>twoStepConfirm(sd,"Zeker?! Alles wordt gewist — klik nogmaals",seedFromPdf);
   }catch(e){ showToast("Fout bij koppelen knoppen: "+(e&&e.message||e)); }
@@ -1954,6 +1996,72 @@ async function seedFromPdf(){
   }catch(e){ if(msg) msg.textContent="Fout tijdens laden: "+(e&&e.message||e); }
 }
 
+// ---------- Tijdswijzigingen: coordinator sees which passengers changed their times ----------
+function timeChangesCardHtml(){
+  if(!canEdit) return '';
+  const pending = collectPendingChanges(families);
+  if(!pending.length) return '';
+  const total = pending.reduce((n,f)=>n+f.changes.length,0);
+  const famHtml = pending.map(f=>{
+    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary" data-tcday="${esc(c.day)}" style="padding:2px 8px;min-height:26px;margin-right:6px">${esc(c.day)}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
+    const when = f.latestAt? new Date(f.latestAt).toLocaleString('nl-NL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+    const by = f.changes.find(c=>c.by)?.by || '';
+    return `<div class="timeChangeFam">
+      <div class="rowflex" style="align-items:flex-start">
+        <div><strong>${esc(f.girlName||f.parentName||f.familyId)}</strong>
+          <div class="muted" style="font-size:11px">${by? 'door '+esc(by)+' · ' : ''}${when}</div></div>
+        <button type="button" class="btn small secondary" data-tcseen="${esc(f.familyId)}">${phIcon('check')} Gezien</button>
+      </div>
+      ${lines}
+    </div>`;
+  }).join('');
+  return `<div class="card timeChangeCard">
+    <div class="rowflex" style="align-items:baseline">
+      <h2 style="margin:0">${phIcon('warning')} Gewijzigde tijden (${total})</h2>
+      ${pending.length>1? `<button type="button" class="btn small secondary" id="tcSeenAll">Alles gezien</button>` : ''}
+    </div>
+    <p class="muted" style="margin:4px 0 6px">Deze ouders hebben hun aankomst- of ophaaltijden aangepast. Controleer het rooster en markeer ze daarna als gezien.</p>
+    ${famHtml}
+  </div>`;
+}
+async function markTimeChangesSeen(familyIds){
+  if(!db) return;
+  try{
+    await Promise.all(familyIds.map(id=>db.doc("families/"+id).set({timeChanges:[]},{merge:true})));
+    showToast("Gemarkeerd als gezien ✓");
+  }catch(e){ showToast("Mislukt: "+(e&&e.message||e)); }
+}
+function wireTimeChangesCard(){
+  document.querySelectorAll('[data-tcseen]').forEach(b=>b.onclick=()=>markTimeChangesSeen([b.dataset.tcseen]));
+  const all=document.getElementById('tcSeenAll');
+  if(all) all.onclick=()=>twoStepConfirm(all,"Zeker? Klik nogmaals",()=>markTimeChangesSeen(collectPendingChanges(families).map(f=>f.familyId)));
+  document.querySelectorAll('[data-tcday]').forEach(b=>b.onclick=()=>{ scheduleDay=b.dataset.tcday; hapticTap(); renderSchedule(); });
+}
+function updateTimeChangesBadge(){
+  const badge=document.getElementById('navRoosterBadge');
+  if(!badge) return;
+  const n = canEdit? countPendingChanges(families) : 0;
+  badge.textContent = n>9? '9+' : String(n);
+  badge.style.display = n? '' : 'none';
+}
+// Called on every families snapshot: when a NEW change arrives while the coordinator has the
+// app open, show a toast (and, if the browser allowed it, a system notification).
+function notifyCoordinatorOfNewTimeChanges(){
+  const n = countPendingChanges(families);
+  const prev = lastPendingChangeCount;
+  lastPendingChangeCount = n;
+  if(prev===null || !canEdit || n<=prev) return;
+  const newest = collectPendingChanges(families)[0];
+  const who = newest? (newest.girlName||newest.parentName) : '';
+  const msg = `Nieuwe tijdswijziging${who? ' van '+who : ''} — zie Rooster`;
+  showToast(msg);
+  try{
+    if('Notification' in window && Notification.permission==='granted' && document.visibilityState!=='visible'){
+      new Notification('AZ Carpool', {body: msg, icon: './icon-192.png'});
+    }
+  }catch(e){ /* notifications are a bonus; never break the app over them */ }
+}
+
 // ---------- Rooster tab ----------
 function girlsFor(day,direction){
   return Object.entries(families).filter(([id,f])=>f.schedule && f.schedule[day] && f.schedule[day][direction]);
@@ -2056,12 +2164,15 @@ function renderSchedule(){
     </button>`;
   }).join('');
   const label = DAYS.find(([k])=>k===scheduleDay)[1];
-  box.innerHTML = `<div class="daypills" role="tablist" aria-label="Kies een dag">${pillsHtml}</div>`
+  box.innerHTML = timeChangesCardHtml()
+    + `<div class="daypills" role="tablist" aria-label="Kies een dag">${pillsHtml}</div>`
     + renderDay(scheduleDay, label)
     + lastUpdateFooter(lastUpdateRooster);
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
   });
+  wireTimeChangesCard();
+  updateTimeChangesBadge();
   attachScheduleHandlers();
 }
 function renderDay(day,label){

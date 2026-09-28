@@ -1,0 +1,10 @@
+{
+  "name": "az-carpool",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AZ Carpool Aalsmeer-Alkmaar: tests",
+  "scripts": {
+    "test": "node planning.test.js && node schedule-changes.test.js"
+  }
+}

@@ -3,11 +3,12 @@
 // files. The cache exists only so the app still opens (to whatever was last seen)
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME whenever the asset list below changes, so old caches are dropped.
-const CACHE_NAME = 'az-carpool-v1';
+const CACHE_NAME = 'az-carpool-v2';
 const ASSETS = [
   './',
   './index.html',
   './planning.js',
+  './schedule-changes.js',
   './firebase-config.js',
   './manifest.json',
   './icon-192.png',
