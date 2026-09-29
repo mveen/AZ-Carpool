@@ -101,3 +101,7 @@ test('the texts of the five new stories exist and fill their placeholders', () =
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
+test('the removed shift map-button texts are gone', () => {
+  assert.equal(Object.prototype.hasOwnProperty.call(nl, 'loc.mapButton'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(nl, 'loc.mapLabel'), false);
+});

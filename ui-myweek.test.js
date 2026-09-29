@@ -143,19 +143,26 @@ await testAsync('pressing the button stores the mark (no reason asked) and confi
   assert.ok(d.ovGirlIds.includes('f2')); assert.ok(!d.cars[0].girlIds.includes('f2'));
   assert.match(dom.doc.getElementById('toast').innerHTML, /Jahaimy gaat terug met OV/);
 });
-test('the ride shows where it starts and ends, with a generic map button', () => {
+test('the ride shows where it starts and ends, as plain text without a map button', () => {
   const html = render({});
   assert.match(text(html), /07:30 Busstation → AFC (&#39;|')34/);
-  assert.match(html, /class="geoBtn" href="geo:0,0\?q=Busstation"/);
+  assert.doesNotMatch(html, /geoBtn|Kaart/);
 });
-test('US-22: the match location is a link that plans a route from the phone\'s position (generic geo link)', () => {
-  const html = render({ matchesSource: 'live', matches: [{ calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') }], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });
+function withUserAgent(ua, fn) { const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator'); Object.defineProperty(globalThis, 'navigator', { value: { userAgent: ua }, configurable: true }); try { return fn(); } finally { if (had) Object.defineProperty(globalThis, 'navigator', had); else delete globalThis.navigator; } }
+const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/126 Mobile', IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Safari/605.1', LAPTOP = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/126';
+test('US-22: on iPhone and laptop the location is a Google Maps link, on Android a geo link', () => {
+  assert.match(withUserAgent(IPHONE, () => locationLinkHtml('De Toekomst, Amsterdam')), /href="https:\/\/www\.google\.com\/maps\/search\/\?api=1&amp;query=De%20Toekomst%2C%20Amsterdam"/);
+  assert.match(withUserAgent(LAPTOP, () => locationLinkHtml('De Toekomst')), /href="https:\/\/www\.google\.com\/maps\//);
+  assert.match(withUserAgent(ANDROID, () => locationLinkHtml('De Toekomst')), /href="geo:0,0\?q=De%20Toekomst"/);
+});
+test('US-22: the match location is a link that plans a route from the phone\'s position (Android: generic geo link)', () => {
+  const html = withUserAgent(ANDROID, () => render({ matchesSource: 'live', matches: [{ calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') }], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
   assert.match(html, /<a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam" aria-label="Route plannen naar De Toekomst, Amsterdam">De Toekomst, Amsterdam<\/a>/);
   assert.doesNotMatch(html, /google/i);
   assert.doesNotMatch(html, /geo:0,0\?q=Busstation%20Aalsmeer/, 'the start is the current position, not the busstation');
 });
 test('US-22: the location of a stored match ride is a link too', () => {
-  const html = render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });
+  const html = withUserAgent(ANDROID, () => render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
   assert.match(html, /<a class="geoLink" href="geo:0,0\?q=Sportpark%20Hoorn"/);
 });
 test('US-22: without a location there is no link', () => {

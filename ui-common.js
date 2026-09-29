@@ -5,7 +5,7 @@ import { S } from './state.js';
 import { renderProfile } from './ui-profile.js';
 import { fam } from './rides.js';
 import { myFamilyId } from './coordinator.js';
-import { isOverride, normalizeLocations, placeFor, shiftGeoLink, shiftLabel } from './locations.js';
+import { isOverride, normalizeLocations, placeFor, shiftLabel } from './locations.js';
 
 // ============================================================
 
@@ -25,14 +25,13 @@ export function phIcon(name, opts){
 // The places (pickup / drop-off, destination) as set in Beheer, with defaults filled in.
 export function locationsCfg(){ return normalizeLocations(S.locationsDoc); }
 
-// US-15: "07:05 Busstation → AFC '34" for one ride, plus a generic map button (geo link, not Google Maps).
+// US-15: "07:05 Busstation → AFC '34" for one ride (plain text, no button).
+export function isAndroidDevice(){ return /Android/i.test((typeof navigator!=='undefined' && navigator.userAgent) || ''); }
+
 export function shiftLocationHtml(car, direction){
   const cfg = locationsCfg();
-  const place = placeFor(car, direction, cfg);
-  const href = shiftGeoLink(car, direction, cfg);
   const changed = isOverride(car, direction, cfg)? ` <span class="changedTag">${t('loc.changedTag')}</span>` : '';
-  const btn = href? `<a class="geoBtn" href="${esc(href)}" aria-label="${esc(t('loc.mapLabel', { place: place.name }))}">${phIcon('away')} ${t('loc.mapButton')}</a>` : '';
-  return `<div class="shiftLoc"><span class="shiftLocText">${esc(shiftLabel(car, direction, cfg))}${changed}</span>${btn}</div>`;
+  return `<div class="shiftLoc"><span class="shiftLocText">${esc(shiftLabel(car, direction, cfg))}${changed}</span></div>`;
 }
 
 export function dirLabelHtml(direction, extra){ return `<span class="dirLabel">${DIR_TEXT[direction]}</span>${extra||''}`; }

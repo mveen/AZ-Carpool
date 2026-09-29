@@ -6,7 +6,7 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, placeQuery, shiftGeoLink, fixedVenue } from './locations.js';
+import { DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from './locations.js';
 
 console.log('=== defaults ===');
 test('without stored settings there are the 3 places and AFC \'34 as destination', () => {
@@ -77,14 +77,14 @@ test('geoLink is a generic geo: link, not a Google Maps link', () => {
   assert.ok(!/google/i.test(l));
 });
 test('geoLink of nothing is empty', () => { assert.equal(geoLink('  '), ''); assert.equal(geoLink(undefined), ''); });
-test('a place is looked up by its address, else by its name', () => {
-  assert.equal(placeQuery({ name: 'De Parel', address: 'Parelstraat 1' }), 'Parelstraat 1');
-  assert.equal(placeQuery({ name: 'De Parel', address: '' }), 'De Parel');
+test('googleMapsLink is a Google Maps search link, empty for nothing', () => {
+  assert.equal(googleMapsLink('Sportpark Hoorn, Hoorn'), 'https://www.google.com/maps/search/?api=1&query=Sportpark%20Hoorn%2C%20Hoorn');
+  assert.equal(googleMapsLink(' '), '');
 });
-test('the shift button goes to the pickup (heen) or drop-off (terug) place', () => {
-  const c = normalizeLocations({ places: [{ id: 'busstation', address: 'Stationsweg 1, Aalsmeer' }, { id: 'de-parel', address: 'Parelstraat 1, Aalsmeer' }], defaults: { heen: 'busstation', terug: 'de-parel' } });
-  assert.equal(shiftGeoLink({}, 'heen', c), 'geo:0,0?q=' + encodeURIComponent('Stationsweg 1, Aalsmeer'));
-  assert.equal(shiftGeoLink({}, 'terug', c), 'geo:0,0?q=' + encodeURIComponent('Parelstraat 1, Aalsmeer'));
+test('mapLink: geo: on Android, Google Maps everywhere else (iPhone, laptop)', () => {
+  assert.match(mapLink('De Parel', true), /^geo:0,0\?q=De%20Parel$/);
+  assert.match(mapLink('De Parel', false), /^https:\/\/www\.google\.com\/maps\/search\/\?api=1&query=De%20Parel$/);
+  assert.equal(mapLink('', true), ''); assert.equal(mapLink('', false), '');
 });
 
 console.log('\n=== fixed venues ===');

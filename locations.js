@@ -48,16 +48,18 @@ export function shiftLabel(car, direction, cfg) {
   return car && car.departureTime ? `${car.departureTime} ${route}` : route;
 }
 
-// A generic map link: a geo: URI that opens whatever maps app the phone uses (not a Google Maps address).
-// The maps app starts the route from the phone's current position. '' when there is nothing to look for.
+// Map links. Android: a generic geo: URI (opens the phone's own maps app, route starts at the current position).
+// Everything else (iPhone, laptop browser): a Google Maps search link, because geo: does not open there.
+// '' when there is nothing to look for.
 export function geoLink(query) {
   const q = str(query);
   return q ? 'geo:0,0?q=' + encodeURIComponent(q) : '';
 }
-// What to look up for a place: the exact address when known, otherwise its name.
-export function placeQuery(place) { return str(place && place.address) || str(place && place.name); }
-// The button of a shift goes to the Aalsmeer side of the ride: the pickup (heen) or the drop-off (terug).
-export function shiftGeoLink(car, direction, cfg) { return geoLink(placeQuery(placeFor(car, direction, cfg))); }
+export function googleMapsLink(query) {
+  const q = str(query);
+  return q ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q) : '';
+}
+export function mapLink(query, isAndroid) { return isAndroid ? geoLink(query) : googleMapsLink(query); }
 
 // US-21: matches at AFC or ATC use a fixed distance from settings, not a calculated one.
 export function fixedVenue(location) {

@@ -159,10 +159,10 @@ test('the coordinator of the day itself is not the one shown', () => {
 });
 
 console.log('\n=== pickup and drop-off place on the ride (US-15) ===');
-test('Rooster "Deze week" and Standaardrooster show the route with a map button', () => {
+test('Rooster "Deze week" and Standaardrooster show the route as plain text, without a map button', () => {
   const week = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
   assert.match(text(week), /07:30 Busstation → AFC &#39;34|07:30 Busstation → AFC '34/); assert.match(text(week), /17:30 AFC (&#39;|')34 → Busstation/);
-  assert.match(week, /class="geoBtn" href="geo:0,0\?q=Busstation"/);
+  assert.doesNotMatch(week, /geoBtn|geo:0,0|Kaart/);   // no map button on a shift
   const std = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
   assert.match(text(std), /07:30 Busstation → AFC (&#39;|')34/);
 });

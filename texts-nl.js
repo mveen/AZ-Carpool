@@ -496,8 +496,6 @@ export default {
   "loc.fixedTitle": "Vaste afstand (km, enkele reis)",
   "loc.fixedHint": "Wedstrijden op AFC of ATC gebruiken deze vaste afstand. Er wordt niets berekend.",
   "loc.saved": "Plekken opgeslagen",
-  "loc.mapButton": "Kaart",
-  "loc.mapLabel": "Open {place} in je kaarten-app",
   "loc.override": "Plek (eenmalig)",
   "loc.useDefault": "Standaard: {name}",
   "loc.changedTag": "eenmalig gewijzigd",
