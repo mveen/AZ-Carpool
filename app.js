@@ -12,6 +12,7 @@ import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { todayKey } from './constants.js';
+import { refreshMatchesIfStale } from './matches.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
 S.currentWeekKey = getISOWeekKey(effectivePlanningDate());
@@ -23,6 +24,11 @@ S.scheduleDay = todayKey || "Ma";
 // open or resumed from the background, switch to the new week and purge the old one.
 export function checkWeekRollover(){
   if(refreshWeekKey() && S.appReady){ purgeStaleDeviations(); renderAll(); }
+}
+
+// Match calendars: once per day the first member who is in the app fetches them from Google (see matches.js).
+export function checkMatchRefresh(){
+  if(S.appReady) refreshMatchesIfStale();
 }
 
 export async function init(){
@@ -112,9 +118,9 @@ export function bootstrap(){
     if(btn) btn.onclick=cycleTheme;
   })();
 
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) checkWeekRollover(); });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); } });
 
-  setInterval(checkWeekRollover, 60*1000);
+  setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); }, 60*1000);
 
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js').catch(()=>{});

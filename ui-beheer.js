@@ -6,19 +6,22 @@ import { dayUp } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority } from './rides.js';
 import { esc, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
-import { normalizeLocations } from './locations.js';
-import { db, doToggleCoord, markTimeChangesSeen, saveCoordFamily } from './data.js';
+import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
+import { hasApiKey } from './distance.js';
+import { db, doToggleCoord, markTimeChangesSeen, recordLastUpdate, saveCoordFamily } from './data.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
+import { renderMyWeek } from './ui-myweek.js';
+import { renderDeviationTab } from './ui-deviation.js';
 
 export function renderAvailabilityTable(){
   const rows = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
   if(!rows.length) return `<p class="muted">${t('beheer.nog_geen_gezinnen')}</p>`;
   const head = `<tr><th style="text-align:left">${t('beheer.ouder')}</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
-    <tr><th></th>${DAYS.map(()=>`<th style="font-size:11px;color:var(--muted)">H</th><th style="font-size:11px;color:var(--muted)">T</th>`).join('')}</tr>`;
+    <tr><th></th>${DAYS.map(()=>`<th style="font-size:12px;color:var(--muted)">H</th><th style="font-size:12px;color:var(--muted)">T</th>`).join('')}</tr>`;
   const body = rows.map(([id,f])=>{
     const cells = DAYS.map(([k])=>{
       const a=(f.availability&&f.availability[k])||{};
@@ -40,7 +43,7 @@ export function renderPrefsCard(){
     const label = r.type==='together'
       ? t('beheer.samen_reizen_2', { p1: (r.ids||[]).map(id=>girlName(id)).join(' &amp; ') })
       : t('beheer.voorkeur_met',{p1:girlName(r.girlId),p2:(r.withAny||[]).map(id=>girlName(id)).join(t('beheer.of'))});
-    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
+    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_voorkeuren')}</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
@@ -129,19 +132,30 @@ export async function saveDayCoordinator(day, familyId){
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
-// US-15 / US-21: the three pickup and drop-off places with exact addresses, the destination in Alkmaar,
+// US-15 / US-21: the pickup and drop-off places (up to 6) with names and addresses, the destination in Alkmaar,
 // the default place per direction and the fixed distances for AFC and ATC. One document: settings/locations.
+// An address is a logical address, GPS in decimal degrees, or GPS in degrees-minutes-seconds.
 export function locationsCardHtml(){
   const cfg = locationsCfg();
-  const placeRows = cfg.places.map(p=>`<div class="grid2" style="margin-top:6px">
+  const placeRows = cfg.places.map(p=>{
+    const gps = parseCoordinates(p.address);
+    const hint = gps? `<p class="addrHint">${t('loc.gpsRecognized',{p1:gps.lat+', '+gps.lon})}</p>` : '';
+    const remove = p.id===BUSSTATION_ID? '' : `<button type="button" class="iconbtn danger locRemove" data-locremove="${p.id}" aria-label="${esc(t('loc.removePlace',{name:p.name}))}" title="${esc(t('loc.removePlace',{name:p.name}))}">${phIcon('trash')}</button>`;
+    return `<div class="grid2" style="margin-top:6px">
       <div><label style="margin-top:0" for="locName_${p.id}">${t('loc.placeName')}</label><input type="text" class="locInput" id="locName_${p.id}" value="${esc(p.name)}"></div>
-      <div><label style="margin-top:0" for="locAddr_${p.id}">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="Straat 1, Aalsmeer"></div>
-    </div>`).join('');
+      <div><label style="margin-top:0" for="locAddr_${p.id}">${t('loc.placeAddress')}</label>
+        <div class="rowflex" style="gap:6px"><input type="text" class="locInput" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="${esc(t('loc.addressPlaceholder'))}" style="flex:1;min-width:0">${remove}</div>${hint}</div>
+    </div>`;
+  }).join('');
   const opts = sel => cfg.places.map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
+  const add = cfg.places.length<MAX_PLACES
+    ? `<button type="button" class="btn small secondary" id="locAdd" style="margin-top:10px">+ ${t('loc.addPlace')}</button>`
+    : `<p class="muted" style="margin-top:10px">${t('loc.maxPlaces',{p1:MAX_PLACES})}</p>`;
   return `<div class="card" id="locationsCard">
       <h2>${t('loc.beheerTitle')}</h2>
-      <p class="muted">${t('loc.beheerIntro')}</p>
+      <p class="muted">${t('loc.beheerIntro',{p1:MAX_PLACES})}</p>
       ${placeRows}
+      ${add}
       <div class="grid2" style="margin-top:10px">
         <div><label style="margin-top:0" for="locDestName">${t('loc.destination')}</label><input type="text" class="locInput" id="locDestName" value="${esc(cfg.destination.name)}"></div>
         <div><label style="margin-top:0" for="locDestAddr">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locDestAddr" value="${esc(cfg.destination.address)}" placeholder="Straat 1, Alkmaar"></div>
@@ -150,26 +164,96 @@ export function locationsCardHtml(){
         <div><label style="margin-top:0" for="locDefHeen">${t('loc.defaultHeen')}</label><select class="locInput" id="locDefHeen">${opts(cfg.defaults.heen)}</select></div>
         <div><label style="margin-top:0" for="locDefTerug">${t('loc.defaultTerug')}</label><select class="locInput" id="locDefTerug">${opts(cfg.defaults.terug)}</select></div>
       </div>
+      <p class="muted" style="margin-top:10px">${t('loc.shiftHint')}</p>
       <p class="muted" style="margin-top:10px"><strong>${t('loc.fixedTitle')}</strong> ${t('loc.fixedHint')}</p>
       <div class="grid2">
-        <div><label style="margin-top:0" for="locFixAFC">AFC</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
-        <div><label style="margin-top:0" for="locFixATC">ATC</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
+        <div><label style="margin-top:0" for="locFixAFC">${t('loc.fixedAFC')}</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
+        <div><label style="margin-top:0" for="locFixATC">${t('loc.fixedATC')}</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
       </div>
     </div>`;
 }
 
+// API keys that may not sit in the public GitHub folder. Now only the OpenRouteService key (distance of away matches).
+// Stored in settings/apiKeys: members can read it (the app needs it), only the coordinator can change it (Firestore rules).
+// The key itself is never shown again after saving, only the last 4 characters.
+export function apiKeysCardHtml(){
+  const has = hasApiKey(S.orsApiKey);
+  const status = has
+    ? `<p class="fitok">${phIcon('check')} ${t('apikeys.ors_ingesteld',{p1:esc(String(S.orsApiKey).slice(-4))})}</p>`
+    : `<p class="muted">${t('apikeys.ors_niet_ingesteld')}</p>`;
+  return `<div class="card" id="apiKeysCard">
+      <h2>${t('apikeys.titel')}</h2>
+      <p class="muted">${t('apikeys.uitleg')}</p>
+      ${status}
+      <label style="margin-top:0" for="apiKeyOrs">${t('apikeys.ors_label')}</label>
+      <input type="password" id="apiKeyOrs" autocomplete="off" spellcheck="false" placeholder="${esc(t('apikeys.ors_placeholder'))}">
+      <div class="rowflex" style="gap:6px;margin-top:8px">
+        <button type="button" class="btn small secondary" id="apiKeyOrsSave">${t('apikeys.opslaan')}</button>
+        ${has? `<button type="button" class="btn small danger" id="apiKeyOrsClear">${t('apikeys.verwijderen')}</button>` : ''}
+      </div>
+    </div>`;
+}
+
+// Saves (or, with value '', removes) the OpenRouteService key. Without an argument it reads the input field.
+export async function saveOrsApiKey(value){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  const el = document.getElementById('apiKeyOrs');
+  const key = String(value!==undefined? value : (el? el.value : '')).trim();
+  if(value===undefined && !key){ showToast(t('apikeys.leeg')); return false; }
+  if(/\s/.test(key)){ showToast(t('apikeys.spaties')); return false; }
+  try{
+    await db.doc("settings/apiKeys").set({ ors:key }, { merge:true });
+    S.orsApiKey = key;
+    if(el) el.value = '';
+    showToast(t(key? 'apikeys.opgeslagen' : 'apikeys.verwijderd'));
+    renderBeheer(); renderMyWeek();
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// One write of settings/locations (normalised). Every locations save goes through here.
+async function writeLocations(raw, toastKey){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  const doc = normalizeLocations(raw);
+  try{ await db.doc("settings/locations").set(doc); S.locationsDoc = doc; if(toastKey) showToast(t(toastKey)); return true; }
+  catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
 export async function saveLocations(){
   if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
-  const val = id=>{ const el=document.getElementById(id); return el? el.value : ''; };
+  const val = (id,fb)=>{ const el=document.getElementById(id); return el? el.value : (fb==null?'':fb); };
   const cur = locationsCfg();
-  const doc = normalizeLocations({
-    places: cur.places.map(p=>({ id:p.id, name:val('locName_'+p.id), address:val('locAddr_'+p.id) })),
+  return writeLocations({
+    places: cur.places.map(p=>({ id:p.id, name:val('locName_'+p.id,p.name), address:val('locAddr_'+p.id,p.address) })),
     destination: { name:val('locDestName'), address:val('locDestAddr') },
-    defaults: { heen:val('locDefHeen'), terug:val('locDefTerug') },
+    defaults: { heen:val('locDefHeen',cur.defaults.heen), terug:val('locDefTerug',cur.defaults.terug) },
+    shifts: cur.shifts,
     fixedKm: { AFC:val('locFixAFC'), ATC:val('locFixATC') },
-  });
-  try{ await db.doc("settings/locations").set(doc); S.locationsDoc = doc; showToast(t('loc.saved')); return true; }
-  catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+  }, 'loc.saved');
+}
+
+// Adds an empty place (max 6). The coordinator then types its name and address.
+export async function addLocationPlace(){
+  const cur = locationsCfg();
+  if(cur.places.length>=MAX_PLACES){ showToast(t('loc.maxPlaces',{p1:MAX_PLACES})); return false; }
+  return writeLocations({ ...cur, places:[...cur.places, newPlace(cur.places, t('loc.newPlaceName'))] }, 'loc.saved');
+}
+
+// Removes a place. Rides that still point at it fall back to the standard place; Busstation cannot be removed.
+export async function removeLocationPlace(id){
+  const cur = locationsCfg();
+  if(id===BUSSTATION_ID || !cur.places.some(p=>p.id===id)) return false;
+  return writeLocations({ ...cur, places:cur.places.filter(p=>p.id!==id) }, 'loc.saved');
+}
+
+// Standaardrooster: another standard place for one shift (day + direction). placeId '' = follow the heen/terug default.
+export async function saveShiftLocation(day,direction,placeId){
+  const cur = locationsCfg();
+  const shifts = {...cur.shifts};
+  if(placeId) shifts[day+'_'+direction]=placeId; else delete shifts[day+'_'+direction];
+  const ok = await writeLocations({ ...cur, shifts }, 'loc.shiftSaved');
+  if(ok){ recordLastUpdate('Rooster'); renderSchedule(); renderMyWeek(); renderDeviationTab(); }
+  return ok;
 }
 
 export function renderBeheer(){
@@ -195,9 +279,9 @@ export function renderBeheer(){
     return `
     <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:15px;font-weight:800">${esc(fd.girlName||'(naam?)')}</div>
+        <div style="font-size:16px;font-weight:800">${esc(fd.girlName||'(naam?)')}</div>
         <div class="muted">${esc(fd.parentName||'(ouder?)')} ${claimed[id]?t('beheer.span_class_badge_gekoppeld_span'):''} ${isCoord?t('beheer.span_class_badge_rec_coordinator'):''}${fd.familyType==='flex'? ` <span class="badge flexBadge">${t('flex.badge')}</span>` : ''}</div>
-        ${missing.length? `<div class="fitbad" style="font-size:11px;margin-top:2px">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
+        ${missing.length? `<div class="fitbad" style="font-size:12px;margin-top:2px">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
       <span style="display:flex;gap:6px;flex-shrink:0">
         <button type="button" class="btn small secondary" data-coordedit="${id}">${t('beheer.wijzig')}</button>
@@ -227,6 +311,7 @@ export function renderBeheer(){
     </div>
     ${dayCoordinatorsCardHtml()}
     ${locationsCardHtml()}
+    ${apiKeysCardHtml()}
     ${impactCardHtml()}
     <div class="card">
       <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
@@ -255,7 +340,7 @@ export function renderBeheer(){
         </div>`).join('')}
       <button type="button" class="btn small secondary" id="addMatchFeedBtn" style="margin-top:8px">${t('beheer.nieuwe_kalender_toevoegen')}</button>
       <button type="button" class="btn small secondary" id="refreshMatchesBtn" style="margin-top:8px">${phIcon('refresh')} ${t('beheer.nu_verversen')}</button>
-      ${S.matchesFetchedAt? `<p class="muted" style="font-size:11px;margin-top:6px">${t('beheer.laatst_opgehaald')} ${new Date(S.matchesFetchedAt).toLocaleString(locale())}${S.matchFetchFailedTeams.length? t('beheer.mislukt')+esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; ')) : ''}</p>` : ''}
+      ${(S.matchesFetchedAt||S.cachedMatchesAt)? `<p class="muted" style="font-size:12px;margin-top:6px">${t('beheer.laatst_opgehaald')} ${new Date(Math.max(S.matchesFetchedAt||0, S.cachedMatchesAt||0)).toLocaleString(locale())}${S.matchFetchFailedTeams.length? t('beheer.mislukt')+esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; ')) : ''}</p>` : ''}
     </div>
     <div class="card">
       <h2>${t('beheer.meldingen_bij_gewijzigde_tijden')}</h2>
@@ -290,6 +375,10 @@ export function renderBeheer(){
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
     document.querySelectorAll('.locInput').forEach(el=>el.onchange=()=>saveLocations());
+    const orsSave=document.getElementById('apiKeyOrsSave'); if(orsSave) orsSave.onclick=()=>{ hapticTap(); saveOrsApiKey(); };
+    const orsClear=document.getElementById('apiKeyOrsClear'); if(orsClear) orsClear.onclick=()=>twoStepConfirm(orsClear, t('beheer.zeker_nogmaals_klikken'), ()=>saveOrsApiKey(''));
+    const locAdd=document.getElementById('locAdd'); if(locAdd) locAdd.onclick=()=>{ hapticTap(); addLocationPlace(); };
+    document.querySelectorAll('[data-locremove]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn, t('beheer.zeker_nogmaals_klikken'), ()=>removeLocationPlace(btn.dataset.locremove)));
     wireImpactCard(renderBeheer);
     const atp=document.getElementById('addTogetherPref');
     if(atp) atp.onclick=async ()=>{
@@ -371,7 +460,7 @@ export function renderCoordEditor(){
   const selfLinkedThis = !isNew && !!(S.links[S.me] && S.links[S.me].familyId===S.coordEditId);
   const coordToggleHtml = isNew? '' : `
     <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg)">
-      <span style="font-size:13px">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
+      <span style="font-size:14px">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
       <button type="button" class="btn small secondary" id="coordToggleBtn">${isCoordThis? t('beheer.coordinator_intrekken') : (selfLinkedThis? t('beheer.maak_coordinator') : phIcon('warning')+t('beheer.maak_coordinator_2'))}</button>
     </div>`;
   area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
@@ -456,7 +545,7 @@ export function timeChangesCardHtml(){
     return `<div class="timeChangeFam">
       <div class="rowflex" style="align-items:flex-start">
         <div><strong>${esc(f.girlName||f.parentName||f.familyId)}</strong>
-          <div class="muted" style="font-size:11px">${by? t('beheer.door')+esc(by)+' · ' : ''}${when}</div></div>
+          <div class="muted" style="font-size:12px">${by? t('beheer.door')+esc(by)+' · ' : ''}${when}</div></div>
         <button type="button" class="btn small secondary" data-tcseen="${esc(f.familyId)}">${phIcon('check')} ${t('beheer.gezien')}</button>
       </div>
       ${lines}

@@ -22,14 +22,19 @@ export const S = {
   lastPendingChangeCount: null,
   matchFeeds: [],
   matchFeedsLoaded: false,
-  matchFeedsSig: null,
   matchLoadSeq: 0,
   matches: [],
   matchesSource: null,
   matchesFetchedAt: null,
+  matchesFeedsSig: null,           // which calendars this session's last successful fetch was for
   matchFetchFailedTeams: [],
   cachedMatches: [],
   cachedMatchesAt: null,
+  cachedMatchesFeedsSig: null,     // which calendars the cache was fetched for (calendar IDs)
+  cachedMatchesPartial: false,     // the cache was written while a team calendar failed
+  matchCacheLoaded: false,         // settings/matchCache has been read (also when it does not exist yet)
+  matchLastAttempt: null,          // {at, sig}: last automatic fetch in this session (limits retries)
+  orsApiKey: '',                   // OpenRouteService key, read from settings/apiKeys (members only)
   matchCarpools: {},
   weekendMatchBySlug: {},
   openMatchCarpoolForm: null,

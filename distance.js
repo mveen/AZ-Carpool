@@ -3,7 +3,7 @@
 // match with OpenRouteService (free tier) and stored in settings/matchDistances so nobody calculates it twice.
 // AFC/ATC matches use the fixed distance from Beheer instead. No location, or a location that cannot be found:
 // "locatie onbekend", never a number.
-import { fixedVenue } from './locations.js';
+import { fixedVenue, parseCoordinates } from './locations.js';
 
 export const ORS_BASE = 'https://api.openrouteservice.org';
 const AALSMEER = { lon: 4.7605, lat: 52.2625 }; // bias for the address search
@@ -36,8 +36,11 @@ async function getJson(fetchFn, url) {
   return res.json();
 }
 
-// Address text -> { lon, lat } or null when OpenRouteService finds nothing.
+// Address text -> { lon, lat } or null when OpenRouteService finds nothing. GPS text (decimal or degrees-minutes-seconds)
+// is used as it is: no search is needed.
 export async function geocode(fetchFn, apiKey, text) {
+  const gps = parseCoordinates(text);
+  if (gps) return { lon: gps.lon, lat: gps.lat };
   const url = `${ORS_BASE}/geocode/search?api_key=${encodeURIComponent(apiKey)}&text=${encodeURIComponent(text)}&size=1`
     + `&focus.point.lon=${AALSMEER.lon}&focus.point.lat=${AALSMEER.lat}`;
   const data = await getJson(fetchFn, url);

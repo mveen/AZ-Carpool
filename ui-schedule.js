@@ -4,8 +4,8 @@ import { S } from './state.js';
 import { DAYS, WA_ICON_SMALL, todayKey } from './constants.js';
 import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, seats, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dayUp, weekRangeLabel } from './dates.js';
-import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
-import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
+import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
+import { saveShiftLocation, timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen } from './ui-myweek.js';
 import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
@@ -179,7 +179,7 @@ export function renderDirectionWeek(day,direction){
       ${neededTimesHtml(day,direction,c.girlIds)}
       <div>${pillsHtml(c.girlIds,myId)}</div>
       ${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}
-      ${shiftLocationHtml(c,direction)}
+      ${shiftLocationHtml(c,direction,{day})}
     </div>`;
   }).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`;
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
@@ -236,7 +236,7 @@ export function renderDirectionStandard(day,direction){
       ${neededTimesHtml(day,direction,g.girlIds)}
       <div>${pills}</div>
       ${driverHtml}
-      ${shiftLocationHtml({...g, departureTime:departure!=='--:--'?departure:''},direction)}
+      ${shiftLocationHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,{day, edit:S.canEdit})}
       ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${g.girlIds.map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
@@ -351,6 +351,19 @@ export async function moveGirlToGroup(gid, girlId, toGid){
   }catch(e){showToast(t('schedule.verplaatsen_mislukt')+(e&&e.message||e));}
 }
 
+// The list of places for one shift of the standaardrooster. "Standaard" follows the heen/terug default of Beheer.
+export function openShiftLocationSheet(key){
+  const [day,direction]=key.split('|');
+  const cfg=locationsCfg();
+  const cur=cfg.shifts[day+'_'+direction]||'';
+  const dayName=(DAYS.find(([k])=>k===day)||[day,day])[1];
+  const dirName=direction==='heen'?t('dir.heenShort'):t('dir.terugShort');
+  const defName=(cfg.places.find(p=>p.id===cfg.defaults[direction])||cfg.places[0]).name;
+  const items=[{ label:esc(t('loc.useDefault',{name:defName}))+(cur===''?' ✓':''), onClick:()=>saveShiftLocation(day,direction,'') }]
+    .concat(cfg.places.map(p=>({ label:esc(p.name)+(cur===p.id?' ✓':''), sub:esc(p.address||''), onClick:()=>saveShiftLocation(day,direction,p.id) })));
+  openSheet(t('loc.shiftTitle'), t('loc.shiftSub',{p1:dirName,p2:dayName}), items);
+}
+
 export function openMoveSheet(gid, girlId){
   const g=S.groups[gid]; if(!g) return;
   const trip = groupsFor(g.day,g.direction);
@@ -415,6 +428,8 @@ export function attachScheduleHandlers(){
       recordLastUpdate('Rooster');
     }catch(e){showToast(t('schedule.wisselen_mislukt')+(e&&e.message||e));}
   });
+  // Standaardrooster: click the place of a shift to give the whole shift another standard place.
+  document.querySelectorAll('[data-shiftloc]').forEach(btn=>btn.onclick=()=>{ hapticTap(); openShiftLocationSheet(btn.dataset.shiftloc); });
   document.querySelectorAll('[data-deptime]').forEach(inp=>inp.onchange=async ()=>{
     const gid=inp.dataset.deptime;
     try{ await db.doc("groups/"+gid).update({departureTime:inp.value}); recordLastUpdate('Rooster'); }catch(e){showToast(t('schedule.aanpassen_mislukt')+(e&&e.message||e));}

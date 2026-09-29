@@ -2,7 +2,7 @@
 import { t, locale } from './i18n.js';
 import { analyzeMatch, carpoolFor, currentMatchList, docToMatch, matchLabel, matchSlug, matchesThisWeek, myMatchRides } from './matches.js';
 import { esc, hapticTap, isAndroidDevice, lastUpdateFooter, locationsCfg, phIcon, shiftLocationHtml, showToast } from './ui-common.js';
-import { db, setReturnByPublicTransport } from './data.js';
+import { setReturnByPublicTransport } from './data.js';
 import { distanceInfo, hasApiKey } from './distance.js';
 import { mapLink } from './locations.js';
 import { S } from './state.js';
@@ -23,7 +23,7 @@ export function matchDistanceHtml(m){
   const a = analyzeMatch(m.summary);
   const info = distanceInfo({ isHome:a.isHome, location:m.location, stored:S.matchDistances[matchSlug(m)], fixedKm:locationsCfg().fixedKm });
   if(!info) return '';
-  if(info.kind==='pending' && !hasApiKey(db.orsApiKey)) return '';   // feature not switched on: say nothing rather than "calculating…"
+  if(info.kind==='pending' && !hasApiKey(S.orsApiKey)) return '';   // feature not switched on: say nothing rather than "calculating…"
   // The distance is an estimate, so the cost is too: km x KM_COST_EUR (one way, as the km).
   const text = info.kind==='km' || info.kind==='fixed'? t('dist.km', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.cost', { eur: (Math.round(info.km*KM_COST_EUR*100)/100).toFixed(2).replace('.',',') })
     : info.kind==='fixedMissing'? t('dist.fixedMissing', { venue: info.venue })
@@ -102,7 +102,7 @@ export function renderMyWeek(){
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg=cars[drivingIdx];
       const names=dg.girlIds.map(id=>girlName(id)).join(', ');
-      extraDriving = `<div class="subrideStatus driving">${phIcon('car')} ${t('myweek.jouw_rijbeurt_om')} ${dg.departureTime||'?'} · ${names}</div>${shiftLocationHtml(dg,direction)}`;
+      extraDriving = `<div class="subrideStatus driving">${phIcon('car')} ${t('myweek.jouw_rijbeurt_om')} ${dg.departureTime||'?'} · ${names}</div>${shiftLocationHtml(dg,direction,{day})}`;
       statusClass = statusClass? statusClass : ''; // the driving BORDER below reflects the daughter's own car only, not this second one
     }
     // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
@@ -110,7 +110,7 @@ export function renderMyWeek(){
     const devTag = differsFromStandard? `<div class="subrideStatus changed">${phIcon('lightning')} ${t('myweek.wijziging_actief')}</div>` : '';
     // US-15: where the ride starts and ends. US-06: parent toggle "Terug met OV" (no reason needed), not for days already past.
     const ownCar = daughterIdx>=0? cars[daughterIdx] : null;
-    const locHtml = ownCar? shiftLocationHtml(ownCar,direction) : '';
+    const locHtml = ownCar? shiftLocationHtml(ownCar,direction,{day}) : '';
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const ovBtn = direction==='terug' && !dayPassed && !isFlex(myFam)
       ? `<button type="button" class="btn small secondary ovBtn" data-ovtoggle="${day}" data-ovon="${isOvMe?0:1}" aria-pressed="${isOvMe}">${t(isOvMe?'ov.undo':'ov.button')}</button>` : '';

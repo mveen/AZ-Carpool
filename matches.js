@@ -118,19 +118,58 @@ async function fetchTeamMatches(feed){
   }catch(e){ return { ok:false, error: (e&&e.message)||String(e) }; }
 }
 
+// ---------- Daily refresh ----------
+// The team calendars are fetched from Google once per day: the first member who opens the app that day does it
+// and stores the result in settings/matchCache. Everyone else reads that cache. A fetch also happens when the
+// set of calendars changed (Beheer) or when the last fetch was partial (one team failed).
+export const MATCH_RETRY_MS = 15*60*1000;   // after an automatic attempt: wait this long before trying again
+
+// The calendar IDs as one comparable text. Renaming a team does not change it.
+export function feedsSignature(feeds){ return (feeds||[]).map(f=>f && f.calendarId).filter(Boolean).sort().join(','); }
+
+function sameLocalDay(a, b){ return new Date(a).toDateString()===new Date(b).toDateString(); }
+
+// PURE. fetchedAt: ms of the last complete fetch (or null)   feedsSig / partial: what that fetch was for / whether a team failed
+//       feeds: the calendars now in Beheer   lastAttempt: {at, sig} of the last automatic attempt in this session (or null)   now: ms
+export function matchesNeedRefresh({ fetchedAt, feedsSig, partial, feeds, lastAttempt, now }){
+  const sig = feedsSignature(feeds);
+  const stale = !fetchedAt || !!partial || (feedsSig||'')!==sig || !sameLocalDay(fetchedAt, now);
+  if(!stale) return false;
+  // A failed fetch must not repeat every minute: same calendars + recent attempt = wait.
+  if(lastAttempt && lastAttempt.sig===sig && now-lastAttempt.at<MATCH_RETRY_MS) return false;
+  return true;
+}
+
+// The newest of: this session's own fetch, and what the database cache says.
+function currentFreshness(){
+  if(S.matchesFetchedAt && S.matchesFetchedAt>=(S.cachedMatchesAt||0))
+    return { fetchedAt:S.matchesFetchedAt, feedsSig:S.matchesFeedsSig, partial:S.matchFetchFailedTeams.length>0 };
+  return { fetchedAt:S.cachedMatchesAt, feedsSig:S.cachedMatchesFeedsSig, partial:S.cachedMatchesPartial };
+}
+
+// Called when the calendars or the cache arrive, when the app comes to the foreground, and once a minute
+// (like checkWeekRollover). Fetches only when the data is not from today. Returns true when a fetch was started.
+export function refreshMatchesIfStale(now=Date.now()){
+  if(!S.matchFeedsLoaded || !S.matchCacheLoaded || !isMemberNow()) return false;   // wait until the coordinator's calendars and the cache are known
+  const feeds = activeMatchFeeds();
+  if(!matchesNeedRefresh({ ...currentFreshness(), feeds, lastAttempt:S.matchLastAttempt, now })) return false;
+  S.matchLastAttempt = { at:now, sig:feedsSignature(feeds) };
+  loadAllMatches();
+  return true;
+}
+
 export async function loadAllMatches(){
   if(!S.matchFeedsLoaded) return; // wait for the coordinator's calendars; the snapshot calls this
   const seq = ++S.matchLoadSeq;
   const feeds = activeMatchFeeds().filter(f=>f.calendarId);
-  S.matchFeedsSig = JSON.stringify(activeMatchFeeds());
   const results = await Promise.all(feeds.map(fetchTeamMatches));
   if(seq!==S.matchLoadSeq) return; // a newer load was started meanwhile
   const failed = [];
   let combined = [];
   results.forEach((r,i)=>{ if(!r.ok) failed.push({label:feeds[i].label, error:r.error}); else combined = combined.concat(r.events); });
   if(combined.length || !S.matchFetchFailedTeams.length){
-    S.matches = combined; S.matchesSource='live'; S.matchesFetchedAt=Date.now(); S.matchFetchFailedTeams=failed;
-    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
+    S.matches = combined; S.matchesSource='live'; S.matchesFetchedAt=Date.now(); S.matchesFeedsSig=feedsSignature(feeds); S.matchFetchFailedTeams=failed;
+    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), feedsSig:feedsSignature(feeds), partial:failed.length>0, matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
   }
   renderMyWeek(); renderMatchesTab();
   calculateMatchDistances(combined);
@@ -189,14 +228,14 @@ export function matchCarCapacityState(slug){
 // US-21: calculates the projected distance of matches that do not have one yet (once per match, stored for everyone).
 // Waits until the stored distances are loaded, so nothing is calculated twice. Returns the number of routes requested.
 export async function calculateMatchDistances(list){
-  if(!hasApiKey(db.orsApiKey) || !S.matchDistancesLoaded || !isMemberNow() || !list || !list.length) return 0;
+  if(!hasApiKey(S.orsApiKey) || !S.matchDistancesLoaded || !isMemberNow() || !list || !list.length) return 0;
   const cfg = normalizeLocations(S.locationsDoc);
   const bus = cfg.places.find(p=>p.id==='busstation');
   const originText = (bus && bus.address) || 'Busstation Aalsmeer, Aalsmeer, Nederland';
   const matches = list.map(m=>({ key:matchSlug(m), isHome:analyzeMatch(m.summary).isHome, location:m.location }));
   try{
     return await ensureDistances({
-      matches, storedByKey:S.matchDistances, fixedKm:cfg.fixedKm, apiKey:db.orsApiKey, originText,
+      matches, storedByKey:S.matchDistances, fixedKm:cfg.fixedKm, apiKey:S.orsApiKey, originText,
       fetchFn:(url)=>fetch(url),
       store: async (key,val)=>{
         S.matchDistances = {...S.matchDistances, [key]:val};

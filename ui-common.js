@@ -28,10 +28,15 @@ export function locationsCfg(){ return normalizeLocations(S.locationsDoc); }
 // US-15: "07:05 Busstation → AFC '34" for one ride (plain text, no button).
 export function isAndroidDevice(){ return /Android/i.test((typeof navigator!=='undefined' && navigator.userAgent) || ''); }
 
-export function shiftLocationHtml(car, direction){
+// opts.day: the weekday of the ride (the standard place can differ per shift).
+// opts.edit: the coordinator's standaardrooster: the place is a button that opens the list of places for the whole shift.
+export function shiftLocationHtml(car, direction, opts){
+  const o = opts || {};
   const cfg = locationsCfg();
-  const changed = isOverride(car, direction, cfg)? ` <span class="changedTag">${t('loc.changedTag')}</span>` : '';
-  return `<div class="shiftLoc"><span class="shiftLocText">${esc(shiftLabel(car, direction, cfg))}${changed}</span></div>`;
+  const changed = isOverride(car, direction, cfg, o.day)? ` <span class="changedTag">${t('loc.changedTag')}</span>` : '';
+  const label = esc(shiftLabel(car, direction, cfg, o.day));
+  if(o.edit && o.day) return `<div class="shiftLoc"><button type="button" class="shiftLocBtn" data-shiftloc="${o.day}|${direction}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}"><span class="shiftLocText">${label}</span>${phIcon('pencil')}</button></div>`;
+  return `<div class="shiftLoc"><span class="shiftLocText">${label}${changed}</span></div>`;
 }
 
 export function dirLabelHtml(direction, extra){ return `<span class="dirLabel">${DIR_TEXT[direction]}</span>${extra||''}`; }
@@ -64,7 +69,7 @@ export function lastUpdateFooter(info){
   if(!info || !info.at) return '';
   const d = new Date(info.at);
   const dateStr = d.toLocaleString(locale(), {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  return `<p class="muted" style="margin-top:10px;font-size:11px">${t('common.laatst_bijgewerkt_door')} ${esc(info.by||t('common.onbekend'))} — ${dateStr}</p>`;
+  return `<p class="muted" style="margin-top:10px;font-size:12px">${t('common.laatst_bijgewerkt_door')} ${esc(info.by||t('common.onbekend'))} — ${dateStr}</p>`;
 }
 
 // ---------- Theme: Licht / Donker only. New users start on Licht; their choice is remembered. ----------
@@ -128,23 +133,27 @@ export function adjustMainPadding(){}
 export function showToast(msg, opts){
   let t=document.getElementById('toast');
   if(!t){ t=document.createElement('div'); t.id='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite');
-    t.style.cssText='position:fixed;left:50%;bottom:calc(18px + var(--sab));transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 16px;border-radius:20px;font-size:13px;max-width:90%;text-align:center;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2)';
+    t.style.cssText='position:fixed;left:50%;bottom:calc(18px + var(--sab));transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 16px;border-radius:20px;font-size:14px;max-width:90%;text-align:center;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2)';
     document.body.appendChild(t);
   }
-  t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg); t.style.display='block';
-  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';},4000);
+  // opts.action = { label, run }: an extra button in the toast (e.g. "Ongedaan maken"). Such a toast stays a little longer.
+  const act = opts && opts.action;
+  t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg)+(act? ` <button type="button" id="toastAction" style="background:none;border:none;color:inherit;font:inherit;font-weight:800;text-decoration:underline;min-height:44px;padding:0 8px;cursor:pointer">${esc(act.label)}</button>` : '');
+  t.style.display='block';
+  t.onclick = act? (e)=>{ if(e && e.target && e.target.id==='toastAction'){ t.style.display='none'; clearTimeout(t._h); return act.run(); } } : null;
+  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';}, act? 7000 : 4000);
 }
 
 export function twoStepConfirm(btn, confirmLabel, action){
   if(btn.dataset.confirming==='1'){
     clearTimeout(btn._resetTimer);
-    btn.dataset.confirming=''; btn.textContent=btn.dataset.origLabel;
+    btn.dataset.confirming=''; btn.innerHTML=btn.dataset.origLabel;
     action();
   } else {
-    btn.dataset.origLabel = btn.textContent;
+    btn.dataset.origLabel = btn.innerHTML;
     btn.dataset.confirming='1';
     btn.textContent = confirmLabel;
-    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; btn.textContent=btn.dataset.origLabel; }, 4000);
+    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; btn.innerHTML=btn.dataset.origLabel; }, 4000);
   }
 }
 

@@ -10,7 +10,7 @@ import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
-import { calculateMatchDistances, currentMatchList, loadAllMatches } from './matches.js';
+import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, effectiveCars, eligibleDrivers, groupsFor } from './rides.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
@@ -23,9 +23,10 @@ import { impactGate } from './impact.js';
 //   db.doc(path)            -> { get, set, update, delete, onSnapshot }
 //   db.collection(path)     -> { get, onSnapshot, doc }
 //   db.batch()              -> { set(path,data,opts), update(path,data), delete(path), commit() }
-//   db.deleteField(), db.signIn(), db.calendarApiKey, db.orsApiKey, db.setListenerSink(array|null)
+//   db.deleteField(), db.signIn(), db.calendarApiKey, db.setListenerSink(array|null)
+// The OpenRouteService key is NOT here: it lives in the database (settings/apiKeys, members only) -> S.orsApiKey.
 // ============================================================
-export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey, orsApiKey }){
+export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
   const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, deleteField, signInAnonymously } = sdk;
   function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data(), pending:!!(s.metadata&&s.metadata.hasPendingWrites) }; }
   // While startDataListeners() runs, every onSnapshot() made through this adapter drops its
@@ -57,7 +58,7 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey, orsA
       return { set:(p,d,o)=>b.set(r(p),d,o), update:(p,d)=>b.update(r(p),d), delete:(p)=>b.delete(r(p)), commit:()=>b.commit() }; },
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
-    calendarApiKey, orsApiKey,
+    calendarApiKey,
     setListenerSink: (a)=>{ listenerSink = a; }
   };
 }
@@ -70,7 +71,6 @@ export const db = {
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
   get calendarApiKey(){ return dbImpl.calendarApiKey; },
-  get orsApiKey(){ return dbImpl.orsApiKey; },
   setListenerSink: (a)=>dbImpl.setListenerSink(a)
 };
 // ============================================================
@@ -170,7 +170,7 @@ export function startDataListeners(){
     db.doc("settings/matchFeeds").onSnapshot(snap=>{
       S.matchFeeds = (snap.exists && snap.data().feeds) || [];
       S.matchFeedsLoaded = true;
-      if(JSON.stringify(S.matchFeeds)!==S.matchFeedsSig) loadAllMatches();
+      refreshMatchesIfStale();   // first member of the day fetches; also when the calendars in Beheer changed
       renderBeheer(); renderMyWeek(); renderDeviationTab();
     }, err=>{});
     db.doc("settings/locations").onSnapshot(snap=>{ S.locationsDoc = snap.exists? snap.data() : null; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
@@ -183,8 +183,18 @@ export function startDataListeners(){
         // Only entries with a calendar ID: older cache entries carried a possibly wrong team name.
         S.cachedMatches = (d.matches||[]).filter(e=>e.calendarId).map(e=>({calendarId:e.calendarId, eventId:e.eventId||'', teamLabel:e.teamLabel, summary:e.summary, location:e.location, start:new Date(e.startMs)}));
         S.cachedMatchesAt = d.fetchedAt||null;
+        S.cachedMatchesFeedsSig = d.feedsSig||null;
+        S.cachedMatchesPartial = !!d.partial;
       }
+      S.matchCacheLoaded = true;
       renderMyWeek(); renderMatchesTab();
+      refreshMatchesIfStale();
+    }, err=>{ S.matchCacheLoaded = true; refreshMatchesIfStale(); });
+    // API keys that must not sit in the public GitHub folder. Members only (Firestore rules); only the coordinator can change it.
+    db.doc("settings/apiKeys").onSnapshot(snap=>{
+      S.orsApiKey = snap.exists? String((snap.data()||{}).ors||'').trim() : '';
+      renderBeheer(); renderMyWeek(); renderMatchesTab();
+      calculateMatchDistances(currentMatchList());
     }, err=>{});
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   finally{ db.setListenerSink(null); }
@@ -193,7 +203,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false;
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }

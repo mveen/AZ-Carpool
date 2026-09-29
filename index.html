@@ -151,6 +151,10 @@ button.btn.danger{background:var(--card);color:var(--danger);border:1px solid va
 .dirLabel{display:inline-flex;align-items:center;gap:6px;background:var(--pill2);color:var(--pill);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
 .shiftLoc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:14px;font-weight:700}
 .shiftLoc .shiftLocText{flex:1;min-width:0}
+.shiftLocBtn{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:6px 10px;margin-left:-10px;border:1px dashed var(--border);border-radius:var(--radius-full);background:transparent;color:inherit;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.shiftLocBtn svg{width:14px;height:14px;flex:none}
+.devFree{margin-top:6px}
+.addrHint{margin:4px 0 0;font-size:12px;color:var(--muted)}
 a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .matchDist{font-size:12px;color:var(--muted)}
 .ovBtn{margin-top:8px}
@@ -381,19 +385,18 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import * as firestoreSdk from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-// Whole module on purpose: an older firebase-config.js without the OpenRouteService key must not break start-up.
+// Whole module on purpose: an older firebase-config.js must not break start-up. (The OpenRouteService key is not in this file: it is in the database, see settings/apiKeys.)
 import * as appConfig from "https://mveen.github.io/AZ-Carpool/firebase-config.js";
 import { initDb, createFirestoreDb } from "https://mveen.github.io/AZ-Carpool/data.js";
 import { startApp } from "https://mveen.github.io/AZ-Carpool/app.js";
 
-const { firebaseConfig, googleCalendarApiKey, openRouteServiceApiKey } = appConfig;
+const { firebaseConfig, googleCalendarApiKey } = appConfig;
 const fbApp = initializeApp(firebaseConfig);
 initDb(createFirestoreDb({
   sdk: { ...firestoreSdk, signInAnonymously },
   firestoreDb: firestoreSdk.getFirestore(fbApp),
   auth: getAuth(fbApp),
-  calendarApiKey: googleCalendarApiKey,
-  orsApiKey: openRouteServiceApiKey
+  calendarApiKey: googleCalendarApiKey
 }));
 startApp();
 </script>
