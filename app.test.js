@@ -50,11 +50,13 @@ test('an unknown tab name changes nothing', () => {
   activateTab('nope');
   assert.equal(dom.el('tab-profile').style.display, 'none');
 });
-test('default tab: coordinator starts on Rooster (standard mode), a parent on Mijn week (week mode)', () => {
+test('default tab: everyone, coordinator included, starts on Mijn week (home); Rooster mode stays standard for the coordinator', () => {
   installNav(); useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ defaultTabChosen: false });
   withFakeNow(NOW, () => chooseDefaultTab());
   assert.equal(S.roosterMode, 'standard'); assert.equal(S.defaultTabChosen, true);
+  assert.equal(dom.el('tab-myweek').style.display, 'block');
+  assert.equal(dom.el('tab-schedule').style.display, 'none');
   sampleParentState({ defaultTabChosen: false });
   withFakeNow(NOW, () => chooseDefaultTab());
   assert.equal(S.roosterMode, 'week');

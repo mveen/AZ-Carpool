@@ -67,5 +67,17 @@ test('static page texts (data-i18n in index.html) all exist', () => {
   assert.deepEqual(keys.filter(k => !hasKey(k)), []);
 });
 
+test('navigation order is Mijn week, Wijzigen, Rooster, Mijn gezin, Beheer, and Mijn week starts open', () => {
+  const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));
+  assert.deepEqual([...nav.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]), ['myweek', 'deviation', 'schedule', 'profile', 'beheer']);
+  assert.match(nav, /data-tab="myweek" class="navtab active"/);
+  assert.equal((nav.match(/navtab active/g) || []).length, 1);
+  assert.match(html, /<div id="tab-myweek"><\/div>/); assert.match(html, /<div id="tab-schedule" style="display:none">/);
+});
+test('the Weekschema warning texts exist', () => {
+  assert.ok(hasKey('profile.weekschema_waarschuwing_titel') && hasKey('profile.weekschema_waarschuwing_tekst') && hasKey('profile.weekschema_naar_wijzigen'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

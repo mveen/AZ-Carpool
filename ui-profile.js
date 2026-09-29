@@ -8,6 +8,7 @@ import { activateTab, afterLinksChanged, renderAll } from './app.js';
 import { DAYS, DIR_TEXT } from './constants.js';
 import { dayUp } from './dates.js';
 import { db } from './data.js';
+import { goToWijzigen } from './ui-myweek.js';
 import { diffSchedules, mergePendingChanges } from './schedule-changes.js';
 
 // ---------- Coordinator test mode: view the app as a specific parent, without losing real rights ----------
@@ -44,6 +45,21 @@ export function stopImpersonate(){
   S.roosterMode='standard';
   renderAll();
   activateTab('beheer');
+}
+
+// Shown once a parent edits the Weekschema: that changes the default planning for every week.
+// One-off changes belong in Wijzigen, so the warning links there.
+export function weekschemaWarningHtml(){
+  return `<div class="devAlert" id="weekschemaWarn" role="status" aria-live="polite" style="margin:8px 0 0"${S.weekschemaWarn? '' : ' hidden'}>
+    <p class="devAlertTitle">${phIcon('warning')} ${t('profile.weekschema_waarschuwing_titel')}</p>
+    <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_waarschuwing_tekst')}</p>
+    <button type="button" class="btn small secondary" id="weekschemaToWijzigen" style="margin-top:8px">${phIcon('lightning')} ${t('profile.weekschema_naar_wijzigen')}</button>
+  </div>`;
+}
+
+// True when a form field belongs to the Weekschema (times or availability), not to name/phone/capacity.
+export function isWeekschemaField(id){
+  return /^me_(sch|av|bkH|bkT)_/.test(id||'');
 }
 
 export function familyFormHtml(prefix,f){
@@ -117,6 +133,7 @@ export function familyFormHtml(prefix,f){
     <div class="rowflex" style="margin-top:16px;align-items:baseline">
       <p style="margin:0;font-size:14px;font-weight:700">${t('profile.weekschema_beschikbaarheid_per_dag')}</p>
     </div>
+    ${prefix==='me'? weekschemaWarningHtml() : ''}
     <div class="grid5" style="margin-top:8px">${dayTabs}</div>
     ${dayDetail}
     ${hiddenOtherDays}`;
@@ -254,7 +271,7 @@ export function renderGateOrApp(){
     if(nav) nav.style.display='flex';
     gateDiv.style.display='none';
     const activeBtn=document.querySelector('nav button.active');
-    const activeTab=activeBtn? activeBtn.dataset.tab : 'schedule';
+    const activeTab=activeBtn? activeBtn.dataset.tab : 'myweek';
     ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
       const el=document.getElementById('tab-'+t);
       if(el) el.style.display=(t===activeTab)?'block':'none';
@@ -347,7 +364,14 @@ export function renderProfile(){
     const linked = !!S.impersonateFamilyId || !!(S.links[S.me] && S.links[S.me].familyId);
     if(linked){
       const card=box.querySelector('.card');
-      if(card) card.addEventListener('change', ()=>saveProfile());
+      if(card) card.addEventListener('change', e=>{
+        if(e && e.target && isWeekschemaField(e.target.id)){
+          S.weekschemaWarn = true;
+          const w=document.getElementById('weekschemaWarn'); if(w) w.hidden=false;
+        }
+        saveProfile();
+      });
+      const toW=document.getElementById('weekschemaToWijzigen'); if(toW) toW.onclick=()=>goToWijzigen(null);
       wireExclusiveAvailability('me');
       wireFamilyFormExtras('me', renderProfile);
       const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=()=>twoStepConfirm(ub,t('profile.zeker_tik_nogmaals_om_te'),async ()=>{

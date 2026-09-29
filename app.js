@@ -79,6 +79,7 @@ export function activateTab(tab){
   if(!btn) return;
   document.querySelectorAll('nav button[data-tab]').forEach(x=>{ x.classList.remove('active'); x.removeAttribute('aria-current'); });
   btn.classList.add('active'); btn.setAttribute('aria-current','page');
+  if(tab!=='profile') S.weekschemaWarn = false; // the Weekschema warning only lives while you stay in Mijn gezin
   if(document.getElementById('tab-gate').style.display!=='block'){
     ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
       const el=document.getElementById('tab-'+t);
@@ -92,7 +93,7 @@ export function chooseDefaultTab(){
   if(S.defaultTabChosen || !S.appReady) return;
   S.defaultTabChosen = true;
   S.roosterMode = S.canEdit? 'standard' : 'week';
-  if(!S.hashTabApplied) activateTab(S.canEdit? 'schedule' : 'myweek');
+  if(!S.hashTabApplied) activateTab('myweek'); // Mijn week is the home page for everyone
   renderSchedule();
 }
 

@@ -73,7 +73,8 @@ test('matchInfoHtml: an away match', () => {
 console.log('\n=== navigation ===');
 test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
   sampleParentState(); goToWijzigen('Di'); assert.equal(S.deviationDay, 'Di');
-  goToWijzigen(); assert.equal(S.deviationDay, null);
+  goToWijzigen(); assert.equal(S.deviationDay, 'Di'); // no day given: the open day stays
+  goToWijzigen(null); assert.equal(S.deviationDay, 'Di');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

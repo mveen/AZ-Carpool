@@ -25,6 +25,7 @@ test('S has the expected top-level fields with safe starting values', () => {
   assert.deepEqual(S.prefs, { rules: [] });
   assert.equal(S.settings.travelLeadMinutes, 60);
   assert.equal(S.roosterMode, 'week');
+  assert.equal(S.weekschemaWarn, false); // Mijn gezin: Weekschema warning starts hidden
 });
 test('coordEditId starts undefined (renderBeheer distinguishes "no editor" from "new family")', () => {
   assert.equal(S.coordEditId, undefined);

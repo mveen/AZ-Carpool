@@ -2,12 +2,12 @@
 import { t } from './i18n.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { activeDeviation, computeDepartureTime, effectiveCars, fam, girlName, isAvailable, seats } from './rides.js';
-import { carpoolFor, currentMatchList, docToMatch, matchCarCapacityState, matchCarpoolsOnDate, matchLabel, matchSlug, matchesNext8Days, suggestedMatchDeparture } from './matches.js';
+import { carpoolFor, currentMatchList, matchCarCapacityState, matchLabel, matchSlug, matchesNext8Days, suggestedMatchDeparture } from './matches.js';
 import { S } from './state.js';
-import { goToMatchCarpool, matchInfoHtml } from './ui-myweek.js';
+import { matchInfoHtml } from './ui-myweek.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildDayWhatsAppMessage, buildWhatsAppMessage } from './message-texts.js';
-import { DAYS, WHATSAPP_SVG } from './constants.js';
+import { DAYS, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey, weekRangeLabel } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 
@@ -149,58 +149,39 @@ export function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
   if(!box) return;
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('deviation.wijzigen')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; return; }
-  if(!S.deviationDay){
-    const changedDays = DAYS.filter(([k])=>activeDeviation(k,'heen')||activeDeviation(k,'terug')).map(([k])=>k);
-    box.innerHTML = `<div class="devAlert">
+  // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
+  if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKey || 'Ma';
+  const day = S.deviationDay;
+  const dayLabel = DAYS.find(([k])=>k===day)[1];
+  const changedDays = DAYS.filter(([k])=>activeDeviation(k,'heen')||activeDeviation(k,'terug')).map(([k])=>k);
+  const pillsHtml = DAYS.map(([k,label])=>{
+    const changed = changedDays.includes(k);
+    const isActive = k===day;
+    return `<button type="button" class="daypill devDayPill${isActive?' active':''}${changed?' changed':''}" data-devday="${k}" aria-pressed="${isActive}" aria-label="${label} ${dateForWeekday(k).getDate()}${changed?t('deviation.gewijzigd'):''}">
+      <span class="daypillTop">${dayUp(k)}</span>
+      <span class="daypillSub">${dateForWeekday(k).getDate()}</span>
+      ${k===todayKey? t('schedule.span_class_daypilltoday_aria_hidden') : ''}
+      ${changed? '<span class="devDayDot" aria-hidden="true"></span>' : ''}
+    </button>`;
+  }).join('');
+  box.innerHTML = `<div class="devAlert">
       <p class="devAlertTitle">${phIcon('lightning')} ${t('deviation.wijzigingen')} ${weekRangeLabel()}</p>
       <p class="devAlertBody">${t('deviation.eenmalige_ritaanpassing_voor_deze_week')}</p>
     </div>
-    <div class="card">
-      <h2>${t('deviation.kies_een_dag')}</h2>
-      <div class="grid5">${DAYS.map(([k,label])=>{
-        const changed = changedDays.includes(k);
-        const hasMatch = matchCarpoolsOnDate(dateForWeekday(k)).length>0;
-        return `<button type="button" class="btn secondary devDayBtn${changed?' changed':''}" data-devday="${k}" style="margin-top:0;position:relative" aria-label="${label} ${dateForWeekday(k).getDate()}${changed?t('deviation.gewijzigd'):''}${hasMatch?t('deviation.wedstrijdcarpool'):''}">${changed?t('deviation.span_class_devdaydot_aria_hidden'):''}<span style="display:block;font-weight:700">${dayUp(k)}</span><span style="display:block;font-size:11px;opacity:.85">${dateForWeekday(k).getDate()}${hasMatch? ` <span style="color:var(--match)" title="${t('deviation.wedstrijdcarpool_op_deze_dag')}">${phIcon('soccer')}</span>`:''}</span></button>`;
-      }).join('')}</div>
-      ${changedDays.length? `<p class="muted" style="margin:8px 0 0;display:flex;align-items:center;gap:6px"><span class="devDayDot" style="position:static" aria-hidden="true"></span> ${t('deviation.deze_week_gewijzigd')}</p>` : ''}
-      ${lastUpdateFooter(S.lastUpdateDeviation)}
-    </div>
-    ${renderWeekendMatchCarpoolCard()}`;
-    document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
-    wireWeekendMatchCarpool();
-    return;
-  }
-  const dayLabel = DAYS.find(([k])=>k===S.deviationDay)[1];
-  box.innerHTML = `<div class="devAlert">
-      <div class="rowflex"><p class="devAlertTitle" style="margin:0">${phIcon('lightning')} ${t('deviation.wijziging')} ${dayLabel}</p>
-        <button type="button" class="btn small secondary" id="devBackBtn">${phIcon('arrow-left')} ${t('deviation.andere_dag')}</button></div>
-      <p class="devAlertBody">${t('deviation.wijzigingen_hier_gelden_alleen_voor')} ${dayLabel} ${t('deviation.deze_week_en_verdwijnen_dit')}</p>
+    <div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>
+    ${changedDays.length? `<p class="muted" style="margin:-6px 2px 10px;display:flex;align-items:center;gap:6px"><span class="devDayDot" style="position:static" aria-hidden="true"></span> ${t('deviation.deze_week_gewijzigd')}</p>` : ''}
+    <div class="daysection"><h3>${dayLabel}</h3>
+      <p class="muted" style="margin:0 0 8px">${t('deviation.wijzigingen_hier_gelden_alleen_voor')} ${dayLabel} ${t('deviation.deze_week_en_verdwijnen_dit')}</p>
       ${whatsAppButtonHtml()}
+      ${renderDevDirection(day,'heen')}
+      ${renderDevDirection(day,'terug')}
     </div>
-    ${renderDevMatchCarpoolsReadOnly(S.deviationDay)}
-    ${renderDevDirection(S.deviationDay,'heen')}
-    ${renderDevDirection(S.deviationDay,'terug')}
-    ${S.lastUpdateDeviation? `<div class="card">${lastUpdateFooter(S.lastUpdateDeviation)}</div>` : ''}`;
-  const backBtn=document.getElementById('devBackBtn');
-  if(backBtn) backBtn.onclick=()=>{ S.deviationDay=null; hapticTap(); renderDeviationTab(); };
-  const waDay = S.deviationDay;
-  wireWhatsAppButton(null, ()=>buildDayWhatsAppMessage(waDay));
-  box.querySelectorAll('[data-gomatchcarpool]').forEach(b=>b.onclick=()=>goToMatchCarpool());
+    ${renderWeekendMatchCarpoolCard()}
+    ${lastUpdateFooter(S.lastUpdateDeviation)}`;
+  document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
+  wireWhatsAppButton(null, ()=>buildDayWhatsAppMessage(day));
+  wireWeekendMatchCarpool();
   attachDeviationHandlers();
-}
-
-// Match carpools that happen to fall on this weekday — shown for context only; they are
-// managed in "Wedstrijdcarpool komende dagen" on the day-picker screen, not here.
-export function renderDevMatchCarpoolsReadOnly(day){
-  const list = matchCarpoolsOnDate(dateForWeekday(day));
-  if(!list.length) return '';
-  const myId = myFamilyId();
-  return `<div class="card" style="border-color:var(--match)">
-    <div class="rowflex"><span class="matchTag">${phIcon('soccer')} ${t('deviation.wedstrijdcarpool_2')}</span><span class="muted" style="font-size:11px;display:inline-flex;align-items:center;gap:4px">${phIcon('eye')} ${t('deviation.alleen_lezen')}</span></div>
-    <p class="muted" style="margin:8px 0 0">${t('deviation.extra_ritten_naar_een_wedstrijd')}</p>
-    ${list.map(([,d])=>`<div class="group matchGroup">${matchInfoHtml(docToMatch(d))}${d.cars.map(c=>matchCarRowHtml(c,{highlightId:myId})).join('')}</div>`).join('')}
-    <button type="button" class="btn small secondary" data-gomatchcarpool="1" style="margin-top:4px">${phIcon('soccer')} ${t('deviation.wedstrijdcarpool_aanpassen')}</button>
-  </div>`;
 }
 
 export function renderDevDirection(day,direction){

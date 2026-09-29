@@ -13,9 +13,10 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot } from './test-support.js';
 import { S } from './state.js';
+import { todayKey } from './constants.js';
 import {
   renderDeviationTab, matchCarRowHtml, whatsAppButtonHtml, wireWhatsAppButton, sendWhatsAppUpdate, renderWeekendMatchCarpoolCard,
-  renderDevMatchCarpoolsReadOnly, renderDevDirection, updateMatchCarCapacityWarning,
+  renderDevDirection, updateMatchCarCapacityWarning,
 } from './ui-deviation.js';
 
 const dom = installFakeDom();
@@ -27,29 +28,67 @@ const matchCarpools = { ev_cal1__e1: { calendarId: 'cal1', eventId: 'e1', teamLa
 const liveMatch = { calendarId: 'cal1', eventId: 'e2', teamLabel: 'AZ O15-1', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst', start: new Date('2026-10-01T18:00:00+02:00') };
 function render(state, patch) { withFakeNow(NOW, () => { state(patch); renderDeviationTab(); }); return dom.html('tab-deviation'); }
 
-console.log('=== day picker ===');
-test('shows the week and a button per day, marking days that were changed this week', () => {
-  const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds });
+console.log('=== day pills (same design as Rooster) ===');
+test('shows the week, one pill per day and the content of one day straight away', () => {
+  const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: null });
   const s = text(html);
   assert.match(s, /^Wijzigingen · Week 40 · 28 sep – 2 okt Eenmalige ritaanpassing voor deze week/);
-  assert.match(s, /MA 28 DI 29 WO 30 DO 1 VR 2 = deze week gewijzigd/);
-  assert.match(html, /devDayBtn changed" data-devday="Di"|data-devday="Di"[^>]*changed|changed[^>]*data-devday="Di"/);
   assert.equal((html.match(/data-devday=/g) || []).length, 5);
-  expectSnapshot('ui-deviation', 'parent day picker with a live match', html);
+  assert.match(html, /class="daypills"/);
+  assert.doesNotMatch(html, /devDayBtn|grid5/);            // the old day tiles are gone
+  const day = todayKey || 'Ma';
+  assert.match(html, new RegExp(`daypill devDayPill active" data-devday="${day}"`)); // today (or Monday) is open by default
+  assert.match(html, /Heen · Aalsmeer → Alkmaar/);          // day content is loaded without an extra tap
+  assert.equal(S.deviationDay, day);
 });
+test('a day that was changed this week is marked on its pill', () => {
+  const html = render(sampleParentState, { deviationDay: 'Ma' });
+  assert.match(html, /devDayPill changed" data-devday="Di"/);
+  assert.match(text(html), /= deze week gewijzigd/);
+});
+test('tapping a pill loads that day (like Rooster)', () => {
+  render(sampleParentState, { deviationDay: 'Ma' });
+  const btn = { dataset: { devday: 'Vr' } };
+  const all = dom.doc.querySelectorAll; dom.doc.querySelectorAll = sel => sel === '[data-devday]' ? [btn] : all(sel);
+  withFakeNow(NOW, () => { renderDeviationTab(); btn.onclick(); });
+  dom.doc.querySelectorAll = all;
+  assert.equal(S.deviationDay, 'Vr');
+  assert.match(text(dom.html('tab-deviation')), /Vrijdag Wijzigingen hier gelden alleen voor Vrijdag/);
+  expectSnapshot('ui-deviation', 'parent day pills with a live match', render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
+});
+test('an unknown day falls back to today (or Monday)', () => {
+  render(sampleParentState, { deviationDay: 'Zo' });
+  assert.equal(S.deviationDay, todayKey || 'Ma');
+});
+
+console.log('\n=== Wedstrijdcarpool is a separate section, not tied to a day ===');
 test('upcoming matches can get a carpool from any parent', () => {
-  const s = text(render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds }));
+  const s = text(render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
   assert.match(s, /Wedstrijdcarpool komende dagen Zet een carpool op voor een wedstrijd\./);
   assert.match(s, /AZ O15-1 \(Uit\) vs Ajax O15-1 donderdag 1 oktober · 18:00 · De Toekomst Nog geen carpool ingesteld\. \+ Auto toevoegen/);
 });
+test('the section shows the same content whichever day is open, after the day content', () => {
+  const opts = { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds };
+  const card = h => h.slice(h.indexOf('id="matchCarpoolCard"'));
+  const ma = render(sampleParentState, { ...opts, deviationDay: 'Ma' });
+  const vr = render(sampleParentState, { ...opts, deviationDay: 'Vr' });
+  assert.equal(card(ma), card(vr));
+  assert.ok(ma.indexOf('id="matchCarpoolCard"') > ma.indexOf('Terug · Alkmaar'));
+});
+test('a day no longer shows a read-only match card of its own', () => {
+  const home = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', start: new Date(kick) };
+  const html = render(sampleParentState, { matchCarpools, matchFeeds: feeds, matches: [home], matchesSource: 'live', deviationDay: 'Vr' });
+  assert.doesNotMatch(html, /data-gomatchcarpool|Alleen lezen/);
+});
 test('without any match there is a friendly empty message', () => {
-  assert.match(text(render(sampleParentState, { matchesSource: 'live' })), /Geen wedstrijden/);
+  assert.match(text(render(sampleParentState, { matchesSource: 'live', deviationDay: 'Ma' })), /Geen wedstrijden/);
 });
 
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
-  assert.match(s, /^Wijziging — Dinsdag Andere dag Wijzigingen hier gelden alleen voor Dinsdag deze week en verdwijnen dit weekend vanzelf\. Deel update via WhatsApp/);
+  assert.match(s, / Dinsdag Wijzigingen hier gelden alleen voor Dinsdag deze week en verdwijnen dit weekend vanzelf\. Deel update via WhatsApp/);
+  assert.doesNotMatch(s, /Andere dag/);   // no separate day picker screen any more
   assert.match(s, /Heen · Aalsmeer → Alkmaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
   assert.match(s, /Terug naar standaard rooster/);
   assert.match(s, /Terug · Alkmaar → Aalsmeer Geen ritten gepland in het standaard Rooster voor dit moment\./);
@@ -83,11 +122,6 @@ test('the weekend carpool card lists the stored cars under their match', () => {
   const home = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', start: new Date(kick) };
   const s = text(render(sampleParentState, { matchCarpools, matchFeeds: feeds, matches: [home], matchesSource: 'live' }));
   assert.match(s, /AZ O15-1 \(Thuis\) vs Hoorn O15-2 zaterdag 3 oktober · 10:30 · Sportpark Hoorn/); assert.match(s, /09:15/); assert.match(s, /Jan Jansen/);
-});
-test('the read-only match list of a day shows carpools that already exist', () => {
-  sampleParentState({ matchCarpools, matchFeeds: feeds });
-  const html = withFakeNow(NOW, () => renderDevMatchCarpoolsReadOnly('Vr'));
-  assert.equal(typeof html, 'string');
 });
 test('the card function returns html for the current state', () => {
   sampleParentState({ matchCarpools, matchFeeds: feeds });

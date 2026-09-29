@@ -48,6 +48,7 @@ export const S = {
   defaultTabChosen: false,
   formSelectedDay: {me:'Ma', coord:'Ma'},
   deviationDay: null,
+  weekschemaWarn: false,
   lastDeviationEditDay: null,
   coordEditId: undefined,
   selectedShiftKey: 'Ma_heen',

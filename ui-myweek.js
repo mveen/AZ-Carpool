@@ -200,7 +200,8 @@ export function renderMyWeek(){
 
 // Jump to the Wijzigen tab, optionally straight into one day.
 export function goToWijzigen(day){
-  S.deviationDay = day || null; S.openMatchCarpoolForm = null;
+  if(day) S.deviationDay = day; // no day given: keep the day that was open
+  S.openMatchCarpoolForm = null;
   renderDeviationTab(); activateTab('deviation'); hapticTap();
 }
 

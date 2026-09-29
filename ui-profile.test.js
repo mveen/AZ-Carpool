@@ -15,7 +15,7 @@ import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, 
 import { S } from './state.js';
 import {
   renderImpersonateBanner, startImpersonate, stopImpersonate, familyFormHtml, readFamilyForm, renderClaimCoordinator,
-  renderGateOrApp, renderGate, submitGate, renderProfile, saveProfile,
+  renderGateOrApp, renderGate, submitGate, renderProfile, saveProfile, weekschemaWarningHtml, isWeekschemaField,
 } from './ui-profile.js';
 
 const dom = installFakeDom();
@@ -113,6 +113,42 @@ test('the form html holds the parent, daughter and capacity fields for the chose
   resetState({});
   const html = familyFormHtml('zz', { parentName: 'A', girlName: 'B', capacity: 5, schedule: {}, availability: {} });
   assert.match(html, /id="zz_parentName"/); assert.match(html, /id="zz_girlName"/); assert.match(html, /id="zz_capacity"/);
+});
+
+console.log('\n=== Weekschema warning ===');
+test('the warning is in the page but hidden until the Weekschema is edited', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekschemaWarn: false });
+  withFakeNow(NOW, () => renderProfile());
+  const html = dom.html('tab-profile');
+  assert.match(html, /id="weekschemaWarn"[^>]* hidden>/);
+  assert.match(text(html), /Je past je vaste weekschema aan Dit geldt voor elke week/);
+  assert.match(html, /id="weekschemaToWijzigen"/);
+});
+test('it shows (not hidden) once S.weekschemaWarn is set, and tells the parent to use Wijzigen for one-off changes', () => {
+  sampleParentState({ weekschemaWarn: true });
+  const html = weekschemaWarningHtml();
+  assert.doesNotMatch(html, / hidden>/);
+  assert.match(text(html), /alleen deze week\? Gebruik dan Wijzigen\./);
+});
+test('only Weekschema fields (times, availability, back-up) trigger it — not name, phone or seats', () => {
+  ['me_sch_Ma_heen', 'me_sch_Vr_terug', 'me_av_Di_heen', 'me_av_Wo_terug', 'me_bkH_Do', 'me_bkT_Vr'].forEach(id => assert.equal(isWeekschemaField(id), true, id));
+  ['me_parentName', 'me_girlName', 'me_parentPhone1', 'me_capacity', 'coord_sch_Ma_heen', '', undefined].forEach(id => assert.equal(isWeekschemaField(id), false, String(id)));
+});
+test('editing a time shows the warning without a re-render; the link opens Wijzigen', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekschemaWarn: false });
+  let listener = null;
+  const box = dom.el('tab-profile'); const origQS = box.querySelector;
+  box.querySelector = sel => (sel === '.card' ? { addEventListener: (type, fn) => { if (type === 'change') listener = fn; } } : origQS(sel));
+  withFakeNow(NOW, () => renderProfile());
+  box.querySelector = origQS;
+  assert.equal(typeof listener, 'function');
+  listener({ target: { id: 'me_parentName' } });
+  assert.equal(S.weekschemaWarn, false);                       // name change: no warning
+  listener({ target: { id: 'me_sch_Ma_heen' } });
+  assert.equal(S.weekschemaWarn, true);
+  assert.equal(dom.el('weekschemaWarn').hidden, false);
+  withFakeNow(NOW, () => dom.el('weekschemaToWijzigen').onclick());
+  assert.match(text(dom.html('tab-deviation')), /Wijzigingen/);
 });
 
 console.log('\n=== saving the profile ===');

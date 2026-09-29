@@ -296,19 +296,15 @@ table.avail th,table.avail td{padding:6px 4px}
 </div>
 
 <main>
-  <div id="tab-schedule"></div>
-  <div id="tab-myweek" style="display:none"></div>
+  <div id="tab-schedule" style="display:none"></div>
+  <div id="tab-myweek"></div>
   <div id="tab-deviation" style="display:none"></div>
   <div id="tab-profile" style="display:none"></div>
   <div id="tab-beheer" style="display:none"></div>
   <div id="tab-gate" style="display:none"></div>
 </main>
 <nav id="bottomnav" aria-label="Hoofdnavigatie" data-i18n-aria-label="nav.main">
-  <button type="button" data-tab="schedule" class="navtab active"><span class="navicon">
-      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
-      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="currentColor"/><rect x="40" y="88" width="176" height="20" fill="var(--card)"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
-    </span><span class="navlabel" data-i18n="nav.rooster">Rooster</span><span id="navRoosterBadge" class="navbadge" style="display:none" aria-live="polite"></span></button>
-  <button type="button" data-tab="myweek" class="navtab"><span class="navicon">
+  <button type="button" data-tab="myweek" class="navtab active"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="96" r="52" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="128" cy="96" r="52" fill="currentColor"/><path d="M24 224c0-48 32-80 104-80s104 32 104 80Z" fill="currentColor"/></svg>
     </span><span class="navlabel" data-i18n="nav.myweek">Mijn week</span></button>
@@ -316,6 +312,10 @@ table.avail th,table.avail td{padding:6px 4px}
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="currentColor"/></svg>
     </span><span class="navlabel" data-i18n="nav.deviation">Wijzigen</span></button>
+  <button type="button" data-tab="schedule" class="navtab"><span class="navicon">
+      <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+      <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="currentColor"/><rect x="40" y="88" width="176" height="20" fill="var(--card)"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
+    </span><span class="navlabel" data-i18n="nav.rooster">Rooster</span><span id="navRoosterBadge" class="navbadge" style="display:none" aria-live="polite"></span></button>
   <button type="button" data-tab="profile" class="navtab"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="none" stroke="currentColor" stroke-width="16"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M162 88a44 44 0 0 1 0 88" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><path d="M184 148c26 8 40 32 40 68" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><circle cx="88" cy="100" r="44" fill="currentColor"/><path d="M24 216c0-40 28-68 64-68s64 28 64 68Z" fill="currentColor"/><path d="M162 88a44 44 0 0 1 0 88 44 44 0 0 1-10-1.2 68 68 0 0 0 18-42.8 68 68 0 0 0-18-42.8A44 44 0 0 1 162 88Z" fill="currentColor"/><path d="M184 148c26 8 40 32 40 68h-40Z" fill="currentColor"/></svg>
