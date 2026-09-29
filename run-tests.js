@@ -16,12 +16,13 @@ const NOT_MODULES = new Set(['fake-db.js', 'run-tests.js', 'firebase-config.js',
 // A module whose tests live in another module's test file.
 const TEST_FOR = { 'texts-nl.js': 'i18n.test.js' };
 
+const TESTS = path.join(dir, 'tests');
 const files = readdirSync(dir);
-const testFiles = files.filter(f => f.endsWith('.test.js')).sort();
+const testFiles = readdirSync(TESTS).filter(f => f.endsWith('.test.js')).sort();
 const modules = files.filter(f => f.endsWith('.js') && !f.endsWith('.test.js') && !f.startsWith('test-') && !NOT_MODULES.has(f)).sort();
 const testOf = m => TEST_FOR[m] || m.replace(/\.js$/, '.test.js');
-const hash = f => createHash('sha256').update(readFileSync(path.join(dir, f))).digest('hex');
-const lockNow = () => Object.fromEntries(modules.map(m => [m, { module: hash(m), test: existsSync(path.join(dir, testOf(m))) ? hash(testOf(m)) : null }]));
+const hash = f => createHash('sha256').update(readFileSync(path.join(f.endsWith('.test.js') ? TESTS : dir, f))).digest('hex');
+const lockNow = () => Object.fromEntries(modules.map(m => [m, { module: hash(m), test: existsSync(path.join(TESTS, testOf(m))) ? hash(testOf(m)) : null }]));
 
 if (process.argv.includes('--lock')) {
   const missing = modules.filter(m => !testFiles.includes(testOf(m)));
@@ -34,7 +35,7 @@ if (process.argv.includes('--lock')) {
 let failedFiles = 0, totalPassed = 0, totalFailed = 0;
 console.log('Running', testFiles.length, 'test files\n');
 for (const f of testFiles) {
-  const r = spawnSync(process.execPath, [f], { cwd: dir, encoding: 'utf8', env: { ...process.env, TZ: 'Europe/Amsterdam' }, timeout: 120000 });
+  const r = spawnSync(process.execPath, [f], { cwd: TESTS, encoding: 'utf8', env: { ...process.env, TZ: 'Europe/Amsterdam' }, timeout: 120000 });
   const out = (r.stdout || '') + (r.stderr || '');
   const m = out.match(/(\d+) passed, (\d+) failed/g);
   const last = m ? m[m.length - 1].match(/(\d+) passed, (\d+) failed/) : null;
