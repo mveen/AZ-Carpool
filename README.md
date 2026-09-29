@@ -41,7 +41,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `package.json` | `npm test`, `npm run lock` | |
 | `firebase-config.js` | Firebase config + Google Calendar API key (fill in once). **No secret keys**: the OpenRouteService key is in the database (Beheer → *API-sleutels*) | never overwrite |
 | `firebase/firestore.rules` | Firestore security rules | paste into Firebase console → Rules |
-| `manifest.json`, `service-worker.js`, `icon-192.png`, `icon-512.png` | PWA (install on home screen) | once; `service-worker.js` changes when modules are added |
+| `manifest.json`, `service-worker.js`, `icon-*.png`, `apple-touch-icon.png`, `favicon-32.png`, `icon.svg` (AZ Carpool logo) | PWA (install on home screen) | once; `service-worker.js` changes when modules are added |
 | `backups/` | Older versions for rollback | not needed on the site |
 
 All `*.test.js` files live in `tests/`; the site does not use that folder. Every other file stays in the repo root because the live site loads it from there.
