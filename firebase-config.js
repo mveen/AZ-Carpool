@@ -30,3 +30,10 @@ export const firebaseConfig = {
 // This key is NOT secret either (same reasoning as firebaseConfig above) — it only grants
 // read access to whichever calendars are public, nothing account-wide.
 export const googleCalendarApiKey = "AIzaSyBxLbG-osWKvzzmPS_njfHvtFjxS-i5urg";
+
+// OpenRouteService API key (free), used to calculate the projected car distance of away matches.
+// openrouteservice.org -> sign up -> Dashboard -> Request a token (type "Standard"). The free tier
+// (about 2000 route requests a day) is plenty for max. 20 users: each match is calculated once and stored.
+// Like the keys above this key is not secret in the sense of account access, but do not share it elsewhere.
+// Leave the placeholder as it is to switch the distance feature off.
+export const openRouteServiceApiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImRhOTFmODY3Y2I3ODQ1MjNiMjg5MDU3NTBiZTExOTMzIiwiaCI6Im11cm11cjY0In0=";
