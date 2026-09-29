@@ -9,6 +9,7 @@ import { setStatus, showToast, updateStatusLine } from './ui-common.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
+import { renderMatchesTab } from './ui-matches.js';
 import { calculateMatchDistances, currentMatchList, loadAllMatches } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, effectiveCars, eligibleDrivers, groupsFor } from './rides.js';
@@ -160,7 +161,7 @@ export function startDataListeners(){
     db.collection("matchCarpools").onSnapshot(snap=>{
       S.matchCarpools={}; snap.docs.forEach(d=>S.matchCarpools[d.id]=d.data());
       purgeStaleMatchCarpools();
-      renderDeviationTab(); renderMyWeek();
+      renderMatchesTab(); renderMyWeek();
     }, err=>{});
     db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ S.lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
       err=>{});
@@ -174,7 +175,7 @@ export function startDataListeners(){
     }, err=>{});
     db.doc("settings/locations").onSnapshot(snap=>{ S.locationsDoc = snap.exists? snap.data() : null; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
       err=>{});
-    db.doc("settings/matchDistances").onSnapshot(snap=>{ S.matchDistances = snap.exists? (snap.data()||{}) : {}; S.matchDistancesLoaded = true; renderMyWeek(); renderDeviationTab(); calculateMatchDistances(currentMatchList()); },
+    db.doc("settings/matchDistances").onSnapshot(snap=>{ S.matchDistances = snap.exists? (snap.data()||{}) : {}; S.matchDistancesLoaded = true; renderMyWeek(); renderMatchesTab(); calculateMatchDistances(currentMatchList()); },
       err=>{});
     db.doc("settings/matchCache").onSnapshot(snap=>{
       if(snap.exists){
@@ -183,7 +184,7 @@ export function startDataListeners(){
         S.cachedMatches = (d.matches||[]).filter(e=>e.calendarId).map(e=>({calendarId:e.calendarId, eventId:e.eventId||'', teamLabel:e.teamLabel, summary:e.summary, location:e.location, start:new Date(e.startMs)}));
         S.cachedMatchesAt = d.fetchedAt||null;
       }
-      renderMyWeek(); renderDeviationTab();
+      renderMyWeek(); renderMatchesTab();
     }, err=>{});
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   finally{ db.setListenerSink(null); }

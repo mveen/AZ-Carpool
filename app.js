@@ -10,6 +10,7 @@ import { renderSchedule } from './ui-schedule.js';
 import { renderBeheer } from './ui-beheer.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
+import { renderMatchesTab } from './ui-matches.js';
 import { todayKey } from './constants.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
@@ -71,7 +72,7 @@ export function afterLinksChanged(){
   renderAll();
 }
 
-export function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderImpersonateBanner(); adjustMainPadding(); }
+export function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); adjustMainPadding(); }
 
 // Switches the visible tab; every switch starts at the top of the new tab.
 export function activateTab(tab){
@@ -81,7 +82,7 @@ export function activateTab(tab){
   btn.classList.add('active'); btn.setAttribute('aria-current','page');
   if(tab!=='profile') S.weekschemaWarn = false; // the Weekschema warning only lives while you stay in Mijn gezin
   if(document.getElementById('tab-gate').style.display!=='block'){
-    ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{
+    ['schedule','myweek','deviation','profile','matches','beheer'].forEach(t=>{
       const el=document.getElementById('tab-'+t);
       if(el) el.style.display = (tab===t)?'block':'none';
     });

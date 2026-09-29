@@ -3,9 +3,7 @@ import { t } from './i18n.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { placeFor } from './locations.js';
 import { activeDeviation, computeDepartureTime, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats } from './rides.js';
-import { carpoolFor, currentMatchList, matchCarCapacityState, matchLabel, matchSlug, matchesNext8Days, suggestedMatchDeparture } from './matches.js';
 import { S } from './state.js';
-import { matchInfoHtml } from './ui-myweek.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, buildWhatsAppMessage } from './message-texts.js';
 import { DAYS, WA_ICON_SMALL, WHATSAPP_SVG, todayKey } from './constants.js';
@@ -13,125 +11,6 @@ import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey,
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { waPhone } from './ui-schedule.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
-
-// One car of a match carpool. `editable` adds the delete button (Afwijking only); `highlightId`
-// tints the row when that family drives it or has its daughter in it.
-export function matchCarRowHtml(c, opts){
-  opts = opts||{};
-  const girlIds = c.girlIds||[];
-  const driver = c.driverFamilyId? esc(fam(c.driverFamilyId).parentName) : t('deviation.nog_geen_chauffeur');
-  const cap = c.driverFamilyId? seats(fam(c.driverFamilyId)) : null;
-  const over = cap!=null && girlIds.length>cap;
-  const mine = !!opts.highlightId && (c.driverFamilyId===opts.highlightId || girlIds.includes(opts.highlightId));
-  const overHtml = over? ` <span class="fitbad" style="white-space:nowrap" title="${t('deviation.meer_passagiers_dan_plekken')}">${phIcon('warning')} ${girlIds.length}/${cap}</span>` : '';
-  const delHtml = opts.editable? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="${t('deviation.verwijder_carpool')}">${phIcon('trash')}</button>` : '';
-  return `<div class="matchCarRow${mine?' mine':''}">
-    <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
-    <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${girlIds.map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}</span>
-    ${delHtml}
-  </div>`;
-}
-
-export function renderWeekendMatchCarpoolCard(){
-  const weekendMatches = matchesNext8Days(currentMatchList());
-  S.weekendMatchBySlug = {};
-  if(!weekendMatches.length){
-    return `<div class="card" id="matchCarpoolCard"><h2>${t('deviation.wedstrijdcarpool_komende_dagen')}</h2><p class="muted">${t('deviation.geen_wedstrijden_gevonden')}</p></div>`;
-  }
-  const allFamilies = Object.entries(S.families);
-  const matchesHtml = weekendMatches.map(m=>{
-    const slug = matchSlug(m);
-    S.weekendMatchBySlug[slug] = m;
-    const cp = carpoolFor(m);
-    const cars = (cp.doc && cp.doc.cars) || [];
-    const carsHtml = cars.length? cars.map((c,idx)=>matchCarRowHtml(c,{editable:true, slug:cp.id, idx})).join('') : t('deviation.p_class_muted_style_font');
-    const isOpen = S.openMatchCarpoolForm===slug;
-    let formHtml;
-    if(isOpen){
-      const suggestedDep = suggestedMatchDeparture(m.start);
-      const girlOptions = allFamilies.map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}">${esc(f.girlName||f.parentName||id)}</label>`).join('');
-      const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}">${esc(f.parentName)} (${seats(f)} ${seats(f)===1?t('common.plek'):t('common.plekken')})</option>`).join('');
-      formHtml = `<div class="dayFormCard" style="margin-top:8px">
-        <label style="margin-top:0">${t('deviation.chauffeur')}</label>
-        <select id="matchCarDriver_${slug}"><option value="">${t('deviation.kies')}</option>${driverOptions}</select>
-        <label>${t('deviation.welke_passagiers')} <span id="matchCarCount_${slug}"></span></label>
-        <div>${girlOptions}</div>
-        <div id="matchCarCapWarn_${slug}" class="matchCapWarn" role="status" aria-live="polite"></div>
-        <label>${t('deviation.vertrektijd')}</label>
-        <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
-        <button type="button" class="btn small secondary" data-savematchcar="${slug}">${t('deviation.opslaan')}</button>
-        <button type="button" class="btn small secondary" data-cancelmatchcar="${slug}">${t('common.annuleren')}</button>
-      </div>`;
-    } else {
-      formHtml = `<button type="button" class="btn small secondary" data-addmatchcar="${slug}" style="margin-top:6px">${t('deviation.auto_toevoegen')}</button>`;
-    }
-    return `<div class="group matchGroup">${matchInfoHtml(m)}${carsHtml}${formHtml}</div>`;
-  }).join('');
-  return `<div class="card" id="matchCarpoolCard">
-    <h2>${t('deviation.wedstrijdcarpool_komende_dagen')}</h2>
-    <p class="muted">${t('deviation.zet_een_carpool_op_voor')}</p>
-    ${matchesHtml}
-  </div>`;
-}
-
-export function updateMatchCarCapacityWarning(slug){
-  const st = matchCarCapacityState(slug);
-  const cnt=document.getElementById('matchCarCount_'+slug);
-  if(cnt) cnt.textContent = st.n? '('+t('deviation.gekozen',{n:st.n})+(st.cap!=null?` / ${st.cap} ${st.cap===1?t('common.plek'):t('common.plekken')}`:'')+')' : '';
-  const warn=document.getElementById('matchCarCapWarn_'+slug);
-  if(warn) warn.innerHTML = st.over
-    ? t('deviation.heeft_maar_je_hebt_passagiers', { p1: phIcon('warning'), p2: esc(fam(st.driverId).parentName), p3: st.cap, p4: st.cap===1?'passagiersplek':'passagiersplekken', p5: st.n })
-    : '';
-  // Any change to the selection cancels a pending "toch opslaan" confirmation.
-  const saveBtn=document.querySelector(`[data-savematchcar="${slug}"]`);
-  if(saveBtn && saveBtn.dataset.confirmOver==='1'){ saveBtn.dataset.confirmOver=''; saveBtn.textContent=t('deviation.opslaan'); }
-}
-
-export function wireWeekendMatchCarpool(){
-  if(S.openMatchCarpoolForm){
-    const slug=S.openMatchCarpoolForm;
-    const driverSel=document.getElementById('matchCarDriver_'+slug);
-    if(driverSel) driverSel.onchange=()=>updateMatchCarCapacityWarning(slug);
-    document.querySelectorAll('.matchCarGirlPick').forEach(c=>c.onchange=()=>updateMatchCarCapacityWarning(slug));
-  }
-  document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=b.dataset.addmatchcar; hapticTap(); renderDeviationTab(); });
-  document.querySelectorAll('[data-cancelmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=null; renderDeviationTab(); });
-  document.querySelectorAll('[data-savematchcar]').forEach(b=>b.onclick=async ()=>{
-    const slug=b.dataset.savematchcar;
-    const driverSel=document.getElementById('matchCarDriver_'+slug);
-    const timeInp=document.getElementById('matchCarTime_'+slug);
-    const girlIds=[...document.querySelectorAll('.matchCarGirlPick:checked')].map(c=>c.value);
-    if(!driverSel || !driverSel.value){ showToast(t('deviation.kies_een_chauffeur')); return; }
-    if(!girlIds.length){ showToast(t('deviation.kies_minstens_1_dochter')); return; }
-    const capState = matchCarCapacityState(slug);
-    if(capState.over && b.dataset.confirmOver!=='1'){
-      b.dataset.confirmOver='1'; b.textContent=t('deviation.toch_opslaan');
-      showToast(t('deviation.te_veel_passagiers_tik_nogmaals', { p1: capState.n, p2: capState.cap }), {icon:'warning'});
-      return;
-    }
-    const m = S.weekendMatchBySlug[slug];
-    if(!m){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
-    const cp = carpoolFor(m);
-    const newCar = {driverFamilyId:driverSel.value, girlIds, departureTime:timeInp.value};
-    const cars = cp.doc? [...(cp.doc.cars||[]), newCar] : [newCar];
-    try{
-      await db.doc("matchCarpools/"+slug).set({matchSlug:slug, calendarId:m.calendarId||'', eventId:m.eventId||'', teamLabel:matchLabel(m), summary:m.summary, location:m.location||'', startMs:m.start.getTime(), cars});
-      // An old name-keyed document is moved over to the ID-keyed one.
-      if(cp.doc && cp.id!==slug){ try{ await db.doc("matchCarpools/"+cp.id).delete(); }catch(e){} }
-      S.openMatchCarpoolForm=null;
-      showToast(t('deviation.carpool_toegevoegd'));
-    }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
-  });
-  document.querySelectorAll('[data-delmatchcar]').forEach(b=>b.onclick=async ()=>{
-    const [slug,idxStr]=b.dataset.delmatchcar.split('|'); const idx=+idxStr;
-    const existing=S.matchCarpools[slug]; if(!existing) return;
-    const cars = existing.cars.filter((_,i)=>i!==idx);
-    try{
-      if(cars.length) await db.doc("matchCarpools/"+slug).set({...existing, cars});
-      else await db.doc("matchCarpools/"+slug).delete();
-    }catch(e){ showToast(t('beheer.verwijderen_mislukt')+(e&&e.message||e)); }
-  });
-}
 
 export function sendWhatsAppUpdate(buildFn){
   const msg = (typeof buildFn==='function'? buildFn : buildWhatsAppMessage)();
@@ -179,11 +58,9 @@ export function renderDeviationTab(){
       ${renderDevDirection(day,'terug')}
       ${conclusieCardHtml(day)}
     </div>
-    ${renderWeekendMatchCarpoolCard()}
     ${lastUpdateFooter(S.lastUpdateDeviation)}`;
   document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
   wireWhatsAppButton('conclusieBtn', ()=>buildConclusieMessage(day));
-  wireWeekendMatchCarpool();
   attachDeviationHandlers();
 }
 
@@ -286,7 +163,7 @@ export function renderDevDirection(day,direction){
       <select class="devDriverSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${driverOptions}</select>
       <label style="margin-top:8px" for="devLoc_${day}_${direction}_${idx}">${t('loc.override')}</label>
       <select class="devLocSel" id="devLoc_${day}_${direction}_${idx}" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${locationOptions}</select>
-      ${!driverOk? `<p class="fitbad" style="font-size:11px;margin-top:2px">${phIcon('warning')} ${t('deviation.deze_ouder_heeft_voor_dit')}</p>` : ''}
+      ${!driverOk? `<p class="fitbad" style="font-size:12px;margin-top:2px">${phIcon('warning')} ${t('deviation.deze_ouder_heeft_voor_dit')}</p>` : ''}
       <div style="margin-top:8px">${passengerRows}</div>
     </div>`;
   }).join('') || `<p class="muted">${t('deviation.geen_ritten_gepland_in_het')}</p>`;

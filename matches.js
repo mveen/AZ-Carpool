@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { effectivePlanningDate, startOfWeek } from './dates.js';
 import { db } from './data.js';
 import { renderMyWeek } from './ui-myweek.js';
-import { renderDeviationTab } from './ui-deviation.js';
+import { renderMatchesTab } from './ui-matches.js';
 import { fam, seats } from './rides.js';
 import { ensureDistances, hasApiKey } from './distance.js';
 import { normalizeLocations } from './locations.js';
@@ -72,24 +72,33 @@ export function carpoolFor(m){
 
 export function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek(effectivePlanningDate()); const e=new Date(s); e.setDate(s.getDate()+7); return list.filter(m=>m.start>=now && m.start<e).sort((a,b)=>a.start-b.start); }
 
-// Rolling 8-day window (today through 7 days out, inclusive) for the weekend-carpool section —
-// deliberately NOT bound to calendar Sat/Sun, so "next Saturday" is always visible regardless
-// of which day of the week today happens to be (a strict Mon-Sun weekend definition could hide
-// the upcoming Saturday entirely if today was already Sunday).
-export function matchesNext8Days(list){
+// Wedstrijden tab: every match of the next 29 days is shown, but a carpool can be set up only for the
+// first 8 days. Both windows are rolling (today through N-1 days out, inclusive) and deliberately NOT
+// bound to calendar Sat/Sun, so "next Saturday" is always visible whatever day it is today.
+export const MATCH_HORIZON_DAYS = 29;   // shown
+export const MATCH_PLAN_DAYS = 8;       // a carpool can be set up
+
+function matchesWithin(list, days){
   const now=new Date();
   const start=new Date(now); start.setHours(0,0,0,0);
-  const end=new Date(start); end.setDate(start.getDate()+8);
+  const end=new Date(start); end.setDate(start.getDate()+days);
   return list.filter(m=>m.start>=now && m.start<end).sort((a,b)=>a.start-b.start);
 }
+export function matchesNext8Days(list){ return matchesWithin(list, MATCH_PLAN_DAYS); }
+export function matchesNext29Days(list){ return matchesWithin(list, MATCH_HORIZON_DAYS); }
+// True when a carpool may be set up for this match (it is within the first 8 days).
+export function isMatchPlannable(m){ return matchesNext8Days([m]).length===1; }
+// The first day on which a carpool can be set up for a match that is still too far away.
+export function plannableFrom(m){ const d=new Date(m.start); d.setHours(0,0,0,0); d.setDate(d.getDate()-(MATCH_PLAN_DAYS-1)); return d; }
 
 async function fetchTeamMatches(feed){
   try{
     if(!db.calendarApiKey) throw new Error(t('matches.geen_api_key'));
     const timeMin = new Date(); timeMin.setDate(timeMin.getDate()-1);
+    const timeMax = new Date(); timeMax.setDate(timeMax.getDate()+MATCH_HORIZON_DAYS+1);   // the Wedstrijden tab shows 29 days
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(feed.calendarId)}/events`
       + `?key=${encodeURIComponent(db.calendarApiKey)}&singleEvents=true&orderBy=startTime`
-      + `&timeMin=${encodeURIComponent(timeMin.toISOString())}&maxResults=25`;
+      + `&timeMin=${encodeURIComponent(timeMin.toISOString())}&timeMax=${encodeURIComponent(timeMax.toISOString())}&maxResults=50`;
     const res = await fetch(url);
     if(!res.ok){
       let detail='';
@@ -123,7 +132,7 @@ export async function loadAllMatches(){
     S.matches = combined; S.matchesSource='live'; S.matchesFetchedAt=Date.now(); S.matchFetchFailedTeams=failed;
     if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
   }
-  renderMyWeek(); renderDeviationTab();
+  renderMyWeek(); renderMatchesTab();
   calculateMatchDistances(combined);
 }
 
@@ -192,7 +201,7 @@ export async function calculateMatchDistances(list){
       store: async (key,val)=>{
         S.matchDistances = {...S.matchDistances, [key]:val};
         try{ await db.doc("settings/matchDistances").set({[key]:val},{merge:true}); }catch(e){ /* not stored: it is calculated again next session */ }
-        renderMyWeek(); renderDeviationTab();
+        renderMyWeek(); renderMatchesTab();
       }
     });
   }catch(e){ return 0; }

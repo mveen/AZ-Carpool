@@ -30,6 +30,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ui-schedule.js` | Rooster tab | `ui-schedule.test.js` |
 | `ui-myweek.js` | Mijn week tab | `ui-myweek.test.js` |
 | `ui-deviation.js` | Wijzigen tab and the WhatsApp share button | `ui-deviation.test.js` |
+| `ui-matches.js` | Wedstrijden tab (violet): matches of the next 29 days, carpool for the first 8 days, estimated cost | `ui-matches.test.js` |
 | `ui-beheer.js` | Beheer tab (coordinator only) | `ui-beheer.test.js` |
 | `ui-profile.js` | Gate, first-run claim, Mijn gezin, test view as a parent | `ui-profile.test.js` |
 | `planning.js` | Planning engine (pure functions, no DOM/Firebase) | `planning.test.js` |
@@ -68,6 +69,14 @@ Some tests compare the generated page with a saved copy in `tests/__snapshots__/
 - **Conclusie-appje (Wijzigen).** Bottom of every day: a drafted text ("<Dag>: volgens schema" + Mijn week link, or the changes first — Rijdt niet mee heen/terug, Gewijzigde chauffeur/tijd, Rijdt ook mee heen/terug, empty kinds left out — followed by the full schedule of the day). The button opens WhatsApp with the text filled in; nobody is messaged automatically. The card is highlighted for that day's coordinator; every parent can use it.
 - **1-op-1 afstemmen (Wijzigen).** Each driver in a direction gets a WhatsApp button with a prefilled question, plus the hint "Stem 1-op-1 af, de dagcoördinator deelt het besluit."
 - **Flex.** Beheer → Wijzig gezin → *Type gezin*: Vast or Flex. Flex families are never in the auto-planned rooster (not as passenger, not as driver, no "niet ingedeeld" alerts). A Flex parent (or the coordinator) signs up per day and direction in Wijzigen: with a time, as passenger in a car with a free seat, or driving herself. This is stored as a normal deviation, so it expires with the week. A Flex driver is shown as "speelster-chauffeur". No change to `firestore.rules` was needed.
+
+## Wedstrijden tab
+- **Where.** Own tab *Wedstrijden* (between Mijn gezin and Beheer, violet like every match ride). The match carpools used to sit at the bottom of Wijzigen; Wijzigen is now only for one-off ride changes. Mijn week keeps its read-only "Wedstrijden deze week" card; its *Carpool regelen* button opens this tab.
+- **Scope.** Every match of the next 29 days (today through 28 days out; `MATCH_HORIZON_DAYS` in `matches.js`) is listed, and the calendar request asks Google for exactly that range (`timeMax`, up to 50 events per team).
+- **Only the first 8 days can get a carpool** (today through 7 days out; `MATCH_PLAN_DAYS`, `isMatchPlannable`). Later matches show a small note "Carpool nog niet te plannen. Dit kan vanaf <dag>" (match day minus 7 days). The save handler checks the same rule, so a carpool can never be stored for a match that is too far away.
+- **Nothing to show.** Without any match in the 29 days the tab is empty (no message). The "set up a carpool" sentence only appears when at least one match can get a carpool.
+- **Estimated cost.** Under the distance of a match: "± 25,4 km enkele reis · ± € 5,08 geschatte kosten" = estimated km x `KM_COST_EUR` (EUR 0,20, `constants.js`). One way, like the km. It also shows in Mijn week wherever the distance shows.
+- **References.** Mijn week → *Carpool regelen* (`goToMatchCarpool`) opens the tab; Beheer's calendar hint names the tab; `data.js` and `matches.js` refresh the tab when matches, carpools or distances change. `service-worker.js` lists `ui-matches.js` (cache name bumped to v6).
 
 ## Ritplekken, Terug met OV, afstand, impact-preview, route (US-15, 06, 21, 07, 22)
 - **Plekken (US-15).** Beheer → *Ophaal- en afzetplekken*: three places (Busstation, A4-De Hoek, De Parel) with exact address, the destination in Alkmaar (default AFC '34), the default place for heen and for terug. Stored in `settings/locations`. Every ride shows "07:05 Busstation → AFC '34" in Rooster and Mijn week (text only, no map button). Wijzigen has a per-car *Plek (eenmalig)* choice; it is stored on the car of that week's deviation (`locationId`) and expires with the week.

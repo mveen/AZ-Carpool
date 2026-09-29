@@ -56,6 +56,9 @@ export const todayKey = (()=>{ const map=[null,"Ma","Di","Wo","Do","Vr",null]; r
 // ---------- WhatsApp update button: opens a pre-filled draft, coordinator/parent still sends it ----------
 export const APP_URL = "https://mveen.github.io/AZ-Carpool/";
 
+// Rough carpool cost per (estimated) kilometre, shown as an estimate next to the distance of a match.
+export const KM_COST_EUR = 0.20;
+
 export const WHATSAPP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7zm-2.8 2.6c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.4s.6 1.6.7 1.7c.1.1 1.2 1.9 3 2.6 1.5.6 1.8.5 2.1.4.3 0 1-.4 1.1-.8.1-.4.1-.8.1-.9-.1-.1-.2-.1-.4-.2l-1.2-.6c-.2-.1-.3-.1-.4.1l-.5.6c-.1.1-.2.2-.4.1-.2-.1-.8-.3-1.5-.9-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.4c.1-.1.1-.2.2-.4 0-.1 0-.3 0-.4l-.5-1.3c-.1-.3-.3-.3-.4-.3h-.3z"/></svg>`;
 
 // ---------- Seed from PDF ----------

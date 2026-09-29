@@ -7,10 +7,12 @@ import { distanceInfo, hasApiKey } from './distance.js';
 import { mapLink } from './locations.js';
 import { S } from './state.js';
 import { myFamilyId } from './coordinator.js';
-import { activeDeviation, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, seats } from './rides.js';
-import { DAYS, DIR_TEXT, WHATSAPP_SVG, todayKey } from './constants.js';
+import { activeDeviation, effectiveCars, fam, girlName, groupsFor, ovGirlsFor, plainGirlName, seats } from './rides.js';
+import { dayChanges } from './day-changes.js';
+import { DAYS, DIR_TEXT, KM_COST_EUR, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, effectivePlanningDate, startOfWeek } from './dates.js';
-import { matchCarRowHtml, renderDeviationTab, wireWhatsAppButton } from './ui-deviation.js';
+import { renderDeviationTab, wireWhatsAppButton } from './ui-deviation.js';
+import { matchCarRowHtml, renderMatchesTab } from './ui-matches.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
@@ -22,7 +24,8 @@ export function matchDistanceHtml(m){
   const info = distanceInfo({ isHome:a.isHome, location:m.location, stored:S.matchDistances[matchSlug(m)], fixedKm:locationsCfg().fixedKm });
   if(!info) return '';
   if(info.kind==='pending' && !hasApiKey(db.orsApiKey)) return '';   // feature not switched on: say nothing rather than "calculating…"
-  const text = info.kind==='km' || info.kind==='fixed'? t('dist.km', { km: String(info.km).replace('.',',') })
+  // The distance is an estimate, so the cost is too: km x KM_COST_EUR (one way, as the km).
+  const text = info.kind==='km' || info.kind==='fixed'? t('dist.km', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.cost', { eur: (Math.round(info.km*KM_COST_EUR*100)/100).toFixed(2).replace('.',',') })
     : info.kind==='fixedMissing'? t('dist.fixedMissing', { venue: info.venue })
     : info.kind==='pending'? t('dist.pending') : t('dist.unknown');
   return `<div class="matchDist">${esc(text)}</div>`;
@@ -47,6 +50,13 @@ export function matchInfoHtml(m, opts){
     <div class="muted" style="font-size:12px">${dayLabel} · ${timeLabel}${m.location? ' · '+(opts&&opts.geo? locationLinkHtml(m.location) : esc(m.location)):''}</div>
     ${matchDistanceHtml(m)}
   </div>`;
+}
+
+// "Rijdt mee met: <driver>". A car without a (known) driver is a problem to solve, so it becomes an amber warning chip.
+export function rideWithHtml(driverFamilyId){
+  const known = !!(driverFamilyId && S.families[driverFamilyId] && S.families[driverFamilyId].parentName);
+  if(known) return t('myweek.rijdt_mee_met', { p1: phIcon('user'), p2: driverNameHtml(driverFamilyId) });
+  return `<span class="statusChip warn">${t('myweek.rijdt_mee_met', { p1: phIcon('warning'), p2: esc(t('driver.none')) })}</span>`;
 }
 
 // ---------- Mijn week: a compact, scroll-free view of just what a parent needs ----------
@@ -80,8 +90,7 @@ export function renderMyWeek(){
         const passengers=g.girlIds.map(id=>girlName(id)).join(', ');
         statusHtml = t('myweek.jij_rijdt', { p1: phIcon('user'), p2: phIcon('car'), p3: passengers? ` · ${passengers}`:'' }); statusClass='driving';
       } else {
-        const driverName = g.driverFamilyId? driverNameHtml(g.driverFamilyId) : t('deviation.nog_geen_chauffeur');
-        statusHtml = t('myweek.rijdt_mee_met', { p1: phIcon('user'), p2: driverName });
+        statusHtml = rideWithHtml(g.driverFamilyId);
       }
     } else if(isOvMe){
       statusHtml = t('ov.status', { p1: phIcon('check-circle') });
@@ -96,14 +105,16 @@ export function renderMyWeek(){
       extraDriving = `<div class="subrideStatus driving">${phIcon('car')} ${t('myweek.jouw_rijbeurt_om')} ${dg.departureTime||'?'} · ${names}</div>${shiftLocationHtml(dg,direction)}`;
       statusClass = statusClass? statusClass : ''; // the driving BORDER below reflects the daughter's own car only, not this second one
     }
-    const devTag = activeDeviation(day,direction)? `<div class="subrideStatus changed">${phIcon('lightning')} ${t('myweek.wijziging_actief')}</div>` : '';
+    // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
+    const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(groupsFor(day,direction).map(([,g])=>g), cars).length>0;
+    const devTag = differsFromStandard? `<div class="subrideStatus changed">${phIcon('lightning')} ${t('myweek.wijziging_actief')}</div>` : '';
     // US-15: where the ride starts and ends. US-06: parent toggle "Terug met OV" (no reason needed), not for days already past.
     const ownCar = daughterIdx>=0? cars[daughterIdx] : null;
     const locHtml = ownCar? shiftLocationHtml(ownCar,direction) : '';
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const ovBtn = direction==='terug' && !dayPassed && !isFlex(myFam)
       ? `<button type="button" class="btn small secondary ovBtn" data-ovtoggle="${day}" data-ovon="${isOvMe?0:1}" aria-pressed="${isOvMe}">${t(isOvMe?'ov.undo':'ov.button')}</button>` : '';
-    return `<div class="subride ${statusClass}">
+    return `<div class="subride ${drivingIdx>=0?'driving':''} ${statusClass==='unplanned'?'unplanned':''}">
       <div class="subrideHead"><span>${label}</span><span class="subrideDep">${isOvMe? '–' : dep}</span></div>
       <div class="subrideStatus ${statusClass}">${statusHtml}</div>
       ${locHtml}${extraDriving}${devTag}${ovBtn}
@@ -124,11 +135,11 @@ export function renderMyWeek(){
     const passengers = (r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
     const status = r.driving
       ? t('myweek.jij_rijdt', { p1: r.daughter? phIcon('user'):'', p2: phIcon('car'), p3: passengers? ` · ${passengers}`:'' })
-      : t('myweek.rijdt_mee_met', { p1: phIcon('user'), p2: r.car.driverFamilyId? driverNameHtml(r.car.driverFamilyId) : t('deviation.nog_geen_chauffeur') });
+      : rideWithHtml(r.car.driverFamilyId);
     return `<div class="subride matchRide">
       <div class="subrideHead"><span style="display:inline-flex;align-items:center;gap:5px">${phIcon('soccer')} ${t('myweek.wedstrijd')} ${esc(matchLabel(r.doc))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</span><span class="subrideDep">${esc(r.car.departureTime||'--:--')}</span></div>
       <div class="subrideStatus ${r.driving?'driving':''}">${status}</div>
-      <div class="subrideStatus" style="font-size:11px">${t('myweek.aftrap')} ${kickoff}${r.doc.location? ' · '+locationLinkHtml(r.doc.location):''}</div>
+      <div class="subrideStatus" style="font-size:12px">${t('myweek.aftrap')} ${kickoff}${r.doc.location? ' · '+locationLinkHtml(r.doc.location):''}</div>
       ${matchDistanceHtml(docToMatch(r.doc))}
     </div>`;
   }
@@ -184,8 +195,8 @@ export function renderMyWeek(){
   const weekMatches = matchesThisWeek(currentMatchList());
   const matchStatusNote = S.matchesSource==='live'
     ? ''
-    : (S.cachedMatchesAt? `<p class="muted" style="font-size:11px;margin-top:6px">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
-  const matchFailNote = S.matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:11px;margin-top:6px">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
+    : (S.cachedMatchesAt? `<p class="muted" style="font-size:12px;margin-top:6px">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
+  const matchFailNote = S.matchFetchFailedTeams.length? `<p class="fitbad" style="font-size:12px;margin-top:6px">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
   const weekMatchesHtml = weekMatches.length? weekMatches.map(m=>{
     const d = carpoolFor(m).doc;
     const cars = (d && d.cars) || [];
@@ -224,14 +235,14 @@ export function renderMyWeek(){
   box.innerHTML = `
     <div class="heroCard compact">
       <div class="heroText">
-        <div class="heroName">${esc(myFam.girlName||'')}</div>
-        <p class="heroSub">${t('myweek.ouder')} ${esc(myFam.parentName||'')} · ${seats(myFam)} ${t('myweek.passagiersplekken')}</p>
+        <span class="heroName">${esc(myFam.girlName||'')}</span>
+        <span class="heroSub">${esc(myFam.parentName||'')} · ${seats(myFam)} ${t('myweek.plekken')}</span>
       </div>
       <button type="button" class="waIconBtn" id="wa-hero" aria-label="${t('myweek.deel_mijn_week_via_whatsapp')}" title="${t('myweek.deel_via_whatsapp')}">${WHATSAPP_SVG}</button>
     </div>
     ${dayCoordinatorHtml()}${unplannedHtml}
-    ${dayCardsHtml}
     <div class="legendLine"><span>${phIcon('user')} ${t('myweek.rit_dochter')}</span><span>${phIcon('car')} ${t('myweek.jouw_rijbeurt')}</span><span>${phIcon('lightning')} ${t('myweek.wijziging')}</span><span>${phIcon('soccer')} ${t('myweek.wedstrijdrit')}</span></div>
+    ${dayCardsHtml}
     ${matchesCardHtml}
     ${lastUpdateFooter([S.lastUpdateRooster,S.lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   `;
@@ -239,7 +250,13 @@ export function renderMyWeek(){
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';
-    if(await setReturnByPublicTransport(b.dataset.ovtoggle, myId, on)) showToast(t(on? 'ov.on' : 'ov.off', { p1: plainGirlName(myId) }));
+    const day = b.dataset.ovtoggle;
+    if(await setReturnByPublicTransport(day, myId, on)){
+      // Toast with an Undo action: one tap puts it back the way it was.
+      showToast(t(on? 'ov.on' : 'ov.off', { p1: plainGirlName(myId) }), { action: { label: t('ov.toastUndo'), run: async ()=>{
+        if(await setReturnByPublicTransport(day, myId, !on)) showToast(t(on? 'ov.off' : 'ov.on', { p1: plainGirlName(myId) }));
+      } } });
+    }
   });
   box.querySelectorAll('[data-gomatchcarpool]').forEach(b=>b.onclick=()=>goToMatchCarpool());
 }
@@ -251,10 +268,8 @@ export function goToWijzigen(day){
   renderDeviationTab(); activateTab('deviation'); hapticTap();
 }
 
-// Jump to "Wedstrijdcarpool komende dagen" on the Wijzigen tab.
+// Jump to the Wedstrijden tab (where the match carpools are set up).
 export function goToMatchCarpool(){
-  goToWijzigen(null);
-  const card=document.getElementById('matchCarpoolCard');
-  const m=document.querySelector('main');
-  if(card && m) m.scrollTop = card.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop - 8;
+  S.openMatchCarpoolForm = null;
+  renderMatchesTab(); activateTab('matches'); hapticTap();
 }
