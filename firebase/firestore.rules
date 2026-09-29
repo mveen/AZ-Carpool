@@ -111,6 +111,12 @@ service cloud.firestore {
     match /settings/matchDistances {
       allow read, write: if isMember();
     }
+    // API keys that must not be public (OpenRouteService): read by members only, written by the coordinator only.
+    // Same effect as the general settings rule below; it is spelled out so nobody loosens it by accident.
+    match /settings/apiKeys {
+      allow read: if isMember();
+      allow write: if isCoordinator();
+    }
     match /settings/{docId} {
       allow read: if isMember();
       allow write: if isCoordinator();
