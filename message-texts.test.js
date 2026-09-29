@@ -228,5 +228,30 @@ test('the wrapper reads the running app: Tuesday has a deviation in the sample d
   assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Vr')), 'Vrijdag: volgens schema. Zie Mijn week: ' + CURL);
 });
 
+console.log('\n=== Terug met OV in the conclusie-appje and Mijn week (US-06) ===');
+test('a girl going home by public transport is named in the conclusie-appje, and the day is no longer "volgens schema"', () => {
+  const s = buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => ['f3'] }), 'Ma');
+  assert.match(s, /^Anouk terug met OV\n/); assert.doesNotMatch(s, /volgens schema/);
+});
+test('several girls: one line with all names', () => {
+  assert.match(buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => ['f3', 'f1'] }), 'Ma'), /^Anouk, Eline terug met OV\n/);
+});
+test('her leaving the car is not also reported as "Rijdt niet mee terug"', () => {
+  const base = [{ driverFamilyId: 'f1', girlIds: ['f2', 'f3'], departureTime: '17:00' }], now = [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '17:00' }];
+  const cx = ctx({ baseCars: (d, dir) => dir === 'terug' ? base : [], cars: (d, dir) => dir === 'terug' ? now : [], ovGirls: () => ['f3'] });
+  const s = buildConclusieFrom(cx, 'Ma');
+  assert.match(s, /Anouk terug met OV/); assert.doesNotMatch(s, /Rijdt niet mee/);
+  assert.match(buildConclusieFrom({ ...cx, ovGirls: () => [] }, 'Ma'), /Rijdt niet mee terug: Anouk/);
+});
+test('without any OV nothing changes: still "volgens schema"', () => {
+  assert.match(buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => [] }), 'Ma'), /volgens schema/);
+  assert.match(buildConclusieFrom(ctx({ baseCars: () => [] }), 'Ma'), /volgens schema/);
+});
+test('Mijn week message says "terug met OV" for the marked day', () => {
+  const myFam = { girlName: 'Jahaimy', schedule: { Ma: { heen: '08:30', terug: '17:30' } } };
+  const s = buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, matchRides: [], isOv: (d, id) => d === 'Ma' && id === 'f2' }));
+  assert.match(s, /MA 28 — heen: 08:30 \(nog niet ingepland\) \| terug: terug met OV/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

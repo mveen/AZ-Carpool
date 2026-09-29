@@ -9,9 +9,11 @@ import { setStatus, showToast, updateStatusLine } from './ui-common.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
-import { loadAllMatches } from './matches.js';
+import { calculateMatchDistances, currentMatchList, loadAllMatches } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
-import { computeDepartureTime, eligibleDrivers, groupsFor } from './rides.js';
+import { computeDepartureTime, effectiveCars, eligibleDrivers, groupsFor } from './rides.js';
+import { applyOv, keepOv, ovIds } from './ov.js';
+import { impactGate } from './impact.js';
 
 // ============================================================
 // Firestore access. The app talks to `db` only; `db` delegates to whichever adapter
@@ -20,9 +22,9 @@ import { computeDepartureTime, eligibleDrivers, groupsFor } from './rides.js';
 //   db.doc(path)            -> { get, set, update, delete, onSnapshot }
 //   db.collection(path)     -> { get, onSnapshot, doc }
 //   db.batch()              -> { set(path,data,opts), update(path,data), delete(path), commit() }
-//   db.deleteField(), db.signIn(), db.calendarApiKey, db.setListenerSink(array|null)
+//   db.deleteField(), db.signIn(), db.calendarApiKey, db.orsApiKey, db.setListenerSink(array|null)
 // ============================================================
-export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
+export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey, orsApiKey }){
   const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, deleteField, signInAnonymously } = sdk;
   function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data(), pending:!!(s.metadata&&s.metadata.hasPendingWrites) }; }
   // While startDataListeners() runs, every onSnapshot() made through this adapter drops its
@@ -54,7 +56,7 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
       return { set:(p,d,o)=>b.set(r(p),d,o), update:(p,d)=>b.update(r(p),d), delete:(p)=>b.delete(r(p)), commit:()=>b.commit() }; },
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
-    calendarApiKey,
+    calendarApiKey, orsApiKey,
     setListenerSink: (a)=>{ listenerSink = a; }
   };
 }
@@ -67,6 +69,7 @@ export const db = {
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
   get calendarApiKey(){ return dbImpl.calendarApiKey; },
+  get orsApiKey(){ return dbImpl.orsApiKey; },
   setListenerSink: (a)=>dbImpl.setListenerSink(a)
 };
 // ============================================================
@@ -169,6 +172,10 @@ export function startDataListeners(){
       if(JSON.stringify(S.matchFeeds)!==S.matchFeedsSig) loadAllMatches();
       renderBeheer(); renderMyWeek(); renderDeviationTab();
     }, err=>{});
+    db.doc("settings/locations").onSnapshot(snap=>{ S.locationsDoc = snap.exists? snap.data() : null; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
+      err=>{});
+    db.doc("settings/matchDistances").onSnapshot(snap=>{ S.matchDistances = snap.exists? (snap.data()||{}) : {}; S.matchDistancesLoaded = true; renderMyWeek(); renderDeviationTab(); calculateMatchDistances(currentMatchList()); },
+      err=>{});
     db.doc("settings/matchCache").onSnapshot(snap=>{
       if(snap.exists){
         const d=snap.data();
@@ -185,7 +192,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={};
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false;
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }
@@ -214,21 +221,53 @@ export async function migrateLegacyFamilySecrets(){
   }finally{ S.migratingSecrets=false; }
 }
 
-export async function saveDeviationCars(day,direction,cars){
-  if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
-  // Strip baseGroupId (an internal marker effectiveCars() adds when falling back to the default
-  // schedule — it was never meant to be persisted into a deviation document) and any literal
-  // `undefined` field, which Firestore's SDK rejects outright with a thrown error.
-  const cleanCars = cars.map(c=>{
+// Strip baseGroupId (an internal marker effectiveCars() adds when falling back to the default
+// schedule — it was never meant to be persisted into a deviation document) and any literal
+// `undefined` field, which Firestore's SDK rejects outright with a thrown error.
+function cleanCars(cars){
+  return cars.map(c=>{
     const {baseGroupId, ...rest} = c;
     Object.keys(rest).forEach(k=>{ if(rest[k]===undefined) delete rest[k]; });
     return rest;
   });
+}
+
+// This week's stored deviation of one shift (null when it belongs to another week).
+function currentDeviationDoc(day,direction){
+  const dev = S.deviations[deviationKey(day,direction)];
+  return dev && dev.weekKey===S.currentWeekKey ? dev : null;
+}
+
+async function writeDeviation(day,direction,cars,extra){
+  refreshWeekKey();
+  await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:cleanCars(cars),...(extra||{})});
+  S.lastDeviationEditDay = day;
+  recordLastUpdate('Deviation');
+}
+
+// opts.skipGate: the impact preview (US-07) already looked at this change and the user confirmed it.
+export async function saveDeviationCars(day,direction,cars,opts){
+  if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
+  if(!(opts&&opts.skipGate) && await impactGate(day,direction,cars, ()=>saveDeviationCars(day,direction,cars,{skipGate:true}), renderDeviationTab)) return false;
   try{
     refreshWeekKey();
-    await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:cleanCars});
-    S.lastDeviationEditDay = day;
-    recordLastUpdate('Deviation');
+    // "Terug met OV" marks (US-06) live on the terug deviation and survive other edits, unless the girl is in a car again.
+    const extra = direction==='terug'? keepOv(currentDeviationDoc(day,direction), cars) : {};
+    await writeDeviation(day,direction,cars,extra);
+    return true;
+  }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
+}
+
+// US-06: a parent marks (or unmarks) that a daughter goes home by public transport on one day.
+// She leaves her terug car (departure time recalculated) and drops out of the planning for that ride.
+export async function setReturnByPublicTransport(day,girlId,on){
+  if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
+  try{
+    refreshWeekKey();
+    const cur = currentDeviationDoc(day,'terug');
+    const r = applyOv({cars:effectiveCars(day,'terug'), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeDepartureTime(day,'terug',ids));
+    const extra = r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {};
+    await writeDeviation(day,'terug',r.cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
 }

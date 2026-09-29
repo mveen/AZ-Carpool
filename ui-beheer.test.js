@@ -173,5 +173,36 @@ test('a Flex family is marked in the family list', () => {
   assert.match(text(html), /Sanne Smit Flex/);
 });
 
+console.log('\n=== places, fixed distances and impact preview (US-15, US-21, US-07) ===');
+import { locationsCardHtml, saveLocations } from './ui-beheer.js';
+test('Beheer has a card with the three places, exact addresses, the destination, defaults and fixed distances', () => {
+  sampleCoordinatorState({ locationsDoc: { places: [{ id: 'de-parel', address: 'Parelstraat 1, Aalsmeer' }], fixedKm: { AFC: 36 } } });
+  const html = locationsCardHtml();
+  ['busstation', 'a4-de-hoek', 'de-parel'].forEach(id => assert.match(html, new RegExp(`id="locName_${id}"`)));
+  assert.match(html, /id="locAddr_de-parel" value="Parelstraat 1, Aalsmeer"/);
+  assert.match(html, /id="locDestName" value="AFC &#39;34"/); assert.match(html, /id="locFixAFC"[^>]*value="36"/); assert.match(html, /id="locFixATC"[^>]*value=""/);
+  assert.match(html, /id="locDefHeen">.*<option value="busstation" selected>/);
+});
+test('the card and the impact-preview switch are part of the Beheer page', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ impactPreview: false });
+  withFakeNow(NOW, () => renderBeheer());
+  assert.match(dom.html('tab-beheer'), /id="locationsCard"/); assert.match(dom.html('tab-beheer'), /id="impactToggle" >/);
+});
+await testAsync('saveLocations stores one settings/locations document, normalised', async () => {
+  const fake = useFakeDb({}); sampleCoordinatorState();
+  const set = { locName_busstation: ' Bus ', locAddr_busstation: 'Stationsweg 1', locDestName: '', locDestAddr: 'Alkmaar', locDefHeen: 'de-parel', locDefTerug: 'nope', locFixAFC: '36,5', locFixATC: '' };
+  Object.entries(set).forEach(([id, v]) => { dom.el(id).value = v; });
+  assert.equal(await saveLocations(), true);
+  const d = fake.get('settings/locations');
+  assert.equal(d.places.find(p => p.id === 'busstation').name, 'Bus'); assert.equal(d.places.find(p => p.id === 'busstation').address, 'Stationsweg 1');
+  assert.equal(d.destination.name, "AFC '34"); assert.equal(d.destination.address, 'Alkmaar');
+  assert.deepEqual(d.defaults, { heen: 'de-parel', terug: 'busstation' }); assert.deepEqual(d.fixedKm, { AFC: 36.5, ATC: null });
+  assert.equal(S.locationsDoc.fixedKm.AFC, 36.5); assert.equal(dom.doc.getElementById('toast').innerHTML, 'Plekken opgeslagen');
+});
+await testAsync('a refused save shows the error and returns false', async () => {
+  const fake = useFakeDb({}); sampleCoordinatorState(); fake.failWrites('settings/locations', 'permission-denied');
+  assert.equal(await saveLocations(), false); assert.match(dom.doc.getElementById('toast').innerHTML, /permission-denied/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -319,5 +319,30 @@ await testAsync('a Flex signup shows up in the conclusie-appje as "Rijdt ook mee
   assert.match(withFakeNow(NOW, () => conclusieCardHtml('Ma')), /Rijdt ook mee heen: Lotte\n/);
 });
 
+console.log('\n=== one-off pickup / drop-off place per ride (US-15) ===');
+test('every car has a "Plek (eenmalig)" choice with the default first and the three places', () => {
+  const html = render(sampleParentState, { deviationDay: 'Ma' });
+  assert.match(html, /<select class="devLocSel"[^>]*data-day="Ma" data-direction="heen" data-caridx="0"><option value="" selected>Standaard: Busstation<\/option><option value="busstation" >Busstation<\/option><option value="a4-de-hoek" >A4-De Hoek<\/option><option value="de-parel" >De Parel<\/option>/);
+});
+test('the saved choice is preselected; the default of the direction follows Beheer', () => {
+  const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30', locationId: 'de-parel' }] } };
+  const html = render(sampleParentState, { deviationDay: 'Ma', deviations: dev, locationsDoc: { defaults: { heen: 'a4-de-hoek', terug: 'busstation' } } });
+  assert.match(html, /<option value="" >Standaard: A4-De Hoek<\/option>/); assert.match(html, /<option value="de-parel" selected>De Parel<\/option>/);
+});
+async function pickPlace(value) {
+  const sel = { dataset: { day: 'Ma', direction: 'heen', caridx: '0' }, value };
+  const all = dom.doc.querySelectorAll; dom.doc.querySelectorAll = s => s === '.devLocSel' ? [sel] : all(s);
+  try { await withFakeNowAsync(NOW, async () => { renderDeviationTab(); await sel.onchange(); }); } finally { dom.doc.querySelectorAll = all; }
+}
+await testAsync('choosing a place stores it on that car of the deviation only; choosing the default removes it again', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ deviationDay: 'Ma' });
+  await pickPlace('a4-de-hoek');
+  assert.equal(fake.get('deviations/Ma_heen').cars[0].locationId, 'a4-de-hoek');
+  assert.equal(fake.get('deviations/Ma_terug'), undefined, 'the other direction is untouched');
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await pickPlace('');
+  assert.ok(!('locationId' in fake.get('deviations/Ma_heen').cars[0]));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

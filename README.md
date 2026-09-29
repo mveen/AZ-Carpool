@@ -21,6 +21,10 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `data.js` | All Firestore access (through an adapter), listeners, saving | `data.test.js` (fake database only) |
 | `message-texts.js` | WhatsApp and other messages, built from data, incl. the conclusie-appje (pure functions) | `message-texts.test.js` |
 | `day-changes.js` | What changed on one day compared with the standard rooster (pure functions) | `day-changes.test.js` |
+| `locations.js` | Pickup/drop-off places per shift, one-off override, `geo:` map links, AFC/ATC fixed venues (pure functions) | `locations.test.js` |
+| `ov.js` | "Terug met OV": take a daughter out of a terug ride and back (pure functions) | `ov.test.js` |
+| `distance.js` | Projected distance of away matches: OpenRouteService calls, calculate once, store per match | `distance.test.js` |
+| `impact.js` | Impact preview on a deviation (pilot, removable): analysis, on/off switch, save gate | `impact.test.js` |
 | `flex.js` | Flex signup: join a car, drive yourself, sign off, departure time (pure functions) | `flex.test.js` |
 | `ui-common.js` | Shared UI pieces: toast, status line, sheets, icons, install card | `ui-common.test.js` |
 | `ui-schedule.js` | Rooster tab | `ui-schedule.test.js` |
@@ -63,14 +67,21 @@ Some tests compare the generated page with a saved copy in `__snapshots__/`. If 
 - **1-op-1 afstemmen (Wijzigen).** Each driver in a direction gets a WhatsApp button with a prefilled question, plus the hint "Stem 1-op-1 af, de dagcoördinator deelt het besluit."
 - **Flex.** Beheer → Wijzig gezin → *Type gezin*: Vast or Flex. Flex families are never in the auto-planned rooster (not as passenger, not as driver, no "niet ingedeeld" alerts). A Flex parent (or the coordinator) signs up per day and direction in Wijzigen: with a time, as passenger in a car with a free seat, or driving herself. This is stored as a normal deviation, so it expires with the week. A Flex driver is shown as "speelster-chauffeur". No change to `firestore.rules` was needed.
 
+## Ritplekken, Terug met OV, afstand, impact-preview, route (US-15, 06, 21, 07, 22)
+- **Plekken (US-15).** Beheer → *Ophaal- en afzetplekken*: three places (Busstation, A4-De Hoek, De Parel) with exact address, the destination in Alkmaar (default AFC '34), the default place for heen and for terug. Stored in `settings/locations`. Every ride shows "07:05 Busstation → AFC '34" plus a *Kaart* button (a generic `geo:` link, not Google Maps) in Rooster and Mijn week. Wijzigen has a per-car *Plek (eenmalig)* choice; it is stored on the car of that week's deviation (`locationId`) and expires with the week. Not on an iPhone: iOS does not open `geo:` links.
+- **Terug met OV (US-06).** Mijn week, terug ride of an upcoming day: button *Terug met OV* (no reason). The girl leaves her terug car (departure time recalculated), is not counted as "niet ingepland", and the conclusie-appje says "<naam> terug met OV". Stored on that day's `_terug` deviation as `ovGirlIds` (+ `ovFrom`, the driver whose car she left, used to put her back with *Toch met de auto*). Expires with the week.
+- **Afstand uitwedstrijden (US-21).** Start: address of *Busstation* (Beheer; without address "Busstation Aalsmeer, Aalsmeer, Nederland"), destination: the calendar location of the match. OpenRouteService (free) geocodes both and gives the fastest car route; the result is stored once per match in `settings/matchDistances` (recalculated only when the calendar location changes). No location or not found: "locatie onbekend". Locations containing AFC or ATC use the fixed km set in Beheer (*Vaste afstand*) and are never calculated. **Setup:** get a free key at openrouteservice.org and put it in `firebase-config.js` as `openRouteServiceApiKey` (see the file). Without the key the feature stays silent. **Publish `firestore.rules`** (new rule for `settings/matchDistances`).
+- **Impact-preview (US-07, pilot).** Beheer → *Impact-preview (pilot)*, off by default. On: before a change in Wijzigen is saved a sheet shows one of "Scheelt een auto", "Geen effect", "Extra plek nodig → voorstel: <chauffeur>", "Geen oplossing → back-up <naam>" (or "Geen oplossing en geen back-up beschikbaar"), with *Opslaan* / *Annuleren*. Nothing about the preview is stored; the switch itself is `settings/features` and is deleted when switched off. **Remove after the pilot:** delete `impact.js` and `impact.test.js`, the line in `data.js` `saveDeviationCars` that calls `impactGate`, and in `ui-beheer.js` the `impactCardHtml()` line and the `wireImpactCard(renderBeheer)` line (plus the two imports), then `npm run lock`.
+- **Route naar wedstrijd (US-22).** In Mijn week the match location is a link (`geo:0,0?q=<location>`); the maps app starts from the current GPS position, not from the busstation.
+
 ## Texts and languages
 Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {placeholders}'`. Code calls `t('key', { name: 'x' })`. Static texts in `index.html` use `data-i18n="key"` attributes. To add a language, copy `texts-nl.js` to `texts-<lang>.js`, translate the values (keep keys and `{placeholders}`), and switch the dictionary in `i18n.js`. Many texts use generic placeholders such as `{p1}`. Look at the Dutch sentence to see what each one is.
 
 ## Deploy
-1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `day-changes.js`, `flex.js`). Test files are optional (the site does not use them).
+1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `locations.js`, `ov.js`, `distance.js`, `impact.js`; also add the `openRouteServiceApiKey` line to your live `firebase-config.js`, and publish `firestore.rules`). Test files are optional (the site does not use them).
 2. GitHub Pages redeploys in about 60 seconds.
 3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v4`) then replaces the old cache.
+4. Open the app once online. The service worker (cache `az-carpool-v5`) then replaces the old cache.
 
 ### Manual smoke test on a phone (before every go-live)
 Automated tests cover logic and page output, but not a real phone, real Firebase, or the real WhatsApp app. Check these on a mobile browser:

@@ -35,6 +35,10 @@ export const S = {
   openMatchCarpoolForm: null,
   currentWeekKey: null,
   dayCoordinators: {},
+  locationsDoc: null,      // settings/locations as stored (locations.js normalises it)
+  matchDistances: {},
+  matchDistancesLoaded: false,      // settings/matchDistances: calculated km per match
+  impactPreview: null,     // impact preview switch (null = not loaded yet)
   settings: {gapThresholdHours:3, travelLeadMinutes:60, prefWindowMinutes:30, parentPrefWindowMinutes:60},
   prefs: {rules:[]},
   shiftPriority: {},

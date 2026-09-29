@@ -158,5 +158,19 @@ test('the coordinator of the day itself is not the one shown', () => {
   assert.equal(withFakeNow(NOW, () => dayCoordinatorHtml()), '');
 });
 
+console.log('\n=== pickup and drop-off place on the ride (US-15) ===');
+test('Rooster "Deze week" and Standaardrooster show the route with a map button', () => {
+  const week = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
+  assert.match(text(week), /07:30 Busstation → AFC &#39;34|07:30 Busstation → AFC '34/); assert.match(text(week), /17:30 AFC (&#39;|')34 → Busstation/);
+  assert.match(week, /class="geoBtn" href="geo:0,0\?q=Busstation"/);
+  const std = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
+  assert.match(text(std), /07:30 Busstation → AFC (&#39;|')34/);
+});
+test('a one-off place chosen in Wijzigen shows on that ride only', () => {
+  const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30', locationId: 'de-parel' }] } };
+  const s = text(render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma', deviations: dev })));
+  assert.match(s, /07:30 De Parel → AFC (&#39;|')34/); assert.match(s, /17:30 AFC (&#39;|')34 → Busstation/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

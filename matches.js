@@ -6,6 +6,9 @@ import { db } from './data.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { fam, seats } from './rides.js';
+import { ensureDistances, hasApiKey } from './distance.js';
+import { normalizeLocations } from './locations.js';
+import { isMemberNow } from './coordinator.js';
 
 export function activeMatchFeeds(){ return S.matchFeeds; }
 
@@ -121,6 +124,7 @@ export async function loadAllMatches(){
     if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
   }
   renderMyWeek(); renderDeviationTab();
+  calculateMatchDistances(combined);
 }
 
 export function currentMatchList(){
@@ -171,4 +175,25 @@ export function matchCarCapacityState(slug){
   const driverId = driverSel && driverSel.value;
   const cap = driverId? seats(fam(driverId)) : null;
   return {n, cap, driverId, over: cap!=null && n>cap};
+}
+
+// US-21: calculates the projected distance of matches that do not have one yet (once per match, stored for everyone).
+// Waits until the stored distances are loaded, so nothing is calculated twice. Returns the number of routes requested.
+export async function calculateMatchDistances(list){
+  if(!hasApiKey(db.orsApiKey) || !S.matchDistancesLoaded || !isMemberNow() || !list || !list.length) return 0;
+  const cfg = normalizeLocations(S.locationsDoc);
+  const bus = cfg.places.find(p=>p.id==='busstation');
+  const originText = (bus && bus.address) || 'Busstation Aalsmeer, Aalsmeer, Nederland';
+  const matches = list.map(m=>({ key:matchSlug(m), isHome:analyzeMatch(m.summary).isHome, location:m.location }));
+  try{
+    return await ensureDistances({
+      matches, storedByKey:S.matchDistances, fixedKm:cfg.fixedKm, apiKey:db.orsApiKey, originText,
+      fetchFn:(url)=>fetch(url),
+      store: async (key,val)=>{
+        S.matchDistances = {...S.matchDistances, [key]:val};
+        try{ await db.doc("settings/matchDistances").set({[key]:val},{merge:true}); }catch(e){ /* not stored: it is calculated again next session */ }
+        renderMyWeek(); renderDeviationTab();
+      }
+    });
+  }catch(e){ return 0; }
 }

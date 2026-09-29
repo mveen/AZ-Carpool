@@ -120,5 +120,27 @@ test('applyStaticTexts fills data-i18n elements and aria-labels from the diction
   assert.equal(a.textContent, 'Mijn week'); assert.equal(b.getAttribute('aria-label'), 'Hoofdnavigatie');
 });
 
+console.log('\n=== shift location (US-15) ===');
+import { shiftLocationHtml, locationsCfg } from './ui-common.js';
+const flat = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
+test('a ride shows "time place → destination" and a generic map button to the pickup place', () => {
+  resetState({ locationsDoc: { places: [{ id: 'busstation', address: 'Stationsweg 1, Aalsmeer' }] } });
+  const html = shiftLocationHtml({ departureTime: '07:05' }, 'heen');
+  assert.match(flat(html), /07:05 Busstation → AFC '34/);
+  assert.match(html, /href="geo:0,0\?q=Stationsweg%201%2C%20Aalsmeer"/); assert.doesNotMatch(html, /google/i);
+});
+test('a terug ride goes from the destination to the drop-off place; a one-off change is marked', () => {
+  resetState({ locationsDoc: { defaults: { heen: 'busstation', terug: 'de-parel' } } });
+  const html = shiftLocationHtml({ departureTime: '17:30', locationId: 'a4-de-hoek' }, 'terug');
+  assert.match(flat(html), /17:30 AFC '34 → A4-De Hoek/); assert.match(html, /eenmalig gewijzigd/);
+  assert.doesNotMatch(shiftLocationHtml({ departureTime: '17:30' }, 'terug'), /eenmalig gewijzigd/);
+});
+test('without an address the button looks up the place name', () => {
+  resetState({}); assert.match(shiftLocationHtml({}, 'heen'), /href="geo:0,0\?q=Busstation"/);
+});
+test('locationsCfg fills in the defaults when nothing is stored', () => {
+  resetState({}); assert.equal(locationsCfg().places.length, 3);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

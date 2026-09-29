@@ -275,5 +275,58 @@ await testAsync('without a settings document there are simply no day coordinator
   stopDataListeners();
 });
 
+console.log('\n=== Terug met OV (US-06) ===');
+import { setReturnByPublicTransport } from './data.js';
+await testAsync('marking takes the girl out of her terug car and stores the mark with the car she left', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  const ok = await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true));
+  assert.equal(ok, true);
+  const d = fake.get('deviations/Ma_terug');
+  assert.deepEqual(d.cars[0].girlIds, ['f1', 'f2']); assert.equal(d.cars[0].driverFamilyId, 'f2');
+  assert.deepEqual(d.ovGirlIds, ['f6']); assert.deepEqual(d.ovFrom, { f6: 'f2' });
+  assert.equal(d.weekKey, WEEK_KEY); assert.equal(d.cars[0].baseGroupId, undefined);
+});
+await testAsync('unmarking puts her back in the same car and removes every trace of the mark', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true));
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', false));
+  const d = fake.get('deviations/Ma_terug');
+  assert.deepEqual(d.cars[0].girlIds, ['f1', 'f2', 'f6']); assert.ok(!('ovGirlIds' in d)); assert.ok(!('ovFrom' in d));
+});
+await testAsync('another edit of the terug cars keeps the mark; putting her in a car by hand clears it', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true));
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  const cars = fake.get('deviations/Ma_terug').cars.map(c => ({ ...c, departureTime: '17:45' }));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Ma', 'terug', cars));
+  assert.deepEqual(fake.get('deviations/Ma_terug').ovGirlIds, ['f6']);
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Ma', 'terug', [{ ...cars[0], girlIds: ['f1', 'f2', 'f6'] }]));
+  assert.ok(!('ovGirlIds' in fake.get('deviations/Ma_terug')));
+});
+await testAsync('a mark from last week is not carried over into this week', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ deviations: { Ma_terug: { day: 'Ma', direction: 'terug', weekKey: '2026-W39', expiresAt: 1, cars: [], ovGirlIds: ['f3'], ovFrom: { f3: null } } } });
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Ma', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '17:30' }]));
+  assert.ok(!('ovGirlIds' in fake.get('deviations/Ma_terug')));
+});
+await testAsync('a girl who is in no car can be marked; the mark is stored even though no car changes', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f3', true));
+  assert.deepEqual(fake.get('deviations/Ma_terug').ovGirlIds, ['f3']);
+});
+await testAsync('a failed write shows a message and returns false', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState(); fake.failWrites('deviations/', 'permission-denied');
+  assert.equal(await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true)), false);
+  assert.equal(toast(), 'Opslaan mislukt: permission-denied');
+});
+await testAsync('the new listeners fill S.locationsDoc and S.matchDistances, and stopping clears them', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/locations': { defaults: { heen: 'de-parel' } }, 'settings/matchDistances': { m1: { loc: 'x', km: 5 } } });
+  sampleCoordinatorState(); startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.locationsDoc, { defaults: { heen: 'de-parel' } }); assert.equal(S.matchDistances.m1.km, 5); assert.equal(S.matchDistancesLoaded, true);
+  stopDataListeners();
+  assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

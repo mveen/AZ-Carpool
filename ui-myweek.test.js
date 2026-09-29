@@ -107,5 +107,92 @@ test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', (
   assert.match(html, /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
 });
 
+console.log('\n=== Terug met OV, places, distance, route link (US-06, US-15, US-21, US-22) ===');
+import { withFakeNowAsync } from './test-support.js';
+import { locationLinkHtml } from './ui-myweek.js';
+test('every upcoming terug ride has a "Terug met OV" button (Thursday, Friday); heen never has one', () => {
+  const html = render({});
+  assert.match(html, /data-ovtoggle="Do" data-ovon="1" aria-pressed="false">Terug met OV<\/button>/);
+  assert.match(html, /data-ovtoggle="Vr" data-ovon="1" aria-pressed="false">Terug met OV<\/button>/);
+  assert.equal((html.match(/data-ovtoggle=/g) || []).length, 2);
+});
+test('days that are already past (Monday, Tuesday; "now" is Wednesday) and days without a ride have no button', () => {
+  const html = render({});
+  ['Ma', 'Di', 'Wo'].forEach(d => assert.ok(!html.includes(`data-ovtoggle="${d}"`), d));
+});
+test('when marked: status "Terug met OV", no departure time, an undo button, and no "niet ingepland" alert for that ride', () => {
+  const dev = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [], ovGirlIds: ['f2'], ovFrom: { f2: null } } };
+  const html = render({ deviations: dev }); const s = text(html);
+  assert.match(s, /Terug · Alkmaar → Aalsmeer – Terug met OV Toch met de auto/);
+  assert.match(html, /data-ovtoggle="Do" data-ovon="0" aria-pressed="true"/);
+  assert.doesNotMatch(s, /Terug \(17:30\): niet ingepland/);
+});
+test('an unmarked, unplanned ride still gets the "Regelen" alert', () => {
+  assert.match(text(render({})), /Donderdag · Heen \(10:15\): niet ingepland/);
+});
+async function pressOv(day, on) {
+  const btn = { dataset: { ovtoggle: day, ovon: on ? '1' : '0' } };
+  const box = dom.el('tab-myweek'); const q = box.querySelectorAll;
+  box.querySelectorAll = s => s === '[data-ovtoggle]' ? [btn] : q(s);
+  try { await withFakeNowAsync(NOW, async () => { sampleParentState(); renderMyWeek(); await btn.onclick(); }); } finally { box.querySelectorAll = q; }
+}
+await testAsync('pressing the button stores the mark (no reason asked) and confirms', async () => {
+  const fake = useFakeDb(sampleDbSeed());
+  await pressOv('Ma', true);
+  const d = fake.get('deviations/Ma_terug');
+  assert.ok(d.ovGirlIds.includes('f2')); assert.ok(!d.cars[0].girlIds.includes('f2'));
+  assert.match(dom.doc.getElementById('toast').innerHTML, /Jahaimy gaat terug met OV/);
+});
+test('the ride shows where it starts and ends, with a generic map button', () => {
+  const html = render({});
+  assert.match(text(html), /07:30 Busstation → AFC (&#39;|')34/);
+  assert.match(html, /class="geoBtn" href="geo:0,0\?q=Busstation"/);
+});
+test('US-22: the match location is a link that plans a route from the phone\'s position (generic geo link)', () => {
+  const html = render({ matchesSource: 'live', matches: [{ calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') }], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });
+  assert.match(html, /<a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam" aria-label="Route plannen naar De Toekomst, Amsterdam">De Toekomst, Amsterdam<\/a>/);
+  assert.doesNotMatch(html, /google/i);
+  assert.doesNotMatch(html, /geo:0,0\?q=Busstation%20Aalsmeer/, 'the start is the current position, not the busstation');
+});
+test('US-22: the location of a stored match ride is a link too', () => {
+  const html = render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });
+  assert.match(html, /<a class="geoLink" href="geo:0,0\?q=Sportpark%20Hoorn"/);
+});
+test('US-22: without a location there is no link', () => {
+  assert.equal(locationLinkHtml(''), ''); assert.equal(locationLinkHtml(undefined), '');
+});
+const awayM = { calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') };
+test('US-21: an away match shows the stored distance', () => {
+  resetState({ matchDistances: { ev_cal1__e5: { loc: 'De Toekomst, Amsterdam', km: 25.4 } } });
+  assert.match(matchInfoHtml(awayM), /<div class="matchDist">± 25,4 km enkele reis<\/div>/);
+});
+test('US-21: no location: "locatie onbekend" and no number', () => {
+  resetState({});
+  const html = matchInfoHtml({ ...awayM, location: '' });
+  assert.match(html, /locatie onbekend/); assert.doesNotMatch(html, /km/);
+});
+test('US-21: AFC/ATC use the fixed distance from Beheer, or say it is not set', () => {
+  resetState({ locationsDoc: { fixedKm: { AFC: 36 } } });
+  assert.match(matchInfoHtml({ ...awayM, location: "AFC'34" }), /± 36 km enkele reis/);
+  assert.match(matchInfoHtml({ ...awayM, location: 'ATC' }), /vaste afstand ATC nog niet ingesteld/);
+});
+test('US-21: a home match elsewhere shows no distance; a calculation in progress shows nothing without an API key', () => {
+  resetState({});
+  assert.doesNotMatch(matchInfoHtml({ ...awayM, summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn' }), /matchDist/);
+  assert.doesNotMatch(matchInfoHtml(awayM), /matchDist/);
+});
+
+import { initDb, createFirestoreDb } from './data.js';
+import { createFakeFirestore } from './fake-db.js';
+test('US-21: with a real API key a match that is still being calculated says so; the placeholder key stays silent', () => {
+  const f = createFakeFirestore({});
+  const withKey = k => initDb(createFirestoreDb({ sdk: f.sdk, firestoreDb: f.firestoreDb, auth: f.auth, calendarApiKey: 'k', orsApiKey: k }));
+  resetState({}); withKey('REALKEY');
+  assert.match(matchInfoHtml(awayM), /afstand wordt berekend/);
+  withKey('PASTE_YOUR_OPENROUTESERVICE_API_KEY_HERE');
+  assert.doesNotMatch(matchInfoHtml(awayM), /matchDist/);
+  useFakeDb(sampleDbSeed());
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

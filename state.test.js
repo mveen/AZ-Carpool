@@ -50,5 +50,9 @@ test('every S.<name> used by any module exists in state.js', () => {
 
 test('dayCoordinators starts empty (Beheer fills it)', () => { assert.deepEqual(S.dayCoordinators, {}); });
 
+test('new fields: places, calculated distances and the impact switch start empty', () => {
+  assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false); assert.equal(S.impactPreview, null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

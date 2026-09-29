@@ -4,7 +4,9 @@ import { S } from './state.js';
 import { DAYS, PDF_SEED } from './constants.js';
 import { dayUp } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority } from './rides.js';
-import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
+import { impactCardHtml, wireImpactCard } from './impact.js';
+import { normalizeLocations } from './locations.js';
 import { db, doToggleCoord, markTimeChangesSeen, saveCoordFamily } from './data.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
@@ -127,6 +129,49 @@ export async function saveDayCoordinator(day, familyId){
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
+// US-15 / US-21: the three pickup and drop-off places with exact addresses, the destination in Alkmaar,
+// the default place per direction and the fixed distances for AFC and ATC. One document: settings/locations.
+export function locationsCardHtml(){
+  const cfg = locationsCfg();
+  const placeRows = cfg.places.map(p=>`<div class="grid2" style="margin-top:6px">
+      <div><label style="margin-top:0" for="locName_${p.id}">${t('loc.placeName')}</label><input type="text" class="locInput" id="locName_${p.id}" value="${esc(p.name)}"></div>
+      <div><label style="margin-top:0" for="locAddr_${p.id}">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="Straat 1, Aalsmeer"></div>
+    </div>`).join('');
+  const opts = sel => cfg.places.map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
+  return `<div class="card" id="locationsCard">
+      <h2>${t('loc.beheerTitle')}</h2>
+      <p class="muted">${t('loc.beheerIntro')}</p>
+      ${placeRows}
+      <div class="grid2" style="margin-top:10px">
+        <div><label style="margin-top:0" for="locDestName">${t('loc.destination')}</label><input type="text" class="locInput" id="locDestName" value="${esc(cfg.destination.name)}"></div>
+        <div><label style="margin-top:0" for="locDestAddr">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locDestAddr" value="${esc(cfg.destination.address)}" placeholder="Straat 1, Alkmaar"></div>
+      </div>
+      <div class="grid2" style="margin-top:10px">
+        <div><label style="margin-top:0" for="locDefHeen">${t('loc.defaultHeen')}</label><select class="locInput" id="locDefHeen">${opts(cfg.defaults.heen)}</select></div>
+        <div><label style="margin-top:0" for="locDefTerug">${t('loc.defaultTerug')}</label><select class="locInput" id="locDefTerug">${opts(cfg.defaults.terug)}</select></div>
+      </div>
+      <p class="muted" style="margin-top:10px"><strong>${t('loc.fixedTitle')}</strong> ${t('loc.fixedHint')}</p>
+      <div class="grid2">
+        <div><label style="margin-top:0" for="locFixAFC">AFC</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
+        <div><label style="margin-top:0" for="locFixATC">ATC</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
+      </div>
+    </div>`;
+}
+
+export async function saveLocations(){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  const val = id=>{ const el=document.getElementById(id); return el? el.value : ''; };
+  const cur = locationsCfg();
+  const doc = normalizeLocations({
+    places: cur.places.map(p=>({ id:p.id, name:val('locName_'+p.id), address:val('locAddr_'+p.id) })),
+    destination: { name:val('locDestName'), address:val('locDestAddr') },
+    defaults: { heen:val('locDefHeen'), terug:val('locDefTerug') },
+    fixedKm: { AFC:val('locFixAFC'), ATC:val('locFixATC') },
+  });
+  try{ await db.doc("settings/locations").set(doc); S.locationsDoc = doc; showToast(t('loc.saved')); return true; }
+  catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
 export function renderBeheer(){
   const box=document.getElementById('tab-beheer');
   if(!box) return;
@@ -181,6 +226,8 @@ export function renderBeheer(){
       ${renderPrefsCard()}
     </div>
     ${dayCoordinatorsCardHtml()}
+    ${locationsCardHtml()}
+    ${impactCardHtml()}
     <div class="card">
       <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
       ${renderAvailabilityTable()}
@@ -242,6 +289,8 @@ export function renderBeheer(){
     const setPrefWindowEl=document.getElementById('setPrefWindow'); if(setPrefWindowEl) setPrefWindowEl.onchange=saveSettingsAuto;
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
+    document.querySelectorAll('.locInput').forEach(el=>el.onchange=()=>saveLocations());
+    wireImpactCard(renderBeheer);
     const atp=document.getElementById('addTogetherPref');
     if(atp) atp.onclick=async ()=>{
       const ids=[...document.querySelectorAll('.prefTogetherPick:checked')].map(c=>c.value);

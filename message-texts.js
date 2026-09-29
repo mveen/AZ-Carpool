@@ -9,6 +9,7 @@ import { dateForWeekday, dayUp, waDayDate } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { analyzeMatch, matchLabel, myMatchRides } from './matches.js';
 import { dayChanges } from './day-changes.js';
+import { ovGirlsFor } from './rides.js';
 
 // "MA 28" — used for the day headings in the WhatsApp messages.
 export function dayHeading(dayKey, date){ return dayUp(dayKey)+' '+date.getDate(); }
@@ -38,6 +39,7 @@ export function buildMyWeekMessageFrom(ctx){
   function part(day,direction){
     const s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
     if(!s) return '–';
+    if(direction==='terug' && ctx.isOv && ctx.isOv(day,myId)) return t('wa.my.ov');
     const car = ctx.cars(day,direction).find(c=>c.girlIds.includes(myId));
     if(!car) return t('wa.my.notPlanned', { time: s });
     return t('wa.my.with', { time: car.departureTime||s, driver: ctx.driverName(car.driverFamilyId) });
@@ -103,12 +105,13 @@ export function buildConclusieFrom(ctx, day){
   const word = d=> d==='heen'? t('wa.dir.heen') : t('wa.dir.terug');
   const changes = {};
   dirs.forEach(d=>{ changes[d] = dayChanges(ctx.baseCars(day,d), ctx.cars(day,d)); });
-  if(!dirs.some(d=>changes[d].length)) return t('wa.conclusie.onSchedule', { dayLabel, url: link });
+  const ov = ctx.ovGirls? ctx.ovGirls(day) : [];   // girls who go home by public transport (US-06)
+  if(!dirs.some(d=>changes[d].length) && !ov.length) return t('wa.conclusie.onSchedule', { dayLabel, url: link });
 
   const names = (d,type)=>{
     const ids = [];
     changes[d].forEach(it=>{
-      if(it.type===type && !ids.includes(it.girlId)) ids.push(it.girlId);
+      if(it.type===type && !ids.includes(it.girlId) && !(type==='out' && d==='terug' && ov.includes(it.girlId))) ids.push(it.girlId);
       if(type==='extra' && it.type==='newcar') it.extraGirlIds.forEach(g=>{ if(!ids.includes(g)) ids.push(g); });
     });
     return ids.map(id=>ctx.girlName(id)).join(', ');
@@ -121,6 +124,7 @@ export function buildConclusieFrom(ctx, day){
   }));
   const summary = [];
   dirs.forEach(d=>{ const n = names(d,'out'); if(n) summary.push(t('wa.conclusie.out', { direction: word(d), names: n })); });
+  if(ov.length) summary.push(t('wa.conclusie.ov', { names: ov.map(id=>ctx.girlName(id)).join(', ') }));
   if(entries.length) summary.push(t('wa.conclusie.changed', { entries: entries.join('; ') }));
   dirs.forEach(d=>{ const n = names(d,'extra'); if(n) summary.push(t('wa.conclusie.extra', { direction: word(d), names: n })); });
 
@@ -162,12 +166,13 @@ function stateCtx(){
     driverName: (id)=>plainDriverName(id),
     girlName: (id)=>plainGirlName(id),
     matchLabel,
+    ovGirls: (day)=>ovGirlsFor(day),
   };
 }
 export function buildWhatsAppMessage(){ return buildWhatsAppMessageFrom(stateCtx()); }
 export function buildMyWeekWhatsAppMessage(){
   const myId = myFamilyId();
-  return buildMyWeekMessageFrom({ ...stateCtx(), myId, myFam: fam(myId), matchRides: myMatchRides(myId) });
+  return buildMyWeekMessageFrom({ ...stateCtx(), myId, myFam: fam(myId), matchRides: myMatchRides(myId), isOv: (day,id)=>ovGirlsFor(day).includes(id) });
 }
 export function buildConclusieMessage(day){ return buildConclusieFrom(stateCtx(), day); }
 export function buildDayWhatsAppMessage(day){ return buildDayMessageFrom(stateCtx(), day); }

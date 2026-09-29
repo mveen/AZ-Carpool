@@ -2,6 +2,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { deviationKey } from './dates.js';
+import { ovIds } from './ov.js';
 import { esc } from './ui-common.js';
 import { computeDepartureTime as pureComputeDepartureTime, minutesToTime as pureMinutesToTime, planAlternativeAssignments, planClusters as pureplanClusters, planPrimaryAssignment, timeToMinutes as pureTimeToMinutes } from './planning.js';
 
@@ -172,7 +173,15 @@ export function planOptions(day,direction,list, st=S){
 export function unplacedFor(day,direction,mode, st=S){
   const cars = mode==='week'? effectiveCars(day,direction, st) : groupsFor(day,direction, st).map(([,g])=>g);
   const placed = new Set(cars.flatMap(c=>c.girlIds||[]));
-  return girlsFor(day,direction, st).filter(([id])=>!placed.has(id));
+  // A girl who goes home by public transport ("Terug met OV") is out of the planning for that ride.
+  const ov = mode==='week' && direction==='terug'? new Set(ovGirlsFor(day, st)) : new Set();
+  return girlsFor(day,direction, st).filter(([id])=>!placed.has(id) && !ov.has(id));
+}
+
+// Girls marked "Terug met OV" on this day of the current week (US-06).
+export function ovGirlsFor(day, st=S){
+  const dev = st.deviations[deviationKey(day,'terug')];
+  return dev && dev.weekKey===st.currentWeekKey ? ovIds(dev) : [];
 }
 
 export function carsCountFor(day,mode, st=S){
