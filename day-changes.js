@@ -2,10 +2,10 @@
 // PURE: cars come in as plain arrays, nothing reads the browser or the database.
 // A car is { driverFamilyId, girlIds, departureTime }. The result is a list of small change items:
 //   { type:'out',    girlId }                          girl no longer rides
-//   { type:'moved',  girlId, driverId }                girl rides with another driver
-//   { type:'extra',  girlId, driverId }                girl rides although she has no standard ride (e.g. Flex)
-//   { type:'driver', driverId, fromDriverId }          another driver takes over a car
-//   { type:'newcar', driverId, girlIds }               a car that is not in the standard rooster
+//   { type:'moved',  girlId, driverId, time }                girl rides with another driver
+//   { type:'extra',  girlId, driverId, time }                girl rides although she has no standard ride (e.g. Flex)
+//   { type:'driver', driverId, fromDriverId, time }          another driver takes over a car
+//   { type:'newcar', driverId, girlIds, time, extraGirlIds }  extraGirlIds = girls without any standard ride               a car that is not in the standard rooster
 //   { type:'time',   driverId, time }                  same car, other departure time
 export function dayChanges(baseCars, effCars){
   const base = (baseCars||[]).filter(c=>(c.girlIds||[]).length);
@@ -31,16 +31,16 @@ export function dayChanges(baseCars, effCars){
 
   eff.forEach((c,ei)=>{
     const bi = matchOf[ei];
-    if(bi<0){ items.push({ type:'newcar', driverId:c.driverFamilyId||null, girlIds:[...c.girlIds] }); return; }
+    if(bi<0){ items.push({ type:'newcar', driverId:c.driverFamilyId||null, girlIds:[...c.girlIds], time:c.departureTime||'', extraGirlIds:c.girlIds.filter(g=>!baseOfGirl.has(g)) }); return; }
     const b = base[bi];
     if((c.driverFamilyId||null)!==(b.driverFamilyId||null)){
-      items.push({ type:'driver', driverId:c.driverFamilyId||null, fromDriverId:b.driverFamilyId||null });
+      items.push({ type:'driver', driverId:c.driverFamilyId||null, fromDriverId:b.driverFamilyId||null, time:c.departureTime||'' });
     } else if((c.departureTime||'')!==(b.departureTime||'') && c.departureTime){
       items.push({ type:'time', driverId:c.driverFamilyId||null, time:c.departureTime });
     }
     c.girlIds.forEach(g=>{
-      if(!baseOfGirl.has(g)){ items.push({ type:'extra', girlId:g, driverId:c.driverFamilyId||null }); }
-      else if(baseOfGirl.get(g)!==bi){ items.push({ type:'moved', girlId:g, driverId:c.driverFamilyId||null }); }
+      if(!baseOfGirl.has(g)){ items.push({ type:'extra', girlId:g, driverId:c.driverFamilyId||null, time:c.departureTime||'' }); }
+      else if(baseOfGirl.get(g)!==bi){ items.push({ type:'moved', girlId:g, driverId:c.driverFamilyId||null, time:c.departureTime||'' }); }
     });
   });
   base.forEach(b=>b.girlIds.forEach(g=>{ if(!effOfGirl.has(g)) items.push({ type:'out', girlId:g }); }));

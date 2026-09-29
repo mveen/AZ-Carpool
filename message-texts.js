@@ -93,30 +93,55 @@ export function buildDayMessageFrom(ctx, day){
 }
 
 // Conclusie-appje (US-03): the text the day coordinator sends to the group after changes on one day.
-// No changes: "<dag>: volgens schema. Zie Mijn week: <link>". Otherwise one line per change.
-// ctx: { baseCars(day,direction), cars(day,direction), driverName(id), girlName(id) }
+// No changes: "<Dag>: volgens schema. Zie Mijn week: <link>". Otherwise: first what changed (one line per kind,
+// a kind without entries is left out), then the full schedule of the day, then the link.
+// ctx: { baseCars(day,direction), cars(day,direction), dateFor(day)->Date, driverName(id), girlName(id) }
 export function buildConclusieFrom(ctx, day){
   const dayLabel = DAYS.find(([k])=>k===day)[1];
-  const short = day.toLowerCase();
   const link = APP_URL+'#myweek';
-  const lines = [];
-  ['heen','terug'].forEach(direction=>{
-    const direct = direction==='heen'? t('wa.dir.heen') : t('wa.dir.terug');
-    const way = direction==='heen'? t('wa.way.heen') : t('wa.way.terug');
-    dayChanges(ctx.baseCars(day,direction), ctx.cars(day,direction)).forEach(it=>{
-      const p = { day: short, direction: direct, way };
-      if(it.type==='out') lines.push(t('wa.conclusie.out', { ...p, girl: ctx.girlName(it.girlId) }));
-      else if(it.type==='moved') lines.push(t('wa.conclusie.moved', { ...p, girl: ctx.girlName(it.girlId), driver: ctx.driverName(it.driverId) }));
-      else if(it.type==='extra') lines.push(t('wa.conclusie.extra', { ...p, girl: ctx.girlName(it.girlId), driver: ctx.driverName(it.driverId) }));
-      else if(it.type==='driver') lines.push(it.driverId
-        ? t('wa.conclusie.driver', { ...p, driver: ctx.driverName(it.driverId), from: ctx.driverName(it.fromDriverId) })
-        : t('wa.conclusie.driverNone', { ...p, from: ctx.driverName(it.fromDriverId) }));
-      else if(it.type==='newcar') lines.push(t('wa.conclusie.newcar', { ...p, driver: ctx.driverName(it.driverId), girls: it.girlIds.map(id=>ctx.girlName(id)).join(', ') }));
-      else if(it.type==='time') lines.push(t('wa.conclusie.time', { ...p, time: it.time, driver: ctx.driverName(it.driverId) }));
+  const dirs = ['heen','terug'];
+  const word = d=> d==='heen'? t('wa.dir.heen') : t('wa.dir.terug');
+  const changes = {};
+  dirs.forEach(d=>{ changes[d] = dayChanges(ctx.baseCars(day,d), ctx.cars(day,d)); });
+  if(!dirs.some(d=>changes[d].length)) return t('wa.conclusie.onSchedule', { dayLabel, url: link });
+
+  const names = (d,type)=>{
+    const ids = [];
+    changes[d].forEach(it=>{
+      if(it.type===type && !ids.includes(it.girlId)) ids.push(it.girlId);
+      if(type==='extra' && it.type==='newcar') it.extraGirlIds.forEach(g=>{ if(!ids.includes(g)) ids.push(g); });
     });
-  });
-  if(!lines.length) return t('wa.conclusie.onSchedule', { dayLabel, url: link });
-  return [t('wa.conclusie.header', { dayLabel }), ...lines, '', t('wa.conclusie.footer', { url: link })].join('\n');
+    return ids.map(id=>ctx.girlName(id)).join(', ');
+  };
+  const entries = [];
+  dirs.forEach(d=>changes[d].forEach(it=>{
+    if(!['driver','newcar','time','moved'].includes(it.type)) return;
+    const e = t('wa.conclusie.changedEntry', { direction: word(d), driver: ctx.driverName(it.driverId), time: it.time||'' }).trim();
+    if(!entries.includes(e)) entries.push(e);
+  }));
+  const summary = [];
+  dirs.forEach(d=>{ const n = names(d,'out'); if(n) summary.push(t('wa.conclusie.out', { direction: word(d), names: n })); });
+  if(entries.length) summary.push(t('wa.conclusie.changed', { entries: entries.join('; ') }));
+  dirs.forEach(d=>{ const n = names(d,'extra'); if(n) summary.push(t('wa.conclusie.extra', { direction: word(d), names: n })); });
+
+  const dateLabel = ctx.dateFor(day).toLocaleDateString(locale(),{day:'numeric',month:'short'});
+  function block(d){
+    const cars = ctx.cars(day,d).filter(c=>c.girlIds && c.girlIds.length);
+    const carLines = cars.length
+      ? [...cars].sort((x,y)=>(x.departureTime||'').localeCompare(y.departureTime||'')).map(c=>
+          t('wa.day.car', { time: c.departureTime||'--:--', driver: ctx.driverName(c.driverFamilyId), girls: c.girlIds.map(id=>ctx.girlName(id)).join(', ') }))
+      : [t('wa.day.noRides')];
+    return [`${DIR_TEXT[d]}${changes[d].length? t('wa.day.adapted') : ''}:`, ...carLines].join('\n');
+  }
+  return [
+    ...summary,
+    '',
+    t('wa.conclusie.title', { day: dayLabel.toLowerCase(), date: dateLabel }),
+    block('heen'),
+    block('terug'),
+    '',
+    link
+  ].join('\n');
 }
 
 // "Can you drive?" ask sent to a reserve driver. dateText is already formatted (e.g. "maandag 28 september").

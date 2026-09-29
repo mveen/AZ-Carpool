@@ -80,12 +80,12 @@ test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
 
 
 console.log('\n=== Dagcoördinator vandaag and Flex (US-02, US-05) ===');
-test('Mijn week shows the day coordinator of today under the header, with a WhatsApp button', () => {
-  const html = render({ dayCoordinators: { Wo: 'f3' } });
-  assert.match(text(html), /^Jahaimy Ouder: Piet Pieters · 4 passagiersplekken Dagcoördinator vandaag: Kees de Vries/);
+test('Mijn week shows the day coordinator of tomorrow under the header, with a WhatsApp button', () => {
+  const html = render({ dayCoordinators: { Do: 'f3' } });
+  assert.match(text(html), /^Jahaimy Ouder: Piet Pieters · 4 passagiersplekken Dagcoördinator morgen: Kees de Vries/);
   assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=/);
 });
-test('without a coordinator for today nothing extra appears', () => {
+test('without a coordinator for tomorrow nothing extra appears', () => {
   assert.doesNotMatch(render({ dayCoordinators: {} }), /Dagcoördinator/);
 });
 test('a Flex daughter has no "not planned" alerts, and sees only the days she signed up for', () => {

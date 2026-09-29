@@ -11,20 +11,31 @@ import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinat
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
 
-// US-02: "Dagcoördinator vandaag: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
+// US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
+// Deviations are purged at midnight, so the coordinator of TODAY is not the one to ask about changes:
+//   Mon-Thu: tomorrow's coordinator ("morgen"); Fri: nothing (tomorrow is the weekend);
+//   Sat/Sun: Monday's coordinator ("maandag").
 // The name and phone number come from the family chosen in Beheer, never from the code.
-// Nothing on weekends or when Beheer has not set a coordinator for today.
+export function dayCoordinatorTarget(date = new Date()){
+  const dow = date.getDay(); // 0 = Sunday
+  if(dow>=1 && dow<=4) return { day: DAYS[dow][0], when: t('dayCoord.tomorrow') };
+  if(dow===0 || dow===6) return { day: 'Ma', when: t('dayCoord.monday') };
+  return null;
+}
+
 export function dayCoordinatorHtml(){
-  if(!todayKey) return '';
-  const dc = dayCoordinatorFor(S, todayKey);
+  const target = dayCoordinatorTarget();
+  if(!target) return '';
+  const dc = dayCoordinatorFor(S, target.day);
   if(!dc) return '';
+  const when = target.when;
   const me = myLinkedFamilyId();
-  if(me && me===dc.familyId) return `<div class="dayCoordBar you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you')}</span></div>`;
+  if(me && me===dc.familyId) return `<div class="dayCoordBar you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you', { when })}</span></div>`;
   const name = esc(dc.name||'?');
   const num = waPhone(dc.phone);
-  const href = num? 'https://wa.me/'+num+'?text='+encodeURIComponent(t('dayCoord.waText', { name: dc.name||'' })) : '';
+  const href = num? 'https://wa.me/'+num+'?text='+encodeURIComponent(t('dayCoord.waText', { name: dc.name||'', when })) : '';
   const btn = href? `<a class="dayCoordWa" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t('dayCoord.waLabel', { name: dc.name||'?' }))}">${WA_ICON_SMALL}</a>` : '';
-  return `<div class="dayCoordBar" id="dayCoordBar">${phIcon('user')} <span>${t('dayCoord.label', { name: `<strong>${name}</strong>` })}</span>${btn}</div>`;
+  return `<div class="dayCoordBar" id="dayCoordBar">${phIcon('user')} <span>${t('dayCoord.label', { when, name: `<strong>${name}</strong>` })}</span>${btn}</div>`;
 }
 
 export function renderSchedule(){

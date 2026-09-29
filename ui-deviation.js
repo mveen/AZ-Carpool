@@ -6,7 +6,7 @@ import { carpoolFor, currentMatchList, matchCarCapacityState, matchLabel, matchS
 import { S } from './state.js';
 import { matchInfoHtml } from './ui-myweek.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
-import { buildConclusieMessage, buildDayWhatsAppMessage, buildWhatsAppMessage } from './message-texts.js';
+import { buildConclusieMessage, buildWhatsAppMessage } from './message-texts.js';
 import { DAYS, WA_ICON_SMALL, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey, waDayDate, weekRangeLabel } from './dates.js';
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
@@ -173,8 +173,7 @@ export function renderDeviationTab(){
     <div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>
     ${changedDays.length? `<p class="muted" style="margin:-6px 2px 10px;display:flex;align-items:center;gap:6px"><span class="devDayDot" style="position:static" aria-hidden="true"></span> ${t('deviation.deze_week_gewijzigd')}</p>` : ''}
     <div class="daysection"><h3>${dayLabel}</h3>
-      <p class="muted" style="margin:0 0 8px">${t('deviation.wijzigingen_hier_gelden_alleen_voor')} ${dayLabel} ${t('deviation.deze_week_en_verdwijnen_dit')}</p>
-      ${whatsAppButtonHtml()}
+      <p class="muted" style="margin:0 0 8px">${t('deviation.wijzigingen_hier_gelden_alleen_voor')} ${dayLabel.toLowerCase()} ${t('deviation.deze_week_en_verdwijnen_dit')}</p>
       ${renderDevDirection(day,'heen')}
       ${renderDevDirection(day,'terug')}
       ${conclusieCardHtml(day)}
@@ -182,7 +181,6 @@ export function renderDeviationTab(){
     ${renderWeekendMatchCarpoolCard()}
     ${lastUpdateFooter(S.lastUpdateDeviation)}`;
   document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
-  wireWhatsAppButton(null, ()=>buildDayWhatsAppMessage(day));
   wireWhatsAppButton('conclusieBtn', ()=>buildConclusieMessage(day));
   wireWeekendMatchCarpool();
   attachDeviationHandlers();
@@ -197,7 +195,7 @@ export function conclusieCardHtml(day){
   const forYou = !!(dc && me && dc.familyId===me);
   return `<div class="card conclusieCard${forYou?' forYou':''}" id="conclusieCard">
     <h2 style="margin-top:0">${t('conclusie.title', { dayLabel })}</h2>
-    <p class="muted" style="margin:0">${forYou? t('conclusie.forYou', { dayLabel }) : t('conclusie.intro')}</p>
+    <p class="muted" style="margin:0">${forYou? t('conclusie.forYou', { day: dayLabel.toLowerCase() }) : t('conclusie.intro')}</p>
     <div class="conclusiePreview" aria-label="${t('conclusie.previewLabel')}">${esc(buildConclusieMessage(day))}</div>
     <button type="button" class="btn${forYou?'':' secondary'}" id="conclusieBtn" style="display:inline-flex;align-items:center">${WHATSAPP_SVG}${t('conclusie.button')}</button>
   </div>`;

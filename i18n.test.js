@@ -83,7 +83,8 @@ test('the Weekschema warning texts exist', () => {
 
 console.log('\n=== US-02..05 texts ===');
 test('the wording from the user stories is exact', () => {
-  assert.equal(t('dayCoord.label', { name: 'Merel' }), 'Dagcoördinator vandaag: Merel');
+  assert.equal(t('dayCoord.label', { when: 'morgen', name: 'Merel' }), 'Dagcoördinator morgen: Merel');
+  assert.equal(t('dayCoord.label', { when: t('dayCoord.monday'), name: 'Merel' }), 'Dagcoördinator maandag: Merel');
   assert.equal(t('oneOnOne.label'), 'Stem 1-op-1 af, de dagcoördinator deelt het besluit.');
   assert.equal(t('wa.conclusie.onSchedule', { dayLabel: 'Donderdag', url: 'U' }), 'Donderdag: volgens schema. Zie Mijn week: U');
   assert.equal(t('flex.speelsterChauffeur'), 'speelster-chauffeur');

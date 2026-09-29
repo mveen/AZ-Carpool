@@ -153,7 +153,7 @@ function conclCtx(base, eff) {
   return ctx({ baseCars: (d, dir) => (base[d + '_' + dir] || []), cars: (d, dir) => (eff[d + '_' + dir] || base[d + '_' + dir] || []) });
 }
 const CURL = 'https://mveen.github.io/AZ-Carpool/#myweek';
-test('no deviations: "<dag>: volgens schema" plus the Mijn week link', () => {
+test('no deviations: "<Dag>: volgens schema" plus the Mijn week link', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
   assert.equal(buildConclusieFrom(conclCtx(base, {}), 'Do'), 'Donderdag: volgens schema. Zie Mijn week: ' + CURL);
 });
@@ -161,39 +161,70 @@ test('a deviation that ends up equal to the standard rooster is still "volgens s
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
   assert.equal(buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f1', ['f1', 'f2'])] }), 'Do'), 'Donderdag: volgens schema. Zie Mijn week: ' + CURL);
 });
-test('a girl who does not ride along: one line, with the day in short form', () => {
+test('changes first, then the full day schedule; kinds without entries are left out; day name is lowercase mid-sentence', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
   const out = buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f1', ['f1'])] }), 'Do');
-  assert.equal(out, ['Donderdag: het schema is aangepast.', 'Jahaimy rijdt do niet mee heen.', '', 'Zie Mijn week: ' + CURL].join('\n'));
+  assert.equal(out, [
+    'Rijdt niet mee heen: Jahaimy',
+    '',
+    'Aangepast schema donderdag 1 okt',
+    'Heen · Aalsmeer → Alkmaar (aangepast):',
+    '• 07:30 – Jan: Eline',
+    'Terug · Alkmaar → Aalsmeer:',
+    '• geen ritten',
+    '',
+    CURL,
+  ].join('\n'));
+  assert.doesNotMatch(out, /Gewijzigde|ook mee/);
 });
-test('a driver who takes over: "<chauffeur> doet do de heenweg in plaats van <oud>"', () => {
-  const base = { Do_heen: [grp('f1', ['f2'])] };
-  const out = buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f2', ['f2'])] }), 'Do');
-  assert.match(out, /\nPiet doet do de heenweg in plaats van Jan\.\n/);
-});
-test('a car without a driver is called out', () => {
-  const base = { Do_terug: [grp('f1', ['f2'])] };
-  assert.match(buildConclusieFrom(conclCtx(base, { Do_terug: [grp(null, ['f2'])] }), 'Do'), /De terugweg van do heeft nog geen chauffeur \(Jan rijdt niet\)\./);
-});
-test('one line per change, heen before terug, and a new car (girl leaves the shared car) and a time change are described', () => {
-  const base = { Ma_heen: [grp('f1', ['f1', 'f2'], '07:30')], Ma_terug: [grp('f1', ['f1'], '17:00')] };
-  const eff = { Ma_heen: [grp('f1', ['f1'], '07:30'), grp('f2', ['f2'], '08:00')], Ma_terug: [grp('f1', ['f1'], '17:30')] };
+test('the five kinds of change come in the agreed order', () => {
+  const base = { Ma_heen: [grp('f1', ['f1', 'f2'])], Ma_terug: [grp('f1', ['f1', 'f3'], '17:00')] };
+  const eff = { Ma_heen: [grp('f1', ['f1', 'f3'])], Ma_terug: [grp('f1', ['f1', 'f2'], '17:30')] };
   const lines = buildConclusieFrom(conclCtx(base, eff), 'Ma').split('\n');
-  assert.deepEqual(lines, ['Maandag: het schema is aangepast.', 'Piet rijdt ma de heenweg met Jahaimy.', 'Vertrek terugweg ma is 17:30 (chauffeur Jan).', '', 'Zie Mijn week: ' + CURL]);
+  assert.deepEqual(lines.slice(0, 6), [
+    'Rijdt niet mee heen: Jahaimy',
+    'Rijdt niet mee terug: Anouk',
+    'Gewijzigde chauffeur/tijd: terug Jan 17:30',
+    'Rijdt ook mee heen: Anouk',
+    'Rijdt ook mee terug: Jahaimy',
+    '',
+  ]);
+  assert.equal(lines[6], 'Aangepast schema maandag 28 sep');
+  assert.equal(lines[7], 'Heen · Aalsmeer → Alkmaar (aangepast):');
+  assert.equal(lines.at(-1), CURL);
 });
-test('a Flex girl who signs up is "extra"; a Flex driver is a new car', () => {
+test('a driver who takes over, or a car without driver, is listed as "Gewijzigde chauffeur/tijd"', () => {
+  const base = { Do_heen: [grp('f1', ['f2'])], Do_terug: [grp('f1', ['f2'], '17:00')] };
+  const out = buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f2', ['f2'], '07:45')], Do_terug: [grp(null, ['f2'], '17:00')] }), 'Do');
+  assert.match(out, /^Gewijzigde chauffeur\/tijd: heen Piet 07:45; terug nog geen chauffeur 17:00\n/);
+  assert.doesNotMatch(out, /Rijdt niet mee|ook mee/);
+  assert.match(out, /\n• 07:45 – Piet: Jahaimy\n/); assert.match(out, /\n• 17:00 – nog geen chauffeur: Jahaimy\n/);
+});
+test('a Flex driver is a changed car plus a girl who rides "ook mee"; only changed directions say "(aangepast)"', () => {
+  const base = { Vr_heen: [grp('f1', ['f1'])], Vr_terug: [grp('f1', ['f1'], '17:00')] };
+  const out = buildConclusieFrom(conclCtx(base, { Vr_heen: [grp('f1', ['f1']), grp('f2', ['f2'], '08:00')] }), 'Vr');
+  assert.match(out, /^Gewijzigde chauffeur\/tijd: heen Piet 08:00\nRijdt ook mee heen: Jahaimy\n\nAangepast schema vrijdag 2 okt\nHeen · Aalsmeer → Alkmaar \(aangepast\):\n• 07:30 – Jan: Eline\n• 08:00 – Piet: Jahaimy\nTerug · Alkmaar → Aalsmeer:\n• 17:00 – Jan: Eline\n/);
+});
+test('a Flex girl who joins an existing car is only "Rijdt ook mee"', () => {
   const base = { Vr_heen: [grp('f1', ['f1'])] };
-  const eff = { Vr_heen: [grp('f1', ['f1', 'f3']), grp('f2', ['f2'], '08:00')] };
-  const c = conclCtx(base, eff);
-  const out = buildConclusieFrom(c, 'Vr');
-  assert.match(out, /Anouk rijdt vr heen extra mee met Jan\./);
-  assert.match(out, /Piet rijdt vr de heenweg met Jahaimy\./);
+  const out = buildConclusieFrom(conclCtx(base, { Vr_heen: [grp('f1', ['f1', 'f3'])] }), 'Vr');
+  assert.match(out, /^Rijdt ook mee heen: Anouk\n\nAangepast schema vrijdag/); assert.doesNotMatch(out, /Gewijzigde/);
 });
 test('the wrapper reads the running app: Tuesday has a deviation in the sample data', () => {
   sampleParentState();
   const out = withFakeNow(NOW, () => buildConclusieMessage('Di'));
-  assert.match(out, /^Dinsdag: het schema is aangepast\./);
-  assert.match(out, /Kees de Vries rijdt di de heenweg met Eline, Evi\./);
+  assert.equal(out, [
+    'Gewijzigde chauffeur/tijd: heen Kees de Vries 09:15',
+    'Rijdt ook mee heen: Eline, Evi',
+    '',
+    'Aangepast schema dinsdag 29 sep',
+    'Heen · Aalsmeer → Alkmaar (aangepast):',
+    '• 09:15 – Kees de Vries: Eline, Evi',
+    'Terug · Alkmaar → Aalsmeer:',
+    '• geen ritten',
+    '',
+    CURL,
+  ].join('\n'));
   assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Vr')), 'Vrijdag: volgens schema. Zie Mijn week: ' + CURL);
 });
 
