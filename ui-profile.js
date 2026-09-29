@@ -9,7 +9,8 @@ import { DAYS, DIR_TEXT } from './constants.js';
 import { dayUp } from './dates.js';
 import { db } from './data.js';
 import { goToWijzigen } from './ui-myweek.js';
-import { diffSchedules, mergePendingChanges } from './schedule-changes.js';
+import { describeWeekschemaChange } from './ui-deviation.js';
+import { diffSchedules, diffWeekschema, mergePendingChanges } from './schedule-changes.js';
 
 // ---------- Coordinator test mode: view the app as a specific parent, without losing real rights ----------
 export function renderImpersonateBanner(){
@@ -47,14 +48,93 @@ export function stopImpersonate(){
   activateTab('beheer');
 }
 
-// Shown once a parent edits the Weekschema: that changes the default planning for every week.
-// One-off changes belong in Wijzigen, so the warning links there.
-export function weekschemaWarningHtml(){
-  return `<div class="devAlert" id="weekschemaWarn" role="status" aria-live="polite" style="margin:8px 0 0"${S.weekschemaWarn? '' : ' hidden'}>
-    <p class="devAlertTitle">${phIcon('warning')} ${t('profile.weekschema_waarschuwing_titel')}</p>
+// ---------- Weekschema edits wait for confirmation ----------
+// A change to the Weekschema (times, "Rijdt", "Back-up") changes the standard planning for every week, so it is
+// NOT saved straight away. S.weekschemaBase holds the saved Weekschema, S.weekschemaEdit the edited one.
+// The warning offers two ways out: Bevestigen (save, for every week) or Eenmalig wijzigen (undo the edit and
+// open Wijzigen, prepared with what the parent wanted).
+const clone = o => JSON.parse(JSON.stringify(o||{}));
+
+export function weekschemaChanges(){
+  return S.weekschemaBase && S.weekschemaEdit? diffWeekschema(S.weekschemaBase, S.weekschemaEdit) : [];
+}
+
+export function weekschemaWarningInnerHtml(){
+  const changes = weekschemaChanges();
+  return `<p class="devAlertTitle">${phIcon('warning')} ${t('profile.weekschema_waarschuwing_titel')}</p>
+    <ul class="devIntentList">${changes.map(c=>`<li>${esc(describeWeekschemaChange(c))}</li>`).join('')}</ul>
     <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_waarschuwing_tekst')}</p>
-    <button type="button" class="btn small secondary" id="weekschemaToWijzigen" style="margin-top:8px">${phIcon('lightning')} ${t('profile.weekschema_naar_wijzigen')}</button>
-  </div>`;
+    <div class="rowflex" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <button type="button" class="btn small" id="weekschemaConfirm">${t('profile.weekschema_bevestigen')}</button>
+      <button type="button" class="btn small secondary" id="weekschemaToWijzigen">${phIcon('lightning')} ${t('profile.weekschema_naar_wijzigen')}</button>
+    </div>
+    <p class="devAlertBody" style="font-size:11px">${t('profile.weekschema_eenmalig_uitleg')}</p>`;
+}
+
+export function weekschemaWarningHtml(){
+  const has = weekschemaChanges().length>0;
+  return `<div class="devAlert" id="weekschemaWarn" role="status" aria-live="polite" style="margin:8px 0 0"${has? '' : ' hidden'}>${has? weekschemaWarningInnerHtml() : ''}</div>`;
+}
+
+// Redraws just the warning (no full re-render, so typing and focus are not disturbed).
+export function refreshWeekschemaWarning(){
+  const el=document.getElementById('weekschemaWarn'); if(!el) return;
+  const has = weekschemaChanges().length>0;
+  el.hidden = !has;
+  el.innerHTML = has? weekschemaWarningInnerHtml() : '';
+  wireWeekschemaWarning();
+}
+
+export function wireWeekschemaWarning(){
+  const ok=document.getElementById('weekschemaConfirm'); if(ok) ok.onclick=()=>confirmWeekschema();
+  const one=document.getElementById('weekschemaToWijzigen'); if(one) one.onclick=()=>weekschemaOneOff();
+}
+
+// A Weekschema field changed: compare the form with the saved Weekschema and (un)show the warning.
+export function onWeekschemaEdited(){
+  const effId = myFamilyId();
+  if(!S.weekschemaBase){
+    const f = fam(effId);
+    S.weekschemaBase = {schedule: clone(f.schedule), availability: clone(f.availability)};
+  }
+  const live = readFamilyForm('me');
+  S.weekschemaEdit = {schedule: live.schedule, availability: live.availability};
+  if(!weekschemaChanges().length){ S.weekschemaBase = null; S.weekschemaEdit = null; } // edited back to the original
+  refreshWeekschemaWarning();
+}
+
+// "Bevestigen": save the edit for every week; the warning clears.
+export async function confirmWeekschema(){
+  if(!S.weekschemaBase) return;
+  const effId = myFamilyId();
+  const live = readFamilyForm('me');
+  S.weekschemaBase = null; S.weekschemaEdit = null;
+  await saveProfile();
+  if(S.families[effId]) S.families[effId] = {...S.families[effId], schedule:live.schedule, availability:live.availability};
+  refreshWeekschemaWarning();
+  showToast(t('profile.weekschema_bevestigd'));
+}
+
+// "Eenmalig wijzigen": undo the edit, clear the warning, open Wijzigen on the right day with the intended change.
+export function weekschemaOneOff(){
+  const changes = weekschemaChanges();
+  if(!changes.length) return;
+  const effId = myFamilyId();
+  const base = S.weekschemaBase;
+  if(S.families[effId]) S.families[effId] = {...S.families[effId], schedule:clone(base.schedule), availability:clone(base.availability)};
+  S.weekschemaBase = null; S.weekschemaEdit = null;
+  S.deviationIntent = changes;
+  refreshWeekschemaWarning();
+  renderProfile();
+  goToWijzigen(changes[0].day);
+}
+
+// While an edit waits for confirmation it is laid over the family data, so a re-render (for instance after a
+// live update from the database) does not lose it.
+export function overlayWeekschemaEdit(effId){
+  if(S.weekschemaBase && S.weekschemaEdit && S.families[effId]){
+    S.families[effId] = {...S.families[effId], schedule:S.weekschemaEdit.schedule, availability:S.weekschemaEdit.availability};
+  }
 }
 
 // True when a form field belongs to the Weekschema (times or availability), not to name/phone/capacity.
@@ -73,14 +153,14 @@ export function familyFormHtml(prefix,f){
   const dayLabel = DAYS.find(([k])=>k===activeDay)[1];
   const dayDetail = `<div class="dayFormCard">
       <div class="rowflex" style="align-items:baseline">
-        <h3 style="margin:0;font-size:15px;font-weight:800">${dayLabel}</h3>
+        <h3 style="margin:0;font-size:16px;font-weight:800">${dayLabel}</h3>
         <span class="muted" style="font-family:var(--font-mono)">${s.heen? t('profile.aankomst')+s.heen : ''}${s.heen&&s.terug? ' · ':''}${s.terug? t('profile.klaar')+s.terug : ''}</span>
       </div>
       <div class="grid2" style="margin-top:10px">
         <div><label style="margin-top:0">${t('profile.heen_aankomst_alkmaar_nodig')}</label><input type="time" id="${prefix}_sch_${activeDay}_heen" value="${s.heen||''}"></div>
         <div><label style="margin-top:0">${t('profile.terug_klaar_om_op_te')}</label><input type="time" id="${prefix}_sch_${activeDay}_terug" value="${s.terug||''}"></div>
       </div>
-      <p style="margin:14px 0 6px;font-size:13px;font-weight:700">${t('profile.kan_jij_deze_dag_rijden')}</p>
+      <p style="margin:14px 0 6px;font-size:14px;font-weight:700">${t('profile.kan_jij_deze_dag_rijden')}</p>
       <p class="muted" style="margin:0 0 4px">${DIR_TEXT.heen}</p>
       <div class="driveToggleGroup">
         <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_heen" ${a.heen?'checked':''}>
@@ -346,6 +426,7 @@ export function renderProfile(){
     const linked = !!S.impersonateFamilyId || !!(S.links[S.me] && S.links[S.me].familyId);
     if(linked){
       const effId = myFamilyId();
+      overlayWeekschemaEdit(effId);
       const lf = fam(effId);
       const unlinkCtl = S.impersonateFamilyId? '' : `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
       html += `<div class="card">
@@ -374,13 +455,10 @@ export function renderProfile(){
     if(linked){
       const card=box.querySelector('.card');
       if(card) card.addEventListener('change', e=>{
-        if(e && e.target && isWeekschemaField(e.target.id)){
-          S.weekschemaWarn = true;
-          const w=document.getElementById('weekschemaWarn'); if(w) w.hidden=false;
-        }
+        if(e && e.target && isWeekschemaField(e.target.id)){ onWeekschemaEdited(); return; } // wait for confirmation
         saveProfile();
       });
-      const toW=document.getElementById('weekschemaToWijzigen'); if(toW) toW.onclick=()=>goToWijzigen(null);
+      wireWeekschemaWarning();
       wireExclusiveAvailability('me');
       wireFamilyFormExtras('me', renderProfile);
       const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=()=>twoStepConfirm(ub,t('profile.zeker_tik_nogmaals_om_te'),async ()=>{
@@ -403,6 +481,8 @@ export async function saveProfile(){
   if(!S.me){showToast(t('profile.je_account_kon_niet_herkend'));return;}
   const effId = myFamilyId();
   const data = readFamilyForm('me');
+  // An edit that still waits for confirmation must not be saved along with other fields.
+  if(S.weekschemaBase){ data.schedule = clone(S.weekschemaBase.schedule); data.availability = clone(S.weekschemaBase.availability); }
   // A parent (not the coordinator) changing their daughter's times gets flagged for the
   // coordinator, stored on the family doc itself as `timeChanges` until marked as seen.
   const timeChanges = S.canEdit? [] : diffSchedules(S.serverSchedules[effId], data.schedule);

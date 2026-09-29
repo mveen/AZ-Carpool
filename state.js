@@ -53,7 +53,9 @@ export const S = {
   defaultTabChosen: false,
   formSelectedDay: {me:'Ma', coord:'Ma'},
   deviationDay: null,
-  weekschemaWarn: false,
+  weekschemaBase: null,   // Mijn gezin: Weekschema as saved, while an edit waits for confirmation
+  weekschemaEdit: null,   // Mijn gezin: the edited (not yet saved) Weekschema
+  deviationIntent: null,  // Wijzigen: what the parent wanted to change one-off (from Mijn gezin)
   lastDeviationEditDay: null,
   coordEditId: undefined,
   selectedShiftKey: 'Ma_heen',

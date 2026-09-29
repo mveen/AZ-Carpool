@@ -87,3 +87,27 @@ export function describeChange(c) {
   const to = c.to || 'geen tijd';
   return `${c.day} · ${label}: ${from} → ${to}`;
 }
+
+// Every difference between two Weekschema states ({schedule, availability}), in weekday order.
+//   { kind:'time',   day, direction, from:'08:30', to:'09:00' }   arrival / pick-up time
+//   { kind:'drive',  day, direction, from:true,    to:false }     "Rijdt" ticked or unticked
+//   { kind:'backup', day, direction, from:false,   to:true }      "Back-up" ticked or unticked
+// Used by Mijn gezin to warn about (and, on request, undo) a change to the standard planning.
+export function diffWeekschema(base, live) {
+  const out = [];
+  const av = (state, day) => (state && state.availability && state.availability[day]) || {};
+  for (const day of DAY_KEYS) {
+    for (const direction of DIRECTIONS) {
+      const from = timeOf(base && base.schedule, day, direction);
+      const to = timeOf(live && live.schedule, day, direction);
+      if (from !== to) out.push({ kind: 'time', day, direction, from, to });
+      const driveKey = direction;
+      const backupKey = direction === 'heen' ? 'backupHeen' : 'backupTerug';
+      const d0 = !!av(base, day)[driveKey], d1 = !!av(live, day)[driveKey];
+      if (d0 !== d1) out.push({ kind: 'drive', day, direction, from: d0, to: d1 });
+      const b0 = !!av(base, day)[backupKey], b1 = !!av(live, day)[backupKey];
+      if (b0 !== b1) out.push({ kind: 'backup', day, direction, from: b0, to: b1 });
+    }
+  }
+  return out;
+}

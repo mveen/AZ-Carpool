@@ -80,7 +80,6 @@ export function activateTab(tab){
   if(!btn) return;
   document.querySelectorAll('nav button[data-tab]').forEach(x=>{ x.classList.remove('active'); x.removeAttribute('aria-current'); });
   btn.classList.add('active'); btn.setAttribute('aria-current','page');
-  if(tab!=='profile') S.weekschemaWarn = false; // the Weekschema warning only lives while you stay in Mijn gezin
   if(document.getElementById('tab-gate').style.display!=='block'){
     ['schedule','myweek','deviation','profile','matches','beheer'].forEach(t=>{
       const el=document.getElementById('tab-'+t);

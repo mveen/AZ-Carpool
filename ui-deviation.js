@@ -27,6 +27,27 @@ export function wireWhatsAppButton(btnId, buildFn){
   if(btn) btn.onclick=()=>sendWhatsAppUpdate(buildFn);
 }
 
+// One line describing a Weekschema change (see diffWeekschema), e.g. "Dinsdag Heen: tijd 08:30 → 09:00".
+export function describeWeekschemaChange(c){
+  const day = (DAYS.find(([k])=>k===c.day)||[c.day,c.day])[1];
+  const dir = c.direction==='heen'? t('dir.heenShort') : t('dir.terugShort');
+  if(c.kind==='time') return t('weekschema.tijd',{p1:day,p2:dir,p3:c.from||t('weekschema.geen_tijd'),p4:c.to||t('weekschema.geen_tijd')});
+  if(c.kind==='drive') return t(c.to? 'weekschema.rijdt_aan' : 'weekschema.rijdt_uit',{p1:day,p2:dir});
+  return t(c.to? 'weekschema.backup_aan' : 'weekschema.backup_uit',{p1:day,p2:dir});
+}
+
+// Set by Mijn gezin's "Eenmalig wijzigen": what the parent wanted to change, shown until closed.
+export function deviationIntentHtml(){
+  const list = S.deviationIntent;
+  if(!list || !list.length) return '';
+  return `<div class="devAlert devIntent" id="devIntent" role="status">
+    <p class="devAlertTitle">${phIcon('lightning')} ${t('deviation.intent_titel')}</p>
+    <ul class="devIntentList">${list.map(c=>`<li>${esc(describeWeekschemaChange(c))}</li>`).join('')}</ul>
+    <p class="devAlertBody" style="font-size:12px">${t('deviation.intent_hint')}</p>
+    <button type="button" class="btn small secondary" id="devIntentClose" style="margin-top:8px">${t('deviation.intent_sluiten')}</button>
+  </div>`;
+}
+
 export function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
   if(!box) return;
@@ -46,7 +67,7 @@ export function renderDeviationTab(){
       ${changed? '<span class="devDayDot" aria-hidden="true"></span>' : ''}
     </button>`;
   }).join('');
-  box.innerHTML = `<div class="devAlert">
+  box.innerHTML = `${deviationIntentHtml()}<div class="devAlert">
       <p class="devAlertTitle">${phIcon('lightning')} ${t('deviation.wijzigingen')} ${weekRangeLabel()}</p>
       <p class="devAlertBody">${t('deviation.eenmalige_ritaanpassing_voor_deze_week')}</p>
     </div>
@@ -60,6 +81,7 @@ export function renderDeviationTab(){
     </div>
     ${lastUpdateFooter(S.lastUpdateDeviation)}`;
   document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; hapticTap(); renderDeviationTab(); });
+  const ic=document.getElementById('devIntentClose'); if(ic) ic.onclick=()=>{ S.deviationIntent=null; hapticTap(); renderDeviationTab(); };
   wireWhatsAppButton('conclusieBtn', ()=>buildConclusieMessage(day));
   attachDeviationHandlers();
 }
@@ -179,7 +201,8 @@ export function renderDevDirection(day,direction){
         </div>`).join('')}
     </div>` : '';
 
-  return `<div class="card">
+  const focus = !!(S.deviationIntent && S.deviationIntent.some(c=>c.day===day && c.direction===direction));
+  return `<div class="card${focus?' devFocus':''}">
     ${dirLabelHtml(direction)}
     ${cardsHtml}
     ${oneOnOneHtml(day,direction,cars)}${flexSignupHtml(day,direction,cars)}
