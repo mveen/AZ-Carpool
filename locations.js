@@ -153,7 +153,8 @@ export function mapLink(query, isAndroid) { return isAndroid ? geoLink(query) : 
 // US-21: matches at AFC or ATC use a fixed distance from settings, not a calculated one.
 export function fixedVenue(location) {
   const l = str(location);
-  if (/\bATC\b/i.test(l)) return 'ATC';
-  if (/\bAFC\b/i.test(l)) return 'AFC';
+  // The calendar usually holds the full address, so the street / name counts as much as the abbreviation.
+  if (/\bATC\b|(AFAS|AZ)\s+Trainingscomplex|Zuiderweg\s*72|1456\s?NH/i.test(l)) return 'ATC';
+  if (/\bAFC\b|Jan\s+Ory|Robonsbosweg|1816\s?MK/i.test(l)) return 'AFC';
   return null;
 }

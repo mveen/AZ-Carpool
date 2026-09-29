@@ -18,14 +18,16 @@ import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
 
-// US-21: projected distance (from Busstation Aalsmeer) under a match. Nothing for a home match at another place.
+// US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
 export function matchDistanceHtml(m){
   const a = analyzeMatch(m.summary);
   const info = distanceInfo({ isHome:a.isHome, location:m.location, stored:S.matchDistances[matchSlug(m)], fixedKm:locationsCfg().fixedKm });
   if(!info) return '';
   if(info.kind==='pending' && !hasApiKey(S.orsApiKey)) return '';   // feature not switched on: say nothing rather than "calculating…"
-  // The distance is an estimate, so the cost is too: km x KM_COST_EUR (one way, as the km).
-  const text = info.kind==='km' || info.kind==='fixed'? t('dist.km', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.cost', { eur: (Math.round(info.km*KM_COST_EUR*100)/100).toFixed(2).replace('.',',') })
+  // Cost = km x KM_COST_EUR (one way, as the km). A calculated distance is an estimate ("±"); a fixed distance (AFC, ATC) is not.
+  const eur = km => (Math.round(km*KM_COST_EUR*100)/100).toFixed(2).replace('.',',');
+  const text = info.kind==='km'? t('dist.km', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.cost', { eur: eur(info.km) })
+    : info.kind==='fixed'? t('dist.kmFixed', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.costFixed', { eur: eur(info.km) })
     : info.kind==='fixedMissing'? t('dist.fixedMissing', { venue: info.venue })
     : info.kind==='pending'? t('dist.pending') : t('dist.unknown');
   return `<div class="matchDist">${esc(text)}</div>`;

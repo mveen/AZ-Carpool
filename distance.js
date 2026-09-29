@@ -1,7 +1,7 @@
 // distance.js — projected car distance of a match (US-21).
 // From 'Busstation Aalsmeer' to the match location (calendar location field), fastest car route, calculated ONCE per
 // match with OpenRouteService (free tier) and stored in settings/matchDistances so nobody calculates it twice.
-// AFC/ATC matches use the fixed distance from Beheer instead. No location, or a location that cannot be found:
+// AFC/ATC matches (recognised by name or address) use the fixed distance from Beheer instead. Home and away matches alike. No location, or a location that cannot be found:
 // "locatie onbekend", never a number.
 import { fixedVenue, parseCoordinates } from './locations.js';
 
@@ -19,7 +19,6 @@ export function distanceInfo({ isHome, location, stored, fixedKm }) {
     const km = fixedKm && fixedKm[venue];
     return km ? { kind: 'fixed', km } : { kind: 'fixedMissing', venue };
   }
-  if (isHome === true) return null;            // a home match elsewhere: nothing to project
   if (!loc) return { kind: 'unknown' };
   if (stored && stored.loc === loc) return stored.unknown ? { kind: 'unknown' } : { kind: 'km', km: stored.km };
   return { kind: 'pending' };
