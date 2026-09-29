@@ -1,0 +1,80 @@
+// Run with: node ui-myweek.test.js
+// The Mijn week tab: what one parent sees of their own daughter's week (read-only overview).
+import assert from 'node:assert/strict';
+let passed = 0, failed = 0;
+function test(name, fn) {
+  try { fn(); passed++; console.log('  ✓', name); }
+  catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
+}
+async function testAsync(name, fn) {
+  try { await fn(); passed++; console.log('  ✓', name); }
+  catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
+}
+import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState } from './test-support.js';
+import { S } from './state.js';
+import { renderMyWeek, matchInfoHtml, goToWijzigen } from './ui-myweek.js';
+
+const dom = installFakeDom();
+useFakeDb(sampleDbSeed());
+const text = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+const kick = new Date('2026-10-03T10:30:00+02:00').getTime();
+const matchCarpools = { ev_cal1__e1: { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', startMs: kick, cars: [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '09:15' }] } };
+function render(patch) { withFakeNow(NOW, () => { sampleParentState(patch); renderMyWeek(); }); return dom.html('tab-myweek'); }
+
+console.log('=== who is looking ===');
+test('an unrecognised visitor is asked to reload', () => {
+  assert.match(text(render({ me: null })), /Mijn week Kon je account niet herkennen\. Herlaad de pagina\./);
+});
+test('a visitor who is not linked to a daughter yet is sent to Mijn gezin', () => {
+  assert.match(text(render({ me: 'x', links: {} })), /Koppel eerst je dochter via 'Mijn gezin'/);
+});
+
+console.log('\n=== a parent\'s week ===');
+test('header: daughter, parent and passenger seats', () => {
+  assert.match(text(render({})), /^Jahaimy Ouder: Piet Pieters · 4 passagiersplekken/);
+});
+test('rides to arrange are listed first, with a Regelen button', () => {
+  const s = text(render({}));
+  assert.match(s, /Jahaimy heeft nog geen rit Donderdag · Heen \(10:15\): niet ingepland Regelen/);
+});
+test('Monday: rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
+  const s = text(render({}));
+  assert.match(s, /MA 28 sep 08:30 \/ 17:30 Heen · Aalsmeer → Alkmaar 07:30 Rijdt mee met: Jan Jansen/);
+  assert.match(s, /Terug · Alkmaar → Aalsmeer 17:30 Jij rijdt · Eline, Jahaimy, Saar/);
+});
+test('a day with a deviation this week says "Wijziging actief"', () => {
+  const s = text(render({}));
+  assert.match(s, /DI 29 sep 10:15 \/ 17:30 Heen · Aalsmeer → Alkmaar 10:15 niet ingepland Wijziging actief/);
+});
+test('days without any time for this girl are not shown (Wednesday)', () => {
+  assert.ok(!/WO 30/.test(text(render({}))));
+});
+test('the WhatsApp share button is present', () => {
+  assert.match(render({}), /id="wa-hero"/);
+});
+test('the day cards are pinned as a snapshot', () => { expectSnapshot('ui-myweek', 'parent Jahaimy', render({})); });
+
+console.log('\n=== a match carpool ===');
+test('a Saturday match carpool appears under its own day with the ride details', () => {
+  const s = text(render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
+  assert.match(s, /ZA 3 okt Wedstrijd Wedstrijd: AZ O15-1 \(Thuis\) vs Hoorn O15-2 09:15 Rijdt mee met: Jan Jansen Aftrap 10:30 · Sportpark Hoorn/);
+  expectSnapshot('ui-myweek', 'parent with match carpool', dom.html('tab-myweek'));
+});
+test('matchInfoHtml: team, home/away, opponent, date, time and location (HTML-escaped)', () => {
+  resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ <O15>' }] });
+  const html = matchInfoHtml({ calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'A&B', start: new Date(kick) });
+  assert.match(text(html), /AZ &lt;O15&gt; \(Thuis\) vs Hoorn O15-2 zaterdag 3 oktober · 10:30 · A&amp;B/);
+});
+test('matchInfoHtml: an away match', () => {
+  resetState({});
+  assert.match(text(matchInfoHtml({ summary: 'Ajax O15-1-AZ O15-1', teamLabel: 'AZ', start: new Date(kick) })), /\(Uit\) vs Ajax O15-1/);
+});
+
+console.log('\n=== navigation ===');
+test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
+  sampleParentState(); goToWijzigen('Di'); assert.equal(S.deviationDay, 'Di');
+  goToWijzigen(); assert.equal(S.deviationDay, null);
+});
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

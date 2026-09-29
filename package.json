@@ -5,6 +5,7 @@
   "type": "module",
   "description": "AZ Carpool Aalsmeer-Alkmaar: tests",
   "scripts": {
-    "test": "node planning.test.js && node schedule-changes.test.js"
+    "test": "node run-tests.js",
+    "lock": "node run-tests.js --lock"
   }
 }
