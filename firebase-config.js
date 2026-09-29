@@ -31,9 +31,7 @@ export const firebaseConfig = {
 // read access to whichever calendars are public, nothing account-wide.
 export const googleCalendarApiKey = "AIzaSyBxLbG-osWKvzzmPS_njfHvtFjxS-i5urg";
 
-// OpenRouteService API key (free), used to calculate the projected car distance of away matches.
-// openrouteservice.org -> sign up -> Dashboard -> Request a token (type "Standard"). The free tier
-// (about 2000 route requests a day) is plenty for max. 20 users: each match is calculated once and stored.
-// Like the keys above this key is not secret in the sense of account access, but do not share it elsewhere.
-// Leave the placeholder as it is to switch the distance feature off.
-export const openRouteServiceApiKey = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImRhOTFmODY3Y2I3ODQ1MjNiMjg5MDU3NTBiZTExOTMzIiwiaCI6Im11cm11cjY0In0=";
+// OpenRouteService (free, distance of away matches): its key is NOT in this file. ORS keys cannot be
+// restricted to one website, so a key in a public GitHub folder can be used by anyone. Enter it in the app instead:
+// Beheer -> "API-sleutels". It is stored in the database (settings/apiKeys): only members can read it, only the
+// coordinator can change it. Get a free key at openrouteservice.org -> Dashboard -> Request a token (type "Standard").
