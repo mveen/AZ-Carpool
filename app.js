@@ -13,6 +13,7 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { todayKey } from './constants.js';
 import { refreshMatchesIfStale } from './matches.js';
+import { closeHelp, initHelpButton } from './ui-help.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
 S.currentWeekKey = getISOWeekKey(effectivePlanningDate());
@@ -109,7 +110,8 @@ export function chooseDefaultTab(){
 export function bootstrap(){
 
   
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeSheet(); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeSheet(); closeHelp(); } });
+  initHelpButton();
 
   (function initTheme(){
     let pref='light'; try{ pref=localStorage.getItem('theme-pref')||'light'; }catch(e){}

@@ -1,0 +1,266 @@
+// help-nl.js — the help text of the app ("?" in the header): one article per question a parent may have.
+// Rules for this file (a test enforces them):
+//  - Plain, short Dutch for parents who are not technical. Name buttons and tabs exactly as they appear in the app.
+//  - NEVER put a secret, API key, password, invite code, phone number, e-mail address or the name of a
+//    person in here. This file is public (GitHub Pages). It explains how the app works, nothing else.
+//  - Each article: id (unique), title (a question or a short topic), keywords (extra words people may type),
+//    body (list of paragraphs; a paragraph that starts with "• " or "1. " is shown as its own line),
+//    tab (optional: the tab where this happens; adds a "Ga naar ..." button, one of the data-tab values),
+//    coordinatorOnly (optional: only shown to the coordinator).
+export default [
+  {
+    id: 'wat-is',
+    title: 'Wat kan ik met deze app?',
+    keywords: 'uitleg introductie overzicht carpool rooster ritten chauffeur dochter',
+    body: [
+      'AZ Carpool regelt wie de meiden naar Alkmaar rijdt (heen) en weer terug naar Aalsmeer (terug).',
+      'De onderste balk heeft de tabbladen: Mijn week (jouw overzicht), Wijzigen (eenmalige aanpassing), Rooster (alle ritten), Mijn gezin (jouw gegevens), Wedstrijden en, alleen voor de coördinator, Beheer.',
+      'Kosten worden niet in deze app verrekend. Dat gaat via de Wie Betaalt Wat-app.',
+    ],
+    tab: 'myweek',
+  },
+  {
+    id: 'inloggen',
+    title: 'Hoe kom ik in de app? (telefoonnummer en code)',
+    keywords: 'inloggen toegang code uitnodiging telefoonnummer gate aanmelden registreren nummer klopt niet',
+    body: [
+      'Bij de eerste keer vraagt de app om je telefoonnummer en een code. Die code krijg je van de coördinator, samen met de link naar de app.',
+      '1. Vul het telefoonnummer in dat de coördinator van jou heeft. Een ander nummer werkt niet.',
+      '2. Vul de code in en tik op Toegang aanvragen.',
+      'Zegt de app "Code klopt niet"? Controleer of je de code precies hebt overgetypt. Zegt de app dat het telefoonnummer niet bij de code hoort, gebruik dan het nummer dat de coördinator van je heeft.',
+      'Je hoeft dit maar één keer te doen op dit toestel.',
+    ],
+  },
+  {
+    id: 'dochter-koppelen',
+    title: 'Hoe koppel ik mijn dochter aan mijn account?',
+    keywords: 'koppelen dochter gezin ontkoppelen selecteren mijn gezin geen overzicht leeg',
+    body: [
+      'Na het inloggen kies je in Mijn gezin je dochter en tik je op Dit is mijn dochter. Twee ouders kunnen dezelfde dochter kiezen.',
+      'Zie je bij Mijn week de tekst dat je eerst je dochter moet koppelen? Dan is dit nog niet gedaan.',
+      'Per ongeluk de verkeerde gekozen? Tik in Mijn gezin op Ontkoppelen van deze dochter. Je moet twee keer tikken om het zeker te weten.',
+      'Staat je dochter er niet bij? Alleen de coördinator kan nieuwe gezinnen toevoegen. Vraag het aan hem of haar.',
+    ],
+    tab: 'profile',
+  },
+  {
+    id: 'mijn-week',
+    title: 'Waar zie ik wie mijn dochter rijdt?',
+    keywords: 'mijn week overzicht wie rijdt vertrektijd heen terug chauffeur vandaag wanneer opgehaald',
+    body: [
+      'Op Mijn week zie je per dag de rit van je dochter: heen en terug, met de tijd en de chauffeur. Vandaag heeft een label VANDAAG.',
+      'Rijd je zelf op een dag, dan staat er "Jouw rijbeurt om" met de tijd.',
+      'Is er deze week iets aangepast, dan staat er "Wijziging actief" bij die dag.',
+      'Mijn week is alleen om te lezen. Wil je iets veranderen, ga dan naar Wijzigen.',
+      'Met Deel mijn week via WhatsApp stuur je het overzicht door.',
+    ],
+    tab: 'myweek',
+  },
+  {
+    id: 'rit-ontbreekt',
+    title: 'Mijn dochter heeft nog geen rit of staat op "niet ingepland"',
+    keywords: 'niet ingepland niet ingedeeld geen rit geen chauffeur regelen ontbreekt',
+    body: [
+      'Dat betekent dat er voor die rit nog geen auto met een vrije plek is gevonden.',
+      'Klopt de tijd van je dochter in Mijn gezin? Zonder aankomsttijd of klaartijd kan de app haar niet inplannen.',
+      'Blijft het staan, laat het de coördinator weten. Die kan haar in het Rooster in een auto zetten.',
+    ],
+    tab: 'myweek',
+  },
+  {
+    id: 'wijzigen',
+    title: 'Mijn dochter is ziek of ik wil een rit ruilen (eenmalig wijzigen)',
+    keywords: 'wijzigen ziek ruilen rit aanpassen eenmalig afmelden niet mee meerijden andere chauffeur tijd veranderen deze week',
+    body: [
+      'Ga naar Wijzigen. Daar pas je de ritten van alleen deze week aan. Het vaste rooster blijft zoals het was. Aan het weekend zijn alle wijzigingen vanzelf weer weg.',
+      '1. Kies de dag bovenaan. Dagen met een wijziging hebben een stip.',
+      '2. Pas de auto aan: kies een andere chauffeur, verplaats een meisje naar een andere auto, of haal haar uit de auto.',
+      '3. Nieuwe auto nodig? Tik op + Auto toevoegen.',
+      '4. Tik op Opslaan.',
+      'Wil je alles van die dag terugzetten? Tik op Terug naar standaard rooster. Tik twee keer om het zeker te weten.',
+      'Stem een wijziging altijd eerst af met de chauffeur. Bij elke chauffeur staat een WhatsApp-knop met een kant-en-klaar bericht.',
+    ],
+    tab: 'deviation',
+  },
+  {
+    id: 'dagcoordinator',
+    title: 'Wat is een dagcoördinator?',
+    keywords: 'dagcoordinator dagcoördinator coördinator morgen wie regelt',
+    body: [
+      'Elke dag heeft één ouder als dagcoördinator. Die regelt de wijzigingen voor die dag.',
+      'Op Rooster en Mijn week staat wie dat morgen is. Op vrijdag staat er niets. In het weekend staat wie het maandag is.',
+      'Staat er niemand, dan heeft de coördinator nog niemand ingesteld.',
+    ],
+  },
+  {
+    id: 'whatsapp-update',
+    title: 'Hoe laat ik de anderen weten dat er iets verandert? (WhatsApp)',
+    keywords: 'whatsapp delen bericht update conclusie appje versturen melden groep',
+    body: [
+      'Onderaan elke dag in Wijzigen staat een kant-en-klaar bericht met de wijzigingen en het schema van die dag. Tik op Deel update via WhatsApp en WhatsApp opent met de tekst al ingevuld.',
+      'De app stuurt zelf nooit iets. Jij kiest in WhatsApp naar wie het gaat en tikt op versturen.',
+    ],
+    tab: 'deviation',
+  },
+  {
+    id: 'terug-met-ov',
+    title: 'Mijn dochter gaat terug met het openbaar vervoer',
+    keywords: 'ov openbaar vervoer trein bus terug zelf naar huis niet met de auto toch met de auto',
+    body: [
+      'Ga naar Mijn week, zoek de terugrit op de dag en tik op Terug met OV. Je dochter gaat dan uit haar auto. De vertrektijd van de auto wordt opnieuw uitgerekend. Er hoeft geen reden bij.',
+      'Ander plan? Tik op Toch met de auto om haar terug in de auto te zetten.',
+    ],
+    tab: 'myweek',
+  },
+  {
+    id: 'rooster',
+    title: 'Wat staat er in het Rooster?',
+    keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen',
+    body: [
+      'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Bij elke rit staat waar de auto ophaalt en heen gaat.',
+      'Kies bovenaan Deze week (met eventuele wijzigingen) of Vast rooster (zoals het elke week is).',
+      'Alleen de coördinator past het Rooster aan. Als ouder gebruik je daarvoor Wijzigen.',
+    ],
+    tab: 'schedule',
+  },
+  {
+    id: 'weekschema',
+    title: 'Wanneer kan ik rijden? Mijn vaste weekschema aanpassen',
+    keywords: 'beschikbaar beschikbaarheid back-up backup rijden weekschema plekken zitplaatsen auto capaciteit aankomst klaar tijd vast',
+    body: [
+      'In Mijn gezin staat je vaste weekschema. Per dag geef je aan:',
+      '• Kan jij deze dag rijden? Kies Beschikbaar of Back-up. Back-up betekent dat je alleen rijdt als het nodig is.',
+      '• Heen: hoe laat je dochter in Alkmaar moet zijn.',
+      '• Terug: hoe laat je dochter klaar is om opgehaald te worden.',
+      '• Hoeveel plekken je auto heeft voor passagiers. Reken jezelf niet mee.',
+      'Let op: een aanpassing hier geldt voor elke week, niet alleen voor deze week. De app waarschuwt je daarvoor voordat je opslaat. Wil je maar één keer iets anders, kies dan Eenmalig wijzigen, dan ga je naar Wijzigen.',
+    ],
+    tab: 'profile',
+  },
+  {
+    id: 'wedstrijden',
+    title: 'Hoe regel ik een carpool voor een wedstrijd?',
+    keywords: 'wedstrijd wedstrijden uitwedstrijd thuiswedstrijd competitie aftrap carpool regelen kalender agenda',
+    body: [
+      'Ga naar Wedstrijden. Daar staan alle wedstrijden van de komende 29 dagen.',
+      'Een carpool kun je regelen voor wedstrijden van de komende 8 dagen. Bij latere wedstrijden staat vanaf welke dag het kan.',
+      '1. Tik bij de wedstrijd op + Auto toevoegen.',
+      '2. Kies de chauffeur, de meiden die meerijden en de vertrektijd.',
+      '3. Sla op. Iedereen kan een wedstrijdcarpool opzetten en aanpassen.',
+      'Onder de wedstrijd staat een schatting van de afstand en de kosten. Die is niet exact, daarom staat er een ± voor.',
+      'De wedstrijden komen uit de agenda\'s van de teams. Ze worden één keer per dag bijgewerkt. Klopt er iets niet, laat het de coördinator weten.',
+    ],
+    tab: 'matches',
+  },
+  {
+    id: 'route',
+    title: 'Hoe kom ik bij het wedstrijdadres? (route)',
+    keywords: 'route navigatie adres locatie maps kaart rijden naar veld',
+    body: [
+      'In Mijn week is de locatie van de wedstrijd een link. Tik erop en je kaartenapp opent met het adres. De route begint bij waar je op dat moment bent.',
+    ],
+    tab: 'myweek',
+  },
+  {
+    id: 'ophaalplek',
+    title: 'Waar wordt mijn dochter opgehaald?',
+    keywords: 'ophaalplek ophalen afzetten plek busstation locatie waar adres',
+    body: [
+      'Bij elke rit staat de tijd en de plek, bijvoorbeeld "07:05 Busstation → AFC \'34".',
+      'De vaste plekken staan in het Rooster. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of vul zelf een adres in. Dat adres wordt niet bewaard en verdwijnt aan het eind van de week.',
+    ],
+    tab: 'deviation',
+  },
+  {
+    id: 'flex',
+    title: 'Ik ben een Flex-gezin. Hoe meld ik me aan voor een rit?',
+    keywords: 'flex aanmelden inschrijven spelerchauffeur speelster meerijden zelf rijden afmelden',
+    body: [
+      'Flex-gezinnen staan niet in het vaste rooster. Je meldt je per dag en per richting aan in Wijzigen:',
+      '• met een tijd,',
+      '• als passagier in een auto met een vrije plek, of',
+      '• als je zelf rijdt.',
+      'Deze aanmelding verdwijnt aan het eind van de week, net als andere wijzigingen.',
+    ],
+    tab: 'deviation',
+  },
+  {
+    id: 'installeren',
+    title: 'Hoe zet ik de app op mijn telefoon?',
+    keywords: 'installeren beginscherm icoon app telefoon iphone android safari chrome snelkoppeling',
+    body: [
+      'Je kunt AZ Carpool op je beginscherm zetten, dan opent hij als een gewone app.',
+      '• Android: tik op Installeer app (te vinden in Mijn gezin).',
+      '• iPhone: open de app in Safari, tik onderin op het deel-icoon en kies Zet op beginscherm.',
+    ],
+    tab: 'profile',
+  },
+  {
+    id: 'donker',
+    title: 'Hoe zet ik het donkere thema aan?',
+    keywords: 'donker licht thema dark mode kleur scherm maan zon',
+    body: [
+      'Tik rechtsboven in de kop op het maan-icoon voor het donkere thema. Het icoon wordt een zon. Tik daarop om terug te gaan naar licht. De app onthoudt je keuze op dit toestel.',
+    ],
+  },
+  {
+    id: 'foutmelding',
+    title: 'De app doet raar of zegt "Geen verbinding"',
+    keywords: 'fout foutmelding geen verbinding niet verbonden werkt niet laden vastgelopen herladen internet storing opslaan mislukt',
+    body: [
+      '1. Controleer of je internet hebt (wifi of mobiele data).',
+      '2. Sluit de app helemaal en open hem opnieuw. In de browser: laad de pagina opnieuw.',
+      '3. Zie je oude gegevens? Open de app een keer met internet. Dan haalt hij de nieuwste versie op.',
+      'Werkt het dan nog niet, laat het de coördinator weten en vertel welke melding je ziet.',
+    ],
+  },
+  {
+    id: 'coordinator-vragen',
+    title: 'Waar kan ik terecht als ik er niet uitkom?',
+    keywords: 'coordinator coördinator contact hulp vragen probleem bellen beheerder',
+    body: [
+      'Kom je er niet uit, vraag het dan aan de coördinator. Alleen de coördinator kan gezinnen toevoegen, het Rooster aanpassen, codes geven en de instellingen wijzigen.',
+    ],
+  },
+  {
+    id: 'beheer-gezinnen',
+    title: 'Beheer: gezinnen toevoegen, codes en telefoonnummers',
+    keywords: 'beheer gezin toevoegen code uitnodiging telefoonnummer coördinator maken testweergave ouder dubbel verwijderen oog',
+    coordinatorOnly: true,
+    body: [
+      'Onder Beheer, bij Gezinnen beheren, voeg je gezinnen toe en pas je gegevens aan namens een ouder. Telefoonnummers en de uitnodigingscode staan onder Wijzig. Meerdere mensen kunnen dezelfde code gebruiken.',
+      'Het oog-icoon toont de app zoals die ouder hem ziet. Met Stop testen ga je terug naar jouw eigen weergave.',
+      'Bij Type gezin kies je Vast of Flex.',
+      'Geef de code en de link alleen door aan de ouder zelf, niet in een openbare groep.',
+    ],
+    tab: 'beheer',
+  },
+  {
+    id: 'beheer-instellingen',
+    title: 'Beheer: planning, plekken en dagcoördinatoren',
+    keywords: 'beheer instellingen planning plekken adres dagcoordinator dagcoördinator voorkeuren samen reizen volgorde standaard ophaalplek',
+    coordinatorOnly: true,
+    body: [
+      '• Dagcoördinatoren: kies per weekdag één gezin.',
+      '• Ophaal- en afzetplekken: maximaal 6 plekken met naam en adres. Een adres mag gewoon een adres zijn of GPS-coördinaten. Het Busstation blijft altijd staan.',
+      '• Planning-instellingen: regels voor hoe combinaties in het Rooster worden voorgesteld. Wijzigingen worden vanzelf opgeslagen.',
+      '• Reisvoorkeuren: wie liever samen in één auto zit.',
+      '• Selectievolgorde per shift: in welke volgorde beschikbare chauffeurs worden voorgesteld.',
+      '• Meldingen bij gewijzigde tijden: zie je bovenaan het Rooster. Zet ook browsermeldingen aan voor een seintje.',
+    ],
+    tab: 'beheer',
+  },
+  {
+    id: 'beheer-kalenders',
+    title: 'Beheer: wedstrijdkalenders en afstanden',
+    keywords: 'beheer wedstrijdkalender kalender agenda google openbaar verversen afstand kilometers wedstrijden ontbreken',
+    coordinatorOnly: true,
+    body: [
+      'Onder Wedstrijdkalenders (Google Calendar) voer je per team een naam en een Calendar ID in. Elke agenda moet openbaar staan in Google Calendar.',
+      'Met Nu verversen haal je de wedstrijden meteen op. Anders gebeurt dat één keer per dag, door de eerste ouder die de app opent.',
+      'Gebruik altijd de teamnaam zoals je die hier invult, en verander die niet los ergens anders.',
+      'Ontbreken de afstanden bij uitwedstrijden, dan is er nog geen routeservice-sleutel ingesteld. Die stel je in onder Beheer, bij API-sleutels. Zet die sleutel nooit in een bericht of in dit hulpvenster.',
+    ],
+    tab: 'beheer',
+  },
+];

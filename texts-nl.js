@@ -572,4 +572,16 @@ export default {
   "impact.beheerToggle": "Impact-preview aan",
   "impact.on": "Impact-preview staat aan",
   "impact.off": "Impact-preview staat uit",
+  // ---- Help ("?" in the header) ----
+  "help.title": "Hulp",
+  "help.open": "Hulp openen",
+  "help.close": "Sluiten",
+  "help.search_label": "Zoek in de hulp",
+  "help.search_placeholder": "Waar kunnen we je mee helpen?",
+  "help.topics": "Alle onderwerpen",
+  "help.results": "Resultaten",
+  "help.no_results": "Niets gevonden. Probeer een ander woord, of vraag het aan de coördinator.",
+  "help.back": "Terug naar de lijst",
+  "help.goto": "Ga naar {tab}",
+  "help.contact": "Kom je er niet uit? Vraag het aan de coördinator.",
 };

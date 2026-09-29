@@ -14,7 +14,7 @@ const LOCK = path.join(dir, 'tests.lock.json');
 // Files that are tooling, not app modules.
 const NOT_MODULES = new Set(['fake-db.js', 'run-tests.js', 'firebase-config.js', 'service-worker.js', 'i18n-codemod.mjs']);
 // A module whose tests live in another module's test file.
-const TEST_FOR = { 'texts-nl.js': 'i18n.test.js' };
+const TEST_FOR = { 'texts-nl.js': 'i18n.test.js', 'help-nl.js': 'help.test.js' };
 
 const TESTS = path.join(dir, 'tests');
 const files = readdirSync(dir);

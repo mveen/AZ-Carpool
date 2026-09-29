@@ -41,6 +41,7 @@ export const PH_PATHS = {
   away: `<path d="M128 20c-44 0-80 36-80 80 0 60 80 136 80 136s80-76 80-136c0-44-36-80-80-80Z" fill="none" stroke="currentColor" stroke-width="14" stroke-linejoin="round"/><circle cx="128" cy="100" r="28" fill="none" stroke="currentColor" stroke-width="14"/>`,
   soccer: `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><polygon points="128,92 162,117 149,157 107,157 94,117" fill="currentColor"/><path d="M128 92V32M162 117l57-19M149 157l35 49M107 157l-35 49M94 117 37 98" stroke="currentColor" stroke-width="14" stroke-linecap="round"/>`,
   eye: `<path d="M16 128 Q128 32 240 128 Q128 224 16 128 Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><circle cx="128" cy="128" r="32" fill="none" stroke="currentColor" stroke-width="16"/>`,
+  question: `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><path d="M100 104a28 28 0 1 1 40 26c-9 5-12 11-12 20" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="128" cy="182" r="10" fill="currentColor"/>`,
 };
 
 export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
