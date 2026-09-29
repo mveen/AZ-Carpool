@@ -22,6 +22,7 @@ import {
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+const toastText = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const kick = new Date('2026-10-03T10:30:00+02:00').getTime();
 const feeds = [{ calendarId: 'cal1', label: 'AZ O15-1' }];
 const matchCarpools = { ev_cal1__e1: { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', startMs: kick, cars: [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '09:15' }] } };
@@ -156,6 +157,156 @@ test('wireWhatsAppButton hooks the click to sending that message', () => {
   wireWhatsAppButton('wa-hero', () => 'Test');
   dom.el('wa-hero').onclick();
   assert.equal(dom.opened.length, 1); assert.equal(dom.opened[0][0], 'https://wa.me/?text=Test');
+});
+
+import { withFakeNowAsync } from './test-support.js';
+import { conclusieCardHtml, flexSignupHtml, oneOnOneHtml } from './ui-deviation.js';
+import { sampleFamilies as _sampleFamilies } from './test-support.js';
+
+console.log('\n=== conclusie-appje (US-03) ===');
+test('the card shows the drafted text: "volgens schema" when nothing changed', () => {
+  const s = text(render(sampleParentState, { deviationDay: 'Vr' }));
+  assert.match(s, /Conclusie-appje Vrijdag Controleer de tekst en verstuur hem zelf in de groepsapp\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/mveen\.github\.io\/AZ-Carpool\/#myweek Open in WhatsApp/);
+});
+test('with a deviation there is one line per change from Wijzigen', () => {
+  const html = render(sampleParentState, { deviationDay: 'Di' });
+  assert.match(html, /id="conclusieCard"/);
+  assert.match(text(html), /Dinsdag: het schema is aangepast\. Kees de Vries rijdt di de heenweg met Eline, Evi\. Zie Mijn week/);
+});
+test('the day coordinator sees the card highlighted, other parents do not', () => {
+  const yes = render(sampleParentState, { deviationDay: 'Di', dayCoordinators: { Di: 'f2' } });
+  assert.match(yes, /class="card conclusieCard forYou"/); assert.match(text(yes), /Jij bent dagcoördinator op Dinsdag\. Deel het besluit met de groep\./);
+  assert.match(yes, /id="conclusieBtn"/); assert.doesNotMatch(yes, /id="conclusieBtn"[^>]*secondary/);
+  const no = render(sampleParentState, { deviationDay: 'Di', dayCoordinators: { Di: 'f3' } });
+  assert.doesNotMatch(no, /conclusieCard forYou/); assert.match(no, /id="conclusieBtn"/, 'others can use the card too');
+  const other = render(sampleParentState, { deviationDay: 'Wo', dayCoordinators: { Di: 'f2' } });
+  assert.doesNotMatch(other, /conclusieCard forYou/, 'being coordinator on Tuesday does not highlight Wednesday');
+});
+test('the button opens WhatsApp with the text filled in and sends nothing itself', () => {
+  render(sampleParentState, { deviationDay: 'Di' }); dom.opened.length = 0;
+  withFakeNow(NOW, () => dom.el('conclusieBtn').onclick());
+  assert.equal(dom.opened.length, 1);
+  const [url, target] = dom.opened[0];
+  assert.match(url, /^https:\/\/wa\.me\/\?text=/); assert.equal(target, '_blank');
+  assert.match(decodeURIComponent(url.split('text=')[1]), /^Dinsdag: het schema is aangepast\.\nKees de Vries rijdt di de heenweg met Eline, Evi\./);
+});
+test('the card follows the open day', () => {
+  sampleParentState({ deviationDay: 'Ma' });
+  assert.match(withFakeNow(NOW, () => conclusieCardHtml('Ma')), /Conclusie-appje Maandag/);
+});
+
+console.log('\n=== 1-op-1 afstemmen (US-04) ===');
+test('every driver on the day gets a WhatsApp button, with the label for the day coordinator\'s role', () => {
+  const html = render(sampleParentState, { deviationDay: 'Di' });
+  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Over%20de%20rit%20heen%20van%20dinsdag%2029%20september/);
+  assert.match(text(html), /WhatsApp Kees de Vries Stem 1-op-1 af, de dagcoördinator deelt het besluit\./);
+  assert.match(html, /aria-label="Stem 1-op-1 af met Kees de Vries via WhatsApp"/);
+});
+test('no button for yourself, for a car without driver, or for a driver without phone number', () => {
+  sampleParentState({ links: { p1: { familyId: 'f1' } } });      // Jan drives on Monday (heen)
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: null, girlIds: ['f5'] }, { driverFamilyId: 'f5', girlIds: ['f6'] }];
+  S.families.f5 = { ...S.families.f5, parentPhone1: '', parentPhone2: '' };
+  assert.equal(oneOnOneHtml('Ma', 'heen', cars), '');
+});
+test('the hint text appears once per direction, not once per driver', () => {
+  sampleParentState({ links: { p1: { familyId: 'f6' } } });
+  const html = withFakeNow(NOW, () => oneOnOneHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: 'f2', girlIds: ['f2'] }]));
+  assert.equal((html.match(/oneOnOneBtn/g) || []).length, 2); assert.equal((html.match(/Stem 1-op-1 af, de dagcoördinator deelt het besluit\./g) || []).length, 1);
+});
+
+console.log('\n=== Flex aanmelden (US-05) ===');
+const flexFamily = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', parentPhone2: '', phoneKeys: ['0677777777'], schedule: {}, availability: {} };
+function flexParent(patch = {}) { return sampleParentState({ me: 'p9', links: { p9: { familyId: 'f9' } }, families: { ..._sampleFamilies(), f9: flexFamily }, ...patch }); }
+test('a Flex parent sees a signup block per direction, with time, car choice, ride-along and drive-yourself', () => {
+  const html = render(flexParent, { deviationDay: 'Ma' });
+  assert.equal((html.match(/class="group flexSignup"/g) || []).length, 2);
+  const s = text(html);
+  assert.match(s, /Flex: aanmelden voor deze dag Flex-leden rijden alleen mee op dagen dat ze zich aanmelden\. Lotte Flex Aankomst in Alkmaar/);
+  assert.match(s, /Klaar om op te halen/); assert.match(s, /Rij mee/); assert.match(s, /Ik rijd zelf/);
+  assert.match(html, /<option value="0">Auto: Jan Jansen<\/option>/);
+});
+test('a fixed parent does not see the block; the coordinator sees every Flex family', () => {
+  const fams = { ..._sampleFamilies(), f9: flexFamily };
+  assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma', families: fams }), /flexSignup/);
+  assert.match(render(sampleCoordinatorState, { deviationDay: 'Ma', families: fams }), /class="group flexSignup"/);
+});
+test('without a Flex family there is no block at all', () => {
+  assert.doesNotMatch(render(sampleCoordinatorState, { deviationDay: 'Ma' }), /flexSignup/);
+});
+test('no free seat: only "ik rijd zelf" is offered; no car of her own: only ride-along', () => {
+  flexParent();
+  const full = [{ driverFamilyId: 'f5', girlIds: ['f5', 'f6', 'f1'] }];   // f5: capacity 4 = 3 passenger seats, all taken
+  const noSeat = withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', full));
+  assert.match(text(noSeat), /Geen auto met een vrije plek\./); assert.match(noSeat, /data-flexdrive/); assert.doesNotMatch(noSeat, /data-flexpass/);
+  S.families.f9 = { ...flexFamily, capacity: 1 };
+  const noCar = withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }]));
+  assert.match(text(noCar), /Geen auto beschikbaar om zelf te rijden\./); assert.match(noCar, /data-flexpass/); assert.doesNotMatch(noCar, /data-flexdrive/);
+});
+test('a Flex girl who is signed up sees "Aangemeld" and a sign-off button instead of the form', () => {
+  flexParent();
+  const html = withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'] }]));
+  assert.match(text(html), /Lotte Flex · Aangemeld Afmelden/); assert.match(html, /data-flexoff="Ma\|heen\|f9"/); assert.doesNotMatch(html, /data-flexpass/);
+});
+test('a Flex driver is marked in the driver dropdown and gets no availability warning', () => {
+  const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f9', girlIds: ['f9'], departureTime: '08:00' }] } };
+  const html = render(flexParent, { deviationDay: 'Ma', deviations: dev });
+  assert.match(html, /<option value="f9" selected>Lotte Flex \(speelster-chauffeur\)<\/option>/);
+  assert.doesNotMatch(html, /Deze ouder heeft voor dit moment geen beschikbaarheid/);
+});
+
+// Runs a signup button handler: the fake page hands out one button for the given selector.
+async function clickFlex(selector, key, { time, car } = {}) {
+  const btn = { dataset: { [selector.replace(/^\[data-|\]$/g, '')]: key } };
+  if (time != null) dom.el('flexTime_' + key).value = time;
+  if (car != null) dom.el('flexCar_' + key).value = car;
+  const all = dom.doc.querySelectorAll; dom.doc.querySelectorAll = sel => sel === selector ? [btn] : all(sel);
+  try { await withFakeNowAsync(NOW, async () => { renderDeviationTab(); await btn.onclick(); }); } finally { dom.doc.querySelectorAll = all; }
+}
+await testAsync('ride along: she is added to the chosen car in a deviation, and the departure moves earlier when needed', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'families/f9': flexFamily });
+  flexParent({ deviationDay: 'Ma' }); S.settings.travelLeadMinutes = 60;
+  await clickFlex('[data-flexpass]', 'Ma|heen|f9', { time: '07:45', car: '0' });
+  const doc = fake.get('deviations/Ma_heen');
+  assert.deepEqual(doc.cars[0].girlIds, ['f1', 'f2', 'f9']); assert.equal(doc.cars[0].departureTime, '06:45');
+  assert.equal(doc.weekKey, '2026-W40');
+  assert.match(toastText(), /Lotte rijdt mee/);
+});
+await testAsync('drive yourself: a new car with her as driver is added, terug leaves at her ready time', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'families/f9': flexFamily });
+  flexParent({ deviationDay: 'Ma' });
+  await clickFlex('[data-flexdrive]', 'Ma|terug|f9', { time: '16:30' });
+  const cars = fake.get('deviations/Ma_terug').cars;
+  assert.equal(cars.length, 2);
+  assert.deepEqual(cars[1], { driverFamilyId: 'f9', girlIds: ['f9'], reserveFamilyIds: [], departureTime: '16:30' });
+  assert.equal('baseGroupId' in cars[0], false);
+  assert.match(toastText(), /Lotte rijdt zelf/);
+});
+await testAsync('no time filled in: nothing is saved and she is asked for a time', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'families/f9': flexFamily });
+  flexParent({ deviationDay: 'Ma' });
+  await clickFlex('[data-flexdrive]', 'Ma|heen|f9', { time: '' });
+  assert.equal(fake.get('deviations/Ma_heen'), undefined); assert.match(toastText(), /Vul eerst een tijd in\./);
+});
+await testAsync('ride along without choosing a car: nothing is saved', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'families/f9': flexFamily });
+  flexParent({ deviationDay: 'Ma' });
+  await clickFlex('[data-flexpass]', 'Ma|heen|f9', { time: '08:00', car: '' });
+  assert.equal(fake.get('deviations/Ma_heen'), undefined); assert.match(toastText(), /Kies een auto/);
+});
+await testAsync('sign off: she leaves the car again; her own car disappears when she was alone in it', async () => {
+  const dev = { Ma_terug: { day: 'Ma', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f2', 'f6'], departureTime: '17:30' }, { driverFamilyId: 'f9', girlIds: ['f9'], departureTime: '16:30' }] } };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'families/f9': flexFamily, 'deviations/Ma_terug': dev.Ma_terug });
+  flexParent({ deviationDay: 'Ma', deviations: dev });
+  await clickFlex('[data-flexoff]', 'Ma|terug|f9');
+  assert.deepEqual(fake.get('deviations/Ma_terug').cars.map(c => c.driverFamilyId), ['f2']);
+  assert.match(toastText(), /Lotte is afgemeld/);
+});
+await testAsync('a Flex signup shows up in the conclusie-appje as "extra" / as a new car', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'families/f9': flexFamily });
+  flexParent({ deviationDay: 'Ma' });
+  await clickFlex('[data-flexpass]', 'Ma|heen|f9', { time: '08:30', car: '0' });
+  S.deviations = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2', 'f9'], departureTime: '07:30' }] } };
+  assert.match(withFakeNow(NOW, () => conclusieCardHtml('Ma')), /Lotte rijdt ma heen extra mee met Jan Jansen\./);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

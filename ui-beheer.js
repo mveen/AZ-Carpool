@@ -94,6 +94,39 @@ export async function movePriority(shiftKeyVal,ids,id,delta){
   catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
 }
 
+// US-02: one family per weekday who handles change requests. Stored as familyIds in settings/dayCoordinators;
+// names are read from the families, so renaming a parent in Beheer updates every screen.
+export function dayCoordinatorsCardHtml(){
+  const fams = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||'', locale()));
+  const rows = DAYS.map(([k,label])=>{
+    const cur = S.dayCoordinators[k]||'';
+    return `<div class="rowflex" style="align-items:center;gap:8px;margin-top:6px">
+      <label style="margin:0;width:96px" for="dayCoord_${k}">${label}</label>
+      <select id="dayCoord_${k}" class="dayCoordSel" data-coordday="${k}" style="flex:1">
+        <option value="">${t('dayCoord.none')}</option>
+        ${fams.map(([id,f])=>`<option value="${id}" ${id===cur?'selected':''}>${esc(f.parentName||id)} (${esc(f.girlName||'?')})</option>`).join('')}
+      </select>
+    </div>`;
+  }).join('');
+  return `<div class="card" id="dayCoordCard">
+      <h2>${t('dayCoord.beheerTitle')}</h2>
+      <p class="muted">${t('dayCoord.beheerIntro')}</p>
+      ${rows}
+    </div>`;
+}
+
+export async function saveDayCoordinator(day, familyId){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  const next = {...S.dayCoordinators};
+  if(familyId) next[day]=familyId; else delete next[day];
+  try{
+    await db.doc("settings/dayCoordinators").set(next);
+    S.dayCoordinators = next;
+    showToast(t('dayCoord.saved'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
 export function renderBeheer(){
   const box=document.getElementById('tab-beheer');
   if(!box) return;
@@ -118,7 +151,7 @@ export function renderBeheer(){
     <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
       <div style="flex:1;min-width:0">
         <div style="font-size:15px;font-weight:800">${esc(fd.girlName||'(naam?)')}</div>
-        <div class="muted">${esc(fd.parentName||'(ouder?)')} ${claimed[id]?t('beheer.span_class_badge_gekoppeld_span'):''} ${isCoord?t('beheer.span_class_badge_rec_coordinator'):''}</div>
+        <div class="muted">${esc(fd.parentName||'(ouder?)')} ${claimed[id]?t('beheer.span_class_badge_gekoppeld_span'):''} ${isCoord?t('beheer.span_class_badge_rec_coordinator'):''}${fd.familyType==='flex'? ` <span class="badge flexBadge">${t('flex.badge')}</span>` : ''}</div>
         ${missing.length? `<div class="fitbad" style="font-size:11px;margin-top:2px">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
       <span style="display:flex;gap:6px;flex-shrink:0">
@@ -147,6 +180,7 @@ export function renderBeheer(){
       <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
       ${renderPrefsCard()}
     </div>
+    ${dayCoordinatorsCardHtml()}
     <div class="card">
       <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
       ${renderAvailabilityTable()}
@@ -207,6 +241,7 @@ export function renderBeheer(){
     const setLeadEl=document.getElementById('setLead'); if(setLeadEl) setLeadEl.onchange=saveSettingsAuto;
     const setPrefWindowEl=document.getElementById('setPrefWindow'); if(setPrefWindowEl) setPrefWindowEl.onchange=saveSettingsAuto;
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
+    document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
     const atp=document.getElementById('addTogetherPref');
     if(atp) atp.onclick=async ()=>{
       const ids=[...document.querySelectorAll('.prefTogetherPick:checked')].map(c=>c.value);

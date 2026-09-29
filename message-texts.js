@@ -4,10 +4,11 @@
 // only collect the current app state into a ctx and call them.
 import { APP_URL, DAYS, DIR_TEXT } from './constants.js';
 import { t, locale } from './i18n.js';
-import { activeDeviation, effectiveCars, fam, plainDriverName, plainGirlName } from './rides.js';
+import { activeDeviation, effectiveCars, fam, groupsFor, plainDriverName, plainGirlName } from './rides.js';
 import { dateForWeekday, dayUp, waDayDate } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { analyzeMatch, matchLabel, myMatchRides } from './matches.js';
+import { dayChanges } from './day-changes.js';
 
 // "MA 28" — used for the day headings in the WhatsApp messages.
 export function dayHeading(dayKey, date){ return dayUp(dayKey)+' '+date.getDate(); }
@@ -91,6 +92,33 @@ export function buildDayMessageFrom(ctx, day){
   ].join('\n');
 }
 
+// Conclusie-appje (US-03): the text the day coordinator sends to the group after changes on one day.
+// No changes: "<dag>: volgens schema. Zie Mijn week: <link>". Otherwise one line per change.
+// ctx: { baseCars(day,direction), cars(day,direction), driverName(id), girlName(id) }
+export function buildConclusieFrom(ctx, day){
+  const dayLabel = DAYS.find(([k])=>k===day)[1];
+  const short = day.toLowerCase();
+  const link = APP_URL+'#myweek';
+  const lines = [];
+  ['heen','terug'].forEach(direction=>{
+    const direct = direction==='heen'? t('wa.dir.heen') : t('wa.dir.terug');
+    const way = direction==='heen'? t('wa.way.heen') : t('wa.way.terug');
+    dayChanges(ctx.baseCars(day,direction), ctx.cars(day,direction)).forEach(it=>{
+      const p = { day: short, direction: direct, way };
+      if(it.type==='out') lines.push(t('wa.conclusie.out', { ...p, girl: ctx.girlName(it.girlId) }));
+      else if(it.type==='moved') lines.push(t('wa.conclusie.moved', { ...p, girl: ctx.girlName(it.girlId), driver: ctx.driverName(it.driverId) }));
+      else if(it.type==='extra') lines.push(t('wa.conclusie.extra', { ...p, girl: ctx.girlName(it.girlId), driver: ctx.driverName(it.driverId) }));
+      else if(it.type==='driver') lines.push(it.driverId
+        ? t('wa.conclusie.driver', { ...p, driver: ctx.driverName(it.driverId), from: ctx.driverName(it.fromDriverId) })
+        : t('wa.conclusie.driverNone', { ...p, from: ctx.driverName(it.fromDriverId) }));
+      else if(it.type==='newcar') lines.push(t('wa.conclusie.newcar', { ...p, driver: ctx.driverName(it.driverId), girls: it.girlIds.map(id=>ctx.girlName(id)).join(', ') }));
+      else if(it.type==='time') lines.push(t('wa.conclusie.time', { ...p, time: it.time, driver: ctx.driverName(it.driverId) }));
+    });
+  });
+  if(!lines.length) return t('wa.conclusie.onSchedule', { dayLabel, url: link });
+  return [t('wa.conclusie.header', { dayLabel }), ...lines, '', t('wa.conclusie.footer', { url: link })].join('\n');
+}
+
 // "Can you drive?" ask sent to a reserve driver. dateText is already formatted (e.g. "maandag 28 september").
 export function reserveAskTextFrom(dateText, direction, time){
   return t('wa.ask.reserve', { direction: t(direction==='heen'?'wa.ask.reserve.heen':'wa.ask.reserve.terug'), date: dateText, time: time||t('ask.unknownTime') });
@@ -105,6 +133,7 @@ function stateCtx(){
     cars: (day,direction)=>effectiveCars(day,direction),
     hasDeviation: (day,direction)=>!!activeDeviation(day,direction),
     dateFor: (day)=>dateForWeekday(day),
+    baseCars: (day,direction)=>groupsFor(day,direction).map(([,g])=>g),
     driverName: (id)=>plainDriverName(id),
     girlName: (id)=>plainGirlName(id),
     matchLabel,
@@ -115,6 +144,7 @@ export function buildMyWeekWhatsAppMessage(){
   const myId = myFamilyId();
   return buildMyWeekMessageFrom({ ...stateCtx(), myId, myFam: fam(myId), matchRides: myMatchRides(myId) });
 }
+export function buildConclusieMessage(day){ return buildConclusieFrom(stateCtx(), day); }
 export function buildDayWhatsAppMessage(day){ return buildDayMessageFrom(stateCtx(), day); }
 export function activeDeviationDayLabel(){ return activeDeviationDayLabelFrom(stateCtx()); }
 export function waDayLabel(k){ return dayHeading(k, dateForWeekday(k)); }

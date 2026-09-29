@@ -226,5 +226,26 @@ test('starting without a family id does nothing', () => {
   assert.ok(!S.impersonateFamilyId);
 });
 
+
+
+console.log('\n=== gezinstype Vast/Flex (US-05) ===');
+test('the coordinator form has a Vast/Flex choice, default Vast; the parent form does not', () => {
+  sampleCoordinatorState();
+  const coordHtml = familyFormHtml('coord', { ...sampleParentState().families.f2 });
+  assert.match(coordHtml, /id="coord_familyType"/); assert.match(coordHtml, /<option value="vast" selected>/);
+  const flexHtml = familyFormHtml('coord', { ...sampleParentState().families.f2, familyType: 'flex' });
+  assert.match(flexHtml, /<option value="flex" selected>/); assert.doesNotMatch(flexHtml, /<option value="vast" selected>/);
+  assert.doesNotMatch(familyFormHtml('me', sampleParentState().families.f2), /familyType/);
+});
+test('readFamilyForm returns the chosen type for the coordinator form only', () => {
+  resetState({});
+  const f = sampleParentState().families.f2; fillForm(f, 'coord'); fillForm(f, 'me');
+  dom.el('coord_familyType').value = 'flex'; dom.el('me_familyType').value = 'flex';
+  assert.equal(readFamilyForm('coord').familyType, 'flex');
+  assert.equal('familyType' in readFamilyForm('me'), false, 'a parent saving their own family never changes the type');
+  dom.el('coord_familyType').value = 'vast'; assert.equal(readFamilyForm('coord').familyType, 'vast');
+  dom.el('coord_familyType').value = 'rubbish'; assert.equal('familyType' in readFamilyForm('coord'), false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

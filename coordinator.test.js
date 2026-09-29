@@ -107,5 +107,26 @@ test('slugify makes safe ids (no accents, no spaces)', () => {
   assert.equal(slugify('Loïs'), 'lois'); assert.equal(slugify('Van der Berg'), 'van-der-berg');
 });
 
+import { dayCoordinatorFor } from './coordinator.js';
+
+console.log('\n=== dagcoördinator (US-02) ===');
+const dcFams = { f1: { parentName: 'Merel', parentPhone1: '0611111111' }, f2: { parentName: 'Mirjam', parentPhone1: '', parentPhone2: '0622222222' } };
+test('the coordinator of a day is read from the family chosen in Beheer', () => {
+  assert.deepEqual(dayCoordinatorFor({ dayCoordinators: { Ma: 'f1', Di: 'f2' }, families: dcFams }, 'Ma'), { familyId: 'f1', name: 'Merel', phone: '0611111111' });
+});
+test('the phone number falls back to Tel.nr. 2', () => {
+  assert.equal(dayCoordinatorFor({ dayCoordinators: { Di: 'f2' }, families: dcFams }, 'Di').phone, '0622222222');
+});
+test('names are never hard-coded: renaming the parent changes the result', () => {
+  const state = { dayCoordinators: { Ma: 'f1' }, families: { f1: { parentName: 'Nieuwe Naam' } } };
+  assert.equal(dayCoordinatorFor(state, 'Ma').name, 'Nieuwe Naam');
+});
+test('no coordinator for a day, an unknown family, or missing data gives null', () => {
+  assert.equal(dayCoordinatorFor({ dayCoordinators: { Ma: 'f1' }, families: dcFams }, 'Wo'), null);
+  assert.equal(dayCoordinatorFor({ dayCoordinators: { Ma: 'gone' }, families: dcFams }, 'Ma'), null);
+  assert.equal(dayCoordinatorFor({ families: dcFams }, 'Ma'), null);
+  assert.equal(dayCoordinatorFor({ dayCoordinators: { Ma: 'f1' } }, 'Ma'), null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -46,5 +46,9 @@ test('every S.<name> used by any module exists in state.js', () => {
   assert.deepEqual([...unknown], []);
 });
 
+
+
+test('dayCoordinators starts empty (Beheer fills it)', () => { assert.deepEqual(S.dayCoordinators, {}); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

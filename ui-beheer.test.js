@@ -134,5 +134,44 @@ await testAsync('seedFromPdf replaces families, invites and groups by the 8 PDF 
   assert.match(text(dom.html('seedMsg') || dom.el('seedMsg').textContent), /gezinnen aangemaakt/);
 });
 
+import { dayCoordinatorsCardHtml, saveDayCoordinator } from './ui-beheer.js';
+
+console.log('\n=== Dagcoördinatoren (US-02) ===');
+test('Beheer has a card with one family choice per weekday, names taken from the families', () => {
+  sampleCoordinatorState({ dayCoordinators: { Di: 'f2' } });
+  const html = dayCoordinatorsCardHtml();
+  assert.equal((html.match(/class="dayCoordSel"/g) || []).length, 5);
+  assert.match(text(html), /Dagcoördinatoren Kies per weekdag/);
+  assert.match(html, /<select id="dayCoord_Di"[^>]*>[\s\S]*<option value="f2" selected>Piet Pieters \(Jahaimy\)<\/option>/);
+  assert.match(html, /<option value="f1" >Jan Jansen \(Eline\)<\/option>/);
+  assert.match(html, /-- niemand --/);
+});
+test('the card is part of the Beheer tab', () => {
+  withFakeNow(NOW, () => { sampleCoordinatorState(); renderBeheer(); });
+  assert.match(dom.html('tab-beheer'), /id="dayCoordCard"/);
+});
+await testAsync('choosing a family saves it to settings/dayCoordinators; choosing "niemand" removes the day', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ dayCoordinators: {} });
+  assert.equal(await saveDayCoordinator('Ma', 'f1'), true);
+  assert.deepEqual(fake.get('settings/dayCoordinators'), { Ma: 'f1' });
+  await saveDayCoordinator('Di', 'f2');
+  assert.deepEqual(fake.get('settings/dayCoordinators'), { Ma: 'f1', Di: 'f2' });
+  assert.match(toast(), /Dagcoördinator opgeslagen/);
+  await saveDayCoordinator('Ma', '');
+  assert.deepEqual(fake.get('settings/dayCoordinators'), { Di: 'f2' });
+});
+await testAsync('a refused save is reported and the state is not changed', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ dayCoordinators: { Ma: 'f1' } }); fake.failWrites('settings/', 'denied');
+  assert.equal(await saveDayCoordinator('Ma', 'f2'), false);
+  assert.deepEqual(S.dayCoordinators, { Ma: 'f1' });
+});
+test('a Flex family is marked in the family list', () => {
+  const fams = sampleCoordinatorState().families; fams.f5 = { ...fams.f5, familyType: 'flex' };
+  withFakeNow(NOW, () => { sampleCoordinatorState({ families: fams }); renderBeheer(); });
+  const html = dom.html('tab-beheer');
+  assert.equal((html.match(/badge flexBadge">Flex</g) || []).length, 1);
+  assert.match(text(html), /Sanne Smit Flex/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

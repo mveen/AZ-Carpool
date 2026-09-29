@@ -77,5 +77,35 @@ test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
   goToWijzigen(null); assert.equal(S.deviationDay, 'Di');
 });
 
+
+
+console.log('\n=== Dagcoördinator vandaag and Flex (US-02, US-05) ===');
+test('Mijn week shows the day coordinator of today under the header, with a WhatsApp button', () => {
+  const html = render({ dayCoordinators: { Wo: 'f3' } });
+  assert.match(text(html), /^Jahaimy Ouder: Piet Pieters · 4 passagiersplekken Dagcoördinator vandaag: Kees de Vries/);
+  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=/);
+});
+test('without a coordinator for today nothing extra appears', () => {
+  assert.doesNotMatch(render({ dayCoordinators: {} }), /Dagcoördinator/);
+});
+test('a Flex daughter has no "not planned" alerts, and sees only the days she signed up for', () => {
+  const fams = sampleParentState().families;
+  fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777',
+    schedule: { Ma: { heen: '09:00', terug: '16:00' }, Do: { heen: '09:00', terug: '16:00' } }, availability: {} };
+  const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'], departureTime: '07:30' }] } };
+  const s = text(render({ me: 'p9', links: { p9: { familyId: 'f9' } }, families: fams, deviations: dev }));
+  assert.match(s, /^Lotte Ouder: Lotte Flex/);
+  assert.doesNotMatch(s, /heeft nog geen rit/);
+  assert.match(s, /MA 28 sep/); assert.match(s, /Rijdt mee met: Jan Jansen/); assert.doesNotMatch(s, /09:00 \/ 16:00/, 'no fixed times for a Flex daughter');
+  assert.doesNotMatch(s, /DO 1 okt/);
+});
+test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', () => {
+  const fams = sampleParentState().families;
+  fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', schedule: {}, availability: {} };
+  const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f9', girlIds: ['f9', 'f2'], departureTime: '07:30' }] } };
+  const html = render({ families: fams, deviations: dev });
+  assert.match(html, /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

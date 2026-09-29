@@ -71,11 +71,25 @@ export function isAvailable(f,day,direction){
 
 export function plainGirlName(id, st=S){ const f=fam(id, st); return f.girlName||f.parentName||id; }
 
-export function plainDriverName(id, st=S){ return id? (fam(id, st).parentName||'?') : t('driver.none'); }
+// Flex families ride only on days they sign up for: never auto-planned, not as passenger and not as driver.
+export function isFlex(f){ return !!f && f.familyType==='flex'; }
+
+// A Flex driver is a player who drives herself: marked "speelster-chauffeur" wherever her name shows.
+export function plainDriverName(id, st=S){
+  if(!id) return t('driver.none');
+  const f = fam(id, st);
+  return (f.parentName||'?') + (isFlex(f)? ' ('+t('flex.speelsterChauffeur')+')' : '');
+}
+// Same, as HTML: escaped name plus a small badge for a Flex driver.
+export function driverNameHtml(id, st=S){
+  if(!id) return esc(t('driver.none'));
+  const f = fam(id, st);
+  return esc(f.parentName||'?') + (isFlex(f)? ` <span class="badge flexBadge">${esc(t('flex.speelsterChauffeur'))}</span>` : '');
+}
 
 // ---------- Rooster tab ----------
 export function girlsFor(day,direction, st=S){
-  return Object.entries(st.families).filter(([id,f])=>f.schedule && f.schedule[day] && f.schedule[day][direction]);
+  return Object.entries(st.families).filter(([id,f])=>!isFlex(f) && f.schedule && f.schedule[day] && f.schedule[day][direction]);
 }
 
 export function groupsFor(day,direction, st=S){
@@ -90,12 +104,12 @@ export function alreadyGrouped(day,direction, st=S){
 
 export function eligibleDrivers(day,direction,count, st=S){
   return sortByShiftPriority(day,direction, Object.entries(st.families).filter(([id,f])=>
-    isAvailable(f,day,direction) && seats(f)>=count
+    !isFlex(f) && isAvailable(f,day,direction) && seats(f)>=count
   ), st);
 }
 
 export function availableDrivers(day,direction, st=S){
-  return Object.entries(st.families).filter(([id,f])=> isAvailable(f,day,direction));
+  return Object.entries(st.families).filter(([id,f])=> !isFlex(f) && isAvailable(f,day,direction));
 }
 
 // timeToMinutes/minutesToTime/computeDepartureTime/planClusters/planPrimaryOption/planOptions

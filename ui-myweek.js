@@ -10,6 +10,8 @@ import { dateForWeekday, dayUp, effectivePlanningDate, startOfWeek } from './dat
 import { matchCarRowHtml, renderDeviationTab, wireWhatsAppButton } from './ui-deviation.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { activateTab } from './app.js';
+import { dayCoordinatorHtml } from './ui-schedule.js';
+import { isFlex, driverNameHtml } from './rides.js';
 
 export function matchInfoHtml(m){
   const a = analyzeMatch(m.summary);
@@ -33,9 +35,13 @@ export function renderMyWeek(){
   const myFam = fam(myId);
 
   function subride(day,direction,label){
-    const s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
-    if(!s) return '';
+    let s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
     const cars = effectiveCars(day,direction);
+    // Flex: no standard schedule; a ride shows only on days she signed up for (in a car, or driving).
+    if(isFlex(myFam)){
+      s = '';
+      if(!cars.some(c=>(c.girlIds||[]).includes(myId) || c.driverFamilyId===myId)) return '';
+    } else if(!s) return '';
     const daughterIdx = cars.findIndex(c=>c.girlIds.includes(myId));
     const drivingIdx = cars.findIndex(c=>c.driverFamilyId===myId);
     let dep = s, statusHtml, statusClass='';
@@ -48,7 +54,7 @@ export function renderMyWeek(){
         const passengers=g.girlIds.map(id=>girlName(id)).join(', ');
         statusHtml = t('myweek.jij_rijdt', { p1: phIcon('user'), p2: phIcon('car'), p3: passengers? ` · ${passengers}`:'' }); statusClass='driving';
       } else {
-        const driverName = g.driverFamilyId? esc(fam(g.driverFamilyId).parentName) : t('deviation.nog_geen_chauffeur');
+        const driverName = g.driverFamilyId? driverNameHtml(g.driverFamilyId) : t('deviation.nog_geen_chauffeur');
         statusHtml = t('myweek.rijdt_mee_met', { p1: phIcon('user'), p2: driverName });
       }
     } else {
@@ -84,7 +90,7 @@ export function renderMyWeek(){
     const passengers = (r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
     const status = r.driving
       ? t('myweek.jij_rijdt', { p1: r.daughter? phIcon('user'):'', p2: phIcon('car'), p3: passengers? ` · ${passengers}`:'' })
-      : t('myweek.rijdt_mee_met', { p1: phIcon('user'), p2: r.car.driverFamilyId? esc(fam(r.car.driverFamilyId).parentName) : t('deviation.nog_geen_chauffeur') });
+      : t('myweek.rijdt_mee_met', { p1: phIcon('user'), p2: r.car.driverFamilyId? driverNameHtml(r.car.driverFamilyId) : t('deviation.nog_geen_chauffeur') });
     return `<div class="subride matchRide">
       <div class="subrideHead"><span style="display:inline-flex;align-items:center;gap:5px">${phIcon('soccer')} ${t('myweek.wedstrijd')} ${esc(matchLabel(r.doc))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</span><span class="subrideDep">${esc(r.car.departureTime||'--:--')}</span></div>
       <div class="subrideStatus ${r.driving?'driving':''}">${status}</div>
@@ -112,7 +118,7 @@ export function renderMyWeek(){
         <span class="dayCardTitle">${dateLabel}</span>
         ${isToday? t('myweek.span_class_todaytag_vandaag_span') : ''}
         ${matchHtml? matchTagHtml : ''}
-        ${onlyMatch? '' : `<span class="dayTimes">${heenTime||'–'} / ${terugTime||'–'}</span>`}
+        ${(onlyMatch||isFlex(myFam))? '' : `<span class="dayTimes">${heenTime||'–'} / ${terugTime||'–'}</span>`}
       </div>
       ${heenHtml}${terugHtml}${matchHtml}
     </div>`;
@@ -167,7 +173,7 @@ export function renderMyWeek(){
     if(dateForWeekday(k) < todayMidnight) return; // days already past
     ['heen','terug'].forEach(direction=>{
       const s = myFam.schedule && myFam.schedule[k] && myFam.schedule[k][direction];
-      if(!s) return;
+      if(!s || isFlex(myFam)) return; // Flex is never auto-planned, so nothing is 'missing'
       if(effectiveCars(k,direction).some(c=>(c.girlIds||[]).includes(myId))) return;
       const when = k===todayKey? t('myweek.vandaag') : label;
       unplannedRows.push(`<div class="row"><span><strong>${when}</strong> · ${direction==='heen'?t('dir.heenShort'):t('dir.terugShort')} (${s}${t('myweek.niet_ingepland')}</span>
@@ -187,7 +193,7 @@ export function renderMyWeek(){
       </div>
       <button type="button" class="waIconBtn" id="wa-hero" aria-label="${t('myweek.deel_mijn_week_via_whatsapp')}" title="${t('myweek.deel_via_whatsapp')}">${WHATSAPP_SVG}</button>
     </div>
-    ${unplannedHtml}
+    ${dayCoordinatorHtml()}${unplannedHtml}
     ${dayCardsHtml}
     <div class="legendLine"><span>${phIcon('user')} ${t('myweek.rit_dochter')}</span><span>${phIcon('car')} ${t('myweek.jouw_rijbeurt')}</span><span>${phIcon('lightning')} ${t('myweek.wijziging')}</span><span>${phIcon('soccer')} ${t('myweek.wedstrijdrit')}</span></div>
     ${matchesCardHtml}

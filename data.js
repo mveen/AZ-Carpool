@@ -143,6 +143,8 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) S.settings={...S.settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
+      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
     db.doc("settings/priority").onSnapshot(snap=>{ S.shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
@@ -183,7 +185,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={};
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={};
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }

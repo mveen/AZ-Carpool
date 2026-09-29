@@ -34,6 +34,7 @@ export const S = {
   weekendMatchBySlug: {},
   openMatchCarpoolForm: null,
   currentWeekKey: null,
+  dayCoordinators: {},
   settings: {gapThresholdHours:3, travelLeadMinutes:60, prefWindowMinutes:30, parentPrefWindowMinutes:60},
   prefs: {rules:[]},
   shiftPriority: {},

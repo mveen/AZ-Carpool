@@ -67,3 +67,14 @@ export function slugify(s){ return s.toLowerCase().normalize('NFD').replace(/[\u
 
 // The logged-in parent's own family (null for a coordinator who isn't linked to a family).
 export function myLinkedFamilyId(){ const linked = !!S.impersonateFamilyId || !!(S.links[S.me] && S.links[S.me].familyId); return linked? myFamilyId() : null; }
+
+// ---------- Dagcoördinator (US-02): who handles change requests on a weekday ----------
+// Beheer stores { Ma: familyId, Di: familyId, ... } in settings/dayCoordinators. The name and phone number are
+// always read from the family, never stored or written into the code.
+// state: { dayCoordinators, families }. Returns { familyId, name, phone } or null when none is set.
+export function dayCoordinatorFor(state, day){
+  const id = state.dayCoordinators && state.dayCoordinators[day];
+  const f = id && state.families && state.families[id];
+  if(!f) return null;
+  return { familyId:id, name:f.parentName||'', phone:f.parentPhone1||f.parentPhone2||'' };
+}

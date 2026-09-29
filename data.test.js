@@ -258,5 +258,22 @@ await testAsync('saveCoordFamily on an existing family keeps fields the form doe
   assert.equal(f.extraField, 'blijft'); assert.equal(f.timeChanges.length, 1);
 });
 
+
+
+await testAsync('the day coordinators from Beheer are loaded live, and cleared when listeners stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/dayCoordinators': { Ma: 'f1', Di: 'f2' } }); sampleParentState({ families: {}, groups: {}, dayCoordinators: {} });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.dayCoordinators, { Ma: 'f1', Di: 'f2' });
+  await db.doc('settings/dayCoordinators').set({ Ma: 'f3' }); await tick();
+  assert.deepEqual(S.dayCoordinators, { Ma: 'f3' });
+  stopDataListeners(); assert.deepEqual(S.dayCoordinators, {});
+});
+await testAsync('without a settings document there are simply no day coordinators', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ families: {}, groups: {}, dayCoordinators: { Ma: 'stale' } });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.dayCoordinators, {});
+  stopDataListeners();
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

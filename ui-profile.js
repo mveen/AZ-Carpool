@@ -112,7 +112,12 @@ export function familyFormHtml(prefix,f){
     <div class="grid2">
       <div><label style="margin-top:0">${t('profile.naam_ouder')}</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}"></div>
       <div><label style="margin-top:0">${t('profile.naam_dochter')}</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
-    </div>
+    </div>${prefix==='coord'? `
+    <label>${t('profile.gezinstype')}</label>
+    <select id="${prefix}_familyType">
+      <option value="vast" ${f.familyType==='flex'?'':'selected'}>${t('profile.gezinstype.vast')}</option>
+      <option value="flex" ${f.familyType==='flex'?'selected':''}>${t('profile.gezinstype.flex')}</option>
+    </select>` : ''}
     <div class="grid2">
       <div><label style="margin-top:8px">${t('profile.tel_nr_1')}</label><input type="tel" inputmode="tel" autocomplete="off" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
       <div><label style="margin-top:8px">${t('profile.tel_nr_2')}</label><input type="tel" inputmode="tel" autocomplete="off" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
@@ -202,7 +207,11 @@ export function readFamilyForm(prefix){
       backupTerug:document.getElementById(`${prefix}_bkT_${k}`).checked
     };
   });
+  // Only the coordinator's form has this field; a parent's own save leaves the type untouched (merge).
+  const typeEl = prefix==='coord'? document.getElementById(`${prefix}_familyType`) : null;
+  const familyType = typeEl && (typeEl.value==='flex' || typeEl.value==='vast')? { familyType: typeEl.value } : {};
   return {
+    ...familyType,
     parentName:document.getElementById(`${prefix}_parentName`).value.trim(),
     girlName:document.getElementById(`${prefix}_girlName`).value.trim(),
     parentPhone1:document.getElementById(`${prefix}_parentPhone1`).value.trim(),

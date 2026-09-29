@@ -3,7 +3,7 @@
 // files. The cache exists only so the app still opens (to whatever was last seen)
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME whenever the asset list below changes, so old caches are dropped.
-const CACHE_NAME = 'az-carpool-v3';
+const CACHE_NAME = 'az-carpool-v4';
 const ASSETS = [
   './',
   './index.html',
@@ -15,6 +15,8 @@ const ASSETS = [
   './texts-nl.js',
   './dates.js',
   './rides.js',
+  './day-changes.js',
+  './flex.js',
   './coordinator.js',
   './matches.js',
   './data.js',

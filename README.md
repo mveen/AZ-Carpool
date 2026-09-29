@@ -16,10 +16,12 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `texts-nl.js` | All Dutch texts and messages (the translation file) | `i18n.test.js` |
 | `dates.js` | Week keys, planning date, day labels, expiry times | `dates.test.js` |
 | `rides.js` | Ride assignment logic: who drives whom (pure functions) | `rides.test.js` |
-| `coordinator.js` | Coordinator/member rules, invite codes, phone numbers (pure functions) | `coordinator.test.js` |
+| `coordinator.js` | Coordinator/member rules, invite codes, phone numbers, day coordinator lookup (pure functions) | `coordinator.test.js` |
 | `matches.js` | Match calendar events and match carpools | `matches.test.js` |
 | `data.js` | All Firestore access (through an adapter), listeners, saving | `data.test.js` (fake database only) |
-| `message-texts.js` | WhatsApp and other messages, built from data (pure functions) | `message-texts.test.js` |
+| `message-texts.js` | WhatsApp and other messages, built from data, incl. the conclusie-appje (pure functions) | `message-texts.test.js` |
+| `day-changes.js` | What changed on one day compared with the standard rooster (pure functions) | `day-changes.test.js` |
+| `flex.js` | Flex signup: join a car, drive yourself, sign off, departure time (pure functions) | `flex.test.js` |
 | `ui-common.js` | Shared UI pieces: toast, status line, sheets, icons, install card | `ui-common.test.js` |
 | `ui-schedule.js` | Rooster tab | `ui-schedule.test.js` |
 | `ui-myweek.js` | Mijn week tab | `ui-myweek.test.js` |
@@ -55,14 +57,20 @@ Commit `tests.lock.json` together with the change.
 ### Render tests (snapshots)
 Some tests compare the generated page with a saved copy in `__snapshots__/`. If you change the look on purpose, refresh the copies with `UPDATE_SNAPSHOTS=1 npm test`, read the diff, and keep it only if it is what you intended.
 
+## Day coordinator, conclusie-appje, 1-op-1, Flex
+- **Dagcoördinator (Beheer).** Beheer → *Dagcoördinatoren*: pick one family per weekday. It is stored as family ids in `settings/dayCoordinators`, so name and phone number always come from the family, never from the code. Rooster and Mijn week show "Dagcoördinator vandaag: <naam>" with a WhatsApp button (nothing on weekends or when no one is set).
+- **Conclusie-appje (Wijzigen).** Bottom of every day: a drafted text ("<dag>: volgens schema" + Mijn week link, or one line per change compared with the standard rooster). The button opens WhatsApp with the text filled in; nobody is messaged automatically. The card is highlighted for that day's coordinator; every parent can use it.
+- **1-op-1 afstemmen (Wijzigen).** Each driver in a direction gets a WhatsApp button with a prefilled question, plus the hint "Stem 1-op-1 af, de dagcoördinator deelt het besluit."
+- **Flex.** Beheer → Wijzig gezin → *Type gezin*: Vast or Flex. Flex families are never in the auto-planned rooster (not as passenger, not as driver, no "niet ingedeeld" alerts). A Flex parent (or the coordinator) signs up per day and direction in Wijzigen: with a time, as passenger in a car with a free seat, or driving herself. This is stored as a normal deviation, so it expires with the week. A Flex driver is shown as "speelster-chauffeur". No change to `firestore.rules` was needed.
+
 ## Texts and languages
 Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {placeholders}'`. Code calls `t('key', { name: 'x' })`. Static texts in `index.html` use `data-i18n="key"` attributes. To add a language, copy `texts-nl.js` to `texts-<lang>.js`, translate the values (keep keys and `{placeholders}`), and switch the dictionary in `i18n.js`. Many texts use generic placeholders such as `{p1}`. Look at the Dutch sentence to see what each one is.
 
 ## Deploy
-1. Upload all changed files to the GitHub repo (`main`). For the first modular release upload `index.html`, `service-worker.js`, and every new `.js` file in the table above. Test files are optional (the site does not use them).
+1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `day-changes.js`, `flex.js`). Test files are optional (the site does not use them).
 2. GitHub Pages redeploys in about 60 seconds.
 3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v3`) then replaces the old cache.
+4. Open the app once online. The service worker (cache `az-carpool-v4`) then replaces the old cache.
 
 ### Manual smoke test on a phone (before every go-live)
 Automated tests cover logic and page output, but not a real phone, real Firebase, or the real WhatsApp app. Check these on a mobile browser:

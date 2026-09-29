@@ -2,14 +2,30 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, WA_ICON_SMALL, todayKey } from './constants.js';
-import { activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, seats, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
+import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, seats, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dayUp, weekRangeLabel } from './dates.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, openSheet, phIcon, setStatus, showToast } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen } from './ui-myweek.js';
-import { myLinkedFamilyId, normalizePhone } from './coordinator.js';
+import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
+
+// US-02: "Dagcoördinator vandaag: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
+// The name and phone number come from the family chosen in Beheer, never from the code.
+// Nothing on weekends or when Beheer has not set a coordinator for today.
+export function dayCoordinatorHtml(){
+  if(!todayKey) return '';
+  const dc = dayCoordinatorFor(S, todayKey);
+  if(!dc) return '';
+  const me = myLinkedFamilyId();
+  if(me && me===dc.familyId) return `<div class="dayCoordBar you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you')}</span></div>`;
+  const name = esc(dc.name||'?');
+  const num = waPhone(dc.phone);
+  const href = num? 'https://wa.me/'+num+'?text='+encodeURIComponent(t('dayCoord.waText', { name: dc.name||'' })) : '';
+  const btn = href? `<a class="dayCoordWa" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t('dayCoord.waLabel', { name: dc.name||'?' }))}">${WA_ICON_SMALL}</a>` : '';
+  return `<div class="dayCoordBar" id="dayCoordBar">${phIcon('user')} <span>${t('dayCoord.label', { name: `<strong>${name}</strong>` })}</span>${btn}</div>`;
+}
 
 export function renderSchedule(){
   const box=document.getElementById('tab-schedule');
@@ -37,7 +53,8 @@ export function renderSchedule(){
   const footer = mode==='week'
     ? lastUpdateFooter([S.lastUpdateRooster,S.lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])
     : lastUpdateFooter(S.lastUpdateRooster);
-  box.innerHTML = timeChangesCardHtml()
+  box.innerHTML = dayCoordinatorHtml()
+    + timeChangesCardHtml()
     + segHtml
     + `<div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>`
     + renderDay(S.scheduleDay, label)
@@ -117,11 +134,14 @@ export function neededTimesHtml(day,direction,girlIds){
   return `<div class="subtime">${direction==='heen'? t('schedule.aankomst_alkmaar_nodig', { p1: range }) : t('schedule.klaar_om_op_te_halen', { p1: range })}</div>`;
 }
 
+// Small badge after a Flex driver's name (used where the name is already a WhatsApp link).
+function flexMark(id){ return isFlex(fam(id))? ` <span class="badge flexBadge">${esc(t('flex.speelsterChauffeur'))}</span>` : ''; }
+
 export function driverLineHtml(driverId,myId,wa){
   if(!driverId) return `<div class="driver" style="color:var(--danger)">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
   if(myId && driverId===myId) return `<div class="driver me">${phIcon('car')} ${t('schedule.jij_rijdt')}</div>`;
   // wa = {day,time}: "Deze week" — the chauffeur's name opens WhatsApp to them.
-  const name = wa? waNameHtml(driverId, driverAskText(wa.day, wa.time)) : esc(fam(driverId).parentName);
+  const name = wa? waNameHtml(driverId, driverAskText(wa.day, wa.time)) + flexMark(driverId) : driverNameHtml(driverId);
   return `<div class="driver">${phIcon('car')} ${t('schedule.chauffeur')} ${name}</div>`;
 }
 

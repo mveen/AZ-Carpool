@@ -98,5 +98,40 @@ test('driverLineHtml names the driver; tripReserveHtml lists the reserves', () =
   assert.match(text(tripReserveHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }], false)), /Reserve: /);
 });
 
+import { dayCoordinatorHtml } from './ui-schedule.js';
+
+console.log('\n=== Dagcoördinator vandaag (US-02) ===');
+// The frozen "today" of the test run is Wednesday (Wo).
+test('nothing is shown when Beheer has no coordinator for today', () => {
+  sampleParentState({ dayCoordinators: { Ma: 'f1' } });
+  assert.equal(withFakeNow(NOW, () => dayCoordinatorHtml()), '');
+  assert.doesNotMatch(render(() => sampleParentState({ dayCoordinators: {} })), /Dagcoördinator/);
+});
+test('Rooster shows "Dagcoördinator vandaag: <naam>" with a WhatsApp button to that person', () => {
+  const html = render(() => sampleParentState({ dayCoordinators: { Wo: 'f3' } }));
+  assert.match(text(html), /^Dagcoördinator vandaag: Kees de Vries/);
+  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi%20Kees%20de%20Vries!%20Een%20vraag/);
+  assert.match(html, /aria-label="Stuur Kees de Vries een WhatsApp-bericht"/);
+});
+test('the name comes from the family data, not from the code', () => {
+  const html = render(() => sampleParentState({ dayCoordinators: { Wo: 'f3' }, families: { ...sampleParentState().families, f3: { ...sampleParentState().families.f3, parentName: 'Merel Test' } } }));
+  assert.match(text(html), /^Dagcoördinator vandaag: Merel Test/);
+  assert.doesNotMatch(html, /Kees de Vries/);
+});
+test('a coordinator without a phone number gets no WhatsApp button', () => {
+  const fams = sampleParentState().families; fams.f3 = { ...fams.f3, parentPhone1: '', parentPhone2: '' };
+  const html = render(() => sampleParentState({ dayCoordinators: { Wo: 'f3' }, families: fams }));
+  assert.match(text(html), /^Dagcoördinator vandaag: Kees de Vries/); assert.doesNotMatch(html, /wa\.me/);
+});
+test('the day coordinator herself is told so, without a button to herself', () => {
+  const html = render(() => sampleParentState({ dayCoordinators: { Wo: 'f2' } }));
+  assert.match(text(html), /^Jij bent dagcoördinator vandaag/); assert.doesNotMatch(html, /dayCoordWa/);
+});
+test('a Flex driver is marked in the "Deze week" driver line', () => {
+  const fams = sampleParentState().families; fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', schedule: {}, availability: {} };
+  const html = withFakeNow(NOW, () => { sampleParentState({ families: fams }); return driverLineHtml('f9', 'f2'); });
+  assert.match(html, /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

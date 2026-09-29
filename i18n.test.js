@@ -79,5 +79,15 @@ test('the Weekschema warning texts exist', () => {
   assert.ok(hasKey('profile.weekschema_waarschuwing_titel') && hasKey('profile.weekschema_waarschuwing_tekst') && hasKey('profile.weekschema_naar_wijzigen'));
 });
 
+
+
+console.log('\n=== US-02..05 texts ===');
+test('the wording from the user stories is exact', () => {
+  assert.equal(t('dayCoord.label', { name: 'Merel' }), 'Dagcoördinator vandaag: Merel');
+  assert.equal(t('oneOnOne.label'), 'Stem 1-op-1 af, de dagcoördinator deelt het besluit.');
+  assert.equal(t('wa.conclusie.onSchedule', { dayLabel: 'Donderdag', url: 'U' }), 'Donderdag: volgens schema. Zie Mijn week: U');
+  assert.equal(t('flex.speelsterChauffeur'), 'speelster-chauffeur');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

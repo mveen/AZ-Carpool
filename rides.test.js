@@ -194,5 +194,44 @@ test('called without a state argument, functions read S', () => {
   assert.equal(S.families.f1.parentName, 'Jan Jansen');
 });
 
+import { isFlex, driverNameHtml } from './rides.js';
+
+console.log('\n=== Flex families (US-05) ===');
+const flexFam = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777',
+  schedule: { Ma: { heen: '09:00', terug: '16:00' } }, availability: { Ma: { heen: true, terug: true, backupHeen: false, backupTerug: false } } };
+function flexState() { const s = state(); s.families = { ...s.families, f9: flexFam }; return s; }
+test('isFlex: only familyType "flex" counts (vast, missing and unknown do not)', () => {
+  assert.equal(isFlex(flexFam), true);
+  assert.equal(isFlex({ familyType: 'vast' }), false);
+  assert.equal(isFlex({}), false);
+  assert.equal(isFlex(undefined), false);
+});
+test('a Flex girl is never in the list of girls to plan, even with times in her schedule', () => {
+  assert.equal(ids(girlsFor('Ma', 'heen', flexState())).includes('f9'), false);
+  assert.equal(ids(girlsFor('Ma', 'heen', state())).length, ids(girlsFor('Ma', 'heen', flexState())).length);
+});
+test('a Flex girl is never reported as "not placed"', () => {
+  assert.equal(ids(unplacedFor('Ma', 'heen', 'standard', flexState())).includes('f9'), false);
+  assert.equal(ids(unplacedFor('Ma', 'heen', 'week', flexState())).includes('f9'), false);
+});
+test('a Flex family is never an automatic driver or reserve, even when marked available', () => {
+  assert.equal(ids(availableDrivers('Ma', 'heen', flexState())).includes('f9'), false);
+  assert.equal(ids(eligibleDrivers('Ma', 'heen', 1, flexState())).includes('f9'), false);
+});
+test('a Flex driver is marked "speelster-chauffeur"; a fixed driver is not', () => {
+  const st = flexState();
+  assert.equal(plainDriverName('f9', st), 'Lotte Flex (speelster-chauffeur)');
+  assert.equal(plainDriverName('f1', st), 'Jan Jansen');
+  assert.match(driverNameHtml('f9', st), /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+  assert.equal(driverNameHtml('f1', st), 'Jan Jansen');
+  assert.equal(driverNameHtml(null, st), 'nog geen chauffeur');
+});
+test('a Flex girl who is put in a car through Wijzigen is part of that car', () => {
+  const st = flexState();
+  st.deviations = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: WEEK_KEY, expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'], departureTime: '07:30' }] } };
+  assert.deepEqual(effectiveCars('Ma', 'heen', st)[0].girlIds, ['f1', 'f9']);
+  assert.equal(ids(unplacedFor('Ma', 'heen', 'week', st)).includes('f9'), false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

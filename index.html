@@ -253,6 +253,15 @@ table.avail th,table.avail td{padding:6px 4px}
 .subride .subrideStatus.unplanned{color:var(--danger);font-weight:800;font-size:13px;display:flex;align-items:center;gap:4px}
 .subride .subrideStatus.changed{color:var(--warn-text);font-weight:600}
 /* ---------- Dagafwijking (amber "warning" theme) ---------- */
+.dayCoordBar{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:12px;font-size:13px}
+.dayCoordBar>span{flex:1;min-width:0}
+.dayCoordBar.you{background:var(--accent2);color:var(--accent);font-weight:700}
+.dayCoordWa{display:flex;align-items:center;justify-content:center;width:40px;height:40px;flex-shrink:0}
+.dayCoordWa svg{width:28px;height:28px}
+.conclusieCard.forYou{border:2px solid var(--az-red)}
+.conclusiePreview{white-space:pre-wrap;background:var(--bg,#f6f6f6);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;font-size:13px;margin:8px 0}
+.oneOnOneHint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.flexBadge{background:var(--accent2);color:var(--accent)}
 .devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
 :root[data-theme="dark"] .devAlert{border-color:#78350f}
 .devAlert .devAlertTitle{font-size:13px;font-weight:800;color:var(--warn-text);margin:0}
