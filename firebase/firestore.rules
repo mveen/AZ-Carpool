@@ -1,0 +1,135 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ------------------------------------------------------------------
+    // Trust model
+    //   - Everyone is signed in anonymously, so "signed in" means only "opened the URL".
+    //   - A MEMBER is either the coordinator, or someone whose own links/{uid} doc points
+    //     at a family that still exists.
+    //   - A links/{uid} doc can only be created by quoting a valid invite code AND one of
+    //     that family's phone numbers. That check happens HERE, not only in the browser.
+    //   - Invite codes live in /invites/{code}. Nobody can list that collection except the
+    //     coordinator; anyone can look up one code they already know.
+    // ------------------------------------------------------------------
+    function signedIn() { return request.auth != null; }
+
+    function coordPath() { return /databases/$(database)/documents/config/coordinator; }
+    function myLinkPath() { return /databases/$(database)/documents/links/$(request.auth.uid); }
+    function hasLink() { return exists(myLinkPath()); }
+    function linkedFamilyId() { return get(myLinkPath()).data.familyId; }
+
+    function coordByUid() {
+      let cfg = get(coordPath()).data;
+      return ('uid' in cfg) && cfg.uid == request.auth.uid;
+    }
+    function coordByFamily() {
+      let cfg = get(coordPath()).data;
+      return ('familyId' in cfg) && hasLink() && linkedFamilyId() == cfg.familyId;
+    }
+    // Coordinator status is either tied to the browser that first claimed it (uid), or to
+    // whichever family is designated "coordinator gezin" in Beheer.
+    function isCoordinator() {
+      return signedIn() && exists(coordPath()) && (coordByUid() || coordByFamily());
+    }
+    function isLinked() {
+      return signedIn() && hasLink()
+        && exists(/databases/$(database)/documents/families/$(linkedFamilyId()));
+    }
+    function isMember() { return isCoordinator() || isLinked(); }
+
+    // A parent creating/replacing their own link must quote a real invite code for that
+    // family, plus a normalised phone number that is on that family's phoneKeys list.
+    function validInviteLink() {
+      let d = request.resource.data;
+      let invite = /databases/$(database)/documents/invites/$(d.code);
+      let family = /databases/$(database)/documents/families/$(d.familyId);
+      return d.keys().hasOnly(['familyId', 'code', 'phoneKey', 'linkedAt'])
+        && d.familyId is string && d.code is string && d.phoneKey is string
+        && d.phoneKey.size() >= 8
+        && exists(invite) && get(invite).data.familyId == d.familyId
+        && exists(family)
+        && ('phoneKeys' in get(family).data)
+        && d.phoneKey in get(family).data.phoneKeys;
+    }
+
+    // ---- Coordinator claim --------------------------------------------------------
+    // First person to create this doc becomes coordinator (first-run only). It can never
+    // be deleted again, otherwise the "claim coordinator" screen would reopen for anyone.
+    match /config/coordinator {
+      allow read: if signedIn();   // needed before linking, to know whether to show the claim screen
+      allow create: if signedIn() && !exists(coordPath());
+      allow update: if isCoordinator();
+      allow delete: if false;
+    }
+
+    // ---- Invite codes (doc id = the code) ------------------------------------------
+    match /invites/{code} {
+      allow get: if signedIn();          // look up ONE code you already know
+      allow list: if isCoordinator();    // only the coordinator can see all codes
+      allow create: if isCoordinator()
+        && request.resource.data.keys().hasOnly(['familyId'])
+        && request.resource.data.familyId is string;
+      // A code can never be silently moved to another family.
+      allow update: if isCoordinator()
+        && request.resource.data.keys().hasOnly(['familyId'])
+        && request.resource.data.familyId == resource.data.familyId;
+      allow delete: if isCoordinator();
+    }
+
+    // ---- Links: which browser belongs to which family ------------------------------
+    match /links/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isCoordinator());
+      allow list: if isCoordinator();
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && (validInviteLink() || isCoordinator());
+      allow delete: if signedIn() && (request.auth.uid == uid || isCoordinator());
+    }
+
+    // ---- Families ------------------------------------------------------------------
+    // Readable by members only (the Rooster needs names, times and — for the WhatsApp
+    // links — phone numbers). Parents may only edit their OWN family.
+    match /families/{familyId} {
+      allow read: if isMember();
+      allow create, delete: if isCoordinator();
+      allow update: if isCoordinator() || (isLinked() && linkedFamilyId() == familyId);
+    }
+
+    // ---- Rooster + settings --------------------------------------------------------
+    match /groups/{groupId} {
+      allow read: if isMember();
+      allow write: if isCoordinator();
+    }
+    // lastUpdateDeviation and matchCache must be writable by any member (the Dagafwijking
+    // and match-carpool features), so they get their own rules ahead of the general one.
+    match /settings/lastUpdateDeviation {
+      allow read, write: if isMember();
+    }
+    match /settings/matchCache {
+      allow read, write: if isMember();
+    }
+    // Calculated distances of away matches (US-21): any member stores the result of a route calculation once.
+    match /settings/matchDistances {
+      allow read, write: if isMember();
+    }
+    match /settings/{docId} {
+      allow read: if isMember();
+      allow write: if isCoordinator();
+    }
+
+    // ---- Deviations (Dagafwijking): any member may read/write ----------------------
+    // Deletes are refused until the deviation's own `expiresAt`, so a stale browser tab still
+    // living in last week can never wipe this week's changes.
+    match /deviations/{docId} {
+      allow read: if isMember();
+      allow create, update: if isMember();
+      allow delete: if isMember() && (
+        !('expiresAt' in resource.data) || request.time.toMillis() >= resource.data.expiresAt
+      );
+    }
+
+    // ---- Weekend match carpools: any member ----------------------------------------
+    match /matchCarpools/{matchSlug} {
+      allow read, write: if isMember();
+    }
+  }
+}

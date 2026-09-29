@@ -34,14 +34,16 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ui-profile.js` | Gate, first-run claim, Mijn gezin, test view as a parent | `ui-profile.test.js` |
 | `planning.js` | Planning engine (pure functions, no DOM/Firebase) | `planning.test.js` |
 | `schedule-changes.js` | Detects and merges changed arrival/pick-up times | `schedule-changes.test.js` |
-| `fake-db.js`, `test-support.js`, `test-clock.js` | Test helpers: fake Firestore, fake page, frozen clock (Wed 30 Sep 2026 10:00) | not tests themselves |
+| `tests/fake-db.js`, `tests/test-support.js`, `tests/test-clock.js` | Test helpers: fake Firestore, fake page, frozen clock (Wed 30 Sep 2026 10:00) | not tests themselves |
 | `run-tests.js`, `tests.lock.json` | Test runner and the "module change needs test change" check | |
-| `__snapshots__/` | Saved page output that render tests compare against | |
+| `tests/__snapshots__/` | Saved page output that render tests compare against | |
 | `package.json` | `npm test`, `npm run lock` | |
 | `firebase-config.js` | Firebase config + Google Calendar API key (fill in once) | never overwrite |
-| `firestore.rules` | Firestore security rules | paste into Firebase console → Rules |
+| `firebase/firestore.rules` | Firestore security rules | paste into Firebase console → Rules |
 | `manifest.json`, `service-worker.js`, `icon-192.png`, `icon-512.png` | PWA (install on home screen) | once; `service-worker.js` changes when modules are added |
 | `backups/` | Older versions for rollback | not needed on the site |
+
+All `*.test.js` files live in `tests/`; the site does not use that folder. Every other file stays in the repo root because the live site loads it from there.
 
 The tests never touch the real Firebase. They run against `fake-db.js`, an in-memory Firestore that the app cannot tell apart from the real one.
 
@@ -59,7 +61,7 @@ It prints one line per test file (PASS/FAIL with counts), then a rule check, the
 Commit `tests.lock.json` together with the change.
 
 ### Render tests (snapshots)
-Some tests compare the generated page with a saved copy in `__snapshots__/`. If you change the look on purpose, refresh the copies with `UPDATE_SNAPSHOTS=1 npm test`, read the diff, and keep it only if it is what you intended.
+Some tests compare the generated page with a saved copy in `tests/__snapshots__/`. If you change the look on purpose, refresh the copies with `UPDATE_SNAPSHOTS=1 npm test`, read the diff, and keep it only if it is what you intended.
 
 ## Day coordinator, conclusie-appje, 1-op-1, Flex
 - **Dagcoördinator (Beheer).** Beheer → *Dagcoördinatoren*: pick one family per weekday. It is stored as family ids in `settings/dayCoordinators`, so name and phone number always come from the family, never from the code. Rooster and Mijn week show the coordinator of the NEXT day, because changes are purged at midnight: Mon–Thu "Dagcoördinator morgen: <naam>", Fri nothing, Sat/Sun "Dagcoördinator maandag: <naam>" (plus a WhatsApp button; nothing when no one is set).
