@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { dirLabelHtml, esc, foldHtml, hapticTap, lastUpdateFooter, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { FREE_TEXT_MAX, freeText, shiftDefaultId } from './locations.js';
-import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats, tripReserveIds } from './rides.js';
+import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, buildWhatsAppMessage, reserveAskText } from './message-texts.js';
@@ -110,7 +110,7 @@ export function conclusieCardHtml(day){
 // A parent sees their own family (when it is Flex); the coordinator sees every Flex family.
 export function flexSignupHtml(day,direction,cars){
   const mine = myLinkedFamilyId();
-  const flexFams = Object.entries(S.families).filter(([id,f])=>isFlex(f) && (S.canEdit || id===mine));
+  const flexFams = sortFamEntriesByGirl(Object.entries(S.families).filter(([id,f])=>isFlex(f) && (S.canEdit || id===mine)));
   if(!flexFams.length) return '';
   const freeIdx = carsWithFreeSeat(cars, id=>seats(fam(id)));
   const timeLabel = direction==='heen'? t('flex.timeHeen') : t('flex.timeTerug');
@@ -173,7 +173,7 @@ export function renderDevDirection(day,direction){
   const dev = activeDeviation(day,direction);
   const allFamilies = Object.entries(S.families);
   const assignedIds = new Set(cars.flatMap(c=>c.girlIds));
-  const unassigned = allFamilies.filter(([id])=>!assignedIds.has(id));
+  const unassigned = sortFamEntriesByGirl(allFamilies.filter(([id])=>!assignedIds.has(id)));
 
   const myIdDev = myFamilyId();
   const locCfg = locationsCfg();
@@ -191,7 +191,7 @@ export function renderDevDirection(day,direction){
       allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isFlex(f)? ' ('+t('flex.speelsterChauffeur')+')' : (isAvailable(f,day,direction)?'':t('deviation.geen_beschikbaarheid'))}</option>`).join('');
     const otherIdxs = cars.map((_,i)=>i).filter(i=>i!==idx);
     const swapOptions = `<option value="">${t('deviation.verplaats_naar')}</option>` + otherIdxs.map(i=>`<option value="${i}">${t('deviation.auto')} ${esc(fam(cars[i].driverFamilyId).parentName||'?')}</option>`).join('');
-    const passengerRows = c.girlIds.map(id=>`
+    const passengerRows = sortGirlIds(c.girlIds).map(id=>`
       <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
         <span style="flex:1${id===myIdDev?';font-weight:800;color:var(--danger)':''}">${girlName(id)}</span>
         ${otherIdxs.length? `<select class="devSwapSel" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}" style="width:auto;font-size:12px" aria-label="${girlName(id)} verplaatsen naar andere auto">${swapOptions}</select>` : ''}

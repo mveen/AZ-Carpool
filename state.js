@@ -66,6 +66,8 @@ export const S = {
   appIsInstalled: false,
   dataUnsubs: [],
   linksCollUnsub: null,
+  sessionsUnsub: null,
+  lastSeenByFamily: {},
   invitesUnsub: null,
   migratingSecrets: false,
   migrationFailed: false,

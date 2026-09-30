@@ -85,6 +85,18 @@ service cloud.firestore {
       allow delete: if signedIn() && (request.auth.uid == uid || isCoordinator());
     }
 
+    // ---- Sessions: when a linked browser last opened the app (shown to the coordinator) ----
+    // Only a timestamp and the family the browser is linked to; written by the browser itself.
+    match /sessions/{uid} {
+      allow get: if signedIn() && (request.auth.uid == uid || isCoordinator());
+      allow list: if isCoordinator();
+      allow create, update: if signedIn() && request.auth.uid == uid && isLinked()
+        && request.resource.data.keys().hasOnly(['familyId', 'at'])
+        && request.resource.data.familyId == linkedFamilyId()
+        && request.resource.data.at is number;
+      allow delete: if signedIn() && (request.auth.uid == uid || isCoordinator());
+    }
+
     // ---- Families ------------------------------------------------------------------
     // Readable by members only (the Rooster needs names, times and — for the WhatsApp
     // links — phone numbers). Parents may only edit their OWN family.

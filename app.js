@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 import { applyStaticTexts, adjustMainPadding, applyTheme, closeSheet, cycleTheme, setStatus, showConnectionError } from './ui-common.js';
 import { effectivePlanningDate, getISOWeekKey, refreshWeekKey } from './dates.js';
 import { S } from './state.js';
-import { db, purgeStaleDeviations, syncListeners } from './data.js';
+import { db, purgeStaleDeviations, recordSession, syncListeners } from './data.js';
 import { renderImpersonateBanner, renderProfile } from './ui-profile.js';
 import { recomputeCanEdit } from './coordinator.js';
 import { renderSchedule } from './ui-schedule.js';
@@ -77,6 +77,7 @@ export function afterLinksChanged(){
   recomputeCanEdit();
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display = S.canEdit?'':'none';
   syncListeners();
+  recordSession();
   chooseDefaultTab();
   renderAll();
 }
@@ -125,7 +126,7 @@ export function bootstrap(){
   let swReg = null;
   const checkForAppUpdate = ()=>{ if(swReg) swReg.update().catch(()=>{}); };
 
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); checkForAppUpdate(); } });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); checkForAppUpdate(); recordSession(); } });
 
   setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); }, 60*1000);
 

@@ -231,5 +231,15 @@ test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   assert.match(s, /Rijdt mee met: Jan Jansen/); assert.match(s, /Wijziging actief/);
 });
 
+test('passengers in a car are listed A-Z, whatever order they were added in', () => {
+  const s = text(render({}));
+  const m = s.match(/rijdt[^]*?·\s*([^]*?)(?:Regelen|$)/);
+  assert.ok(m);
+  for (const line of s.match(/(?:[A-Z][a-z]+, )+[A-Z][a-z]+/g) || []) {
+    const parts = line.split(', ');
+    assert.deepEqual(parts, [...parts].sort((a, b) => a.localeCompare(b, 'nl')), line);
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

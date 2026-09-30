@@ -369,5 +369,12 @@ test('without a temporary rooster nothing changes for Wijzigen', () => {
   assert.equal(a, b);
 });
 
+test('the "andere meiden" list is A-Z by daughter name', () => {
+  const h = render(sampleCoordinatorState, { deviationDay: 'Di' });
+  const names = [...h.matchAll(/<span style="flex:1">([^<]+)<\/span>\s*<select class="devAddSel"/g)].map(m => m[1]);
+  assert.ok(names.length > 1);
+  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

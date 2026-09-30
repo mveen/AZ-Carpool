@@ -7,7 +7,7 @@ import { distanceInfo, hasApiKey } from './distance.js';
 import { mapLink } from './locations.js';
 import { S } from './state.js';
 import { myFamilyId } from './coordinator.js';
-import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, seats } from './rides.js';
+import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, seats, sortGirlIds } from './rides.js';
 import { dayChanges } from './day-changes.js';
 import { DAYS, DIR_TEXT, KM_COST_EUR, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, effectivePlanningDate, startOfWeek } from './dates.js';
@@ -89,7 +89,7 @@ export function renderMyWeek(){
       const isMe = g.driverFamilyId===myId;
       if(isMe){
         // Full passenger list, including your own daughter — not just "everyone else".
-        const passengers=g.girlIds.map(id=>girlName(id)).join(', ');
+        const passengers=sortGirlIds(g.girlIds).map(id=>girlName(id)).join(', ');
         statusHtml = t('myweek.jij_rijdt', { p1: phIcon('user'), p2: phIcon('car'), p3: passengers? ` · ${passengers}`:'' }); statusClass='driving';
       } else {
         statusHtml = rideWithHtml(g.driverFamilyId);
@@ -103,7 +103,7 @@ export function renderMyWeek(){
     let extraDriving='';
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg=cars[drivingIdx];
-      const names=dg.girlIds.map(id=>girlName(id)).join(', ');
+      const names=sortGirlIds(dg.girlIds).map(id=>girlName(id)).join(', ');
       extraDriving = `<div class="subrideStatus driving">${phIcon('car')} ${t('myweek.jouw_rijbeurt_om')} ${dg.departureTime||'?'} · ${names}</div>${shiftLocationHtml(dg,direction,{day})}`;
       statusClass = statusClass? statusClass : ''; // the driving BORDER below reflects the daughter's own car only, not this second one
     }
@@ -134,7 +134,7 @@ export function renderMyWeek(){
     const a = analyzeMatch(r.doc.summary||'');
     const kickoff = new Date(r.doc.startMs).toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
     const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
-    const passengers = (r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
+    const passengers = sortGirlIds(r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
     const status = r.driving
       ? t('myweek.jij_rijdt', { p1: r.daughter? phIcon('user'):'', p2: phIcon('car'), p3: passengers? ` · ${passengers}`:'' })
       : rideWithHtml(r.car.driverFamilyId);

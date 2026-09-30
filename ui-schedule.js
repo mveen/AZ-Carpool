@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, WA_ICON_SMALL, todayKey } from './constants.js';
-import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, rideTime, seats, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
+import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dayUp, weekRangeLabel } from './dates.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
 import { saveShiftLocation, timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
@@ -169,7 +169,7 @@ export function driverLineHtml(driverId,myId,wa){
 }
 
 export function pillsHtml(girlIds,myId){
-  return girlIds.map(id=>`<span class="pill${id===myId?' mine':''}">${girlName(id)}</span>`).join('');
+  return sortGirlIds(girlIds).map(id=>`<span class="pill${id===myId?' mine':''}">${girlName(id)}</span>`).join('');
 }
 
 // "Deze week": what actually runs this week — read-only; changes go through Wijzigen.
@@ -225,7 +225,7 @@ export function renderDirectionStandard(day,direction){
     const timeHtml = S.canEdit
       ? `<input type="time" class="timeBig" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd auto ${gi+1}">`
       : `<div class="time">${departure}</div>`;
-    const pills = g.girlIds.map(id=>{
+    const pills = sortGirlIds(g.girlIds).map(id=>{
       const cls = `pill${id===myId?' mine':''}`;
       return (S.canEdit && otherGroups.length)
         ? `<button type="button" class="${cls}" data-movepill="${gid}|${id}" aria-label="${t('schedule.verplaats',{p1:girlName(id)})}" aria-haspopup="dialog">${girlName(id)}</button>`
@@ -251,7 +251,7 @@ export function renderDirectionStandard(day,direction){
       ${shiftLocationHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,{day, edit:S.canEdit})}
       ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
-          <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${g.girlIds.map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
+          <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
           <div class="rowflex" style="margin-top:8px;gap:6px">
             <button type="button" class="btn small" data-swapconfirm="${gid}">${t('schedule.wissel')}</button>
             <button type="button" class="btn small secondary" data-swapcancel="${gid}">${t('common.annuleren')}</button>
@@ -301,7 +301,7 @@ export function renderDirectionStandard(day,direction){
           : t('schedule.nieuwe_auto', { p1: opt.label });
         const sub = opt.kind==='add'
           ? opt.touched.map(c=>t('schedule.auto_regel',{p1:c.num,p2:c.ids.map(id=>girlName(id)).join(', '),p3:c.ids.length,p4:c.cap,p5:c.dep})).join(' · ')
-          : opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${a.girlIds.map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
+          : opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${sortGirlIds(a.girlIds).map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
         return `<div class="group suggestion${i===0?t('schedule.primary'):''}">
           <div class="fitok">${i===0?t('schedule.span_class_badge_rec_aanbevolen'):''}${t('schedule.optie')} ${i+1}: ${title}</div>
           <div class="subtime">${sub}</div>

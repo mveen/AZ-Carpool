@@ -124,5 +124,10 @@ test('closing removes the overview again', () => {
   assert.equal(removed, 1);
 });
 
+test('passengers in the week overview are listed A-Z', () => {
+  for (const day of overviewData().days) for (const sh of day.shifts) for (const r of sh.rows)
+    assert.deepEqual(r.passengers, [...r.passengers].sort((a, b) => a.localeCompare(b, 'nl')));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -4,7 +4,7 @@
 import { t, locale } from './i18n.js';
 import { esc, hapticTap, phIcon, showToast } from './ui-common.js';
 import { carpoolFor, currentMatchList, isMatchPlannable, matchCarCapacityState, matchLabel, matchSlug, matchesNext29Days, plannableFrom, suggestedMatchDeparture } from './matches.js';
-import { fam, girlName, seats } from './rides.js';
+import { fam, girlName, seats, sortFamEntriesByGirl, sortGirlIds } from './rides.js';
 import { S } from './state.js';
 import { db } from './data.js';
 import { matchInfoHtml } from './ui-myweek.js';
@@ -22,7 +22,7 @@ export function matchCarRowHtml(c, opts){
   const delHtml = opts.editable? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="${t('deviation.verwijder_carpool')}">${phIcon('trash')}</button>` : '';
   return `<div class="matchCarRow${mine?' mine':''}">
     <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
-    <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${girlIds.map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}</span>
+    <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}</span>
     ${delHtml}
   </div>`;
 }
@@ -50,7 +50,7 @@ export function matchesCardHtml(){
     let formHtml;
     if(isOpen){
       const suggestedDep = suggestedMatchDeparture(m.start);
-      const girlOptions = allFamilies.map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}">${esc(f.girlName||f.parentName||id)}</label>`).join('');
+      const girlOptions = sortFamEntriesByGirl(allFamilies).map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}">${esc(f.girlName||f.parentName||id)}</label>`).join('');
       const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}">${esc(f.parentName)} (${seats(f)} ${seats(f)===1?t('common.plek'):t('common.plekken')})</option>`).join('');
       formHtml = `<div class="dayFormCard" style="margin-top:8px">
         <label style="margin-top:0">${t('deviation.chauffeur')}</label>

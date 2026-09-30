@@ -8,7 +8,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { dirLabelHtml, esc, hapticTap, phIcon, shiftLocationHtml, showToast, twoStepConfirm } from './ui-common.js';
-import { plainGirlName, famTime, fam, girlName, isFlex, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
+import { plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
 import { driverLineHtml, renderSchedule } from './ui-schedule.js';
@@ -145,7 +145,7 @@ function carHtml(iso, direction, car, idx, cars){
        </select>`
     : driverLineHtml(car.driverFamilyId, myId);
   const targets = cars.map((c, i) => ({ value:'car:'+i, label:t('period.view.moveTo',{p1:i+1, p2:plainDriverName(c.driverFamilyId)}) })).filter((x, i) => i!==idx);
-  const riders = (car.girlIds||[]).map(id => edit
+  const riders = sortGirlIds(car.girlIds||[]).map(id => edit
     ? `<div class="periodRider"><span class="pill${id===myId? ' mine' : ''}">${girlName(id)}</span>
         <select class="periodSel periodMove" data-pmove="${esc(id)}" data-iso="${iso}" data-dir="${direction}" aria-label="${esc(t('period.view.move'))} ${esc(plainGirlName(id))}">
           <option value="">${t('period.view.move')}</option>
@@ -171,7 +171,7 @@ function unplacedHtml(iso, direction, cars){
   const un = periodUnplacedFor(iso, direction);
   if(!un.length) return '';
   const free = periodEligibleDrivers(iso, direction, 1).filter(([id]) => !cars.some(c => c.driverFamilyId===id));
-  const rows = un.map(([id]) => S.canEdit
+  const rows = sortGirlIds(un.map(([id]) => id)).map(id => S.canEdit
     ? `<div class="row"><span><strong>${girlName(id)}</strong></span>
         <select class="periodSel periodMove" data-pmove="${esc(id)}" data-iso="${iso}" data-dir="${direction}" aria-label="${esc(t('period.view.place'))} ${esc(plainGirlName(id))}">
           <option value="">${t('period.view.place')}</option>
