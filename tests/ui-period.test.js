@@ -439,5 +439,10 @@ test('after the deadline of the first period the coordinator still fills in for 
   parent2(); assert.equal(withFakeNow(CLOSED, () => openPeriodForm('2026-10-26')), false); assert.equal(withFakeNow(CLOSED, () => openPeriodForm('2026-11-09')), true);
 });
 
+test('the coordinator overview (Namens een ouder invullen) is collapsed by default and stays open once opened', () => {
+  coordinator(); assert.match(render(OPEN), /<details class="fold card" id="periodBehalfCard_2026-10-26" data-fold="periodBehalf\|2026-10-26">/);
+  S.folds['periodBehalf|2026-10-26'] = true; assert.match(render(OPEN), /data-fold="periodBehalf\|2026-10-26" open>/); S.folds = {};
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

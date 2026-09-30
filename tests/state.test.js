@@ -62,5 +62,7 @@ test('new fields: places, calculated distances and the impact switch start empty
   assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false); assert.equal(S.impactPreview, null);
 });
 
+test('collapsible sections start with nothing open', () => { assert.deepEqual(S.folds, {}); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

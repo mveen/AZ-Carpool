@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { DAYS, PDF_SEED } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority } from './rides.js';
-import { esc, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, foldCards, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
@@ -481,6 +481,8 @@ export function renderBeheer(){
       <button type="button" class="btn danger" id="seedPdf">${phIcon('trash')} ${t('beheer.alles_wissen_pdf_gegevens_laden')}</button>
       <p id="seedMsg" class="muted" style="margin-top:8px"></p>
     </div>`;
+
+  foldCards(box);
 
   try{
     const saveSettingsAuto = async ()=>{

@@ -207,7 +207,8 @@ const flexFamily = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'f
 function flexParent(patch = {}) { return sampleParentState({ me: 'p9', links: { p9: { familyId: 'f9' } }, families: { ..._sampleFamilies(), f9: flexFamily }, ...patch }); }
 test('a Flex parent sees a signup block per direction, with time, car choice, ride-along and drive-yourself', () => {
   const html = render(flexParent, { deviationDay: 'Ma' });
-  assert.equal((html.match(/class="group flexSignup"/g) || []).length, 2);
+  assert.equal((html.match(/class="fold group flexSignup"/g) || []).length, 2);
+  assert.doesNotMatch(html, /<details[^>]*flexSignup[^>]* open/); // collapsed by default
   const s = text(html);
   assert.match(s, /Flex: aanmelden voor deze dag Flex-leden rijden alleen mee op dagen dat ze zich aanmelden\. Lotte Flex Aankomst in Alkmaar/);
   assert.match(s, /Klaar om op te halen/); assert.match(s, /Rij mee/); assert.match(s, /Ik rijd zelf/);
@@ -216,7 +217,7 @@ test('a Flex parent sees a signup block per direction, with time, car choice, ri
 test('a fixed parent does not see the block; the coordinator sees every Flex family', () => {
   const fams = { ..._sampleFamilies(), f9: flexFamily };
   assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma', families: fams }), /flexSignup/);
-  assert.match(render(sampleCoordinatorState, { deviationDay: 'Ma', families: fams }), /class="group flexSignup"/);
+  assert.match(render(sampleCoordinatorState, { deviationDay: 'Ma', families: fams }), /class="fold group flexSignup"/);
 });
 test('without a Flex family there is no block at all', () => {
   assert.doesNotMatch(render(sampleCoordinatorState, { deviationDay: 'Ma' }), /flexSignup/);
