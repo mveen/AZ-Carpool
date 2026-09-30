@@ -19,7 +19,7 @@ export const firebaseConfig = {
   storageBucket: "az-carpool.firebasestorage.app",
   messagingSenderId: "366961042772",
   appId: "1:366961042772:web:7bcbf144fa4316146814c1",
-  measurementId: "G-B1VT4T621M"
+  //measurementId: "G-B1VT4T621M"
 };
 
 // Google Calendar API key, used to fetch the AZ match schedules (Mijn week + Afwijking's
