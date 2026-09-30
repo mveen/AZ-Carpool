@@ -431,5 +431,11 @@ test('a file with a thousand errors shows only the first few', () => {
 });
 function sampleFamiliesForBackup() { return structuredClone(S.families); }
 
+test('Beheer shows the notice card, and the WhatsApp intro icon wiring is still there', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  assert.match(text(dom.html('tab-beheer')), /Melding voor iedereen/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
