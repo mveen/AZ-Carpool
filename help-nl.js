@@ -2,11 +2,15 @@
 // Rules for this file (a test enforces them):
 //  - Plain, short Dutch for parents who are not technical. Name buttons and tabs exactly as they appear in the app.
 //  - NEVER put a secret, API key, password, invite code, phone number, e-mail address or the name of a
-//    person in here. This file is public (GitHub Pages). It explains how the app works, nothing else.
+//    parent or child in here. This file is public (GitHub Pages). It explains how the app works, nothing else.
+//    (The developer's name in 'over-achtergrond' is there on purpose.)
 //  - Each article: id (unique), title (a question or a short topic), keywords (extra words people may type),
 //    body (list of paragraphs; a paragraph that starts with "• " or "1. " is shown as its own line),
 //    tab (optional: the tab where this happens; adds a "Ga naar ..." button, one of the data-tab values),
-//    coordinatorOnly (optional: only shown to the coordinator).
+//    coordinatorOnly (optional: only shown to the coordinator),
+//    group (optional: 'over' = listed under the heading "Over deze app", below the other topics).
+import { TEST_COUNT } from './test-count.js';
+
 export default [
   {
     id: 'wat-is',
@@ -29,6 +33,15 @@ export default [
       '2. Vul de code in en tik op Toegang aanvragen.',
       'Zegt de app "Code klopt niet"? Controleer of je de code precies hebt overgetypt. Zegt de app dat het telefoonnummer niet bij de code hoort, gebruik dan het nummer dat de coördinator van je heeft.',
       'Je hoeft dit maar één keer te doen op dit toestel.',
+    ],
+  },
+  {
+    id: 'melding-balk',
+    title: 'Wat is de gele balk bovenaan de app?',
+    keywords: 'melding balk geel mededeling bericht bovenaan waarschuwing nieuws',
+    body: [
+      'De coördinator kan een korte melding laten zien bovenaan de app, bijvoorbeeld dat een training niet doorgaat. Die melding staat in een dunne gele balk boven de rode kop, op elk tabblad.',
+      'Je kunt de balk niet wegklikken. Hij verdwijnt vanzelf als de coördinator hem uitzet, of op het moment dat de coördinator heeft ingesteld.',
     ],
   },
   {
@@ -245,13 +258,12 @@ export default [
   {
     id: 'beheer-gezinnen',
     title: 'Beheer: gezinnen toevoegen, codes en telefoonnummers',
-    keywords: 'back-up backup terugzetten export import csv excel beheer gezin toevoegen code uitnodiging telefoonnummer coördinator maken testweergave ouder dubbel verwijderen oog',
+    keywords: 'beheer gezin toevoegen code uitnodiging telefoonnummer coördinator maken testweergave ouder dubbel verwijderen oog',
     coordinatorOnly: true,
     body: [
       'Onder Beheer, bij Gezinnen beheren, voeg je gezinnen toe en pas je gegevens aan namens een ouder. Telefoonnummers en de uitnodigingscode staan onder Wijzig. Meerdere mensen kunnen dezelfde code gebruiken.',
       'Het oog-icoon toont de app zoals die ouder hem ziet. Met Stop testen ga je terug naar jouw eigen weergave.',
       'Bij Type gezin kies je Vast of Flex.',
-      'Onder Back-up gezinnen maak je een bestand (CSV, te openen in Excel) van alle gezinnen, met tijden, beschikbaarheid, coördinator, autocapaciteit en telefoonnummers. Met Terugzetten uit bestand zet je een eerder gemaakt bestand terug: de gezinnen in het bestand worden overschreven, gezinnen die er niet in staan blijven staan. Het bestand wordt eerst gecontroleerd; bij een fout wordt er niets gewijzigd.',
       'Geef de code en de link alleen door aan de ouder zelf, niet in een openbare groep.',
     ],
     tab: 'beheer',
@@ -268,6 +280,21 @@ export default [
       '• Reisvoorkeuren: wie liever samen in één auto zit.',
       '• Selectievolgorde per shift: in welke volgorde beschikbare chauffeurs worden voorgesteld.',
       '• Meldingen bij gewijzigde tijden: zie je bovenaan het Rooster. Zet ook browsermeldingen aan voor een seintje.',
+    ],
+    tab: 'beheer',
+  },
+  {
+    id: 'beheer-melding',
+    title: 'Beheer: een melding voor iedereen aan- en uitzetten',
+    keywords: 'melding balk geel mededeling bericht aan uit zetten automatisch uit datum tijd iedereen',
+    coordinatorOnly: true,
+    body: [
+      'Onder Beheer, bij Melding voor iedereen, zet je een korte melding aan. Alle gebruikers zien hem als dunne gele balk bovenaan de app.',
+      '1. Zet Melding tonen aan.',
+      '2. Typ de tekst (maximaal 100 tekens). Onder Zo ziet iedereen het zie je het resultaat.',
+      '3. Kies eventueel Automatisch uit op: een datum én een tijd. Laat je dit leeg, dan blijft de melding aan tot jij hem uitzet.',
+      '4. Tik op Opslaan.',
+      'Uitzetten doe je door Melding tonen uit te zetten en op Opslaan te tikken. De tekst blijft bewaard, dus je kunt hem later weer aanzetten. Gebruikers kunnen de balk zelf niet wegklikken.',
     ],
     tab: 'beheer',
   },
@@ -320,5 +347,55 @@ export default [
       'Ontbreken de afstanden bij uitwedstrijden, dan is er nog geen routeservice-sleutel ingesteld. Die stel je in onder Beheer, bij API-sleutels. Zet die sleutel nooit in een bericht of in dit hulpvenster.',
     ],
     tab: 'beheer',
+  },
+  // ---- Over deze app (shown under its own heading below the topics; text comes from the coordinator's document) ----
+  {
+    id: 'over-achtergrond',
+    group: 'over',
+    title: 'Over deze app: achtergrond en kwaliteit',
+    keywords: 'over app gemaakt ontwikkeld bouwer wie claude ai gemini lumo tests testen kwaliteit wcag toegankelijkheid contrast ontwerp gebruiksgemak stabiel betrouwbaar',
+    body: [
+      'De app is ontwikkeld door Michiel Veen met Claude (AI), aangevuld met Gemini en Lumo. De app zelf gebruikt geen AI. De eisen, de keuzes en de controle liggen bij de ontwikkelaar.',
+      'Bij elke wijziging worden tests geschreven. Vóór livegang draaien alle bestaande tests opnieuw en moeten ze allemaal slagen. Het gaat om ' + TEST_COUNT.toLocaleString('nl-NL') + ' automatische tests.',
+      'Ontwerp en gebruiksgemak zijn meerdere keren getoetst, onder meer aan de WCAG-richtlijnen. Getoetst is op contrast, bruikbaarheid op een telefoon en een consistent gebruik van knoppen en kleuren.',
+    ],
+  },
+  {
+    id: 'over-privacy',
+    group: 'over',
+    title: 'Over deze app: privacy en veiligheid',
+    keywords: 'privacy avg gegevens opgeslagen persoonsgegevens cookies tracking analytics meting ip adres veilig veiligheid security beveiliging verwijderen wissen cookiebanner toegang',
+    body: [
+      'De app bewaart zo weinig mogelijk gegevens: naam ouder, telefoonnummer(s), voornaam dochter (tenzij zelf anders ingevuld), rijtijden en beschikbaarheid. Er worden geen adressen, geboortedata of e-mailadressen opgeslagen.',
+      'Toegang is alleen mogelijk met telefoonnummer en code. De database weigert toegang voor niet-leden, ook buiten de app om.',
+      'De app gebruikt geen cookies en heeft geen tracking of meting (geen Google Analytics, Sentry of Hotjar, geen advertenties). Het toestel bewaart alleen wat nodig is voor de werking: een anonieme inlogcode en de themakeuze. Er is daarom geen cookiebanner.',
+      'Het IP-adres is zichtbaar voor de partijen die de app laden: GitHub (hosting), Google (database, agenda-opvraging) en OpenRouteService (routes). Dat geldt voor elke website.',
+      'Na elke grote wijziging wordt de app gecontroleerd op security- en privacy-risico\'s. Verwijdering van gegevens kan worden aangevraagd bij de coördinator.',
+    ],
+  },
+  {
+    id: 'over-diensten',
+    group: 'over',
+    title: 'Over deze app: gebruikte diensten',
+    keywords: 'diensten koppelingen integraties routes openrouteservice navigatie maps waze tomtom here wego google agenda kalender whatsapp firebase github hosting opslag database afstand',
+    body: [
+      '• Routes: OpenRouteService, een Europese open-sourcedienst op basis van OpenStreetMap-gegevens. Gebruikt voor afstand en kosten van uitwedstrijden.',
+      '• Navigatie: op Android is de navigatie-app vrij te kiezen (bijvoorbeeld TomTom, HERE WeGo, Waze, Google Maps). Op iPhone en andere apparaten opent Google Maps.',
+      '• Wedstrijden: uit een apart Google-agenda met de wedstrijdkalenders van de teams. Wordt één keer per dag bijgewerkt.',
+      '• Berichten: via WhatsApp. De app verstuurt zelf geen berichten.',
+      '• Opslag en hosting: Google Firebase (database) en GitHub Pages (hosting).',
+    ],
+  },
+  {
+    id: 'over-beheer',
+    group: 'over',
+    title: 'Over deze app: beheer en onderhoud',
+    keywords: 'beheer onderhoud verbeteren verbetering ontwikkelaar developer contributor meewerken hulp vragen zonder afhankelijk seizoen kalender leeg coordinator rol roosters standaardschema',
+    body: [
+      'Verbeteringen verlopen uitsluitend via de ontwikkelaar. Een developer die wil meewerken kan contributor worden.',
+      'Deze helpfunctie bevat de kennis over de app. Zoek hier eerst een antwoord op je vraag, daarna pas de coördinator benaderen. Bij elke aanpassing van de app wordt de helpfunctie mee aangepast.',
+      'De app werkt zonder tussenkomst van de ontwikkelaar. Enige afhankelijkheid: elk seizoen wordt een nieuwe wedstrijdkalender gebruikt, die in Beheer moet worden toegevoegd. Zonder die stap blijven de wedstrijden leeg.',
+      'De coördinatorrol blijft bij dezelfde persoon. Roosters en standaardschema\'s worden door de coördinator samengesteld.',
+    ],
   },
 ];

@@ -2,15 +2,13 @@
 // NETWORK-FIRST on purpose: an online user must always get the current deployed
 // files. The cache exists only so the app still opens (to whatever was last seen)
 // when there's genuinely no connection — it must never mask a real update.
-// Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
-// signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
+// Bump CACHE_NAME whenever the asset list below changes, so old caches are dropped.
 const CACHE_NAME = 'az-carpool-v15';
 const ASSETS = [
   './',
   './index.html',
   './planning.js',
   './period.js',
-  './family-backup.js',
   './app.js',
   './state.js',
   './constants.js',
@@ -34,11 +32,14 @@ const ASSETS = [
   './ui-myweek.js',
   './ui-deviation.js',
   './ui-period.js',
+  './notice.js',
+  './ui-notice.js',
   './ui-period-rooster.js',
   './ui-matches.js',
   './ui-help.js',
   './help.js',
   './help-nl.js',
+  './test-count.js',
   './ui-beheer.js',
   './ui-profile.js',
   './schedule-changes.js',

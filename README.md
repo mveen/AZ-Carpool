@@ -26,7 +26,6 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `distance.js` | Projected distance of away matches: OpenRouteService calls, calculate once, store per match | `distance.test.js` |
 | `impact.js` | Impact preview on a deviation (pilot, removable): analysis, on/off switch, save gate | `impact.test.js` |
 | `period.js` | "Periode met andere tijden" (holiday, exam week): validation of the Beheer form, the phases waiting/open/closed/over, and the times a family hands in (pure functions) | `period.test.js` |
-| `family-backup.js` | Back-up / restore of the families as one CSV file: build, read, check, plan the overwrite (pure functions) | `family-backup.test.js` |
 | `ui-period.js` | Periode, parent side: task card, form and "doorgegeven" card in Wijzigen, badge on the Wijzigen tab | `ui-period.test.js` |
 | `ui-period-rooster.js` | Periode, Rooster tab: overview for the coordinator, the temporary rooster (third view) and its edits | `ui-period-rooster.test.js` |
 | `flex.js` | Flex signup: join a car, drive yourself, sign off, departure time (pure functions) | `flex.test.js` |
@@ -39,6 +38,8 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `help-nl.js` | Help articles (Dutch, plain language, no secrets or personal data) | `help.test.js` |
 | `help.js` | Help search: pure functions, runs in the browser | `help.test.js` |
 | `ui-help.js` | The help panel behind the `?` in the header | `ui-help.test.js` |
+| `notice.js` | "Melding voor iedereen": validation, when it is visible, the stored document (pure functions) | `notice.test.js` |
+| `ui-notice.js` | The thin yellow notice bar at the top (everyone) and the Beheer card with switch, text and optional automatic end | `ui-notice.test.js` |
 | `ui-beheer.js` | Beheer tab (coordinator only) | `ui-beheer.test.js` |
 | `ui-profile.js` | Gate, first-run claim, Mijn gezin, test view as a parent | `ui-profile.test.js` |
 | `planning.js` | Planning engine (pure functions, no DOM/Firebase) | `planning.test.js` |
@@ -73,7 +74,6 @@ Commit `tests.lock.json` together with the change.
 Some tests compare the generated page with a saved copy in `tests/__snapshots__/`. If you change the look on purpose, refresh the copies with `UPDATE_SNAPSHOTS=1 npm test`, read the diff, and keep it only if it is what you intended.
 
 ## Day coordinator, conclusie-appje, 1-op-1, Flex
-- **Back-up gezinnen (Beheer).** Card *Back-up gezinnen* below *Gezinnen beheren*. *Back-up maken* downloads `az-carpool-gezinnen-<datum>.csv` (semicolon, UTF-8 with BOM, opens in Excel): per family `id`, Ouder, Dochter, Type gezin (vast/flex), Coördinator (j/n), Autocapaciteit, Telefoon 1 and 2, and per weekday the times (`Ma heen`, `Ma terug`) and availability (`Ma rijden heen`, `Ma rijden terug`: *beschikbaar*, *back-up* or empty). *Terugzetten uit bestand…* reads such a file (comma or tab also fine), checks ALL of it first (times hh:mm, capacity 1–9, type, j/n, one coordinator at most, no double ids) and shows either the problems with their line number (nothing is written) or a summary with *Overschrijven* (two taps). Restore **overwrites** the fields above of the families in the file, matched on `id` (if the id no longer exists the family is created again under that id), else on a unique daughter+parent name, else it becomes a new family; families NOT in the file stay untouched, and invite codes, links and pending time changes are never in the file nor touched. It is one batch: all or nothing. The coordinator changes only when the file marks another family with *j* than the current one (the preview warns). Excel dropping the leading 0 of a phone number is repaired. Service worker cache `az-carpool-v15`. No change to `firestore.rules` (only the coordinator writes families and `config/coordinator`).
 - **Dagcoördinator (Beheer).** Beheer → *Dagcoördinatoren*: pick one family per weekday. It is stored as family ids in `settings/dayCoordinators`, so name and phone number always come from the family, never from the code. Rooster and Mijn week show the coordinator of the NEXT day, because changes are purged at midnight: Mon–Thu "Dagcoördinator morgen: <naam>", Fri nothing, Sat/Sun "Dagcoördinator maandag: <naam>" (plus a WhatsApp button; nothing when no one is set).
 - **Conclusie-appje (Wijzigen).** Bottom of every day: a drafted text ("<Dag>: volgens schema" + Mijn week link, or the changes first — Rijdt niet mee heen/terug, Gewijzigde chauffeur/tijd, Rijdt ook mee heen/terug, empty kinds left out — followed by the full schedule of the day). The button opens WhatsApp with the text filled in; nobody is messaged automatically. The card is highlighted for that day's coordinator; every parent can use it.
 - **1-op-1 afstemmen (Wijzigen).** Each driver in a direction gets a WhatsApp button with a prefilled question, plus the hint "Stem 1-op-1 af, de dagcoördinator deelt het besluit."
@@ -126,6 +126,14 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 - **Firestore rules (publish `firebase/firestore.rules` again).** New `periods/{firstDay}`: members read, only the coordinator writes (id = first day, known fields, `deadlineAt` a number). `periodEntries` now checks the deadline of THE period named in the entry (`periods/<firstDay>`, falling back to `settings/period` until moved), so each period has its own deadline. Tested against the Firebase emulator (39 cases in total for the three period collections).
 - **Also fixed:** in step 2 the "Annuleren" button of the Beheer form and the one of the Wijzigen form shared an id (`periodCancel`), which could make one tap the other's button. The Beheer buttons are now `periodDraftSave` / `periodDraftCancel`.
 
+## Melding voor iedereen (notice bar)
+
+- **Where.** Beheer → *Melding voor iedereen* (above *Perioden met andere tijden*). Switch *Melding tonen*, text (max 100 characters, plain text, one line), optional *Automatisch uit op* (date AND time, phone's local time), *Opslaan*.
+- **What users see.** A thin yellow bar (`#noticeBar`, `.noticeBar`, no button, 25 px for one line, 41 px for two) above the red header on every tab, for all users including the coordinator. Users cannot close it. With the test view on, the test bar stays on top and the notice sits below it.
+- **Stored.** `settings/notice` = `{ on, text, offDate, offTime, offAt, updatedAt }`. Members read, only the coordinator writes (the general `settings/{docId}` rule; no rules change needed). Switching off keeps the text.
+- **Ending by itself.** The bar is hidden when `offAt` has passed. It is re-checked on every data change, every minute and when the app comes back to the front, so it can be up to a minute late on a phone that was asleep, never longer than that after opening the app.
+- **Files.** `notice.js` (logic), `ui-notice.js` (bar + card), the card is placed in `ui-beheer.js`, the listener is in `data.js`.
+
 ## Wedstrijden tab
 - **Where.** Own tab *Wedstrijden* (between Mijn gezin and Beheer, violet like every match ride). The match carpools used to sit at the bottom of Wijzigen; Wijzigen is now only for one-off ride changes. Mijn week keeps its read-only "Wedstrijden deze week" card; its *Carpool regelen* button opens this tab.
 - **Scope.** Every match of the next 29 days (today through 28 days out; `MATCH_HORIZON_DAYS` in `matches.js`) is listed, and the calendar request asks Google for exactly that range (`timeMax`, up to 50 events per team).
@@ -146,6 +154,7 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 - **What.** The `?` button next to the theme button opens a panel with a search box and a list of topics. A parent types a question ("mijn dochter is ziek") and gets the best articles, opens one, and can jump to the right tab with *Ga naar ...*. Coordinator-only articles (Beheer) show only to the coordinator (`S.canEdit`).
 - **How it works.** Plain search over `help-nl.js` in the browser (`help.js`: lower-case, accents removed, filler words dropped, prefix matching, title > keywords > body). No AI, no server, no API key, nothing a user types leaves the phone.
 - **Adding or changing an article.** Edit `help-nl.js` (fields are explained at the top of the file), run `npm test`, then `npm run lock`. The test fails if an article contains a link, e-mail address, phone number, long key-like code or password, so a secret can never end up in the help by accident. Write button and tab names exactly as they appear in the app, and update the article whenever a screen changes.
+- **Over deze app.** Four articles with `group: 'over'` (achtergrond, privacy, diensten, beheer) are listed under their own heading below the topics. Their text comes from the coordinator's own document; keep it true when the app changes (for example when a service is added or removed). The number of tests in *achtergrond* is exact: `npm run lock` runs all tests and writes the total to `test-count.js` (generated, never edit by hand; upload it with the other files). `npm test` fails with "The help shows N tests, but there are M" until `npm run lock` has been run again, so the number can never be out of date.
 - **Panel texts** are in `texts-nl.js` under `help.*`; the `?` icon is `question` in `constants.js`.
 - **Later option.** An AI chat on top of the same articles would need a key that must not sit in the app, so it needs a small server. Not built on purpose.
 
@@ -153,11 +162,10 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {placeholders}'`. Code calls `t('key', { name: 'x' })`. Static texts in `index.html` use `data-i18n="key"` attributes. To add a language, copy `texts-nl.js` to `texts-<lang>.js`, translate the values (keep keys and `{placeholders}`), and switch the dictionary in `i18n.js`. Many texts use generic placeholders such as `{p1}`. Look at the Dutch sentence to see what each one is.
 
 ## Deploy
-1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `family-backup.js`; earlier: `period.js`; earlier: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
+1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `period.js`; earlier: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
 2. GitHub Pages redeploys in about 60 seconds.
 3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v15`) then replaces the old cache.
-5. **Always bump `CACHE_NAME` in `service-worker.js` on every deploy.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
+4. Open the app once online. The service worker (cache `az-carpool-v9`) then replaces the old cache.
 
 ### Manual smoke test on a phone (before every go-live)
 Automated tests cover logic and page output, but not a real phone, real Firebase, or the real WhatsApp app. Check these on a mobile browser:

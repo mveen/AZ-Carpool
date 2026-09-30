@@ -5,6 +5,8 @@ import { deviationExpiryMs, deviationKey, refreshWeekKey } from './dates.js';
 import { isMemberNow, isRealCoordinator, isValidInviteCode, myDisplayInfo, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { notifyCoordinatorOfNewTimeChanges, renderBeheer } from './ui-beheer.js';
 import { renderAll } from './app.js';
+import { renderNoticeBanner } from './ui-notice.js';
+import { normalizeNotice } from './notice.js';
 import { setStatus, showToast, updateStatusLine } from './ui-common.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -335,6 +337,8 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.doc("settings/notice").onSnapshot(snap=>{ S.notice = snap.exists? normalizeNotice(snap.data()) : null; renderNoticeBanner(); renderBeheer(); },
+      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.collection("periods").onSnapshot(snap=>{
       S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
       rebuildPeriods(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
@@ -402,8 +406,9 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
+  renderNoticeBanner();
   updateStatusLine();
 }
 
@@ -517,26 +522,6 @@ export async function saveCoordFamily(){
     if(await saveInviteCode(S.coordEditId, newCode)) showToast(t('data.opgeslagen'));
   }
   catch(e){showToast(t('data.opslaan_mislukt')+(e&&e.message||e));}
-}
-
-// Back-up restore (Beheer → Back-up gezinnen): writes the planned families (family-backup.js planRestore) in ONE batch, so a restore is
-// all-or-nothing. Fields that are not in the back-up (timeChanges, invite codes, links) stay untouched (merge). Returns true when stored.
-export async function restoreFamilies(plan){
-  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
-  if(!S.canEdit){ showToast(t('backup.err.coordinator_only')); return false; }
-  if(!plan || !plan.ok || !plan.items.length){ showToast(t('backup.err.nothing')); return false; }
-  try{
-    const batch = db.batch();
-    plan.items.forEach(i=>batch.set('families/'+i.id, i.data, {merge:true}));
-    if(plan.coordinatorFamilyId) batch.set('config/coordinator', {familyId:plan.coordinatorFamilyId});
-    await batch.commit();
-    if(plan.coordinatorFamilyId){
-      S.coordinatorConfig = {familyId:plan.coordinatorFamilyId}; S.coordinatorExists = true;
-      recomputeCanEdit();
-    }
-    showToast(t('backup.restored',{p1:plan.items.length}));
-    return true;
-  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
 // Invite codes live in /invites/{code} (doc id = the code), not on the family doc, so linked
