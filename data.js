@@ -12,10 +12,10 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
-import { computeDepartureTime, effectiveCars, eligibleDrivers, groupsFor, isFlex } from './rides.js';
+import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, groupsFor, isFlex, planPeriodRooster, planPeriodShift } from './rides.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
-import { periodEntryId, periodEntryState, storedPeriod, validateEntry } from './period.js';
+import { isValidIsoDate, isWorkday, periodEntryId, periodEntryState, periodShiftId, periodWorkdays, storedPeriod, validateEntry } from './period.js';
 
 // ============================================================
 // Firestore access. The app talks to `db` only; `db` delegates to whichever adapter
@@ -126,6 +126,74 @@ export async function savePeriodEntry(familyId, rawDays){
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
+// ---------- Periode met andere tijden, step 4: the temporary rooster (coordinator) ----------
+// One document per shift: periodCars/<firstDay>_<date>_<direction>. Where it exists it replaces the standard rooster for that date
+// (rides.js periodShift); one-off changes in Wijzigen still go before it. Only the coordinator writes (firestore.rules).
+const cleanPeriodCars = cars => (cars||[])
+  .map(c=>({ driverFamilyId:c.driverFamilyId||'', girlIds:[...new Set((c.girlIds||[]).filter(id=>typeof id==='string' && id))], departureTime:c.departureTime||'' }))
+  .filter(c=>c.girlIds.length);
+
+function periodShiftDocOf(period, iso, direction, cars){
+  return { periodFirstDay:period.firstDay, date:iso, direction, cars:cleanPeriodCars(cars), madeAt:Date.now(), by:myDisplayInfo().name };
+}
+
+function periodRoosterGuard(){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  if(!S.canEdit){ showToast(t('period.rooster.err.coordinator')); return false; }
+  if(!S.period){ showToast(t('period.entry.err.noPeriod')); return false; }
+  return true;
+}
+
+// Stores the cars of ONE shift (a date of the period and a direction). Returns true when stored.
+export async function savePeriodShift(iso, direction, cars){
+  if(!periodRoosterGuard()) return false;
+  const p = S.period;
+  if(!isValidIsoDate(iso) || !isWorkday(iso) || iso<p.firstDay || iso>p.lastDay || (direction!=='heen' && direction!=='terug')){ showToast(t('period.rooster.err.shift')); return false; }
+  const doc = periodShiftDocOf(p, iso, direction, cars), id = periodShiftId(p, iso, direction);
+  try{
+    await db.doc("periodCars/"+id).set(doc);
+    S.periodCars = {...S.periodCars, [id]:doc};
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// "Tijdelijk rooster maken" / "Alles opnieuw indelen": plans every shift of the period with the handed-in times and stores them together.
+export async function makePeriodRooster(){
+  if(!periodRoosterGuard()) return false;
+  const p = S.period, plan = planPeriodRooster();
+  const batch = db.batch(), docs = {};
+  plan.forEach(s=>{ const id = periodShiftId(p, s.iso, s.direction); docs[id] = periodShiftDocOf(p, s.iso, s.direction, s.cars); batch.set('periodCars/'+id, docs[id]); });
+  try{
+    await batch.commit();
+    S.periodCars = {...S.periodCars, ...docs};
+    showToast(t('period.rooster.made'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// Plans one shift again ("Opnieuw indelen"): the proposal replaces the cars of that shift.
+export async function replanPeriodShift(iso, direction){
+  if(!periodRoosterGuard()) return false;
+  const ok = await savePeriodShift(iso, direction, planPeriodShift(iso, direction).cars);
+  if(ok) showToast(t('period.rooster.replanned'));
+  return ok;
+}
+
+// Back to the standard rooster for the whole period: removes every shift of this period (the handed-in times stay).
+export async function deletePeriodRooster(){
+  if(!periodRoosterGuard()) return false;
+  const p = S.period, ids = periodWorkdays(p.firstDay, p.lastDay).flatMap(iso=>['heen','terug'].map(d=>periodShiftId(p, iso, d))).filter(id=>S.periodCars[id]);
+  const batch = db.batch();
+  ids.forEach(id=>batch.delete('periodCars/'+id));
+  try{
+    await batch.commit();
+    const rest = {...S.periodCars}; ids.forEach(id=>delete rest[id]);
+    S.periodCars = rest;
+    showToast(t('period.rooster.removed'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
 export async function recordLastUpdate(kind){
   if(!db) return;
   try{
@@ -181,6 +249,8 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.collection("periodCars").onSnapshot(snap=>{ S.periodCars={}; snap.docs.forEach(d=>S.periodCars[d.id]=d.data()); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
+      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
     db.doc("settings/priority").onSnapshot(snap=>{ S.shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
@@ -235,7 +305,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.period=null; S.periodDraft=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.period=null; S.periodDraft=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }
@@ -308,7 +378,7 @@ export async function setReturnByPublicTransport(day,girlId,on){
   try{
     refreshWeekKey();
     const cur = currentDeviationDoc(day,'terug');
-    const r = applyOv({cars:effectiveCars(day,'terug'), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeDepartureTime(day,'terug',ids));
+    const r = applyOv({cars:effectiveCars(day,'terug'), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,'terug',ids));
     const extra = r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {};
     await writeDeviation(day,'terug',r.cars,extra);
     return true;

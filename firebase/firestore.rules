@@ -159,6 +159,19 @@ service cloud.firestore {
       allow delete: if isCoordinator();
     }
 
+    // ---- Periode met andere tijden: the temporary rooster (doc id = <firstDay>_<date>_<direction>) ----
+    // Members read (Mijn week and Rooster show it); only the coordinator writes.
+    match /periodCars/{shiftId} {
+      allow read: if isMember();
+      allow create, update: if isCoordinator()
+        && request.resource.data.keys().hasOnly(['periodFirstDay', 'date', 'direction', 'cars', 'madeAt', 'by'])
+        && request.resource.data.periodFirstDay is string
+        && request.resource.data.date is string
+        && request.resource.data.direction in ['heen', 'terug']
+        && request.resource.data.cars is list;
+      allow delete: if isCoordinator();
+    }
+
     // ---- Weekend match carpools: any member ----------------------------------------
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();

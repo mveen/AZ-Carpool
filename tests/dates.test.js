@@ -13,7 +13,7 @@ async function testAsync(name, fn) {
 }
 import { withFakeNow, resetState, NOW, WEEK_KEY } from './test-support.js';
 import { S } from '../state.js';
-import { dayUp, startOfWeek, effectivePlanningDate, dateForWeekday, getISOWeekKey, refreshWeekKey, deviationExpiryMs, deviationKey, weekRangeLabel, waDayDate, isoDayLabel, isoRangeLabel } from '../dates.js';
+import { dayUp, startOfWeek, effectivePlanningDate, dateForWeekday, getISOWeekKey, refreshWeekKey, deviationExpiryMs, deviationKey, weekRangeLabel, waDayDate, isoDayLabel, isoRangeLabel, weekKeyDayIso } from '../dates.js';
 
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
@@ -103,6 +103,21 @@ test('isoRangeLabel: "26 – 30 okt" in one month, both months when the range cr
   assert.equal(isoRangeLabel('2026-10-26', '2026-10-30'), '26 – 30 okt');
   assert.equal(isoRangeLabel('2026-10-29', '2026-11-06'), '29 okt – 6 nov');
   assert.equal(isoRangeLabel('2026-12-28', '2027-01-08'), '28 dec – 8 jan');
+});
+
+test('weekKeyDayIso: the date of a weekday in an ISO week, from the week key alone', () => {
+  assert.equal(weekKeyDayIso('2026-W40', 'Ma'), '2026-09-28'); assert.equal(weekKeyDayIso('2026-W40', 'Vr'), '2026-10-02');
+  assert.equal(weekKeyDayIso('2026-W44', 'Ma'), '2026-10-26'); assert.equal(weekKeyDayIso('2026-W44', 'Vr'), '2026-10-30');
+});
+test('weekKeyDayIso: year borders and week 53', () => {
+  assert.equal(weekKeyDayIso('2026-W53', 'Wo'), '2026-12-30'); assert.equal(weekKeyDayIso('2027-W01', 'Ma'), '2027-01-04'); assert.equal(weekKeyDayIso('2025-W01', 'Ma'), '2024-12-30');
+});
+test('weekKeyDayIso agrees with getISOWeekKey and dateForWeekday', () => {
+  withFakeNow(NOW, () => { resetState({ currentWeekKey: getISOWeekKey(effectivePlanningDate()) }); assert.equal(weekKeyDayIso(S.currentWeekKey, 'Wo'), ymd(dateForWeekday('Wo'))); });
+});
+test('weekKeyDayIso gives null for anything that is not a week key or a weekday', () => {
+  ['', null, 'x', '2026-40', '2026-W4'].forEach(k => assert.equal(weekKeyDayIso(k, 'Ma'), null, String(k)));
+  assert.equal(weekKeyDayIso('2026-W40', 'Za'), null); assert.equal(weekKeyDayIso('2026-W40', undefined), null);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

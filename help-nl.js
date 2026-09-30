@@ -115,10 +115,11 @@ export default [
   {
     id: 'rooster',
     title: 'Wat staat er in het Rooster?',
-    keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen',
+    keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen tijdelijk rooster vakantie periode',
     body: [
       'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Bij elke rit staat waar de auto ophaalt en heen gaat.',
       'Kies bovenaan Deze week (met eventuele wijzigingen) of Vast rooster (zoals het elke week is).',
+      'Is er een periode met andere tijden (vakantie, proefwerkweek) en heeft de coördinator het tijdelijke rooster gemaakt? Dan staat er een derde knop met de naam van de periode. Daar zie je per dag de doorgegeven tijden en de auto\'s. Op die dagen laat Deze week het tijdelijke rooster zien in plaats van het vaste rooster.',
       'Alleen de coördinator past het Rooster aan. Als ouder gebruik je daarvoor Wijzigen.',
     ],
     tab: 'schedule',
@@ -174,6 +175,7 @@ export default [
       'Heen is de tijd dat je dochter in Alkmaar moet zijn. Terug is de tijd dat ze klaar is om opgehaald te worden. Een tijd invullen betekent dat ze meerijdt.',
       'Je vult dit één keer in voor de hele periode. Tot de deadline kun je het aanpassen met Tijden aanpassen. Daarna kan alleen de coördinator het nog aanpassen. Vul je niets in, dan geldt het vaste rooster.',
       'Je vaste weekschema in Mijn gezin verandert hierdoor niet.',
+      'Daarna maakt de coördinator een tijdelijk rooster voor de periode. Dat zie je in Mijn week en bij Rooster. Alleen in die periode vervangt het tijdelijke rooster het vaste rooster. Wijzigen gaat altijd voor het tijdelijke rooster.',
     ],
     tab: 'deviation',
   },
@@ -284,6 +286,22 @@ export default [
       'Een ouder die niets invult, houdt het vaste rooster voor die dagen.',
     ],
     tab: 'beheer',
+  },
+  {
+    id: 'periode-rooster',
+    title: 'Rooster: het tijdelijke rooster voor een periode maken',
+    keywords: 'tijdelijk rooster periode vakantie proefwerkweek auto indeling opnieuw indelen chauffeur verplaatsen niet ingedeeld doorgegeven',
+    coordinatorOnly: true,
+    body: [
+      'Bij Rooster staat bovenaan een kaart met de periode: hoeveel gezinnen hebben doorgegeven, wie nog niet, en per dag hoeveel tijden anders zijn dan het vaste rooster.',
+      '1. Tik op Tijdelijk rooster maken. De app deelt alle dagen van de periode in met de doorgegeven tijden, op dezelfde manier als bij het vaste rooster. Wie niets heeft doorgegeven, houdt de vaste tijd.',
+      '2. Tik op de derde knop (de naam van de periode) en kies een dag.',
+      '3. Pas aan wat niet klopt: kies een andere chauffeur, verplaats een meisje naar een andere auto of naar Niet ingedeeld, of zet een meisje in een nieuwe auto. Elke wijziging wordt meteen opgeslagen.',
+      '4. Met Opnieuw indelen deel je één richting van een dag opnieuw in. Met Alles opnieuw indelen doe je dat voor de hele periode. Handmatige aanpassingen zijn dan weg. Tik twee keer om het zeker te weten.',
+      'Met het prullenbak-icoon verwijder je het tijdelijke rooster. Dan geldt weer het vaste rooster. De doorgegeven tijden blijven bewaard.',
+      'Het tijdelijke rooster vervangt het vaste rooster alleen in de periode. Wijzigingen in Wijzigen gaan altijd voor het tijdelijke rooster.',
+    ],
+    tab: 'schedule',
   },
   {
     id: 'beheer-kalenders',

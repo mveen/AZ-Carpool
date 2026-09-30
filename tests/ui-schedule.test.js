@@ -110,7 +110,7 @@ test('nothing is shown when Beheer has no coordinator for today', () => {
 test('Rooster shows "Dagcoördinator morgen: <naam>" with a WhatsApp button to that person', () => {
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' } }));
   assert.match(text(html), /^Dagcoördinator morgen: Kees de Vries/);
-  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi%20Kees%20de%20Vries!%20Een%20vraag%20over%20de%20carpool%20van%20morgen%3A/);
+  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Een%20vraag%20over%20de%20carpool%20van%20morgen%3A%20"/);   // no name in the message text: "Hi! Een vraag over de carpool van morgen: "
   assert.match(html, /aria-label="Stuur Kees de Vries een WhatsApp-bericht"/);
 });
 test('the name comes from the family data, not from the code', () => {
@@ -170,6 +170,17 @@ test('a one-off place chosen in Wijzigen shows on that ride only', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30', locationId: 'de-parel' }] } };
   const s = text(render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma', deviations: dev })));
   assert.match(s, /07:30 De Parel → AFC (&#39;|')34/); assert.match(s, /17:30 AFC (&#39;|')34 → Busstation/);
+});
+
+test('without a period the switch has two views and a stale "period" mode falls back to "Deze week"', () => {
+  sampleParentState({ roosterMode: 'period', period: null });
+  const html = withFakeNow(NOW, () => { renderSchedule(); return dom.html('tab-schedule'); });
+  assert.equal((html.match(/data-rmode=/g) || []).length, 2); assert.equal(S.roosterMode, 'week');
+});
+test('the standard views are untouched while a period is set: same html with and without the period', () => {
+  const plain = withFakeNow(NOW, () => { sampleParentState({ roosterMode: 'standard' }); renderSchedule(); return dom.html('tab-schedule'); });
+  const withPeriod = withFakeNow(NOW, () => { sampleParentState({ roosterMode: 'standard', period: { name: 'x', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' }, periodCars: {}, periodEntries: {}, periodEntriesLoaded: true }); renderSchedule(); return dom.html('tab-schedule'); });
+  assert.equal(plain, withPeriod);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -44,6 +44,8 @@ export const S = {
   periodDraft: null,       // Beheer: the period form while it has unsaved edits (null = show the saved period)
   periodEntries: {},       // periodEntries/*: the times families handed in for the period, by document id
   periodEntriesLoaded: false,
+  periodCars: {},          // periodCars/*: the temporary rooster, one document per shift (see period.js)
+  periodDay: null,         // Rooster, temporary view: the open date ('YYYY-MM-DD')
   periodView: null,        // Wijzigen (coordinator): the family whose handed-in times are unfolded ("Bekijk")
   periodForm: null,        // Wijzigen: the open form for handing in times { familyId, days } (null = closed); it also holds unsaved edits
   periodPhaseKey: null,    // last shown state of the task card and badge, so the minute check redraws only on a change

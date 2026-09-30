@@ -322,5 +322,19 @@ await testAsync('choosing a place stores it on that car of the deviation only; c
   assert.ok(!('locationId' in fake.get('deviations/Ma_heen').cars[0]));
 });
 
+console.log('\n=== during a period with a temporary rooster ===');
+test('Wijzigen starts from the temporary rooster on a date where it applies: its car, its departure time, the handed-in times', () => {
+  const html = withFakeNow(NOW, () => { sampleParentState({ period: { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }, deviations: {},
+    periodCars: { '2026-09-28_2026-09-29_terug': { periodFirstDay: '2026-09-28', date: '2026-09-29', direction: 'terug', madeAt: 1, by: 'x', cars: [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '12:00' }] } },
+    periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-29': { heen: '09:00', terug: '12:00' } } } } }); return renderDevDirection('Di', 'terug'); });
+  assert.match(html, /type="time"[^>]*value="12:00"|value="12:00"[^>]*type="time"/); assert.match(html, /<option value="f3" selected/);
+  assert.doesNotMatch(text(html), /Geen ritten gepland in het standaard Rooster/);
+});
+test('without a temporary rooster nothing changes for Wijzigen', () => {
+  const a = withFakeNow(NOW, () => { sampleParentState({ deviations: {} }); return renderDevDirection('Ma', 'heen'); });
+  const b = withFakeNow(NOW, () => { sampleParentState({ deviations: {}, period: { name: 'x', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }, periodCars: {}, periodEntries: {} }); return renderDevDirection('Ma', 'heen'); });
+  assert.equal(a, b);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

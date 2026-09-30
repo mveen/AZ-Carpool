@@ -17,6 +17,8 @@ import {
   fam, seats, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
   planOptions, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
+  baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
+  periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
 
 function state(patch = {}) {
@@ -248,6 +250,160 @@ test('the mark only concerns the terug ride of that day in this week: heen and t
   const st = state({ deviations: ovDev });
   assert.deepEqual(ids(unplacedFor('Ma', 'heen', 'week', st)), ids(unplacedFor('Ma', 'heen', 'week', state())));
   assert.deepEqual(ids(unplacedFor('Ma', 'terug', 'standard', st)), ['f3', 'f4', 'f5']);
+});
+
+console.log('\n=== the temporary rooster of a period ===');
+const P = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+const W44 = '2026-W44';   // Mon 26 Oct - Fri 30 Oct 2026, the week of the period
+const entryOf = (id, days) => ({ familyId: id, periodFirstDay: '2026-10-26', days, submittedAt: 1, by: 'x' });
+const shiftDoc = (iso, direction, cars) => ({ periodFirstDay: '2026-10-26', date: iso, direction, cars, madeAt: 1, by: 'x' });
+// f2 hands in Tuesday terug 12:30 and is out on Thursday; f6 hands in Tuesday terug 12:30; f5 Tuesday terug 13:00.
+const entries = () => ({
+  '2026-10-26_f2': entryOf('f2', { '2026-10-27': { terug: '12:30', heen: '10:15' }, '2026-10-29': { out: true } }),
+  '2026-10-26_f6': entryOf('f6', { '2026-10-27': { terug: '12:30', heen: '10:15' } }),
+  '2026-10-26_f5': entryOf('f5', { '2026-10-27': { terug: '13:00', heen: '10:15' } }),
+});
+const XCARS = [{ driverFamilyId: 'f4', girlIds: ['f4'], departureTime: '17:30' }];
+const pst = (patch = {}) => state({ currentWeekKey: W44, deviations: {}, period: P, periodEntries: entries(), periodCars: { '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', XCARS) }, ...patch });
+
+test('periodShift: only where the temporary rooster was made, inside the period, in the week of that date', () => {
+  const ps = periodShift('Di', 'terug', pst());
+  assert.deepEqual([ps.id, ps.iso], ['2026-10-26_2026-10-27_terug', '2026-10-27']); assert.equal(ps.doc.cars, XCARS);
+  assert.equal(periodShift('Di', 'heen', pst()), null, 'no document for that shift: the standard rooster');
+  assert.equal(periodShift('Wo', 'terug', pst()), null);
+  assert.equal(periodShift('Di', 'terug', pst({ currentWeekKey: WEEK_KEY })), null, 'another week');
+  assert.equal(periodShift('Di', 'terug', pst({ currentWeekKey: '2026-W45' })), null, 'the week after the period');
+  assert.equal(periodShift('Di', 'terug', pst({ period: null })), null);
+  assert.equal(periodShift('Di', 'terug', pst({ periodCars: undefined })), null);
+  assert.equal(periodShift('Di', 'terug', pst({ periodCars: { '2026-10-26_2026-10-27_terug': { ...shiftDoc('2026-10-27', 'terug', XCARS), periodFirstDay: '2026-12-21' } } })), null, 'a document of another period');
+  assert.equal(periodShift('Di', 'terug', pst({ periodCars: { '2026-10-26_2026-10-27_terug': { periodFirstDay: '2026-10-26' } } })), null, 'a broken document');
+});
+test('periodShift: a stored shift outside the period (the period was shortened or moved afterwards) never applies', () => {
+  const stale = { '2026-10-26_2026-10-29_terug': shiftDoc('2026-10-29', 'terug', XCARS), '2026-10-26_2026-10-26_heen': shiftDoc('2026-10-26', 'heen', XCARS) };
+  assert.equal(periodShift('Do', 'terug', pst({ period: { ...P, lastDay: '2026-10-28' }, periodCars: stale })), null, 'after the last day');
+  assert.equal(periodShift('Do', 'terug', pst({ periodCars: stale })).iso, '2026-10-29', 'inside the period it does apply');
+  assert.equal(periodShift('Ma', 'heen', pst({ period: { ...P, firstDay: '2026-10-27' }, periodCars: stale })), null, 'before the first day');
+});
+test('effectiveCars: a one-off change goes before the temporary rooster, which goes before the standard rooster', () => {
+  assert.deepEqual(effectiveCars('Di', 'terug', pst()), XCARS);
+  const standard = effectiveCars('Ma', 'heen', pst());
+  assert.deepEqual(standard.map(c => c.driverFamilyId), ['f1'], 'no shift made for Ma heen: the standard rooster');
+  assert.equal(standard[0].baseGroupId, 'Ma_heen_1');
+  const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: W44, expiresAt: 1, cars: [{ driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '13:00' }] } };
+  assert.deepEqual(effectiveCars('Di', 'terug', pst({ deviations: dev })).map(c => c.driverFamilyId), ['f3']);
+});
+test('effectiveCars returns copies: changing them never changes the stored temporary rooster', () => {
+  const st = pst(); const cars = effectiveCars('Di', 'terug', st);
+  cars[0].girlIds.push('zzz'); cars[0].departureTime = 'x';
+  assert.deepEqual(st.periodCars['2026-10-26_2026-10-27_terug'].cars, XCARS);
+});
+test('outside the period nothing changes: the standard rooster and the standard times, also with a period and entries in the state', () => {
+  const st = pst({ currentWeekKey: WEEK_KEY, deviations: sampleDeviations() });
+  assert.deepEqual(effectiveCars('Ma', 'heen', st), effectiveCars('Ma', 'heen', state()));
+  assert.equal(rideTime('f2', 'Di', 'terug', st), '17:30');
+});
+test('baseCars: what a one-off change is compared with', () => {
+  assert.equal(baseCars('Di', 'terug', pst()), XCARS);
+  assert.deepEqual(baseCars('Ma', 'heen', pst()).map(c => c.driverFamilyId), ['f1']);
+  assert.deepEqual(baseCars('Ma', 'heen', state()), groupsFor('Ma', 'heen', state()).map(([, g]) => g));
+});
+test('periodTimeFor: the handed-in time, "" when not riding, the standard time when nothing was handed in', () => {
+  const st = pst();
+  assert.equal(periodTimeFor('f2', '2026-10-27', 'terug', st), '12:30'); assert.equal(periodTimeFor('f5', '2026-10-27', 'terug', st), '13:00');
+  assert.equal(periodTimeFor('f2', '2026-10-29', 'heen', st), '', 'out that day');
+  assert.equal(periodTimeFor('f2', '2026-10-26', 'heen', st), '08:30', 'handed in, but nothing for this date: standard');
+  assert.equal(periodTimeFor('f1', '2026-10-27', 'terug', st), '17:30', 'no entry at all: standard');
+  assert.equal(periodTimeFor('f1', '2026-10-28', 'heen', st), '', 'no standard time either');
+  assert.equal(periodTimeFor('f2', '2026-10-27', 'terug', pst({ period: null })), '17:30');
+});
+test('a handed-in direction that is left out means she does not ride that way', () => {
+  const st = pst({ periodEntries: { '2026-10-26_f2': entryOf('f2', { '2026-10-27': { heen: '10:15' } }) } });
+  assert.equal(periodTimeFor('f2', '2026-10-27', 'heen', st), '10:15'); assert.equal(periodTimeFor('f2', '2026-10-27', 'terug', st), '');
+});
+test('rideTime: handed-in times count only on a shift with a temporary rooster', () => {
+  const st = pst();
+  assert.equal(rideTime('f2', 'Di', 'terug', st), '12:30');
+  assert.equal(rideTime('f2', 'Di', 'heen', st), '10:15', 'nothing made for Di heen: the standard time (same here by coincidence)');
+  assert.equal(rideTime('f5', 'Ma', 'heen', st), famTime('f5', 'Ma', 'heen', st));
+  assert.equal(rideTime('f2', 'Do', 'heen', st), '10:15', 'she is out on Thursday, but no shift is made: the standard time still counts');
+  const made = pst({ periodCars: { ...pst().periodCars, '2026-10-26_2026-10-29_heen': shiftDoc('2026-10-29', 'heen', []) } });
+  assert.equal(rideTime('f2', 'Do', 'heen', made), '', 'with the shift made she does not ride');
+});
+test('girlsForRide: who needs a ride; the same as girlsFor when no temporary rooster applies; Flex never', () => {
+  assert.deepEqual(ids(girlsForRide('Ma', 'heen', pst())), ids(girlsFor('Ma', 'heen', pst())));
+  assert.deepEqual(ids(girlsForRide('Ma', 'heen', state())), ids(girlsFor('Ma', 'heen', state())));
+  const made = pst({ periodCars: { '2026-10-26_2026-10-29_terug': shiftDoc('2026-10-29', 'terug', []) } });
+  assert.equal(ids(girlsForRide('Do', 'terug', made)).includes('f2'), false); assert.equal(ids(girlsFor('Do', 'terug', made)).includes('f2'), true);
+  const flex = sampleFamilies(); flex.f1 = { ...flex.f1, familyType: 'flex' };
+  assert.equal(ids(girlsForRide('Ma', 'heen', pst({ families: flex }))).includes('f1'), false);
+});
+test('computeRideDeparture: heen leaves early for the earliest, terug waits for the last, with the handed-in times', () => {
+  const st = pst();
+  assert.equal(computeRideDeparture('Di', 'terug', ['f2', 'f6', 'f5'], st), '13:00');
+  assert.equal(computeRideDeparture('Di', 'terug', ['f2', 'f1'], st), '17:30');
+  assert.equal(computeDepartureTime('Di', 'terug', ['f2', 'f6', 'f5'], st), '17:30', 'the standard function still uses the standard times');
+  assert.equal(computeRideDeparture('Ma', 'heen', ['f1', 'f2'], pst()), computeDepartureTime('Ma', 'heen', ['f1', 'f2'], pst()));
+});
+test('unplacedFor "week": uses the riders of the temporary rooster; "standard" is untouched', () => {
+  const st = pst({ periodCars: { ...pst().periodCars, '2026-10-26_2026-10-29_terug': shiftDoc('2026-10-29', 'terug', []) } });
+  assert.deepEqual(ids(unplacedFor('Do', 'terug', 'week', st)).includes('f2'), false);       // out that day
+  assert.deepEqual(ids(unplacedFor('Do', 'terug', 'standard', st)).includes('f2'), true);
+  assert.deepEqual(ids(unplacedFor('Di', 'terug', 'week', st)), ['f1', 'f2', 'f5', 'f6']);   // XCARS has only f4
+});
+test('shiftFamilies: the planning sees the handed-in time for that shift only; nothing else changes and the input is not touched', () => {
+  const st = pst(), before = JSON.stringify(st.families);
+  const fs = shiftFamilies('Di', 'terug', st);
+  assert.equal(fs.f2.schedule.Di.terug, '12:30'); assert.equal(fs.f2.schedule.Di.heen, '10:15'); assert.equal(fs.f2.schedule.Ma.terug, '17:30');
+  assert.equal(fs.f1.schedule.Di.terug, '17:30'); assert.equal(JSON.stringify(st.families), before);
+  assert.equal(shiftFamilies('Ma', 'heen', st), st.families, 'no temporary rooster for this shift: the families themselves');
+});
+test('the temporary rooster by date: riders, cars, unplaced, departure', () => {
+  const st = pst();
+  assert.deepEqual(ids(periodRidersFor('2026-10-27', 'terug', st)), ['f1', 'f2', 'f4', 'f5', 'f6']);
+  assert.equal(ids(periodRidersFor('2026-10-29', 'heen', st)).includes('f2'), false, 'out that day');
+  assert.equal(periodCarsFor('2026-10-27', 'terug', st), XCARS); assert.equal(periodCarsFor('2026-10-27', 'heen', st), null);
+  assert.deepEqual(ids(periodUnplacedFor('2026-10-27', 'terug', st)), ['f1', 'f2', 'f5', 'f6']);
+  assert.deepEqual(periodUnplacedFor('2026-10-27', 'heen', st), [], 'a shift that is not made has nobody unplaced');
+  assert.equal(periodDeparture('2026-10-27', 'terug', ['f2', 'f5'], st), '13:00'); assert.equal(periodDeparture('2026-10-27', 'heen', ['f1', 'f2'], st), '09:15');
+});
+test('periodEligibleDrivers: the standard availability of that weekday', () => {
+  assert.deepEqual(ids(periodEligibleDrivers('2026-10-27', 'terug', 1, pst())).sort(), ['f2', 'f4']);
+  assert.deepEqual(periodEligibleDrivers('2026-10-31', 'terug', 1, pst()), []);
+});
+test('planPeriodShift: auto planning with the handed-in times (clusters by time, drivers by priority)', () => {
+  const r = planPeriodShift('2026-10-27', 'terug', pst());
+  assert.deepEqual(r.cars, [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f5'], departureTime: '13:00' }, { driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]);
+  assert.deepEqual(r.unplaced, []);
+});
+test('planPeriodShift: a rider nobody can drive is handed back as unplaced, the rest is planned', () => {
+  const fams = sampleFamilies(); fams.f4 = { ...fams.f4, availability: { ...fams.f4.availability, Di: { heen: false, terug: false } } };
+  const r = planPeriodShift('2026-10-27', 'terug', pst({ families: fams }));
+  assert.equal(r.cars.length, 1); assert.equal(r.cars[0].driverFamilyId, 'f2');
+  assert.equal(r.cars[0].girlIds.length, 4, 'f2 has 4 passenger seats: the car is filled up');
+  assert.equal(r.unplaced.length, 1);
+  assert.equal(r.cars[0].departureTime, periodDeparture('2026-10-27', 'terug', r.cars[0].girlIds, pst({ families: fams })));
+  assert.deepEqual([...r.cars.flatMap(c => c.girlIds), ...r.unplaced].sort(), ['f1', 'f2', 'f4', 'f5', 'f6']);
+});
+test('planPeriodShift: a weekend date, or no families: nothing to plan', () => {
+  assert.deepEqual(planPeriodShift('2026-10-31', 'heen', pst()), { cars: [], unplaced: [] });
+  assert.deepEqual(planPeriodShift('2026-10-27', 'heen', pst({ families: {} })), { cars: [], unplaced: [] });
+});
+test('planPeriodShift never plans Flex families and never seats a rider twice', () => {
+  const fams = sampleFamilies(); fams.f5 = { ...fams.f5, familyType: 'flex' };
+  const r = planPeriodShift('2026-10-27', 'terug', pst({ families: fams }));
+  const all = [...r.cars.flatMap(c => c.girlIds), ...r.unplaced];
+  assert.equal(all.includes('f5'), false); assert.equal(new Set(all).size, all.length);
+});
+test('planPeriodRooster: every shift of the period, heen and terug, ten in a two-week period', () => {
+  const plan = planPeriodRooster(pst());
+  assert.equal(plan.length, 10); assert.deepEqual(plan.slice(0, 3).map(s => [s.iso, s.direction]), [['2026-10-26', 'heen'], ['2026-10-26', 'terug'], ['2026-10-27', 'heen']]);
+  assert.equal(planPeriodRooster(pst({ period: { ...P, lastDay: '2026-11-06' } })).length, 20);
+  assert.deepEqual(planPeriodRooster(pst({ period: null })), []);
+});
+test('a Thursday when nobody rides plans no cars and nobody unplaced, and an out girl is not planned', () => {
+  const all = Object.fromEntries(Object.keys(sampleFamilies()).map(id => ['2026-10-26_' + id, entryOf(id, { '2026-10-29': { out: true } })]));
+  const r = planPeriodShift('2026-10-29', 'terug', pst({ periodEntries: all }));
+  assert.deepEqual(r, { cars: [], unplaced: [] });
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

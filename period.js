@@ -184,3 +184,41 @@ export function periodProgress(period, families, entries){
   });
   return { total: rows.length, done: rows.filter(r => r.done).length, rows };
 }
+
+// ---------- Step 4: the temporary rooster ----------
+// One document per shift (a date and a direction): periodCars/<firstDay>_<date>_<direction>
+//   { periodFirstDay, date, direction, cars: [{ driverFamilyId, girlIds, departureTime }], madeAt, by }
+// It exists only once the coordinator made the temporary rooster (or re-planned that shift). Where it exists it replaces the standard
+// rooster for that date; one-off changes in Wijzigen (deviations) still go before it.
+export function periodShiftId(period, iso, direction){ return normalizePeriod(period).firstDay + '_' + iso + '_' + direction; }
+
+// Pure edits of the cars of one shift of the temporary rooster. cars: [{ driverFamilyId, girlIds, departureTime }].
+//   depOf(girlIds) -> departure time; capOf(driverId) -> passenger seats or null (unknown: no limit).
+// Each returns { cars, error } where error is null or a text key with its parameters: { key, p1, p2 }.
+// target of a move: 'none' (in no car) | 'car:<index>' | 'new:<driverId>' (a new car with that driver).
+export function periodMoveGirl(cars, girlId, target, depOf, capOf){
+  const next = (cars || []).map(c => ({ ...c, girlIds: (c.girlIds || []).filter(id => id!==girlId) }));
+  const touched = new Set();
+  (cars || []).forEach((c, i) => { if((c.girlIds || []).includes(girlId)) touched.add(i); });
+  const m = /^car:(\d+)$/.exec(String(target)), n = /^new:(.+)$/.exec(String(target));
+  if(m){
+    const i = +m[1], car = next[i];
+    if(!car) return { cars, error: { key:'period.rooster.err.unknown' } };
+    const cap = capOf(car.driverFamilyId);
+    if(cap!=null && car.girlIds.length >= cap) return { cars, error: { key:'period.rooster.err.full', p1:car.girlIds.length, p2:cap } };
+    car.girlIds.push(girlId); touched.add(i);
+  } else if(n){
+    next.push({ driverFamilyId:n[1], girlIds:[girlId], departureTime:'' }); touched.add(next.length-1);
+  } else if(target!=='none') return { cars, error: { key:'period.rooster.err.unknown' } };
+  touched.forEach(i => { if(next[i]) next[i].departureTime = next[i].girlIds.length ? depOf(next[i].girlIds) : ''; });
+  return { cars: next.filter(c => c.girlIds.length), error: null };
+}
+
+export function periodSetDriver(cars, index, driverId, capOf){
+  const car = (cars || [])[index];
+  if(!car) return { cars, error: { key:'period.rooster.err.unknown' } };
+  if((cars || []).some((c, i) => i!==index && driverId && c.driverFamilyId===driverId)) return { cars, error: { key:'period.rooster.err.driverBusy' } };
+  const cap = driverId? capOf(driverId) : null;
+  if(cap!=null && (car.girlIds || []).length > cap) return { cars, error: { key:'period.rooster.err.full', p1:(car.girlIds || []).length, p2:cap } };
+  return { cars: cars.map((c, i) => i===index ? { ...c, driverFamilyId: driverId || '' } : c), error: null };
+}

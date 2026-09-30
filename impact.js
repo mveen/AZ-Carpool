@@ -10,7 +10,7 @@ import { S } from './state.js';
 import { planClusters, planPrimaryAssignment, timeToMinutes } from './planning.js';
 import { db } from './data.js';
 import { esc, openSheet, phIcon, showToast } from './ui-common.js';
-import { effectiveCars } from './rides.js';
+import { effectiveCars, shiftFamilies } from './rides.js';
 
 // ---------- pure: the analysis ----------
 const seatsOf = f => Math.max(0, ((f && f.capacity) || 0) - 1);
@@ -114,7 +114,7 @@ export async function impactGate(day, direction, cars, save, rerender) {
   if (!(await impactEnabled())) return false;
   const result = analyzeImpact({
     day, direction, before: effectiveCars(day, direction), after: cars,
-    families: S.families, settings: S.settings, prefs: S.prefs, priority: S.shiftPriority[day + '_' + direction],
+    families: shiftFamilies(day, direction), settings: S.settings, prefs: S.prefs, priority: S.shiftPriority[day + '_' + direction],
   });
   const name = id => (S.families[id] && S.families[id].parentName) || '?';
   const text = impactText(result, name);

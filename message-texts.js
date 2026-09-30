@@ -4,7 +4,7 @@
 // only collect the current app state into a ctx and call them.
 import { APP_URL, DAYS, DIR_TEXT } from './constants.js';
 import { t, locale } from './i18n.js';
-import { activeDeviation, effectiveCars, fam, groupsFor, plainDriverName, plainGirlName } from './rides.js';
+import { activeDeviation, baseCars, effectiveCars, fam, plainDriverName, plainGirlName, rideTime } from './rides.js';
 import { dateForWeekday, dayUp, waDayDate } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { analyzeMatch, matchLabel, myMatchRides } from './matches.js';
@@ -36,8 +36,10 @@ export function buildWhatsAppMessageFrom(ctx){
 //        matchRides: [{doc,car}], driverName(id), matchLabel(doc) }
 export function buildMyWeekMessageFrom(ctx){
   const { myId, myFam } = ctx;
+  // ctx.rideTime: the handed-in time where the temporary rooster applies; without it (or in tests) the standard schedule.
+  const timeOf = (day,direction) => ctx.rideTime? ctx.rideTime(myId,day,direction) : (myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction]);
   function part(day,direction){
-    const s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
+    const s = timeOf(day,direction);
     if(!s) return '–';
     if(direction==='terug' && ctx.isOv && ctx.isOv(day,myId)) return t('wa.my.ov');
     const car = ctx.cars(day,direction).find(c=>c.girlIds.includes(myId));
@@ -48,8 +50,7 @@ export function buildMyWeekMessageFrom(ctx){
   // day instead of in a block at the end; weekend matches naturally follow Friday.
   const entries = [];
   DAYS.forEach(([k])=>{
-    const sch = myFam.schedule && myFam.schedule[k];
-    if(!sch || (!sch.heen && !sch.terug)) return;
+    if(!timeOf(k,'heen') && !timeOf(k,'terug')) return;
     const changed = (ctx.hasDeviation(k,'heen')||ctx.hasDeviation(k,'terug'))? t('wa.my.changed') : '';
     const d = ctx.dateFor(k); d.setHours(0,0,0,0);
     entries.push({sort:d.getTime(), order:0, text:t('wa.my.line', { day: dayHeading(k, ctx.dateFor(k)), changed, heen: part(k,'heen'), terug: part(k,'terug') })});
@@ -162,7 +163,8 @@ function stateCtx(){
     cars: (day,direction)=>effectiveCars(day,direction),
     hasDeviation: (day,direction)=>!!activeDeviation(day,direction),
     dateFor: (day)=>dateForWeekday(day),
-    baseCars: (day,direction)=>groupsFor(day,direction).map(([,g])=>g),
+    baseCars: (day,direction)=>baseCars(day,direction),
+    rideTime: (id,day,direction)=>rideTime(id,day,direction),
     driverName: (id)=>plainDriverName(id),
     girlName: (id)=>plainGirlName(id),
     matchLabel,

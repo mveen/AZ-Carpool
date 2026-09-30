@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, WA_ICON_SMALL, todayKey } from './constants.js';
-import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, seats, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
+import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, rideTime, seats, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dayUp, weekRangeLabel } from './dates.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
 import { saveShiftLocation, timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
@@ -10,6 +10,7 @@ import { goToWijzigen } from './ui-myweek.js';
 import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
+import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
 // Deviations are purged at midnight, so the coordinator of TODAY is not the one to ask about changes:
@@ -33,7 +34,7 @@ export function dayCoordinatorHtml(){
   if(me && me===dc.familyId) return `<div class="dayCoordBar you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you', { when })}</span></div>`;
   const name = esc(dc.name||'?');
   const num = waPhone(dc.phone);
-  const href = num? 'https://wa.me/'+num+'?text='+encodeURIComponent(t('dayCoord.waText', { name: dc.name||'', when })) : '';
+  const href = num? 'https://wa.me/'+num+'?text='+encodeURIComponent(t('dayCoord.waText', { when })) : '';
   const btn = href? `<a class="dayCoordWa" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t('dayCoord.waLabel', { name: dc.name||'?' }))}">${WA_ICON_SMALL}</a>` : '';
   return `<div class="dayCoordBar" id="dayCoordBar">${phIcon('user')} <span>${t('dayCoord.label', { when, name: `<strong>${name}</strong>` })}</span>${btn}</div>`;
 }
@@ -41,6 +42,9 @@ export function dayCoordinatorHtml(){
 export function renderSchedule(){
   const box=document.getElementById('tab-schedule');
   if(!box) return;
+  // The third view (temporary rooster of the period) only exists while there is one to show.
+  const periodMode = periodModeAvailable();
+  if(S.roosterMode==='period' && !periodMode) S.roosterMode = 'week';
   const mode = S.roosterMode;
   const pillsHtml = DAYS.map(([k,label])=>{
     const carCount = carsCountFor(k,mode);
@@ -56,19 +60,22 @@ export function renderSchedule(){
   const label = DAYS.find(([k])=>k===S.scheduleDay)[1];
   const segHtml = `<div class="segmented" role="group" aria-label="${t('schedule.welk_rooster')}">
       <button type="button" data-rmode="week" class="${mode==='week'?'active':''}" aria-pressed="${mode==='week'}">${t('schedule.deze_week')}</button>
-      <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">${t('schedule.standaardrooster')}</button>
+      <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">${t('schedule.standaardrooster')}</button>${periodMode? `<button type="button" data-rmode="period" class="${mode==='period'?'active':''}" aria-pressed="${mode==='period'}">${esc(periodModeLabel())}</button>` : ''}
     </div>
     <p class="muted" style="margin:-4px 2px 10px">${mode==='week'
       ? t('schedule.het_standaardrooster_met_de_wijzigingen', { p1: weekRangeLabel() })
+      : mode==='period'? periodModeInfoHtml()
       : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</p>`;
   const footer = mode==='week'
     ? lastUpdateFooter([S.lastUpdateRooster,S.lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])
     : lastUpdateFooter(S.lastUpdateRooster);
   box.innerHTML = dayCoordinatorHtml()
     + timeChangesCardHtml()
+    + periodOverviewHtml()
     + segHtml
-    + `<div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>`
-    + renderDay(S.scheduleDay, label)
+    + (mode==='period'
+      ? periodViewHtml()
+      : `<div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label))
     + footer;
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
@@ -84,6 +91,7 @@ export function renderSchedule(){
   wireTimeChangesCard();
   updateTimeChangesBadge();
   attachScheduleHandlers();
+  wirePeriodRooster();
 }
 
 export function renderDay(day,label){
@@ -139,8 +147,9 @@ export function tripReserveHtml(day,direction,cars,withWhatsApp,askTime){
   return `<div class="tripReserve">${t('schedule.reserve')} ${names.join(', ')}</div>`;
 }
 
-export function neededTimesHtml(day,direction,girlIds){
-  const times = girlIds.map(id=>famTime(id,day,direction)).filter(Boolean).sort();
+// timeOf: standard times by default ("Vast rooster"); "Deze week" passes rideTime, so a date with a temporary rooster shows the handed-in times.
+export function neededTimesHtml(day,direction,girlIds,timeOf=famTime){
+  const times = girlIds.map(id=>timeOf(id,day,direction)).filter(Boolean).sort();
   const range = `${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`;
   return `<div class="subtime">${direction==='heen'? t('schedule.aankomst_alkmaar_nodig', { p1: range }) : t('schedule.klaar_om_op_te_halen', { p1: range })}</div>`;
 }
@@ -176,7 +185,7 @@ export function renderDirectionWeek(day,direction){
         </div>
         ${driver? `<span class="capbadge">${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}</span>` : ''}
       </div>
-      ${neededTimesHtml(day,direction,c.girlIds)}
+      ${neededTimesHtml(day,direction,c.girlIds,rideTime)}
       <div>${pillsHtml(c.girlIds,myId)}</div>
       ${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}
       ${shiftLocationHtml(c,direction,{day})}
