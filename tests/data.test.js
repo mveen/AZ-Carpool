@@ -17,7 +17,7 @@ import { S } from '../state.js';
 import {
   createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
-  migrateLegacyFamilySecrets, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
+  migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
 } from '../data.js';
 
@@ -234,6 +234,26 @@ await testAsync('syncListeners: only the coordinator listens to all links and in
   sampleCoordinatorState({ links: {}, families: {} });
   syncListeners(); await tick(); await tick();
   assert.deepEqual(S.invitesByCode, { CODE1234: 'f3' }); assert.deepEqual(S.inviteByFamily, { f3: 'CODE1234' }); assert.ok('p1' in S.links);
+  stopDataListeners();
+});
+await testAsync('recordSession: a linked browser stores its family and time, at most once per 15 minutes', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({}); resetSessionThrottle();
+  await recordSession(1e12);
+  assert.deepEqual(fake.get('sessions/p1'), { familyId: 'f2', at: 1e12 });
+  await recordSession(1e12 + 60000); assert.equal(fake.get('sessions/p1').at, 1e12);
+  await recordSession(1e12 + 16 * 60000); assert.equal(fake.get('sessions/p1').at, 1e12 + 16 * 60000);
+});
+await testAsync('recordSession: nothing for an unlinked browser or a coordinator looking as another family', async () => {
+  let fake = useFakeDb(sampleDbSeed()); sampleParentState({ links: {} }); resetSessionThrottle();
+  await recordSession(1e12); assert.equal(fake.get('sessions/p1'), undefined);
+  fake = useFakeDb(sampleDbSeed()); sampleParentState({ impersonateFamilyId: 'f3' }); resetSessionThrottle();
+  await recordSession(1e12); assert.equal(fake.get('sessions/p1'), undefined);
+});
+await testAsync('syncListeners: the coordinator sees the newest session per family', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'sessions/a': { familyId: 'f2', at: 10 }, 'sessions/b': { familyId: 'f2', at: 30 }, 'sessions/c': { familyId: 'f3', at: 20 } });
+  sampleCoordinatorState({ links: {}, families: {} });
+  syncListeners(); await tick(); await tick();
+  assert.deepEqual(S.lastSeenByFamily, { f2: 30, f3: 20 });
   stopDataListeners();
 });
 await testAsync('saveCoordFamily creates a new family document and warns about duplicate girl names', async () => {

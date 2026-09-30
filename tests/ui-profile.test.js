@@ -318,15 +318,14 @@ test('Mijn gezin labels Tel.nr. 1 as receiving WhatsApp messages; Beheer keeps t
   assert.doesNotMatch(text(familyFormHtml('coord', f)), /ontvangt WhatsApp/);
 });
 
-test('Beheer shows the newest sign of life under the phone numbers; Mijn gezin and empty data show nothing', () => {
+test('Beheer shows the last session under the phone numbers (else the link date); Mijn gezin and empty data show nothing', () => {
   const f = sampleParentState().families.f2, t0 = new Date('2026-09-20T10:00:00+02:00').getTime();
-  S.coordEditId = 'f2';
-  S.links = {};
+  S.coordEditId = 'f2'; S.links = {}; S.lastSeenByFamily = {};
   assert.doesNotMatch(text(familyFormHtml('coord', f)), /Laatste sessie|Gekoppeld op/);
-  S.links = { u1: { familyId: 'f2', linkedAt: t0 }, u2: { familyId: 'f9', lastSeenAt: t0 + 1e9 } };
+  S.links = { u1: { familyId: 'f2', linkedAt: t0 }, u2: { familyId: 'f9', linkedAt: t0 + 1e9 } };
   assert.match(text(familyFormHtml('coord', f)), /Gekoppeld op: .*2026/);
-  S.links.u3 = { familyId: 'f2', linkedAt: t0, lastSeenAt: t0 + 86400000 };
-  assert.match(text(familyFormHtml('coord', f)), /Laatste sessie: .*2026/);
+  S.lastSeenByFamily = { f2: t0 + 86400000 };
+  assert.match(text(familyFormHtml('coord', f)), /Laatste sessie: 21 sep 2026/);
   assert.doesNotMatch(text(familyFormHtml('me', f)), /Laatste sessie|Gekoppeld op/);
 });
 

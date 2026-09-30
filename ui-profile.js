@@ -223,17 +223,14 @@ export function familyFormHtml(prefix,f){
     const code = (S.inviteByFamily[S.coordEditId]||'');
     return `<div class="rowflex" style="gap:6px">${input}${introWaIconHtml(n, f['parentPhone'+n]||'', code)}</div>`;
   };
-  // Beheer only: newest sign of life among the browsers linked to this family (links/{uid}).
-  // Real session fields win; linkedAt (moment of linking) is the fallback. Nothing is shown without data.
+  // Beheer only: when a browser of this family last opened the app (sessions/{uid}); before that data exists,
+  // the moment the family was linked. Nothing is shown without data.
   const lastSeenHtml = ()=>{
     if(prefix!=='coord' || !S.coordEditId) return '';
-    let best=null;
-    Object.values(S.links||{}).filter(l=>l && l.familyId===S.coordEditId).forEach(l=>{
-      [['lastSeenAt','Laatste sessie'],['lastLoginAt','Laatst ingelogd'],['lastActionAt','Laatste actie in app'],['linkedAt','Gekoppeld op']].forEach(([k,label])=>{
-        const at=Number(l[k]); if(at>0 && (!best || at>best.at || (at===best.at && k!=='linkedAt'))) best={at,label};
-      });
-    });
-    return best? `<p class="muted" style="font-size:12px;margin:6px 0 0">${best.label}: ${new Date(best.at).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'})}</p>` : '';
+    const seen = Number((S.lastSeenByFamily||{})[S.coordEditId]) || 0;
+    const linked = Math.max(0, ...Object.values(S.links||{}).filter(l=>l && l.familyId===S.coordEditId).map(l=>Number(l.linkedAt)||0));
+    const [label, at] = seen? ['Laatste sessie', seen] : ['Gekoppeld op', linked];
+    return at? `<p class="muted" style="font-size:12px;margin:6px 0 0">${label}: ${new Date(at).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'})}</p>` : '';
   };
   const phoneInput1 = phoneField(1,'06-12345678'), phoneInput2 = phoneField(2,'06-...');
   return `

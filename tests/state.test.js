@@ -66,5 +66,9 @@ test('collapsible sections start with nothing open', () => { assert.deepEqual(S.
 
 test('the notice state starts empty', () => { assert.equal(S.notice, null); assert.equal(S.noticeDraft, null); });
 
+test('the last-session map starts empty and has no listener', () => {
+  assert.deepEqual(S.lastSeenByFamily, {}); assert.equal(S.sessionsUnsub, null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

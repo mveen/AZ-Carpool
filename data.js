@@ -286,6 +286,18 @@ export async function migrateLegacyPeriod(){
   finally{ migratingLegacy = false; }
 }
 
+// Remembers when this (linked) browser last opened the app, for the coordinator's Beheer. At most once per
+// 15 minutes per page load; never when the coordinator is only looking as another family. Best-effort.
+let lastSessionWrite = 0;
+export async function recordSession(now=Date.now()){
+  if(!db || !S.me || S.impersonateFamilyId) return;
+  const familyId = S.links[S.me] && S.links[S.me].familyId;
+  if(!familyId || now-lastSessionWrite < 15*60*1000) return;
+  lastSessionWrite = now;
+  try{ await db.doc("sessions/"+S.me).set({familyId, at:now}); }catch(e){ lastSessionWrite = 0; }
+}
+export function resetSessionThrottle(){ lastSessionWrite = 0; }
+
 export async function recordLastUpdate(kind){
   if(!db) return;
   try{
@@ -308,6 +320,13 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
+  if(coord && !S.sessionsUnsub){
+    S.sessionsUnsub = db.collection("sessions").onSnapshot(snap=>{
+      const next={}; snap.docs.forEach(d=>{ const {familyId,at}=d.data(); if(familyId && at>(next[familyId]||0)) next[familyId]=at; });
+      S.lastSeenByFamily = next;
+      renderBeheer();
+    }, err=>{});
+  }
   if(coord && !S.invitesUnsub){
     S.invitesUnsub = db.collection("invites").onSnapshot(snap=>{
       S.invitesByCode={}; S.inviteByFamily={};
@@ -317,6 +336,7 @@ export function syncListeners(){
   }
   if(!coord){
     if(S.linksCollUnsub){ S.linksCollUnsub(); S.linksCollUnsub=null; const mine=S.links[S.me]; S.links={}; if(mine) S.links[S.me]=mine; }
+    if(S.sessionsUnsub){ S.sessionsUnsub(); S.sessionsUnsub=null; S.lastSeenByFamily={}; }
     if(S.invitesUnsub){ S.invitesUnsub(); S.invitesUnsub=null; S.invitesByCode={}; S.inviteByFamily={}; }
   }
 }

@@ -163,5 +163,10 @@ test('renderAll draws the notice bar', () => {
   assert.match(dom.html('noticeBanner'), /Test melding/);
 });
 
+test('opening the app and coming back to the foreground both record the session', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /syncListeners\(\);\s*recordSession\(\);/); assert.match(src, /visibilitychange[^\n]*recordSession\(\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
