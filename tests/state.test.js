@@ -64,5 +64,7 @@ test('new fields: places, calculated distances and the impact switch start empty
 
 test('collapsible sections start with nothing open', () => { assert.deepEqual(S.folds, {}); });
 
+test('the notice state starts empty', () => { assert.equal(S.notice, null); assert.equal(S.noticeDraft, null); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

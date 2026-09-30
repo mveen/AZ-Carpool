@@ -674,5 +674,12 @@ await testAsync('restoreFamilies writes nothing for a parent, an invalid plan, o
   assert.match(toast(), /permission-denied/);
 });
 
+await testAsync('the notice for everyone is loaded live and cleared when listeners stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/notice': { on: true, text: 'Geen training' } }); sampleParentState({ families: {}, groups: {}, notice: null });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.notice.text, 'Geen training'); assert.equal(S.notice.on, true);
+  stopDataListeners(); assert.equal(S.notice, null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

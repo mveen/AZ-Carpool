@@ -1,19 +1,19 @@
 {
   "app.js": {
-    "module": "4fea3f4b192b997b8a72c1a23e7830b731dca5510c6599b4172d6c56144c782a",
-    "test": "fced000c66439fa2269f0d910b5ec90dbcea0c0c0cf04b3f95a283c32cff68d5"
+    "module": "704edb82b2ce1756f6ac0005a19b88d33eec25252d41407e1a721d2abe3e5d94",
+    "test": "08ed43fcc2344218b6c02ded0844f6e88232686881a32acd0a3e34a99f20c782"
   },
   "constants.js": {
-    "module": "17356367d51cdc87e4c532016c1dd7dd7b87160d580eac48330dd0b921388997",
-    "test": "762ef330d95f2c0ad7a3169478b5cf9e56032da3ef9112ff28e53038f62ca61d"
+    "module": "6bc9e45ce503958eb43ce31a9399ceb37c4743716eef38aa50cf7853ec12209a",
+    "test": "9f9b3c18bcc72e42f3d9a6c2c67f6659745ec8506a07e97894475690006af6d5"
   },
   "coordinator.js": {
     "module": "709af35f94e50314ced21d72ece3b2e725ac6dfd0491844947524ec6657d90d2",
     "test": "77bded5a0fa10ce5a22aa20a3b9b27f7a50e18fe7e6a613df6f5a7f6a77a041c"
   },
   "data.js": {
-    "module": "5999f04bfef93cc8edcb142bc55ae298674a22832d5e87e78621a9b2e1b3f401",
-    "test": "60fe4a3491e7d47bad9c9d3d745d6fe4ef792ed3ffa5757823b45f7401670b61"
+    "module": "3ee29a50820e9ba1b1a5767d821304907f7efbcd813448867877ef2d2ed73858",
+    "test": "a88ac041d90b7ba96c8ec85b57ee60e06b97813cda1293126737f4b5cf15caee"
   },
   "dates.js": {
     "module": "f502addd4970229e55d30d8e73096b2ad739a7a000b75d09d6932a6946f26272",
@@ -36,16 +36,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "eb56f57e2990f29c3034ffd5c7a5b6fb886cfdb1b841e19dc043b9f181b4343c",
-    "test": "c353cc777db37964c8731621bfb1f0713114e5ae15a5279ca89cf5202c3e65d9"
+    "module": "af9960fe71f783b2c924fdce8f9941bb3af74f41387309f40c189bde076cfe56",
+    "test": "6afc8f0e27e3df1d832b041d3fb0329fd3b8452e0171f06021e4382c47b5f8d4"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "c353cc777db37964c8731621bfb1f0713114e5ae15a5279ca89cf5202c3e65d9"
+    "test": "6afc8f0e27e3df1d832b041d3fb0329fd3b8452e0171f06021e4382c47b5f8d4"
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "709f09cd35185af33af3db296ad067b277901598ad47d9f5ad94bcb14c6994da"
+    "test": "a20acdd07338a5c58169f5b483a663f241b73009efb49230bf72a35ce21bab72"
   },
   "impact.js": {
     "module": "b8324f916a3b681c343c58767a9dd0ba80e6a28fcfbc0bf7fc0c0ea9e2758586",
@@ -62,6 +62,10 @@
   "message-texts.js": {
     "module": "dcbe641d244739e7342c67cbb4ebec0de7de58152d7e6e53307e396c27d28999",
     "test": "0ec4eabe27464675dd0141570f27342d9e981a45db4c940e68462d9f380242c4"
+  },
+  "notice.js": {
+    "module": "ca411ae280a728d29651e7887023e319f11e5d6ccddd92cd60cc880c994811b5",
+    "test": "b3f31bd4d244619db528d5b1baa93d003981be7dd7479e942ba150ad407e8ffc"
   },
   "ov.js": {
     "module": "5072f7dfd75a2f4f52541a1288bc3dd85418aa867e50e2c8a8b63febd16f7d08",
@@ -84,16 +88,16 @@
     "test": "72128f940bec263b43ba7c32379801947e5088ebfd05fa999c99c732effde253"
   },
   "state.js": {
-    "module": "24fe837df409a4b556e74d26b3c2fc04905df5a6dc6f02bb38fcf042a813b762",
-    "test": "cd1085c0086eec6cb013bf40910fe2237836e15cb2fd7df2e47ce4188785792c"
+    "module": "ffee4374aed8c931dfd7468df8372aa588956d774d618ea667def22d62820801",
+    "test": "2ae492684ab7de87c37b313f19dd6eac2bf99a686577dd36cbed79916e8f5893"
   },
   "texts-nl.js": {
-    "module": "f7714b7bf1fd8d1f2a4f387269e8d5b7f0ab86a63c85b29c8503c01f887eed76",
-    "test": "709f09cd35185af33af3db296ad067b277901598ad47d9f5ad94bcb14c6994da"
+    "module": "bff6e03a23da78c4e9f964dbe865cf3b1eb045ccac474ac0338a42c5257c2687",
+    "test": "a20acdd07338a5c58169f5b483a663f241b73009efb49230bf72a35ce21bab72"
   },
   "ui-beheer.js": {
-    "module": "fe6d511618f4b497ad655548fc88db2776a6f853db43665f92540cff9ad2a03e",
-    "test": "9288e6acd27d56cff49360616b5b39a40e441d95124df3cc181c41d1ee40e99f"
+    "module": "b90f9834cda1613de9eb7cf7d876fa669ecf1454421aa7157f78312d0c0ebc95",
+    "test": "60988e59f34c459013d224d7e55679f0a2f09f75d73716a9a53196e978b30039"
   },
   "ui-common.js": {
     "module": "3378607b38d5215de6bec1e9d77887fee8ee95f1d57dc679719fd21304db282e",
@@ -114,6 +118,10 @@
   "ui-myweek.js": {
     "module": "4b56b03a810a8f0ccc0f9ee16508cf4f05ba39d804958945b2e286a6cac5de0f",
     "test": "884b4d5ddc967c00d10a02801570319afc92c1c1286f6a9257b5f0050423c7fa"
+  },
+  "ui-notice.js": {
+    "module": "2baa22febd237d86597fe4fc6dcd582f13fbc291d696fc8be2cc6429da91e100",
+    "test": "575b3bfd3647c0261bcbc2da4a9854055c488b1c606273024fd716b4ae8f81b8"
   },
   "ui-overview.js": {
     "module": "975a1d00114a8179b4b078a12ebe660922ec0835406155a50ee608c1c39b51f3",

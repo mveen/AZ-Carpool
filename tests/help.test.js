@@ -150,5 +150,11 @@ test('the back-up / terugzetten help is found by the coordinator and hidden from
   assert.equal(searchHelp('terugzetten csv excel', { canEdit: false }).some(a => a.id === 'beheer-gezinnen'), false);
 });
 
+test('the notice help: everyone finds the bar, only the coordinator finds how to switch it', () => {
+  assert.ok(searchHelp('gele balk melding', { canEdit: false }).some(a => a.id === 'melding-balk'));
+  assert.equal(searchHelp('melding tonen uitzetten', { canEdit: false }).some(a => a.id === 'beheer-melding'), false);
+  assert.ok(searchHelp('melding tonen uitzetten', { canEdit: true }).some(a => a.id === 'beheer-melding'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -157,5 +157,11 @@ test('checkWeekRollover does nothing within the same week', () => {
   assert.equal(S.currentWeekKey, '2026-W40');
 });
 
+test('renderAll draws the notice bar', () => {
+  sampleCoordinatorState({ notice: { on: true, text: 'Test melding', offDate: '', offTime: '' } });
+  withFakeNow(NOW, () => renderAll());
+  assert.match(dom.html('noticeBanner'), /Test melding/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

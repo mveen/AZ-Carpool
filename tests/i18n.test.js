@@ -126,6 +126,10 @@ test('the texts of the Weekoverzicht and of the Wijzigen Back-up / Stem af exist
   assert.ok(hasKey('overview.print') && hasKey('overview.reserve') && hasKey('overview.rijfrequentie'));
 });
 
+test('the notice texts exist and the WhatsApp intro texts are still there', () => {
+  for (const k of ['notice.title', 'notice.save', 'notice.err.noText', 'profile.wa_intro_text', 'profile.tel_nr_1_wa', 'backup.title']) assert.ok(hasKey(k), k);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
