@@ -37,8 +37,9 @@ test('AFC and ATC use the fixed distance from Beheer, never a calculated one', (
   assert.deepEqual(distanceInfo({ isHome: true, location: 'AFC', fixedKm }), { kind: 'fixed', km: 36 });
   assert.deepEqual(distanceInfo({ isHome: false, location: 'ATC Alkmaar', fixedKm }), { kind: 'fixedMissing', venue: 'ATC' });
 });
-test('a home match at another place shows nothing', () => {
-  assert.equal(distanceInfo({ isHome: true, location: 'Sportpark Aalsmeer', fixedKm }), null);
+test('a home match at another place is calculated like an away match (pending until stored)', () => {
+  assert.deepEqual(distanceInfo({ isHome: true, location: 'Sportpark Aalsmeer', fixedKm }), { kind: 'pending' });
+  assert.deepEqual(distanceInfo({ isHome: true, location: 'Sportpark Aalsmeer', stored: { loc: 'Sportpark Aalsmeer', km: 3.2 }, fixedKm }), { kind: 'km', km: 3.2 });
 });
 test('roundKm: one decimal below 100 km, whole km above', () => {
   assert.equal(roundKm(42.349), 42.3); assert.equal(roundKm(120.4), 120);
@@ -94,13 +95,13 @@ const matches = [
   { key: 'm5', isHome: false, location: 'Nergens' },
   { key: 'm6', isHome: false, location: 'Al opgeslagen' },
 ];
-await testAsync('only away matches that still need it are calculated; the result is stored per match', async () => {
+await testAsync('every match that still needs it (home or away) is calculated; the result is stored per match', async () => {
   forgetAttempts();
   const f = fakeOrs({ geo: { Nergens: null } }); const saved = {};
   const calls = await ensureDistances({ matches, storedByKey: { m6: { loc: 'Al opgeslagen', km: 5 } }, fixedKm, fetchFn: f.fetchFn, apiKey: 'K', originText: 'Busstation Aalsmeer', store: async (k, v) => { saved[k] = v; } });
-  assert.equal(calls, 2);
-  assert.deepEqual(Object.keys(saved).sort(), ['m1', 'm5']);
-  assert.equal(saved.m1.km, 42.3); assert.equal(saved.m1.loc, 'Sportpark Hoorn');
+  assert.equal(calls, 3);   // m1 (away), m4 (home elsewhere), m5 (not found); m2 has no location, m3 is AFC (fixed), m6 is stored
+  assert.deepEqual(Object.keys(saved).sort(), ['m1', 'm4', 'm5']);
+  assert.equal(saved.m1.km, 42.3); assert.equal(saved.m1.loc, 'Sportpark Hoorn'); assert.equal(saved.m4.km, 42.3);
   assert.equal(saved.m5.unknown, true); assert.equal(saved.m5.km, undefined);
 });
 await testAsync('a second run in the same session asks nothing again', async () => {

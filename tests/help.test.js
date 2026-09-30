@@ -1,0 +1,99 @@
+// Run with: node help.test.js
+// The help articles (help-nl.js) and the search over them (help.js). The article rules matter because help-nl.js is public:
+// no secret, no link, no e-mail address, no phone number, no invite code may ever end up in it.
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+let passed = 0, failed = 0;
+function test(name, fn) {
+  try { fn(); passed++; console.log('  ✓', name); }
+  catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
+}
+import './test-support.js';
+import articles from '../help-nl.js';
+import { normalize, words, queryTokens, visibleArticles, searchHelp, findArticle } from '../help.js';
+
+const ids = q => searchHelp(q, { canEdit: false }).map(a => a.id);
+const allText = a => [a.title, a.keywords || '', ...a.body].join('\n');
+
+console.log('=== the articles (help-nl.js) ===');
+test('every article has a unique id, a title, keywords and at least one paragraph', () => {
+  assert.ok(articles.length >= 10);
+  const seen = new Set();
+  articles.forEach(a => {
+    assert.match(a.id, /^[a-z0-9-]+$/, a.id); assert.ok(!seen.has(a.id), 'duplicate id ' + a.id); seen.add(a.id);
+    assert.ok(a.title && a.title.length >= 8, a.id + ' title'); assert.ok(a.keywords && a.keywords.length >= 8, a.id + ' keywords');
+    assert.ok(Array.isArray(a.body) && a.body.length >= 1 && a.body.every(p => typeof p === 'string' && p.trim()), a.id + ' body');
+  });
+});
+test('the tab of an article is a real tab of the app', () => {
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));
+  const tabs = new Set([...nav.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]));
+  articles.filter(a => a.tab).forEach(a => assert.ok(tabs.has(a.tab), a.id + ' points to unknown tab ' + a.tab));
+});
+test('pages of the Beheer tab are only for the coordinator', () => {
+  articles.filter(a => a.tab === 'beheer').forEach(a => assert.equal(a.coordinatorOnly, true, a.id));
+});
+test('no article contains a link, e-mail address, phone number, long key-like code or password', () => {
+  articles.forEach(a => {
+    const s = allText(a);
+    assert.doesNotMatch(s, /https?:\/\/|www\./i, a.id + ' has a link');
+    assert.doesNotMatch(s, /\S+@\S+\.\S+/, a.id + ' has an e-mail address');
+    assert.doesNotMatch(s, /(\+31|0031|\b06)[\s-]?\d[\d\s-]{6,}/, a.id + ' has a phone number');
+    assert.doesNotMatch(s, /\b[A-Za-z0-9_-]{24,}\b/, a.id + ' has a long key-like code');
+    assert.doesNotMatch(s, /wachtwoord\s*(is|:)|password\s*(is|:)/i, a.id + ' has a password');
+  });
+});
+test('the article about the periode explains the fields of the Beheer card', () => {
+  const a = findArticle('beheer-periode', { canEdit: true });
+  assert.ok(a); const s = allText(a);
+  ['Naam', 'Eerste dag', 'Laatste dag', 'Invullen open vanaf', 'Deadline', 'Opslaan', 'Annuleren'].forEach(w => assert.ok(s.includes(w), w));
+});
+
+console.log('\n=== search helpers ===');
+test('normalize removes accents and case; words splits on anything else', () => {
+  assert.equal(normalize('Dagcoördinator'), 'dagcoordinator'); assert.equal(normalize(null), '');
+  assert.deepEqual(words('Heen/terug, café!'), ['heen', 'terug', 'cafe']);
+});
+test('queryTokens drops filler words but keeps a question made only of filler words', () => {
+  assert.deepEqual(queryTokens('Hoe kan ik mijn dochter koppelen?'), ['dochter', 'koppelen']);
+  assert.deepEqual(queryTokens('hoe kan ik'), ['hoe', 'kan', 'ik']);
+  assert.deepEqual(queryTokens('a'), []);
+});
+
+console.log('\n=== search ===');
+test('an empty question lists every article the user may see, in order', () => {
+  assert.deepEqual(ids(''), articles.filter(a => !a.coordinatorOnly).map(a => a.id));
+  assert.deepEqual(searchHelp('  ', { canEdit: true }).map(a => a.id), articles.map(a => a.id));
+});
+test('coordinator articles are hidden for parents and shown for the coordinator', () => {
+  assert.equal(visibleArticles(false).some(a => a.coordinatorOnly), false);
+  assert.equal(visibleArticles(true).length, articles.length);
+  assert.deepEqual(searchHelp('beheer periode vakantie', { canEdit: false }).filter(a => a.coordinatorOnly), []);
+  assert.equal(searchHelp('periode vakantie proefwerkweek', { canEdit: false }).some(a => a.id === 'beheer-periode'), false);
+  assert.equal(searchHelp('periode vakantie proefwerkweek', { canEdit: true })[0].id, 'beheer-periode');
+  assert.equal(findArticle('beheer-periode', { canEdit: false }), null);
+});
+test('a natural question finds the right article first', () => {
+  assert.equal(ids('mijn dochter is ziek')[0], 'wijzigen');
+  assert.equal(ids('hoe installeer ik de app')[0], 'installeren');
+  assert.equal(ids('donker thema')[0], 'donker');
+  assert.equal(ids('terug met ov')[0], 'terug-met-ov');
+});
+test('accents, capitals and word endings do not matter', () => {
+  assert.equal(ids('DAGCOORDINATOR')[0], 'dagcoordinator');
+  assert.equal(ids('dagcoördinator')[0], 'dagcoordinator');
+  assert.ok(ids('wijzigingen').includes('wijzigen'));
+});
+test('nothing found gives an empty list; results are limited to 6 unless asked otherwise', () => {
+  assert.deepEqual(ids('xyzzyqq'), []);
+  assert.ok(ids('rit').length <= 6);
+  assert.ok(searchHelp('rit', { canEdit: true, limit: 2 }).length <= 2);
+});
+test('a very short word does not match the start of longer words', () => {
+  assert.deepEqual(ids('ok'), []);   // would otherwise match "oktober", "ontvangen", ...
+});
+test('findArticle returns null for an unknown id', () => { assert.equal(findArticle('bestaat-niet'), null); assert.equal(findArticle('wat-is').id, 'wat-is'); });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

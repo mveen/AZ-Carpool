@@ -176,7 +176,7 @@ test('a Flex family is marked in the family list', () => {
 console.log('\n=== places, fixed distances and impact preview (US-15, US-21, US-07) ===');
 import { locationsCardHtml, saveLocations } from '../ui-beheer.js';
 test('Beheer has a card with the three places, exact addresses, the destination, defaults and fixed distances', () => {
-  sampleCoordinatorState({ locationsDoc: { places: [{ id: 'de-parel', address: 'Parelstraat 1, Aalsmeer' }], fixedKm: { AFC: 36 } } });
+  sampleCoordinatorState({ locationsDoc: { places: [{ id: 'busstation' }, { id: 'a4-de-hoek' }, { id: 'de-parel', address: 'Parelstraat 1, Aalsmeer' }], fixedKm: { AFC: 36 } } });
   const html = locationsCardHtml();
   ['busstation', 'a4-de-hoek', 'de-parel'].forEach(id => assert.match(html, new RegExp(`id="locName_${id}"`)));
   assert.match(html, /id="locAddr_de-parel" value="Parelstraat 1, Aalsmeer"/);

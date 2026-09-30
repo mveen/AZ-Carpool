@@ -176,12 +176,12 @@ import { initDb, createFirestoreDb } from '../data.js';
 import { createFakeFirestore } from './fake-db.js';
 import { calculateMatchDistances } from '../matches.js';
 import { forgetAttempts } from '../distance.js';
-function dbWithKey(seed, orsApiKey) { const fake = createFakeFirestore(seed); initDb(createFirestoreDb({ sdk: fake.sdk, firestoreDb: fake.firestoreDb, auth: fake.auth, calendarApiKey: 'k', orsApiKey })); return fake; }
+function dbWithKey(seed) { const fake = createFakeFirestore(seed); initDb(createFirestoreDb({ sdk: fake.sdk, firestoreDb: fake.firestoreDb, auth: fake.auth, calendarApiKey: 'k' })); return fake; }
 const awayMatch = { calendarId: 'cal1', eventId: 'e9', teamLabel: 'AZ', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') };
 function stubOrs() { const urls = []; globalThis.fetch = async url => { urls.push(url); return { ok: true, json: async () => url.includes('/geocode/') ? { features: [{ geometry: { coordinates: [4.9, 52.3] } }] } : { features: [{ properties: { summary: { distance: 25400 } } }] } }; }; return urls; }
-const member = { me: 'p1', links: { p1: { familyId: 'f2' } }, matchDistancesLoaded: true, matchDistances: {} };
+const member = { me: 'p1', links: { p1: { familyId: 'f2' } }, matchDistancesLoaded: true, matchDistances: {}, orsApiKey: 'KEY' };   // the key comes from settings/apiKeys
 await testAsync('an away match without a stored distance is calculated once and stored for everyone', async () => {
-  forgetAttempts(); const fake = dbWithKey({}, 'KEY'); const urls = stubOrs(); resetState(member);
+  forgetAttempts(); const fake = dbWithKey({}); const urls = stubOrs(); resetState(member);
   const calls = await calculateMatchDistances([awayMatch]);
   assert.equal(calls, 1);
   assert.deepEqual(Object.keys(fake.get('settings/matchDistances')), ['ev_cal1__e9']);
@@ -191,25 +191,28 @@ await testAsync('an away match without a stored distance is calculated once and 
   assert.equal(await calculateMatchDistances([awayMatch]), 0, 'not calculated again');
 });
 await testAsync('the address entered for the busstation in Beheer is the starting point', async () => {
-  forgetAttempts(); dbWithKey({}, 'KEY'); const urls = stubOrs();
+  forgetAttempts(); dbWithKey({}); const urls = stubOrs();
   resetState({ ...member, locationsDoc: { places: [{ id: 'busstation', address: 'Stationsweg 1, Aalsmeer' }] } });
   await calculateMatchDistances([awayMatch]);
   assert.match(urls[0], /text=Stationsweg%201%2C%20Aalsmeer/);
 });
-await testAsync('nothing is calculated without an API key, before the stored distances are loaded, or for a non-member', async () => {
+await testAsync('nothing is calculated without an API key (or with the placeholder), before the stored distances are loaded, or for a non-member', async () => {
   forgetAttempts(); const urls = stubOrs();
-  dbWithKey({}, undefined); resetState(member); assert.equal(await calculateMatchDistances([awayMatch]), 0);
-  dbWithKey({}, 'KEY'); resetState({ ...member, matchDistancesLoaded: false }); assert.equal(await calculateMatchDistances([awayMatch]), 0);
+  dbWithKey({}); resetState({ ...member, orsApiKey: '' }); assert.equal(await calculateMatchDistances([awayMatch]), 0);
+  resetState({ ...member, orsApiKey: 'PASTE_YOUR_OPENROUTESERVICE_API_KEY_HERE' }); assert.equal(await calculateMatchDistances([awayMatch]), 0);
+  dbWithKey({}); resetState({ ...member, matchDistancesLoaded: false }); assert.equal(await calculateMatchDistances([awayMatch]), 0);
   resetState({ me: 'x', links: {}, matchDistancesLoaded: true }); assert.equal(await calculateMatchDistances([awayMatch]), 0);
   assert.equal(urls.length, 0);
 });
-await testAsync('AFC/ATC matches and home matches elsewhere are never calculated', async () => {
-  forgetAttempts(); dbWithKey({}, 'KEY'); const urls = stubOrs(); resetState(member);
-  await calculateMatchDistances([{ ...awayMatch, eventId: 'a', location: "AFC'34" }, { ...awayMatch, eventId: 'b', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn' }]);
+await testAsync('AFC/ATC matches are never calculated; a home match elsewhere is calculated like an away match', async () => {
+  forgetAttempts(); dbWithKey({}); const urls = stubOrs(); resetState(member);
+  assert.equal(await calculateMatchDistances([{ ...awayMatch, eventId: 'a', location: "AFC'34" }]), 0);
   assert.equal(urls.length, 0);
+  assert.equal(await calculateMatchDistances([{ ...awayMatch, eventId: 'b', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn' }]), 1);
+  assert.equal(urls.length, 3);   // two address lookups and one route
 });
 await testAsync('when the distance cannot be stored (rules not published) the screen still gets the value', async () => {
-  forgetAttempts(); const fake = dbWithKey({}, 'KEY'); stubOrs(); resetState(member); fake.failWrites('settings/matchDistances', 'permission-denied');
+  forgetAttempts(); const fake = dbWithKey({}); stubOrs(); resetState(member); fake.failWrites('settings/matchDistances', 'permission-denied');
   await calculateMatchDistances([awayMatch]);
   assert.equal(S.matchDistances.ev_cal1__e9.km, 25.4);
 });

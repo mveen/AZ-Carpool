@@ -15,8 +15,7 @@ import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, s
 import { S } from '../state.js';
 import { todayKey } from '../constants.js';
 import {
-  renderDeviationTab, matchCarRowHtml, whatsAppButtonHtml, wireWhatsAppButton, sendWhatsAppUpdate, renderWeekendMatchCarpoolCard,
-  renderDevDirection, updateMatchCarCapacityWarning,
+  renderDeviationTab, whatsAppButtonHtml, wireWhatsAppButton, sendWhatsAppUpdate, renderDevDirection,
 } from '../ui-deviation.js';
 
 const dom = installFakeDom();
@@ -68,27 +67,15 @@ test('an unknown day falls back to today (or Monday)', () => {
   assert.equal(S.deviationDay, todayKey || 'Ma');
 });
 
-console.log('\n=== Wedstrijdcarpool is a separate section, not tied to a day ===');
-test('upcoming matches can get a carpool from any parent', () => {
-  const s = text(render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
-  assert.match(s, /Wedstrijdcarpool komende dagen Zet een carpool op voor een wedstrijd\./);
-  assert.match(s, /AZ O15-1 \(Uit\) vs Ajax O15-1 donderdag 1 oktober · 18:00 · De Toekomst Nog geen carpool ingesteld\. \+ Auto toevoegen/);
+console.log('\n=== match carpools are not in Wijzigen any more (they live in the Wedstrijden tab) ===');
+test('with upcoming matches Wijzigen still shows only one-off ride changes: no match carpool section', () => {
+  const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' });
+  assert.doesNotMatch(html, /matchCarpoolCard|Wedstrijdcarpool|data-addmatchcar|Geen wedstrijden/);
 });
-test('the section shows the same content whichever day is open, after the day content', () => {
-  const opts = { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds };
-  const card = h => h.slice(h.indexOf('id="matchCarpoolCard"'));
-  const ma = render(sampleParentState, { ...opts, deviationDay: 'Ma' });
-  const vr = render(sampleParentState, { ...opts, deviationDay: 'Vr' });
-  assert.equal(card(ma), card(vr));
-  assert.ok(ma.indexOf('id="matchCarpoolCard"') > ma.indexOf('Terug · Alkmaar'));
-});
-test('a day no longer shows a read-only match card of its own', () => {
+test('a day does not show a match card of its own, even when a carpool is stored for that day', () => {
   const home = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', start: new Date(kick) };
   const html = render(sampleParentState, { matchCarpools, matchFeeds: feeds, matches: [home], matchesSource: 'live', deviationDay: 'Vr' });
-  assert.doesNotMatch(html, /data-gomatchcarpool|Alleen lezen/);
-});
-test('without any match there is a friendly empty message', () => {
-  assert.match(text(render(sampleParentState, { matchesSource: 'live', deviationDay: 'Ma' })), /Geen wedstrijden/);
+  assert.doesNotMatch(html, /data-gomatchcarpool|Alleen lezen|matchCarpoolCard/);
 });
 
 console.log('\n=== editing one day ===');
@@ -119,24 +106,7 @@ test('renderDevDirection returns the block for a single direction', () => {
   assert.match(text(html), /Terug · Alkmaar → Aalsmeer/);
 });
 
-console.log('\n=== match carpools ===');
-test('matchCarRowHtml describes a car: departure, driver and riders', () => {
-  sampleCoordinatorState();
-  const s = text(matchCarRowHtml({ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '09:15' }, {}));
-  assert.match(s, /09:15/); assert.match(s, /Jan Jansen/); assert.match(s, /Jahaimy/); assert.match(s, /Evi/);
-});
-test('the weekend carpool card lists the stored cars under their match', () => {
-  const home = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', start: new Date(kick) };
-  const s = text(render(sampleParentState, { matchCarpools, matchFeeds: feeds, matches: [home], matchesSource: 'live' }));
-  assert.match(s, /AZ O15-1 \(Thuis\) vs Hoorn O15-2 zaterdag 3 oktober · 10:30 · Sportpark Hoorn/); assert.match(s, /09:15/); assert.match(s, /Jan Jansen/);
-});
-test('the card function returns html for the current state', () => {
-  sampleParentState({ matchCarpools, matchFeeds: feeds });
-  assert.equal(typeof withFakeNow(NOW, () => renderWeekendMatchCarpoolCard()), 'string');
-});
-test('capacity warning does not throw when the form is not on screen', () => {
-  sampleParentState(); updateMatchCarCapacityWarning('nothing');
-});
+// The match carpools moved to the Wedstrijden tab: see ui-matches.test.js.
 
 console.log('\n=== WhatsApp share button ===');
 test('the day screen no longer has the generic "Deel update via WhatsApp" button (only the conclusie-appje)', () => {
