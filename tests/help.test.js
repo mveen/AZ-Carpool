@@ -80,6 +80,19 @@ test('a natural question finds the right article first', () => {
   assert.equal(ids('donker thema')[0], 'donker');
   assert.equal(ids('terug met ov')[0], 'terug-met-ov');
 });
+test('a parent finds how to hand in the times for a holiday or exam week, the coordinator also finds how to set it up', () => {
+  assert.equal(ids('tijden doorgeven vakantie')[0], 'periode-tijden');
+  assert.equal(ids('proefwerkweek')[0], 'periode-tijden');
+  assert.equal(searchHelp('periode instellen vakantie deadline', { canEdit: true }).some(a => a.id === 'beheer-periode'), true);
+  const s = allText(findArticle('periode-tijden'));
+  ['Tijden doorgeven', 'Rijdt niet mee', 'Doorgeven', 'Tijden aanpassen', 'Actie nodig'].forEach(w => assert.ok(s.includes(w), w));
+});
+test('the coordinator articles explain the overview per family and that the coordinator can still fill in after the deadline', () => {
+  const s = allText(findArticle('beheer-periode', { canEdit: true }));
+  ['Namens een ouder invullen', 'Invullen', 'Bekijk', 'Tijden aanpassen', 'Na de deadline'].forEach(w => assert.ok(s.includes(w), w));
+  assert.equal(searchHelp('namens een ouder invullen', { canEdit: true })[0].id, 'beheer-periode');
+  assert.equal(searchHelp('namens een ouder invullen', { canEdit: false }).some(a => a.coordinatorOnly), false);
+});
 test('accents, capitals and word endings do not matter', () => {
   assert.equal(ids('DAGCOORDINATOR')[0], 'dagcoordinator');
   assert.equal(ids('dagcoördinator')[0], 'dagcoordinator');

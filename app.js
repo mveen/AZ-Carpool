@@ -10,6 +10,7 @@ import { renderSchedule } from './ui-schedule.js';
 import { renderBeheer } from './ui-beheer.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
+import { refreshPeriodTask } from './ui-period.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { todayKey } from './constants.js';
 import { refreshMatchesIfStale } from './matches.js';
@@ -120,9 +121,9 @@ export function bootstrap(){
     if(btn) btn.onclick=cycleTheme;
   })();
 
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); } });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); } });
 
-  setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); }, 60*1000);
+  setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); }, 60*1000);
 
   if('serviceWorker' in navigator){
     navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js').catch(()=>{});

@@ -65,3 +65,18 @@ export function weekRangeLabel(){
 
 // "maandag 28 september" for a weekday key in the current planning week.
 export function waDayDate(day){ return dateForWeekday(day).toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'long'}); }
+
+// "ma 26 okt" / "maandag 26 okt" (weekday 'short' | 'long') or "26 okt" (weekday ''), for a 'YYYY-MM-DD' date.
+export function isoDayLabel(iso, weekday='short'){
+  const [y,m,d] = String(iso).split('-').map(Number);
+  const opts = { day:'numeric', month:'short' }; if(weekday) opts.weekday = weekday;
+  return new Date(y,m-1,d).toLocaleDateString(locale(), opts).replace('.','');
+}
+
+// "26 – 30 okt" within one month, "29 okt – 2 nov" across two.
+export function isoRangeLabel(first, last){
+  const [y1,m1,d1] = String(first).split('-').map(Number), [y2,m2,d2] = String(last).split('-').map(Number);
+  const a = new Date(y1,m1-1,d1), b = new Date(y2,m2-1,d2);
+  const dm = d => d.toLocaleDateString(locale(),{day:'numeric',month:'short'}).replace('.','');
+  return (m1===m2 && y1===y2)? `${a.getDate()} – ${dm(b)}` : `${dm(a)} – ${dm(b)}`;
+}

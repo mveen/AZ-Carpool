@@ -78,6 +78,14 @@ test('a day does not show a match card of its own, even when a carpool is stored
   assert.doesNotMatch(html, /data-gomatchcarpool|Alleen lezen|matchCarpoolCard/);
 });
 
+console.log('\n=== periode met andere tijden: the card sits on top of Wijzigen ===');
+const periodDoc = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+test('while filling in is open the task card comes before the weekly changes; without a period Wijzigen is as before', () => {
+  const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ period: periodDoc, periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
+  assert.ok(html.indexOf('id="periodTask"') > -1 && html.indexOf('id="periodTask"') < html.indexOf('Wijzigingen ·'));
+  assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma' }), /periodTask|periodDone/);
+});
+
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));

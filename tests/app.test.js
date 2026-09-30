@@ -1,6 +1,7 @@
 // Run with: node app.test.js
 // App start-up and glue: init (sign-in, coordinator lookup), tab switching, default tab, week rollover, renderAll.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -118,6 +119,10 @@ test('checkWeekRollover moves to the new planning week once Saturday starts', ()
   installNav(); useFakeDb(sampleDbSeed()); sampleParentState({ linksLoaded: true, coordinatorExists: true });
   withFakeNow('2026-10-03T00:30:00+02:00', () => checkWeekRollover());
   assert.equal(S.currentWeekKey, '2026-W41');
+});
+test('the minute check and the return to the app both refresh the period task (badge and card change with the clock)', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /setInterval\(\(\)=>\{[^}]*refreshPeriodTask\(\)/); assert.match(src, /visibilitychange[^\n]*refreshPeriodTask\(\)/);
 });
 test('checkWeekRollover does nothing within the same week', () => {
   installNav(); useFakeDb(sampleDbSeed()); sampleParentState({ linksLoaded: true, coordinatorExists: true });

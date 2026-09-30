@@ -13,7 +13,7 @@ async function testAsync(name, fn) {
 }
 import { withFakeNow, resetState, NOW, WEEK_KEY } from './test-support.js';
 import { S } from '../state.js';
-import { dayUp, startOfWeek, effectivePlanningDate, dateForWeekday, getISOWeekKey, refreshWeekKey, deviationExpiryMs, deviationKey, weekRangeLabel, waDayDate } from '../dates.js';
+import { dayUp, startOfWeek, effectivePlanningDate, dateForWeekday, getISOWeekKey, refreshWeekKey, deviationExpiryMs, deviationKey, weekRangeLabel, waDayDate, isoDayLabel, isoRangeLabel } from '../dates.js';
 
 const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 
@@ -94,6 +94,15 @@ test('weekRangeLabel: "Week 40 · 28 sep – 2 okt"', () => {
 });
 test('waDayDate: full Dutch date for a weekday key', () => {
   withFakeNow(NOW, () => assert.equal(waDayDate('Ma'), 'maandag 28 september'));
+});
+
+test('isoDayLabel: short and long weekday, or only the date', () => {
+  assert.equal(isoDayLabel('2026-10-26'), 'ma 26 okt'); assert.equal(isoDayLabel('2026-10-16', 'long'), 'vrijdag 16 okt'); assert.equal(isoDayLabel('2026-10-26', ''), '26 okt');
+});
+test('isoRangeLabel: "26 – 30 okt" in one month, both months when the range crosses one', () => {
+  assert.equal(isoRangeLabel('2026-10-26', '2026-10-30'), '26 – 30 okt');
+  assert.equal(isoRangeLabel('2026-10-29', '2026-11-06'), '29 okt – 6 nov');
+  assert.equal(isoRangeLabel('2026-12-28', '2027-01-08'), '28 dec – 8 jan');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

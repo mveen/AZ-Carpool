@@ -95,3 +95,92 @@ export function periodPhase(p, nowMs){
   if(now >= dayStartMs(v.opensOn)) return 'open';
   return 'waiting';
 }
+
+// ---------- Step 2: the times a family hands in for the period ----------
+// One document per family per period: periodEntries/<firstDay>_<familyId>. Per workday of the period:
+//   { out: true }                       the daughter does not ride
+//   { heen: 'HH:MM', terug: 'HH:MM' }   she rides; a time left out means she does not ride in that direction
+// Heen = arrival in Alkmaar, terug = ready to be picked up (same as everywhere in the app).
+// The standard rooster (families.schedule) is never changed: the handed-in times live next to it.
+
+const DAY_KEYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr'];
+
+export function periodEntryId(period, familyId){ return normalizePeriod(period).firstDay + '_' + familyId; }
+// 'Ma'..'Vr' for a workday, null for a weekend day or a bad date.
+export function periodDayKey(iso){ const d = isoWeekday(iso); return d>=1 && d<=5 ? DAY_KEYS[d-1] : null; }
+
+// The standard rooster of one day of the period: { heen, terug } ('' when there is no time).
+export function standardDay(family, iso){
+  const s = (family && family.schedule && family.schedule[periodDayKey(iso)]) || {};
+  return { heen: isValidTime(s.heen) ? s.heen : '', terug: isValidTime(s.terug) ? s.terug : '' };
+}
+
+// The form as it starts: the standard rooster. A day without standard times starts as "Rijdt niet mee".
+export function defaultEntryDays(period, family){
+  const days = {};
+  periodWorkdays(period && period.firstDay, period && period.lastDay).forEach(iso => {
+    const std = standardDay(family, iso);
+    days[iso] = { out: !std.heen && !std.terug, heen: std.heen, terug: std.terug };
+  });
+  return days;
+}
+
+// Form values -> the stored shape, or the problems.
+//   raw: { 'YYYY-MM-DD': { out:bool, heen:'HH:MM'|'', terug:'HH:MM'|'' } } for every workday of the period.
+//   -> { ok, errors: [{ day, key }], days }   `key` is a text key; `days` holds the stored shape.
+export function validateEntry(period, raw){
+  const errors = [], days = {};
+  const workdays = periodWorkdays(period && period.firstDay, period && period.lastDay);
+  const src = raw && typeof raw==='object' ? raw : {};
+  if(!workdays.length) return { ok:false, errors:[{ day:'', key:'period.entry.err.noPeriod' }], days:{} };
+  workdays.forEach(iso => {
+    const d = src[iso];
+    if(!d || typeof d!=='object'){ errors.push({ day:iso, key:'period.entry.err.missing' }); return; }
+    if(d.out){ days[iso] = { out:true }; return; }
+    const heen = String(d.heen==null ? '' : d.heen).trim(), terug = String(d.terug==null ? '' : d.terug).trim();
+    if((heen && !isValidTime(heen)) || (terug && !isValidTime(terug))){ errors.push({ day:iso, key:'period.entry.err.time' }); return; }
+    if(!heen && !terug){ errors.push({ day:iso, key:'period.entry.err.noTime' }); return; }
+    if(heen && terug && terug <= heen){ errors.push({ day:iso, key:'period.entry.err.order' }); return; }
+    days[iso] = { ...(heen ? { heen } : {}), ...(terug ? { terug } : {}) };
+  });
+  return { ok: errors.length===0, errors, days: errors.length? {} : days };
+}
+
+// What a day says compared with the standard rooster:
+//   { kind:'standard' } | { kind:'out' } | { kind:'times', heen?, terug? }   (only the directions that differ; null = no ride that way)
+export function describeEntryDay(family, iso, day){
+  const std = standardDay(family, iso);
+  const stdOut = !std.heen && !std.terug;
+  if(!day || day.out) return stdOut ? { kind:'standard' } : { kind:'out' };
+  const heen = day.heen || '', terug = day.terug || '';
+  if(heen===std.heen && terug===std.terug) return { kind:'standard' };
+  return { kind:'times', ...(heen!==std.heen ? { heen: heen || null } : {}), ...(terug!==std.terug ? { terug: terug || null } : {}) };   // null = does not ride that way
+}
+
+// Can this family (or the coordinator for it) hand in times right now, and does a task show?
+//   entry: the stored document or undefined   ctx: { hasFamily, isFlex, canEdit (= coordinator) }
+//   -> { show: null | 'task' | 'done', canEdit: bool, badge: bool, phase }
+// Parents: task from the day filling in opens until the deadline. After the deadline only the coordinator can still change times.
+// A Flex family signs up per day in Wijzigen, so it has no task.
+export function periodEntryState(period, entry, ctx, nowMs){
+  const phase = periodPhase(period, nowMs);
+  const none = { show:null, canEdit:false, badge:false, phase };
+  const c = ctx || {};
+  if(!c.hasFamily || c.isFlex) return none;
+  const canEdit = phase==='open' || (phase==='closed' && !!c.canEdit);
+  if(!canEdit && !(phase==='closed' && entry)) return none;   // closed for a parent without an entry: the standard rooster applies, nothing to show
+  if(phase!=='open' && phase!=='closed') return none;
+  return { show: entry ? 'done' : 'task', canEdit, badge: phase==='open' && !entry, phase };
+}
+
+// ---------- Step 3: who has handed in (coordinator overview) ----------
+// Flex families sign up per day and are not counted. Rows are in the order of `families`.
+//   -> { total, done, rows: [{ id, family, done }] }
+export function periodProgress(period, families, entries){
+  const rows = [];
+  Object.entries(families || {}).forEach(([id, family]) => {
+    if(!family || family.familyType==='flex') return;
+    rows.push({ id, family, done: !!(entries && entries[periodEntryId(period, id)]) });
+  });
+  return { total: rows.length, done: rows.filter(r => r.done).length, rows };
+}

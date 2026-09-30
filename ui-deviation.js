@@ -10,6 +10,7 @@ import { DAYS, WA_ICON_SMALL, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey, waDayDate, weekRangeLabel } from './dates.js';
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { waPhone } from './ui-schedule.js';
+import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
 export function sendWhatsAppUpdate(buildFn){
@@ -51,7 +52,9 @@ export function deviationIntentHtml(){
 export function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
   if(!box) return;
-  if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('deviation.wijzigen')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; return; }
+  if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('deviation.wijzigen')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; markPeriodShown(); return; }
+  // Periode met andere tijden: while the form is open it is all Wijzigen shows.
+  if(periodFormActive()){ box.innerHTML = periodFormHtml(); wirePeriod(); markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
   if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKey || 'Ma';
   const day = S.deviationDay;
@@ -67,7 +70,7 @@ export function renderDeviationTab(){
       ${changed? '<span class="devDayDot" aria-hidden="true"></span>' : ''}
     </button>`;
   }).join('');
-  box.innerHTML = `${deviationIntentHtml()}<div class="devAlert">
+  box.innerHTML = `${periodCardsHtml()}${deviationIntentHtml()}<div class="devAlert">
       <p class="devAlertTitle">${phIcon('lightning')} ${t('deviation.wijzigingen')} ${weekRangeLabel()}</p>
       <p class="devAlertBody">${t('deviation.eenmalige_ritaanpassing_voor_deze_week')}</p>
     </div>
@@ -84,6 +87,8 @@ export function renderDeviationTab(){
   const ic=document.getElementById('devIntentClose'); if(ic) ic.onclick=()=>{ S.deviationIntent=null; hapticTap(); renderDeviationTab(); };
   wireWhatsAppButton('conclusieBtn', ()=>buildConclusieMessage(day));
   attachDeviationHandlers();
+  wirePeriod();
+  markPeriodShown();
 }
 
 // US-03: the auto-drafted "conclusie-appje" for the open day. Highlighted for that day's coordinator (US-02);

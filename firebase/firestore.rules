@@ -133,6 +133,32 @@ service cloud.firestore {
       );
     }
 
+    // ---- Periode met andere tijden: times a family hands in (doc id = <firstDay>_<familyId>) ----
+    // Members read. The coordinator writes for anyone, at any time. A parent writes only for the OWN family, only for the
+    // period that is set now, and only before the deadline (settings/period.deadlineAt, ms, saved by Beheer): the server
+    // clock decides, not the phone.
+    function periodPath() { return /databases/$(database)/documents/settings/period; }
+    function periodOpenForMyFamily(entryId) {
+      let d = request.resource.data;
+      let p = get(periodPath()).data;
+      return exists(periodPath())
+        && isLinked()
+        && d.familyId == linkedFamilyId()
+        && entryId == p.firstDay + '_' + linkedFamilyId()
+        && d.periodFirstDay == p.firstDay
+        && ('deadlineAt' in p) && p.deadlineAt is number
+        && request.time.toMillis() < p.deadlineAt;
+    }
+    match /periodEntries/{entryId} {
+      allow read: if isMember();
+      allow create, update: if (isCoordinator() || periodOpenForMyFamily(entryId))
+        && request.resource.data.keys().hasOnly(['familyId', 'periodFirstDay', 'days', 'submittedAt', 'by'])
+        && request.resource.data.familyId is string
+        && request.resource.data.periodFirstDay is string
+        && request.resource.data.days is map;
+      allow delete: if isCoordinator();
+    }
+
     // ---- Weekend match carpools: any member ----------------------------------------
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();
