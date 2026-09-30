@@ -116,39 +116,84 @@ test('the form html holds the parent, daughter and capacity fields for the chose
 });
 
 console.log('\n=== Weekschema warning ===');
-test('the warning is in the page but hidden until the Weekschema is edited', () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekschemaWarn: false });
+test('the warning is in the page but empty and hidden until the Weekschema is edited', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
   withFakeNow(NOW, () => renderProfile());
   const html = dom.html('tab-profile');
-  assert.match(html, /id="weekschemaWarn"[^>]* hidden>/);
-  assert.match(text(html), /Je past je vaste weekschema aan Dit geldt voor elke week/);
-  assert.match(html, /id="weekschemaToWijzigen"/);
+  assert.match(html, /<div class="devAlert" id="weekschemaWarn"[^>]* hidden><\/div>/);
+  assert.doesNotMatch(html, /id="weekschemaConfirm"/);
 });
-test('it shows (not hidden) once S.weekschemaWarn is set, and tells the parent to use Wijzigen for one-off changes', () => {
-  sampleParentState({ weekschemaWarn: true });
+test('with an unconfirmed edit it shows the list of changes, Bevestigen and Eenmalig wijzigen', () => {
+  const fams = sampleParentState().families; const edited = JSON.parse(JSON.stringify(fams.f2)); edited.schedule.Ma.heen = '09:00';
+  sampleParentState({ weekschemaBase: { schedule: fams.f2.schedule, availability: fams.f2.availability }, weekschemaEdit: { schedule: edited.schedule, availability: edited.availability } });
   const html = weekschemaWarningHtml();
   assert.doesNotMatch(html, / hidden>/);
-  assert.match(text(html), /alleen deze week\? Gebruik dan Wijzigen\./);
+  const s = text(html);
+  assert.match(s, /Je past je vaste weekschema aan/); assert.match(s, /Maandag Heen: tijd 08:30 → 09:00/);
+  assert.match(s, /Deze aanpassing is nog niet opgeslagen\. Ze werkt door in de standaardplanning van elke week, niet alleen deze week\./);
+  assert.match(html, /id="weekschemaConfirm"/); assert.match(html, /id="weekschemaToWijzigen"/);
+  assert.match(s, /Bevestigen: voor elke week/); assert.match(s, /Eenmalig wijzigen maakt deze aanpassing ongedaan en opent Wijzigen voor alleen deze week\./);
 });
 test('only Weekschema fields (times, availability, back-up) trigger it — not name, phone or seats', () => {
   ['me_sch_Ma_heen', 'me_sch_Vr_terug', 'me_av_Di_heen', 'me_av_Wo_terug', 'me_bkH_Do', 'me_bkT_Vr'].forEach(id => assert.equal(isWeekschemaField(id), true, id));
   ['me_parentName', 'me_girlName', 'me_parentPhone1', 'me_capacity', 'coord_sch_Ma_heen', '', undefined].forEach(id => assert.equal(isWeekschemaField(id), false, String(id)));
 });
-test('editing a time shows the warning without a re-render; the link opens Wijzigen', () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekschemaWarn: false });
+// Renders Mijn gezin and returns the change listener the page put on the card.
+function openProfileAndGetListener() {
   let listener = null;
   const box = dom.el('tab-profile'); const origQS = box.querySelector;
   box.querySelector = sel => (sel === '.card' ? { addEventListener: (type, fn) => { if (type === 'change') listener = fn; } } : origQS(sel));
   withFakeNow(NOW, () => renderProfile());
   box.querySelector = origQS;
   assert.equal(typeof listener, 'function');
-  listener({ target: { id: 'me_parentName' } });
-  assert.equal(S.weekschemaWarn, false);                       // name change: no warning
+  return listener;
+}
+const editedF2 = fn => { const e = JSON.parse(JSON.stringify(S.families.f2)); fn(e); fillForm(e); return e; };
+test('editing a time waits for confirmation and shows the warning without a re-render', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
+  const listener = openProfileAndGetListener();
+  editedF2(() => {});                                          // the form still holds the saved values
   listener({ target: { id: 'me_sch_Ma_heen' } });
-  assert.equal(S.weekschemaWarn, true);
+  assert.equal(S.weekschemaBase, null); assert.equal(S.weekschemaEdit, null);   // nothing really changed: no warning
+  editedF2(e => { e.schedule.Ma.heen = '09:00'; });
+  listener({ target: { id: 'me_sch_Ma_heen' } });
+  assert.equal(S.weekschemaBase.schedule.Ma.heen, '08:30'); assert.equal(S.weekschemaEdit.schedule.Ma.heen, '09:00');
   assert.equal(dom.el('weekschemaWarn').hidden, false);
+  assert.match(text(dom.html('weekschemaWarn')), /Maandag Heen: tijd 08:30 → 09:00/);
+});
+test('editing the time back to the saved value takes the warning away again', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
+  const listener = openProfileAndGetListener();
+  editedF2(e => { e.schedule.Ma.heen = '09:00'; }); listener({ target: { id: 'me_sch_Ma_heen' } });
+  assert.ok(S.weekschemaBase);
+  editedF2(() => {}); listener({ target: { id: 'me_sch_Ma_heen' } });
+  assert.equal(S.weekschemaBase, null); assert.equal(dom.el('weekschemaWarn').hidden, true);
+});
+test('a name change is not a Weekschema change: no edit is held back and no warning appears', () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  const listener = openProfileAndGetListener();
+  editedF2(e => { e.parentName = 'Piet P.'; });
+  listener({ target: { id: 'me_parentName' } });
+  assert.equal(S.weekschemaBase, null);
+});
+test('Eenmalig wijzigen undoes the edit, remembers what was wanted and opens Wijzigen', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
+  const listener = openProfileAndGetListener();
+  editedF2(e => { e.schedule.Ma.heen = '09:00'; }); listener({ target: { id: 'me_sch_Ma_heen' } });
   withFakeNow(NOW, () => dom.el('weekschemaToWijzigen').onclick());
+  assert.equal(S.families.f2.schedule.Ma.heen, '08:30');                        // back to the saved time
+  assert.equal(S.weekschemaBase, null); assert.equal(S.weekschemaEdit, null);
+  assert.deepEqual(S.deviationIntent.map(c => [c.day, c.direction, c.from, c.to]), [['Ma', 'heen', '08:30', '09:00']]);
   assert.match(text(dom.html('tab-deviation')), /Wijzigingen/);
+});
+await testAsync('Bevestigen saves the edit for every week and clears the warning', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState(); S.serverSchedules = { f2: JSON.parse(JSON.stringify(S.families.f2.schedule)) };
+  const listener = openProfileAndGetListener();
+  editedF2(e => { e.schedule.Ma.heen = '09:00'; }); listener({ target: { id: 'me_sch_Ma_heen' } });
+  await withFakeNow(NOW, () => dom.el('weekschemaConfirm').onclick());
+  assert.equal(fake.get('families/f2').schedule.Ma.heen, '09:00');
+  assert.equal(S.weekschemaBase, null); assert.equal(S.weekschemaEdit, null);
+  assert.equal(S.families.f2.schedule.Ma.heen, '09:00'); assert.match(toast(), /Weekschema opgeslagen voor elke week/);
 });
 
 console.log('\n=== saving the profile ===');

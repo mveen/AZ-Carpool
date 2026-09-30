@@ -31,7 +31,7 @@ test('a visitor who is not linked to a daughter yet is sent to Mijn gezin', () =
 
 console.log('\n=== a parent\'s week ===');
 test('header: daughter, parent and passenger seats', () => {
-  assert.match(text(render({})), /^Jahaimy Ouder: Piet Pieters · 4 passagiersplekken/);
+  assert.match(text(render({})), /^Jahaimy Piet Pieters · 4 plekken/);
 });
 test('rides to arrange are listed first, with a Regelen button', () => {
   const s = text(render({}));
@@ -82,7 +82,7 @@ test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
 console.log('\n=== Dagcoördinator vandaag and Flex (US-02, US-05) ===');
 test('Mijn week shows the day coordinator of tomorrow under the header, with a WhatsApp button', () => {
   const html = render({ dayCoordinators: { Do: 'f3' } });
-  assert.match(text(html), /^Jahaimy Ouder: Piet Pieters · 4 passagiersplekken Dagcoördinator morgen: Kees de Vries/);
+  assert.match(text(html), /^Jahaimy Piet Pieters · 4 plekken Dagcoördinator morgen: Kees de Vries/);
   assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=/);
 });
 test('without a coordinator for tomorrow nothing extra appears', () => {
@@ -94,7 +94,7 @@ test('a Flex daughter has no "not planned" alerts, and sees only the days she si
     schedule: { Ma: { heen: '09:00', terug: '16:00' }, Do: { heen: '09:00', terug: '16:00' } }, availability: {} };
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'], departureTime: '07:30' }] } };
   const s = text(render({ me: 'p9', links: { p9: { familyId: 'f9' } }, families: fams, deviations: dev }));
-  assert.match(s, /^Lotte Ouder: Lotte Flex/);
+  assert.match(s, /^Lotte Lotte Flex · 2 plekken/);
   assert.doesNotMatch(s, /heeft nog geen rit/);
   assert.match(s, /MA 28 sep/); assert.match(s, /Rijdt mee met: Jan Jansen/); assert.doesNotMatch(s, /09:00 \/ 16:00/, 'no fixed times for a Flex daughter');
   assert.doesNotMatch(s, /DO 1 okt/);
@@ -171,7 +171,7 @@ test('US-22: without a location there is no link', () => {
 const awayM = { calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') };
 test('US-21: an away match shows the stored distance', () => {
   resetState({ matchDistances: { ev_cal1__e5: { loc: 'De Toekomst, Amsterdam', km: 25.4 } } });
-  assert.match(matchInfoHtml(awayM), /<div class="matchDist">± 25,4 km enkele reis<\/div>/);
+  assert.match(matchInfoHtml(awayM), /<div class="matchDist">± 25,4 km enkele reis · ± € 5,08 carpoolkosten<\/div>/);
 });
 test('US-21: no location: "locatie onbekend" and no number', () => {
   resetState({});
@@ -180,7 +180,7 @@ test('US-21: no location: "locatie onbekend" and no number', () => {
 });
 test('US-21: AFC/ATC use the fixed distance from Beheer, or say it is not set', () => {
   resetState({ locationsDoc: { fixedKm: { AFC: 36 } } });
-  assert.match(matchInfoHtml({ ...awayM, location: "AFC'34" }), /± 36 km enkele reis/);
+  assert.match(matchInfoHtml({ ...awayM, location: "AFC'34" }), /<div class="matchDist">36 km enkele reis · € 7,20 carpoolkosten<\/div>/);   // fixed distance: no "±"
   assert.match(matchInfoHtml({ ...awayM, location: 'ATC' }), /vaste afstand ATC nog niet ingesteld/);
 });
 test('US-21: a home match elsewhere shows no distance; a calculation in progress shows nothing without an API key', () => {
@@ -189,16 +189,13 @@ test('US-21: a home match elsewhere shows no distance; a calculation in progress
   assert.doesNotMatch(matchInfoHtml(awayM), /matchDist/);
 });
 
-import { initDb, createFirestoreDb } from '../data.js';
-import { createFakeFirestore } from './fake-db.js';
-test('US-21: with a real API key a match that is still being calculated says so; the placeholder key stays silent', () => {
-  const f = createFakeFirestore({});
-  const withKey = k => initDb(createFirestoreDb({ sdk: f.sdk, firestoreDb: f.firestoreDb, auth: f.auth, calendarApiKey: 'k', orsApiKey: k }));
-  resetState({}); withKey('REALKEY');
+test('US-21: with a real API key a match that is still being calculated says so; without a key (or the placeholder) it stays silent', () => {
+  resetState({ orsApiKey: 'REALKEY' });
   assert.match(matchInfoHtml(awayM), /afstand wordt berekend/);
-  withKey('PASTE_YOUR_OPENROUTESERVICE_API_KEY_HERE');
+  resetState({ orsApiKey: '' });
   assert.doesNotMatch(matchInfoHtml(awayM), /matchDist/);
-  useFakeDb(sampleDbSeed());
+  resetState({ orsApiKey: 'PASTE_YOUR_OPENROUTESERVICE_API_KEY_HERE' });
+  assert.doesNotMatch(matchInfoHtml(awayM), /matchDist/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

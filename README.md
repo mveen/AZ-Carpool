@@ -25,6 +25,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ov.js` | "Terug met OV": take a daughter out of a terug ride and back (pure functions) | `ov.test.js` |
 | `distance.js` | Projected distance of away matches: OpenRouteService calls, calculate once, store per match | `distance.test.js` |
 | `impact.js` | Impact preview on a deviation (pilot, removable): analysis, on/off switch, save gate | `impact.test.js` |
+| `period.js` | "Periode met andere tijden" (holiday, exam week): validation of the Beheer form and the phases waiting/open/closed/over (pure functions) | `period.test.js` |
 | `flex.js` | Flex signup: join a car, drive yourself, sign off, departure time (pure functions) | `flex.test.js` |
 | `ui-common.js` | Shared UI pieces: toast, status line, sheets, icons, install card | `ui-common.test.js` |
 | `ui-schedule.js` | Rooster tab | `ui-schedule.test.js` |
@@ -73,6 +74,14 @@ Some tests compare the generated page with a saved copy in `tests/__snapshots__/
 - **1-op-1 afstemmen (Wijzigen).** Each driver in a direction gets a WhatsApp button with a prefilled question, plus the hint "Stem 1-op-1 af, de dagcoördinator deelt het besluit."
 - **Flex.** Beheer → Wijzig gezin → *Type gezin*: Vast or Flex. Flex families are never in the auto-planned rooster (not as passenger, not as driver, no "niet ingedeeld" alerts). A Flex parent (or the coordinator) signs up per day and direction in Wijzigen: with a time, as passenger in a car with a free seat, or driving herself. This is stored as a normal deviation, so it expires with the week. A Flex driver is shown as "speelster-chauffeur". No change to `firestore.rules` was needed.
 
+## Periode met andere tijden (holiday, exam week) — step 1: Beheer
+Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is built in four steps, each with its own tests and a phone check before the next one starts. **Step 1 (done): the coordinator sets the period up.** Nothing changes yet for parents, Rooster or Mijn week.
+- **Where.** Beheer → *Periode met andere tijden*, below *Dagcoördinatoren*. Fields: name, first day, last day, *Invullen open vanaf*, deadline (date + time). *Opslaan* stores it, *Annuleren* drops unsaved edits, the trash button (only when a period is saved; click twice) removes it.
+- **Rules** (`period.js`, `validatePeriod`): name required (max 40 characters); first and last day are workdays (Mon–Fri), last not before first, at most 10 workdays (`PERIOD_MAX_WORKDAYS`); filling in opens on or before the deadline day; the deadline is before the first day of the period. Nothing invalid is stored: the first problem is shown in a toast and what was typed stays in the form.
+- **Storage.** One document `settings/period`: `name`, `firstDay`, `lastDay`, `opensOn`, `deadlineDate` (`YYYY-MM-DD`) and `deadlineTime` (`HH:MM`, local time). Dates are plain strings, so no time zone can shift a day. Separate from `deviations`, so it does not expire on Saturday. `firestore.rules` already covers it (`settings/{docId}`: members read, only the coordinator writes), so **no rules change and nothing to publish**. A broken document counts as "no period".
+- **Status line** under the intro: no period / *Invullen opent op …* / open until the deadline / deadline passed (only the coordinator can still change times) / period over (`periodPhase`). The "9 van 14 gezinnen doorgegeven" line from the design comes with step 2, when parents can hand in their times.
+- **Next steps.** 2: Wijzigen task card and form for parents. 3: coordinator fills in on behalf of a parent. 4: Rooster progress and the temporary rooster.
+
 ## Wedstrijden tab
 - **Where.** Own tab *Wedstrijden* (between Mijn gezin and Beheer, violet like every match ride). The match carpools used to sit at the bottom of Wijzigen; Wijzigen is now only for one-off ride changes. Mijn week keeps its read-only "Wedstrijden deze week" card; its *Carpool regelen* button opens this tab.
 - **Scope.** Every match of the next 29 days (today through 28 days out; `MATCH_HORIZON_DAYS` in `matches.js`) is listed, and the calendar request asks Google for exactly that range (`timeMax`, up to 50 events per team).
@@ -100,10 +109,10 @@ Some tests compare the generated page with a saved copy in `tests/__snapshots__/
 Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {placeholders}'`. Code calls `t('key', { name: 'x' })`. Static texts in `index.html` use `data-i18n="key"` attributes. To add a language, copy `texts-nl.js` to `texts-<lang>.js`, translate the values (keep keys and `{placeholders}`), and switch the dictionary in `i18n.js`. Many texts use generic placeholders such as `{p1}`. Look at the Dutch sentence to see what each one is.
 
 ## Deploy
-1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
+1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `period.js`; earlier: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
 2. GitHub Pages redeploys in about 60 seconds.
 3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v5`) then replaces the old cache.
+4. Open the app once online. The service worker (cache `az-carpool-v9`) then replaces the old cache.
 
 ### Manual smoke test on a phone (before every go-live)
 Automated tests cover logic and page output, but not a real phone, real Firebase, or the real WhatsApp app. Check these on a mobile browser:

@@ -40,6 +40,8 @@ export const S = {
   openMatchCarpoolForm: null,
   currentWeekKey: null,
   dayCoordinators: {},
+  period: null,            // settings/period: the period with other times (holiday, exam week); null = none
+  periodDraft: null,       // Beheer: the period form while it has unsaved edits (null = show the saved period)
   locationsDoc: null,      // settings/locations as stored (locations.js normalises it)
   matchDistances: {},
   matchDistancesLoaded: false,      // settings/matchDistances: calculated km per match

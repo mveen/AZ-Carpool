@@ -25,7 +25,7 @@ test('S has the expected top-level fields with safe starting values', () => {
   assert.deepEqual(S.prefs, { rules: [] });
   assert.equal(S.settings.travelLeadMinutes, 60);
   assert.equal(S.roosterMode, 'week');
-  assert.equal(S.weekschemaWarn, false); // Mijn gezin: Weekschema warning starts hidden
+  assert.equal(S.weekschemaBase, null); assert.equal(S.weekschemaEdit, null); // Mijn gezin: no Weekschema edit is waiting for confirmation
 });
 test('coordEditId starts undefined (renderBeheer distinguishes "no editor" from "new family")', () => {
   assert.equal(S.coordEditId, undefined);
@@ -49,6 +49,8 @@ test('every S.<name> used by any module exists in state.js', () => {
 
 
 test('dayCoordinators starts empty (Beheer fills it)', () => { assert.deepEqual(S.dayCoordinators, {}); });
+
+test('period (Beheer: periode met andere tijden) starts empty, with no unsaved form edits', () => { assert.equal(S.period, null); assert.equal(S.periodDraft, null); });
 
 test('new fields: places, calculated distances and the impact switch start empty', () => {
   assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false); assert.equal(S.impactPreview, null);

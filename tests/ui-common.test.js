@@ -60,12 +60,12 @@ test('updateStatusLine: parent name; coordinator suffix; unlinked; nobody', () =
   resetState({ me: 'x' }); updateStatusLine(); assert.equal(dom.html('whoami'), 'Nog niet gekoppeld — ga naar Mijn gezin');
   resetState({ me: null }); updateStatusLine(); assert.equal(dom.html('whoami'), '');
 });
-test('twoStepConfirm: first tap asks, second tap acts and restores the label', () => {
-  const btn = dom.doc.createElement('button'); btn.textContent = 'Verwijder'; let done = 0;
+test('twoStepConfirm: first tap asks, second tap acts and restores the label (also an icon-only button)', () => {
+  const btn = dom.doc.createElement('button'); btn.innerHTML = phIcon('trash'); let done = 0;
   twoStepConfirm(btn, 'Zeker?', () => { done++; });
   assert.equal(btn.textContent, 'Zeker?'); assert.equal(done, 0);
   twoStepConfirm(btn, 'Zeker?', () => { done++; });
-  assert.equal(btn.textContent, 'Verwijder'); assert.equal(done, 1);
+  assert.equal(btn.innerHTML, phIcon('trash')); assert.equal(done, 1);
 });
 
 console.log('\n=== theme ===');

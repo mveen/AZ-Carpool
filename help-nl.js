@@ -251,6 +251,22 @@ export default [
     tab: 'beheer',
   },
   {
+    id: 'beheer-periode',
+    title: 'Beheer: een periode met andere tijden instellen (vakantie, proefwerkweek)',
+    keywords: 'periode vakantie proefwerkweek herfstvakantie andere tijden deadline invullen tijdelijk rooster eerste dag laatste dag',
+    coordinatorOnly: true,
+    body: [
+      'Onder Periode met andere tijden stel je in voor welke dagen ouders andere tijden kunnen doorgeven. Het vaste rooster blijft staan.',
+      '• Naam: bijvoorbeeld Herfstvakantie.',
+      '• Eerste dag en Laatste dag: allebei een werkdag, samen maximaal 10 werkdagen.',
+      '• Invullen open vanaf: vanaf die dag kunnen ouders hun tijden doorgeven (ongeveer 10 dagen van tevoren).',
+      '• Deadline: dag en tijd, vóór de eerste dag van de periode.',
+      'Tik op Opslaan. Met Annuleren gooi je je wijzigingen weg. Met het prullenbak-icoon verwijder je de periode (tik twee keer).',
+      'Ouders zien hier nog niets van. Dat komt in een volgende stap.',
+    ],
+    tab: 'beheer',
+  },
+  {
     id: 'beheer-kalenders',
     title: 'Beheer: wedstrijdkalenders en afstanden',
     keywords: 'beheer wedstrijdkalender kalender agenda google openbaar verversen afstand kilometers wedstrijden ontbreken',
