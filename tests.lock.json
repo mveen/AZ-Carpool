@@ -32,12 +32,12 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "c2f1bc4f36c40777a0950d5430dd742338b5e3f117749402d6b44c803f3796f8",
-    "test": "9869d24d979efac99f57d909e19b615dc1dfbef96acc369c21d7c383ab286a63"
+    "module": "251bf121c3b9eb0cfd7982115b2744f9fde2984360fb143880c284349a9ffa5e",
+    "test": "ebe973a0bf3f0f625baf81439d1b449dc6e81416c5a96bcb94dec0e0652b5190"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "9869d24d979efac99f57d909e19b615dc1dfbef96acc369c21d7c383ab286a63"
+    "test": "ebe973a0bf3f0f625baf81439d1b449dc6e81416c5a96bcb94dec0e0652b5190"
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
