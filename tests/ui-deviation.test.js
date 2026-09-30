@@ -148,7 +148,7 @@ test('wireWhatsAppButton hooks the click to sending that message', () => {
 });
 
 import { withFakeNowAsync } from './test-support.js';
-import { conclusieCardHtml, flexSignupHtml, oneOnOneHtml } from '../ui-deviation.js';
+import { backupHtml, conclusieCardHtml, flexSignupHtml, oneOnOneHtml } from '../ui-deviation.js';
 import { sampleFamilies as _sampleFamilies } from './test-support.js';
 
 console.log('\n=== conclusie-appje (US-03) ===');
@@ -187,8 +187,8 @@ console.log('\n=== 1-op-1 afstemmen (US-04) ===');
 test('every driver on the day gets a WhatsApp button, with the label for the day coordinator\'s role', () => {
   const html = render(sampleParentState, { deviationDay: 'Di' });
   assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Over%20de%20rit%20heen%20van%20dinsdag%2029%20september/);
-  assert.match(text(html), /WhatsApp Kees de Vries Stem 1-op-1 af, de dagcoördinator deelt het besluit\./);
-  assert.match(html, /aria-label="Stem 1-op-1 af met Kees de Vries via WhatsApp"/);
+  assert.match(text(html), /Stem af met chauffeur Kees de Vries Stem 1-op-1 af, de dagcoördinator deelt het besluit\./);
+  assert.match(html, /aria-label="Stem af met chauffeur Kees de Vries via WhatsApp"/);
 });
 test('no button for yourself, for a car without driver, or for a driver without phone number', () => {
   sampleParentState({ links: { p1: { familyId: 'f1' } } });      // Jan drives on Monday (heen)
@@ -200,6 +200,38 @@ test('the hint text appears once per direction, not once per driver', () => {
   sampleParentState({ links: { p1: { familyId: 'f6' } } });
   const html = withFakeNow(NOW, () => oneOnOneHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: 'f2', girlIds: ['f2'] }]));
   assert.equal((html.match(/oneOnOneBtn/g) || []).length, 2); assert.equal((html.match(/Stem 1-op-1 af, de dagcoördinator deelt het besluit\./g) || []).length, 1);
+});
+
+console.log('\n=== Back-up (reserves op Wijzigen) ===');
+test('Back-up lists the reserves of the shift and leaves out the driver of the car', () => {
+  sampleCoordinatorState({});
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }];
+  const s = text(withFakeNow(NOW, () => backupHtml('Ma', 'heen', cars))).replace(/ ,/g, ',');
+  assert.equal(s, 'Back-up: Piet Pieters, Kees de Vries, Tom Visser');
+});
+test('a driver of another car in the same shift is not a Back-up', () => {
+  sampleCoordinatorState({});
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30' }, { driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '07:30' }];
+  const s = text(withFakeNow(NOW, () => backupHtml('Ma', 'heen', cars))).replace(/ ,/g, ',');
+  assert.equal(s, 'Back-up: Kees de Vries, Tom Visser');
+});
+test('each Back-up name asks that reserve by WhatsApp for the time of the ride; your own name is plain text', () => {
+  sampleParentState({ links: { p1: { familyId: 'f2' } } });   // Piet is a reserve himself
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }];
+  const html = withFakeNow(NOW, () => backupHtml('Ma', 'heen', cars));
+  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Zou%20jij%20de%20rit%20heen%20van%20maandag%2028%20september%20om%2007%3A30%20kunnen%20doen%3F"/);
+  assert.doesNotMatch(html, /31622222222/);            // no link to yourself
+  assert.match(text(html).replace(/ ,/g, ','), /Back-up: Piet Pieters, Kees de Vries, Tom Visser/);
+});
+test('no Back-up line when nobody is left, or when there is no ride', () => {
+  sampleCoordinatorState({});
+  assert.equal(backupHtml('Ma', 'heen', []), '');
+  const all = [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: 'f2', girlIds: ['f2'] }, { driverFamilyId: 'f3', girlIds: ['f3'] }, { driverFamilyId: 'f6', girlIds: ['f6'] }];
+  assert.equal(backupHtml('Ma', 'heen', all), '');
+});
+test('Wijzigen shows the Back-up line for a direction, before the WhatsApp buttons', () => {
+  const s = text(render(sampleParentState, { deviationDay: 'Di' }));
+  assert.match(s, /Back-up: Piet Pieters, Mo Bakker Stem af met chauffeur/);
 });
 
 console.log('\n=== Flex aanmelden (US-05) ===');

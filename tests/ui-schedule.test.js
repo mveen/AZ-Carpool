@@ -183,5 +183,17 @@ test('the standard views are untouched while a period is set: same html with and
   assert.equal(plain, withPeriod);
 });
 
+console.log('\n=== Weekoverzicht-knop ===');
+test('Rooster has a Weekoverzicht button in "Deze week" and in the standard rooster; it opens the overview', () => {
+  ['week', 'standard'].forEach(mode => {
+    dom.doc.body.children.length = 0;
+    const html = render(() => sampleCoordinatorState({ roosterMode: mode, scheduleDay: 'Ma' }));
+    assert.match(html, /id="ovOpen"[^>]*>[\s\S]*?Weekoverzicht/);
+    dom.el('ovOpen').onclick();
+    assert.equal(dom.doc.body.children.length, 1);
+    assert.equal(dom.doc.body.children[0].id, 'ovOverlay');
+  });
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

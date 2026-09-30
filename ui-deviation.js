@@ -2,14 +2,14 @@
 import { t } from './i18n.js';
 import { dirLabelHtml, esc, foldHtml, hapticTap, lastUpdateFooter, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { FREE_TEXT_MAX, freeText, shiftDefaultId } from './locations.js';
-import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats } from './rides.js';
+import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats, tripReserveIds } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
-import { buildConclusieMessage, buildWhatsAppMessage } from './message-texts.js';
+import { buildConclusieMessage, buildWhatsAppMessage, reserveAskText } from './message-texts.js';
 import { DAYS, WA_ICON_SMALL, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey, waDayDate, weekRangeLabel } from './dates.js';
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
-import { waPhone } from './ui-schedule.js';
+import { waNameHtml, waPhone } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
@@ -155,6 +155,19 @@ export function oneOnOneHtml(day,direction,cars){
   return `<div class="oneOnOne"><div class="rowflex" style="gap:6px;flex-wrap:wrap">${buttons.join('')}</div><p class="oneOnOneHint">${t('oneOnOne.label')}</p></div>`;
 }
 
+// Back-up drivers of one shift: the reserves in the order of the Selectievolgorde, without anyone who already drives a car of this
+// shift (tripReserveIds leaves them out). Each name asks that reserve by WhatsApp; your own name is plain text.
+export function backupHtml(day,direction,cars){
+  const ids = tripReserveIds(day,direction,cars);
+  if(!ids.length) return '';
+  const me = myLinkedFamilyId();
+  const withRiders = cars.filter(c=>(c.girlIds||[]).length);
+  const askCar = withRiders.find(c=>me && c.driverFamilyId===me) || withRiders.find(c=>me && c.girlIds.includes(me)) || withRiders[0];
+  const ask = reserveAskText(day,direction,askCar && askCar.departureTime);
+  const names = ids.map(id=> id===me? esc(fam(id).parentName||'?') : waNameHtml(id, ask));
+  return `<div class="tripReserve backup">${t('deviation.backup')} ${names.join(', ')}</div>`;
+}
+
 export function renderDevDirection(day,direction){
   const cars = effectiveCars(day,direction);
   const dev = activeDeviation(day,direction);
@@ -211,6 +224,7 @@ export function renderDevDirection(day,direction){
   return `<div class="card${focus?' devFocus':''}">
     ${dirLabelHtml(direction)}
     ${cardsHtml}
+    ${backupHtml(day,direction,cars)}
     ${oneOnOneHtml(day,direction,cars)}${flexSignupHtml(day,direction,cars)}
     ${unassignedHtml}
     ${dev? `<button type="button" class="btn small secondary" data-devreset="${day}|${direction}">${t('deviation.terug_naar_standaard_rooster')}</button>` : ''}

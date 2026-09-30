@@ -123,5 +123,27 @@ test('a very short word does not match the start of longer words', () => {
 });
 test('findArticle returns null for an unknown id', () => { assert.equal(findArticle('bestaat-niet'), null); assert.equal(findArticle('wat-is').id, 'wat-is'); });
 
+console.log('\n=== button and tab names in the help match the app ===');
+import nl from '../texts-nl.js';
+// Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
+const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
+  'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Vrije invoer', 'Plek toevoegen',
+  'Terug met OV', 'Toch met de auto', 'Weekoverzicht', 'Afdrukken / PDF', 'Stem af met chauffeur', 'Deel update via WhatsApp', '+ Auto toevoegen', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Dit is mijn dochter', 'Toegang aanvragen', 'Nu verversen'];
+const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
+const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
+test('every quoted name exists in the app texts', () => {
+  QUOTED.forEach(q => assert.ok(appValues.toLowerCase().includes(q.toLowerCase()), 'not in the app: ' + q));
+});
+test('every quoted name is really used in the help (so the list stays honest)', () => {
+  QUOTED.forEach(q => assert.ok(helpText().includes(q), 'not in the help: ' + q));
+});
+
+test('the help finds the Weekoverzicht (also by "pdf" or "afdrukken") and explains Back-up in Wijzigen', () => {
+  assert.ok(ids('weekoverzicht').includes('rooster'));
+  assert.ok(ids('pdf afdrukken').includes('rooster'));
+  assert.ok(articles.find(a => a.id === 'rooster').body.join(' ').includes('Weekoverzicht'));
+  assert.ok(ids('back-up invallen').some(id => articles.find(a => a.id === id).body.join(' ').includes('Back-up:')));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

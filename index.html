@@ -382,6 +382,47 @@ input[type=time].periodTime.changed{border-color:var(--warn);background:var(--wa
 :root[data-theme="dark"] .dayCard.today{border-color:var(--accent)}
 :root[data-theme="dark"] .daypill .daypillAlert{color:#450a0a}   /* white on the light dark-mode red was only 2.8:1 */
 input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
+/* Weekoverzicht (Rooster): the PDF layout on screen; print = one A4 landscape page */
+.ovOpenRow{display:flex;justify-content:flex-end;margin:-4px 0 10px}
+.ovOverlay{position:fixed;inset:0;z-index:70;background:#fff;color:#111;overflow:auto;-webkit-overflow-scrolling:touch}
+.ovBar{position:sticky;top:0;z-index:2;display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #ccc}
+.ovDoc{padding:12px 16px 32px;max-width:1200px;margin:0 auto;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.ovHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px}
+.ovHead h1{font-size:15px;margin:0 0 2px}
+.ovHead p{margin:0 0 2px;font-size:12px;font-weight:700}
+.ovVersion{font-size:12px;font-weight:700}
+.ovTop{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.ovMain{flex:1 1 640px;min-width:0}
+.ovSide{flex:0 0 auto}
+.ovScroll{overflow-x:auto}
+.ovTable{border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;color:#111;background:#fff}
+.ovMain .ovTable{width:100%}
+.ovTable th,.ovTable td{border:1px dotted #777;padding:2px 6px;text-align:left;white-space:nowrap}
+.ovTable th{border:1px solid #000;font-weight:700}
+.ovTable td.ovWrap{white-space:normal;min-width:110px}
+.ovTable tr.ovDay td{border-top:2px solid #000;font-weight:800;font-style:italic}
+.ovCoord{font-weight:400;color:#8a8a8a}
+.ovNo{color:#b42318;font-style:italic}
+.ovNote{font-size:11px;margin:4px 0 0}
+.ovGirls .ovTable{width:auto}
+.ovGirls th{text-align:center}
+.ovGirls td{text-align:right}
+.ovGirls td:first-child{text-align:left}
+.ovHeen{background:#e3f2dc}
+.ovTerug{background:#dbe8f7}
+.ovTable th,.ovTable td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+  body>*:not(#ovOverlay){display:none!important}
+  .ovOverlay{position:static;overflow:visible}
+  .noPrint{display:none!important}
+  .ovDoc{padding:0;max-width:none}
+  .ovScroll{overflow:visible}
+  .ovTable{font-size:9px}
+  .ovTable th,.ovTable td{padding:1px 4px}
+  .ovTable,.ovHead,.ovTop{page-break-inside:avoid}
+}
 </style>
 </head>
 <body>

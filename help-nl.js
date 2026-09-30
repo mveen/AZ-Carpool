@@ -78,7 +78,8 @@ export default [
       '3. Nieuwe auto nodig? Tik op + Auto toevoegen.',
       '4. Tik op Opslaan.',
       'Wil je alles van die dag terugzetten? Tik op Terug naar standaard rooster. Tik twee keer om het zeker te weten.',
-      'Stem een wijziging altijd eerst af met de chauffeur. Bij elke chauffeur staat een WhatsApp-knop met een kant-en-klaar bericht.',
+      'Stem een wijziging altijd eerst af met de chauffeur. Bij elke chauffeur staat de knop Stem af met chauffeur, met een kant-en-klaar WhatsApp-bericht.',
+      'Onder de auto\'s staat Back-up: de chauffeurs die kunnen invallen, in de volgorde waarin je ze kunt vragen. Chauffeurs die die dag al rijden staan er niet bij. Tik op een naam om die chauffeur via WhatsApp te vragen.',
     ],
     tab: 'deviation',
   },
@@ -115,11 +116,12 @@ export default [
   {
     id: 'rooster',
     title: 'Wat staat er in het Rooster?',
-    keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen tijdelijk rooster vakantie periode',
+    keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen tijdelijk rooster vakantie periode weekoverzicht pdf afdrukken printen',
     body: [
       'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Bij elke rit staat waar de auto ophaalt en heen gaat.',
       'Kies bovenaan Deze week (met eventuele wijzigingen) of Vast rooster (zoals het elke week is).',
       'Is er een periode met andere tijden (vakantie, proefwerkweek) en heeft de coördinator het tijdelijke rooster gemaakt? Dan staat er een derde knop met de naam van de periode. Daar zie je per dag de doorgegeven tijden en de auto\'s. Op die dagen laat Deze week het tijdelijke rooster zien in plaats van het vaste rooster.',
+      'Tik op Weekoverzicht voor de hele week op één pagina, zoals de PDF die je eerder kreeg: alle ritten met chauffeur, passagiers, bezetting en reserves, hoe vaak elke chauffeur rijdt en de tijden van elke meid. Tik op Afdrukken / PDF om het af te drukken of als PDF te bewaren.',
       'Alleen de coördinator past het Rooster aan. Als ouder gebruik je daarvoor Wijzigen.',
     ],
     tab: 'schedule',

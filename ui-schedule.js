@@ -10,6 +10,7 @@ import { goToWijzigen } from './ui-myweek.js';
 import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
+import { openOverview } from './ui-overview.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
@@ -73,6 +74,7 @@ export function renderSchedule(){
     + timeChangesCardHtml()
     + periodOverviewHtml()
     + segHtml
+    + `<div class="ovOpenRow"><button type="button" class="btn small secondary" id="ovOpen">${phIcon('calendar')} ${t('overview.open')}</button></div>`
     + (mode==='period'
       ? periodViewHtml()
       : `<div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label))
@@ -88,6 +90,8 @@ export function renderSchedule(){
     const el=document.getElementById('sugg-'+b.dataset.gosugg); const m=document.querySelector('main');
     if(el && m) m.scrollTop = el.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop - 8;
   });
+  const ovOpen = document.getElementById('ovOpen');
+  if(ovOpen) ovOpen.onclick = ()=>{ hapticTap(); openOverview(); };
   wireTimeChangesCard();
   updateTimeChangesBadge();
   attachScheduleHandlers();

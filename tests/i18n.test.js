@@ -118,6 +118,14 @@ test('the texts of the five new stories exist and fill their placeholders', () =
   assert.ok(hasKey('loc.beheerTitle') && hasKey('geo.route') && hasKey('impact.beheerIntro'));
 });
 
+test('the texts of the Weekoverzicht and of the Wijzigen Back-up / Stem af exist', () => {
+  assert.equal(t('overview.standaardrit', { km: '55', eur: '€11,-', km2: '110', eur2: '€22,-', ct: 20 }), 'Standaardrit = 55 km (€11,-); heen & weer = 110 km (€22,-) (20ct/km)');
+  assert.equal(t('overview.vertrektijden', { heen: 'Busstation', terug: "AFC '34" }), "Vertrektijden heen: Busstation, terug: AFC '34");
+  assert.equal(t('oneOnOne.button', { name: 'Kees' }), 'Stem af met chauffeur Kees');
+  assert.equal(t('deviation.backup'), 'Back-up:');
+  assert.ok(hasKey('overview.print') && hasKey('overview.reserve') && hasKey('overview.rijfrequentie'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
