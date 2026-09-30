@@ -15,6 +15,7 @@ import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, effectiveCars, eligibleDrivers, groupsFor } from './rides.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
+import { storedPeriod } from './period.js';
 
 // ============================================================
 // Firestore access. The app talks to `db` only; `db` delegates to whichever adapter
@@ -149,6 +150,8 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.doc("settings/period").onSnapshot(snap=>{ S.period = snap.exists? storedPeriod(snap.data()) : null; renderBeheer(); },
+      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
     db.doc("settings/priority").onSnapshot(snap=>{ S.shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
@@ -203,7 +206,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.period=null; S.periodDraft=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }

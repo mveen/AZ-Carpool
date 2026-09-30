@@ -12,6 +12,7 @@ import { db, doToggleCoord, markTimeChangesSeen, recordLastUpdate, saveCoordFami
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
+import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, normalizePeriod, periodPhase, validatePeriod } from './period.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -128,6 +129,86 @@ export async function saveDayCoordinator(day, familyId){
     await db.doc("settings/dayCoordinators").set(next);
     S.dayCoordinators = next;
     showToast(t('dayCoord.saved'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// Periode met andere tijden (vakantie, proefwerkweek): the coordinator sets name, first and last day (max 10 workdays),
+// when filling in opens and the deadline. One document, settings/period. Edits stay in S.periodDraft until Opslaan,
+// so a live update from the database cannot wipe what is being typed. Parents fill in their times in a later step.
+const fmtDay = iso => { const [y,m,d] = iso.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString(locale(),{weekday:'short',day:'numeric',month:'short'}).replace('.',''); };
+const fmtDeadline = p => fmtDay(p.deadlineDate)+' '+p.deadlineTime;
+
+export function periodPhaseText(p, nowMs){
+  const phase = periodPhase(p, nowMs);
+  if(phase==='none') return t('period.phase.none');
+  const v = normalizePeriod(p);
+  if(phase==='waiting') return t('period.phase.waiting',{p1:fmtDay(v.opensOn)});
+  if(phase==='open') return t('period.phase.open',{p1:fmtDeadline(v)});
+  if(phase==='closed') return t('period.phase.closed',{p1:fmtDeadline(v)});
+  return t('period.phase.over');
+}
+
+export function periodCardHtml(){
+  const v = normalizePeriod(S.periodDraft || S.period);
+  const field = (id,labelKey,type,val,extra='') => `<div style="margin-top:10px;flex:1"><label for="${id}" style="margin-top:0">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
+  const status = S.period && !S.periodDraft? `<p class="muted" id="periodPhase">${esc(periodPhaseText(S.period))}</p>` : (!S.period? `<p class="muted" id="periodPhase">${t('period.phase.none')}</p>` : '');
+  return `<div class="card" id="periodCard">
+      <h2>${t('period.title')}</h2>
+      <p class="muted">${t('period.intro')}</p>
+      ${status}
+      ${field('periodName','period.name','text',v.name,`maxlength="${PERIOD_NAME_MAX}" placeholder="${esc(t('period.namePlaceholder'))}"`)}
+      <div class="rowflex" style="gap:8px">
+        ${field('periodFirst','period.firstDay','date',v.firstDay)}
+        ${field('periodLast','period.lastDay','date',v.lastDay)}
+      </div>
+      <p class="muted" style="margin-top:3px">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}</p>
+      ${field('periodOpens','period.opensOn','date',v.opensOn)}
+      <p class="muted" style="margin-top:3px">${t('period.opensHint')}</p>
+      <div class="rowflex" style="gap:8px">
+        ${field('periodDlDate','period.deadlineDate','date',v.deadlineDate)}
+        ${field('periodDlTime','period.deadlineTime','time',v.deadlineTime)}
+      </div>
+      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>
+      <div class="rowflex" style="gap:6px;margin-top:8px">
+        <button type="button" class="btn small" id="periodSave">${t('period.save')}</button>
+        <button type="button" class="btn small secondary" id="periodCancel">${t('period.cancel')}</button>
+        ${S.period? `<button type="button" class="iconbtn danger" id="periodDelete" aria-label="${t('period.delete')}" title="${t('period.delete')}">${phIcon('trash')}</button>` : ''}
+      </div>
+    </div>`;
+}
+
+const periodField = id => { const el = document.getElementById(id); return el? el.value : ''; };
+function readPeriodForm(){
+  return normalizePeriod({ name:periodField('periodName'), firstDay:periodField('periodFirst'), lastDay:periodField('periodLast'),
+    opensOn:periodField('periodOpens'), deadlineDate:periodField('periodDlDate'), deadlineTime:periodField('periodDlTime') });
+}
+
+// Keeps what is typed while the form is open (see the note above).
+export function rememberPeriodDraft(){ S.periodDraft = readPeriodForm(); }
+
+export async function savePeriod(){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  const res = validatePeriod(readPeriodForm());
+  if(!res.ok){ S.periodDraft = res.value; showToast(t(res.errors[0],{p1:PERIOD_MAX_WORKDAYS})); return false; }
+  try{
+    await db.doc("settings/period").set(res.value);
+    S.period = res.value; S.periodDraft = null;
+    showToast(t('period.saved'));
+    renderBeheer();
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+export function cancelPeriodEdit(){ S.periodDraft = null; renderBeheer(); }
+
+export async function deletePeriod(){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  try{
+    await db.doc("settings/period").delete();
+    S.period = null; S.periodDraft = null;
+    showToast(t('period.deleted'));
+    renderBeheer();
     return true;
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
@@ -310,6 +391,7 @@ export function renderBeheer(){
       ${renderPrefsCard()}
     </div>
     ${dayCoordinatorsCardHtml()}
+    ${periodCardHtml()}
     ${locationsCardHtml()}
     ${apiKeysCardHtml()}
     ${impactCardHtml()}
@@ -374,6 +456,10 @@ export function renderBeheer(){
     const setPrefWindowEl=document.getElementById('setPrefWindow'); if(setPrefWindowEl) setPrefWindowEl.onchange=saveSettingsAuto;
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
+    document.querySelectorAll('.periodInput').forEach(el=>el.oninput=rememberPeriodDraft);
+    const perSave=document.getElementById('periodSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); savePeriod(); };
+    const perCancel=document.getElementById('periodCancel'); if(perCancel) perCancel.onclick=()=>cancelPeriodEdit();
+    const perDel=document.getElementById('periodDelete'); if(perDel) perDel.onclick=()=>twoStepConfirm(perDel, t('beheer.zeker_nogmaals_klikken'), ()=>deletePeriod());
     document.querySelectorAll('.locInput').forEach(el=>el.onchange=()=>saveLocations());
     const orsSave=document.getElementById('apiKeyOrsSave'); if(orsSave) orsSave.onclick=()=>{ hapticTap(); saveOrsApiKey(); };
     const orsClear=document.getElementById('apiKeyOrsClear'); if(orsClear) orsClear.onclick=()=>twoStepConfirm(orsClear, t('beheer.zeker_nogmaals_klikken'), ()=>saveOrsApiKey(''));

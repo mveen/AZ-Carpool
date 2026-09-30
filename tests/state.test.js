@@ -50,6 +50,8 @@ test('every S.<name> used by any module exists in state.js', () => {
 
 test('dayCoordinators starts empty (Beheer fills it)', () => { assert.deepEqual(S.dayCoordinators, {}); });
 
+test('period (Beheer: periode met andere tijden) starts empty, with no unsaved form edits', () => { assert.equal(S.period, null); assert.equal(S.periodDraft, null); });
+
 test('new fields: places, calculated distances and the impact switch start empty', () => {
   assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false); assert.equal(S.impactPreview, null);
 });

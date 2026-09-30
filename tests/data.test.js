@@ -275,6 +275,26 @@ await testAsync('without a settings document there are simply no day coordinator
   stopDataListeners();
 });
 
+const PERIOD_DOC = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+await testAsync('the period from Beheer is loaded live, and cleared when listeners stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/period': PERIOD_DOC }); sampleParentState({ families: {}, groups: {}, period: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.period, PERIOD_DOC);
+  await db.doc('settings/period').set({ ...PERIOD_DOC, name: 'Proefwerkweek' }); await tick();
+  assert.equal(S.period.name, 'Proefwerkweek');
+  await db.doc('settings/period').delete(); await tick();
+  assert.equal(S.period, null);
+  stopDataListeners(); assert.equal(S.period, null); assert.equal(S.periodDraft, null);
+});
+await testAsync('without a settings/period document there is no period; a broken document counts as none', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ families: {}, groups: {}, period: { stale: true } });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.period, null);
+  await db.doc('settings/period').set({ ...PERIOD_DOC, lastDay: '' }); await tick();
+  assert.equal(S.period, null);
+  stopDataListeners();
+});
+
 console.log('\n=== Terug met OV (US-06) ===');
 import { setReturnByPublicTransport } from '../data.js';
 await testAsync('marking takes the girl out of her terug car and stores the mark with the car she left', async () => {
