@@ -48,7 +48,7 @@ console.log('\n=== Deze week (with this week\'s changes) ===');
 test('Tuesday: the deviation replaces the standard rooster and is marked "gewijzigd"', () => {
   const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));
   const s = text(html);
-  assert.match(s, /Week 40 · 28 sep – 2 okt — het standaardrooster mét de wijzigingen van deze week\./);
+  assert.match(s, /Week 40 · 28 sep – 2 okt · met wijzigingen\./);
   assert.match(s, /Heen · Aalsmeer → Alkmaar gewijzigd 1 Vertrek 09:15 2\/5 plekken/);
   assert.match(s, /Chauffeur: Kees de Vries/); assert.match(s, /Reserve: Piet Pieters , Mo Bakker/);
   assert.match(s, /Heen : Jahaimy, Lois, Saar Regelen/);
