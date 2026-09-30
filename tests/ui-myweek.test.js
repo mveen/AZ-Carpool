@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState } from './test-support.js';
+import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderMyWeek, matchInfoHtml, goToWijzigen } from '../ui-myweek.js';
 
@@ -203,7 +203,7 @@ const P40 = { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', 
 const shift40 = (iso, direction, cars) => ({ periodFirstDay: '2026-09-28', date: iso, direction, cars, madeAt: 1, by: 'x' });
 // f2 is out on Monday and hands in Tuesday 09:00 / 12:00; the temporary rooster is made for Monday (nobody) and Tuesday (Kees drives her).
 const period40 = () => ({
-  period: P40,
+  periods: oneP(P40),
   periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-28': { out: true }, '2026-09-29': { heen: '09:00', terug: '12:00' } } } },
   periodCars: {
     '2026-09-28_2026-09-28_heen': shift40('2026-09-28', 'heen', []), '2026-09-28_2026-09-28_terug': shift40('2026-09-28', 'terug', []),
@@ -223,7 +223,7 @@ test('a day she does not ride is gone, and is not reported as "niet ingepland"',
 test('outside the days with a temporary rooster the week is exactly as before', () => {
   const s = text(render({ ...period40(), deviations: {} }));
   assert.match(s, /Donderdag · Heen \(10:15\)/); assert.match(s, /Vrijdag · Heen \(11:00\)/);
-  assert.equal(text(render({ period: null })), text(render({})));
+  assert.equal(text(render({ periods: {} })), text(render({})));
 });
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };

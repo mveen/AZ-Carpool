@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import './test-support.js';
-import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress, periodShiftId, periodMoveGirl, periodSetDriver } from '../period.js';
+import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress, periodShiftId, periodMoveGirl, periodSetDriver, periodList, periodForDate, mergePeriods } from '../period.js';
 
 // The design example: Herfstvakantie, ma 26 okt - vr 30 okt 2026, opens wo 14 okt, deadline vr 16 okt 12:00.
 const GOOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
@@ -253,6 +253,44 @@ test('periodSetDriver: another driver; not one that already drives another car; 
 });
 test('periodSetDriver keeps the same driver on the same car without complaining', () => {
   assert.equal(periodSetDriver(carsBase(), 0, 'd1', cap).error, null);
+});
+
+console.log('\n=== several periods at the same time ===');
+const NEXT = { name: 'Toetsweek', firstDay: '2026-11-09', lastDay: '2026-11-13', opensOn: '2026-10-27', deadlineDate: '2026-11-04', deadlineTime: '12:00' };
+test('validatePeriod: a period may not share a day with another one', () => {
+  const r = validatePeriod({ ...NEXT, firstDay: '2026-10-29', lastDay: '2026-11-03', opensOn: '2026-10-14', deadlineDate: '2026-10-16' }, [GOOD]);
+  assert.deepEqual(r.errors, ['period.err.overlap']); assert.equal(r.ok, false); assert.equal(r.overlap.name, 'Herfstvakantie');
+});
+test('validatePeriod: touching is overlapping (one shared day), a gap of a weekend is not', () => {
+  const at = (first, last) => validatePeriod({ ...NEXT, firstDay: first, lastDay: last, opensOn: '2026-10-14', deadlineDate: '2026-10-16' }, [GOOD]).errors;
+  assert.deepEqual(at('2026-10-30', '2026-11-03'), ['period.err.overlap']);   // Friday 30 is the last day of GOOD
+  assert.deepEqual(at('2026-10-19', '2026-10-26'), ['period.err.overlap']);   // Monday 26 is the first day of GOOD
+  assert.deepEqual(at('2026-10-19', '2026-10-23'), []); assert.deepEqual(at('2026-11-02', '2026-11-06'), []);
+  assert.deepEqual(at('2026-10-27', '2026-10-28'), ['period.err.overlap'], 'inside the other one');
+  assert.deepEqual(at('2026-10-23', '2026-11-02'), ['period.err.overlap'], 'around the other one');
+});
+test('validatePeriod: the filling-in windows may overlap freely (collect the next period while the first one runs)', () => {
+  assert.equal(validatePeriod(NEXT, [GOOD]).ok, true);   // NEXT opens on 27 Oct, inside GOOD (26-30 Oct)
+});
+test('validatePeriod: without others, or with broken others, nothing changes; an invalid range is not reported as overlap', () => {
+  assert.equal(validatePeriod(GOOD).ok, true); assert.equal(validatePeriod(GOOD, []).ok, true); assert.equal(validatePeriod(GOOD, [null, {}, { name: 'x' }]).ok, true);
+  assert.deepEqual(validatePeriod({ ...GOOD, firstDay: '2026-10-30', lastDay: '2026-10-26' }, [GOOD]).errors, ['period.err.order']);
+  assert.equal(validatePeriod(GOOD, [GOOD]).ok, false, 'a period overlaps itself: callers leave the edited period out of `others`');
+});
+test('periodList: valid periods, oldest first; broken ones are left out', () => {
+  assert.deepEqual(periodList({ b: NEXT, a: GOOD, c: { ...GOOD, lastDay: '' }, d: null }).map(p => p.name), ['Herfstvakantie', 'Toetsweek']);
+  assert.deepEqual(periodList(null), []); assert.deepEqual(periodList({}), []);
+});
+test('periodForDate: the period a date belongs to, none between periods or for a bad date', () => {
+  const ps = { '2026-10-26': GOOD, '2026-11-09': NEXT };
+  assert.equal(periodForDate(ps, '2026-10-26').name, 'Herfstvakantie'); assert.equal(periodForDate(ps, '2026-10-30').name, 'Herfstvakantie'); assert.equal(periodForDate(ps, '2026-11-11').name, 'Toetsweek');
+  assert.equal(periodForDate(ps, '2026-11-02'), null); assert.equal(periodForDate(ps, '2026-10-25'), null); assert.equal(periodForDate(ps, 'x'), null); assert.equal(periodForDate({}, '2026-10-26'), null);
+});
+test('mergePeriods: the collection plus the old single period; the collection wins; a document under the wrong id is ignored', () => {
+  assert.deepEqual(Object.keys(mergePeriods({ '2026-11-09': NEXT }, GOOD)).sort(), ['2026-10-26', '2026-11-09']);
+  assert.equal(mergePeriods({ '2026-10-26': { ...GOOD, name: 'Uit de collectie' } }, GOOD)['2026-10-26'].name, 'Uit de collectie');
+  assert.deepEqual(mergePeriods({ wrong: NEXT, '2026-11-09': { ...NEXT, lastDay: '' } }, null), {});
+  assert.deepEqual(mergePeriods(null, null), {}); assert.deepEqual(mergePeriods({}, { broken: true }), {});
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

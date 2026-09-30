@@ -40,14 +40,17 @@ export const S = {
   openMatchCarpoolForm: null,
   currentWeekKey: null,
   dayCoordinators: {},
-  period: null,            // settings/period: the period with other times (holiday, exam week); null = none
-  periodDraft: null,       // Beheer: the period form while it has unsaved edits (null = show the saved period)
+  periods: {},             // the periods with other times (holiday, exam week), { firstDay: period }; several can exist at once
+  periodsColl: {},         // periods/*: the collection as loaded
+  legacyPeriod: null,      // settings/period: the single period of the first version; the coordinator's app moves it into periods/
+  periodDraft: null,       // Beheer: the period form { editing: firstDay of the period being edited or '', value } while it is open (null = closed)
+  periodSel: null,         // Rooster, temporary view: the chosen period (firstDay)
   periodEntries: {},       // periodEntries/*: the times families handed in for the period, by document id
   periodEntriesLoaded: false,
   periodCars: {},          // periodCars/*: the temporary rooster, one document per shift (see period.js)
   periodDay: null,         // Rooster, temporary view: the open date ('YYYY-MM-DD')
-  periodView: null,        // Wijzigen (coordinator): the family whose handed-in times are unfolded ("Bekijk")
-  periodForm: null,        // Wijzigen: the open form for handing in times { familyId, days } (null = closed); it also holds unsaved edits
+  periodView: null,        // Wijzigen (coordinator): '<firstDay>|<familyId>' whose handed-in times are unfolded ("Bekijk")
+  periodForm: null,        // Wijzigen: the open form for handing in times { familyId, firstDay, days } (null = closed); it also holds unsaved edits
   periodPhaseKey: null,    // last shown state of the task card and badge, so the minute check redraws only on a change
   locationsDoc: null,      // settings/locations as stored (locations.js normalises it)
   matchDistances: {},

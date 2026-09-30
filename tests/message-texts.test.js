@@ -12,7 +12,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, withFakeNow, NOW } from './test-support.js';
+import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, withFakeNow, NOW, oneP } from './test-support.js';
 import {
   dayHeading, activeDeviationDayLabelFrom, buildWhatsAppMessageFrom, buildMyWeekMessageFrom, buildDayMessageFrom,
   reserveAskTextFrom, driverAskTextFrom, buildWhatsAppMessage, buildMyWeekWhatsAppMessage, buildDayWhatsAppMessage,
@@ -258,7 +258,7 @@ const P40 = { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', 
 const shift40 = (iso, direction, cars) => ({ periodFirstDay: '2026-09-28', date: iso, direction, cars, madeAt: 1, by: 'x' });
 // f2 is out on Monday and hands in Tuesday 09:00 / 12:00; the temporary rooster is made for Monday (nobody) and Tuesday (Kees drives her).
 const period40 = () => ({
-  period: P40,
+  periods: oneP(P40),
   periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-28': { out: true }, '2026-09-29': { heen: '09:00', terug: '12:00' } } } },
   periodCars: {
     '2026-09-28_2026-09-28_heen': shift40('2026-09-28', 'heen', []), '2026-09-28_2026-09-28_terug': shift40('2026-09-28', 'terug', []),

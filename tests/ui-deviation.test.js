@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot } from './test-support.js';
+import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { todayKey } from '../constants.js';
 import {
@@ -81,8 +81,8 @@ test('a day does not show a match card of its own, even when a carpool is stored
 console.log('\n=== periode met andere tijden: the card sits on top of Wijzigen ===');
 const periodDoc = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
 test('while filling in is open the task card comes before the weekly changes; without a period Wijzigen is as before', () => {
-  const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ period: periodDoc, periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
-  assert.ok(html.indexOf('id="periodTask"') > -1 && html.indexOf('id="periodTask"') < html.indexOf('Wijzigingen ·'));
+  const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ periods: oneP(periodDoc), periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
+  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('Wijzigingen ·'));
   assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma' }), /periodTask|periodDone/);
 });
 
@@ -324,7 +324,7 @@ await testAsync('choosing a place stores it on that car of the deviation only; c
 
 console.log('\n=== during a period with a temporary rooster ===');
 test('Wijzigen starts from the temporary rooster on a date where it applies: its car, its departure time, the handed-in times', () => {
-  const html = withFakeNow(NOW, () => { sampleParentState({ period: { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }, deviations: {},
+  const html = withFakeNow(NOW, () => { sampleParentState({ periods: oneP({ name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }), deviations: {},
     periodCars: { '2026-09-28_2026-09-29_terug': { periodFirstDay: '2026-09-28', date: '2026-09-29', direction: 'terug', madeAt: 1, by: 'x', cars: [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '12:00' }] } },
     periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-29': { heen: '09:00', terug: '12:00' } } } } }); return renderDevDirection('Di', 'terug'); });
   assert.match(html, /type="time"[^>]*value="12:00"|value="12:00"[^>]*type="time"/); assert.match(html, /<option value="f3" selected/);
@@ -332,7 +332,7 @@ test('Wijzigen starts from the temporary rooster on a date where it applies: its
 });
 test('without a temporary rooster nothing changes for Wijzigen', () => {
   const a = withFakeNow(NOW, () => { sampleParentState({ deviations: {} }); return renderDevDirection('Ma', 'heen'); });
-  const b = withFakeNow(NOW, () => { sampleParentState({ deviations: {}, period: { name: 'x', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }, periodCars: {}, periodEntries: {} }); return renderDevDirection('Ma', 'heen'); });
+  const b = withFakeNow(NOW, () => { sampleParentState({ deviations: {}, periods: oneP({ name: 'x', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }), periodCars: {}, periodEntries: {} }); return renderDevDirection('Ma', 'heen'); });
   assert.equal(a, b);
 });
 

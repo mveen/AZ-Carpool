@@ -50,7 +50,7 @@ test('every S.<name> used by any module exists in state.js', () => {
 
 test('dayCoordinators starts empty (Beheer fills it)', () => { assert.deepEqual(S.dayCoordinators, {}); });
 
-test('period (Beheer: periode met andere tijden) starts empty, with no unsaved form edits', () => { assert.equal(S.period, null); assert.equal(S.periodDraft, null); });
+test('periods (Beheer: perioden met andere tijden) start empty, with no unsaved form edits and none chosen', () => { assert.deepEqual(S.periods, {}); assert.deepEqual(S.periodsColl, {}); assert.equal(S.legacyPeriod, null); assert.equal(S.periodDraft, null); assert.equal(S.periodSel, null); });
 
 test('handed-in period times: nothing loaded, no form open, no state remembered', () => {
   assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null); assert.equal(S.periodView, null); assert.equal(S.periodPhaseKey, null);

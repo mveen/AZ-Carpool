@@ -11,10 +11,10 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync } from './test-support.js';
+import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
-import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver } from '../ui-period-rooster.js';
+import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -30,7 +30,7 @@ const entries = () => ({
   '2026-10-26_f5': entryOf('f5', { '2026-10-27': { heen: '10:15', terug: '13:00' } }),
 });
 const XCARS = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f5'], departureTime: '13:00' }, { driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }];
-const base = { currentWeekKey: '2026-W44', period: PERIOD, periodEntries: entries(), periodEntriesLoaded: true, deviations: {}, scheduleDay: 'Ma' };
+const base = { currentWeekKey: '2026-W44', periods: oneP(PERIOD), periodEntries: entries(), periodEntriesLoaded: true, deviations: {}, scheduleDay: 'Ma' };
 const coord = (patch = {}) => sampleCoordinatorState({ links: { coord: { familyId: 'f1' } }, ...base, periodCars: {}, ...patch });
 const parent = (patch = {}) => sampleParentState({ ...base, periodCars: {}, ...patch });
 const madeCars = { '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', XCARS) };
@@ -46,8 +46,9 @@ function registry(h) {
     [...m[0].matchAll(/data-([a-z]+)="([^"]*)"/g)].forEach(d => { el.dataset[d[1]] = d[2]; });
     return el;
   });
-  picks = { perday: attr('perday'), preplan: attr('preplan'), pdrv: attr('pdrv'), pmove: attr('pmove') };
-  dom.doc.querySelectorAll = sel => (sel === '[data-perday]' ? picks.perday : sel === '[data-preplan]' ? picks.preplan : sel === '[data-pdrv]' ? picks.pdrv : sel === '.periodMove' ? picks.pmove : []);
+  picks = { perday: attr('perday'), preplan: attr('preplan'), pdrv: attr('pdrv'), pmove: attr('pmove'), make: attr('periodmake'), remake: attr('periodremake'), remove: attr('periodremove'), pick: attr('periodpick') };
+  dom.doc.querySelectorAll = sel => (sel === '[data-perday]' ? picks.perday : sel === '[data-preplan]' ? picks.preplan : sel === '[data-pdrv]' ? picks.pdrv : sel === '.periodMove' ? picks.pmove
+    : sel === '[data-periodmake]' ? picks.make : sel === '[data-periodremake]' ? picks.remake : sel === '[data-periodremove]' ? picks.remove : sel === '[data-periodpick]' ? picks.pick : []);
 }
 const render = (now = OPEN) => { withFakeNow(now, () => renderSchedule()); return html; };
 const findMove = girl => picks.pmove.find(e => e.dataset.pmove === girl);
@@ -56,7 +57,7 @@ console.log('=== is the third view there? ===');
 test('the coordinator has it while filling in is open or the deadline passed; not before or after', () => {
   coord(); assert.equal(withFakeNow(OPEN, () => periodModeAvailable()), true); assert.equal(withFakeNow(CLOSED, () => periodModeAvailable()), true);
   assert.equal(withFakeNow(WAITING, () => periodModeAvailable()), false); assert.equal(withFakeNow(OVER, () => periodModeAvailable()), false);
-  coord({ period: null }); assert.equal(withFakeNow(OPEN, () => periodModeAvailable()), false);
+  coord({ periods: {} }); assert.equal(withFakeNow(OPEN, () => periodModeAvailable()), false);
 });
 test('a parent has it only once the temporary rooster was made', () => {
   parent(); assert.equal(withFakeNow(OPEN, () => periodModeAvailable()), false);
@@ -64,9 +65,11 @@ test('a parent has it only once the temporary rooster was made', () => {
   parent({ periodCars: { '2026-12-21_x': { periodFirstDay: '2026-12-21', cars: [] } } }); assert.equal(withFakeNow(OPEN, () => periodModeAvailable()), false, 'a rooster of another period does not count');
 });
 test('the button label is the period name, shortened when it is long', () => {
-  coord(); assert.equal(periodModeLabel(), 'Herfstvak.');
-  coord({ period: { ...PERIOD, name: 'Proefwerkweek 2' } }); assert.equal(periodModeLabel(), 'Proefwerk.');
-  coord({ period: { ...PERIOD, name: 'Kerst' } }); assert.equal(periodModeLabel(), 'Kerst'); coord({ period: { ...PERIOD, name: '0123456789' } }); assert.equal(periodModeLabel(), '0123456789');
+  const label = () => withFakeNow(OPEN, () => periodModeLabel());
+  coord(); assert.equal(label(), 'Herfstvak.');
+  coord({ periods: oneP({ ...PERIOD, name: 'Proefwerkweek 2' }) }); assert.equal(label(), 'Proefwerk.');
+  coord({ periods: oneP({ ...PERIOD, name: 'Kerst' }) }); assert.equal(label(), 'Kerst'); coord({ periods: oneP({ ...PERIOD, name: '0123456789' }) }); assert.equal(label(), '0123456789');
+  coord({ periods: {} }); assert.equal(label(), '', 'no period: no label');
 });
 test('the switch shows the third button and the explanation; a stale "period" mode falls back to "Deze week"', () => {
   coord({ roosterMode: 'period' }); const h = render();
@@ -85,16 +88,16 @@ console.log('\n=== the overview for the coordinator (A5) ===');
 test('title, how many handed in, the deadline with the names that are still missing, a change count per day and the button', () => {
   coord(); const h = render(); const s = text(h);
   assert.match(s, /Herfstvakantie · 26 – 30 okt Doorgegeven 3 van 6 Deadline vr 16 okt 12:00 · nog niet: Eline, Anouk, Evi MA 26 geen wijz\. DI 27 3 wijz\. WO 28 geen wijz\. DO 29 1 wijz\. VR 30 geen wijz\. Tijdelijk rooster maken Het tijdelijke rooster vervangt het vaste rooster alleen in deze periode\. Daarna geldt weer het vaste rooster\./);
-  assert.match(h, /id="periodMake"/); assert.doesNotMatch(h, /periodRemake|periodRemove/);
+  assert.match(h, /id="periodMake_2026-10-26"/); assert.doesNotMatch(h, /periodRemake|periodRemove/);
 });
 test('the overview comes above the switch, and only for the coordinator', () => {
-  coord(); const h = render(); assert.ok(h.indexOf('id="periodOverview"') > -1 && h.indexOf('id="periodOverview"') < h.indexOf('class="segmented"'));
-  parent(); assert.doesNotMatch(render(), /periodOverview/);
-  coord({ impersonateFamilyId: 'f2', canEdit: false }); assert.doesNotMatch(render(), /periodOverview/, 'not in the test view as a parent');
+  coord(); const h = render(); assert.ok(h.indexOf('id="periodOverview_2026-10-26"') > -1 && h.indexOf('id="periodOverview_2026-10-26"') < h.indexOf('class="segmented"'));
+  parent(); assert.doesNotMatch(render(), /periodOverview_2026-10-26/);
+  coord({ impersonateFamilyId: 'f2', canEdit: false }); assert.doesNotMatch(render(), /periodOverview_2026-10-26/, 'not in the test view as a parent');
 });
 test('not before filling in opens and not after the period; not before the handed-in times are loaded', () => {
-  coord(); assert.doesNotMatch(render(WAITING), /periodOverview/); assert.doesNotMatch(render(OVER), /periodOverview/);
-  coord({ periodEntriesLoaded: false }); assert.doesNotMatch(render(), /periodOverview/); coord({ period: null }); assert.doesNotMatch(render(), /periodOverview/);
+  coord(); assert.doesNotMatch(render(WAITING), /periodOverview_2026-10-26/); assert.doesNotMatch(render(OVER), /periodOverview_2026-10-26/);
+  coord({ periodEntriesLoaded: false }); assert.doesNotMatch(render(), /periodOverview_2026-10-26/); coord({ periods: {} }); assert.doesNotMatch(render(), /periodOverview_2026-10-26/);
 });
 test('more than five families missing: five names and "+n"; everybody in: says so; after the deadline the wording changes', () => {
   const fams = sampleCoordinatorState().families; for (let i = 7; i <= 12; i++) fams['f' + i] = { ...fams.f1, girlName: 'Meisje' + i, parentName: 'Ouder' + i };
@@ -111,7 +114,7 @@ test('periodDayChanges counts changes and "rijdt niet mee" per date, Flex famili
 });
 test('once the rooster is made the button becomes "Alles opnieuw indelen" and a trash button appears', () => {
   coord({ periodCars: madeCars }); const h = render();
-  assert.match(h, /id="periodRemake"[^>]*>Alles opnieuw indelen</); assert.match(h, /id="periodRemove"[^>]*aria-label="Verwijder tijdelijk rooster"/); assert.doesNotMatch(h, /id="periodMake"/);
+  assert.match(h, /id="periodRemake_2026-10-26"[^>]*>Alles opnieuw indelen</); assert.match(h, /id="periodRemove_2026-10-26"[^>]*aria-label="Verwijder tijdelijk rooster"/); assert.doesNotMatch(h, /id="periodMake_2026-10-26"/);
 });
 
 console.log('\n=== the temporary rooster, day by day (A6) ===');
@@ -140,7 +143,7 @@ test('a shift that is not made says the standard rooster applies', () => {
 });
 test('a parent sees the same, read only: no selects, no buttons; their own car is marked', () => {
   parent({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render();
-  assert.doesNotMatch(h, /data-pdrv|data-pmove|data-preplan|periodOverview/); assert.match(text(h), /Vertrek 13:00/);
+  assert.doesNotMatch(h, /data-pdrv|data-pmove|data-preplan|periodOverview_2026-10-26/); assert.match(text(h), /Vertrek 13:00/);
   assert.match(text(h), /Jij rijdt/); assert.match(text(h), /Chauffeur: Mo Bakker/); assert.match(h, /class="driver me"/);
   assert.match(h, /class="pill mine">Jahaimy</); assert.match(h, /class="group confirmed minedriving"/);
 });
@@ -165,8 +168,8 @@ test('riders without a car are listed with a way to place them', () => {
 });
 test('the open date defaults to the first date that is not past, else the first date; a chosen date stays', () => {
   coord(); assert.equal(withFakeNow('2026-10-15T09:00:00+02:00', () => periodViewDay()), '2026-10-26');
-  assert.equal(withFakeNow('2026-10-28T09:00:00+01:00', () => periodViewDay()), '2026-10-28'); assert.equal(withFakeNow('2026-11-05T09:00:00+01:00', () => periodViewDay()), '2026-10-26');
-  coord({ periodDay: '2026-10-29' }); assert.equal(periodViewDay(), '2026-10-29'); coord({ periodDay: '2027-01-01' }); assert.equal(periodViewDay(), '2026-10-26', 'a date outside the period is ignored');
+  assert.equal(withFakeNow('2026-10-28T09:00:00+01:00', () => periodViewDay()), '2026-10-28'); assert.equal(withFakeNow('2026-11-05T09:00:00+01:00', () => periodViewDay()), null, 'the period is over: no view');
+  coord({ periodDay: '2026-10-29' }); assert.equal(withFakeNow(OPEN, () => periodViewDay()), '2026-10-29'); coord({ periodDay: '2027-01-01' }); assert.equal(withFakeNow(OPEN, () => periodViewDay()), '2026-10-26', 'a date outside the period is ignored');
 });
 test('pill taps change the open date', () => {
   coord({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); render();
@@ -176,7 +179,7 @@ test('pill taps change the open date', () => {
 test('periodTimesHtml and periodDirectionHtml are usable on their own', () => {
   coord({ periodCars: madeCars });
   assert.match(periodTimesHtml('2026-10-27', 'terug'), /12:30/); assert.match(periodDirectionHtml('2026-10-27', 'terug'), /data-perdir="2026-10-27\|terug"/);
-  assert.equal(periodViewHtml().includes('data-perday'), true); coord({ period: null }); assert.equal(periodViewHtml(), '');
+  assert.equal(withFakeNow(OPEN, () => periodViewHtml()).includes('data-perday'), true); coord({ periods: {} }); assert.equal(withFakeNow(OPEN, () => periodViewHtml()), '');
   assert.match(periodTimesHtml('2026-10-31', 'heen'), /Niemand rijdt mee\./);
 });
 
@@ -186,15 +189,15 @@ const settle = async () => { for (let i = 0; i < 5; i++) await new Promise(r => 
 const inOpen = fn => withFakeNowAsync(OPEN, fn);   // the redraws after an edit happen later: they need the same "now"
 await testAsync('"Tijdelijk rooster maken" plans every shift, stores them and shows the view', async () => { await inOpen(async () => {
   const fake = useFakeDb(sampleDbSeed()); coord({ roosterMode: 'week' }); render();
-  await dom.el('periodMake').onclick();
-  assert.equal(Object.keys(S.periodCars).length, 10); assert.ok(fake.get('periodCars/2026-10-26_2026-10-27_terug')); assert.match(html, /id="periodRemake"/);
+  await picks.make[0].onclick();
+  assert.equal(Object.keys(S.periodCars).length, 10); assert.ok(fake.get('periodCars/2026-10-26_2026-10-27_terug')); assert.match(html, /id="periodRemake_2026-10-26"/);
 }); });
 await testAsync('"Alles opnieuw indelen" and the trash button need a second tap; then they plan again / go back to the standard rooster', async () => { await inOpen(async () => {
   const fake = await prep(); const before = fake.writes.length;
-  dom.el('periodRemake').onclick(); await settle(); assert.equal(fake.writes.length, before, 'the first tap only asks');
-  dom.el('periodRemake').onclick(); await settle(); assert.equal(Object.keys(S.periodCars).length, 10);
-  dom.el('periodRemove').onclick(); await settle(); assert.equal(Object.keys(S.periodCars).length, 10, 'the first tap only asks');
-  dom.el('periodRemove').onclick(); await settle(); assert.deepEqual(S.periodCars, {}); assert.match(html, /id="periodMake"/);
+  const remake = picks.remake[0]; remake.onclick(); await settle(); assert.equal(fake.writes.length, before, 'the first tap only asks');
+  remake.onclick(); await settle(); assert.equal(Object.keys(S.periodCars).length, 10);
+  const remove = picks.remove[0]; remove.onclick(); await settle(); assert.equal(Object.keys(S.periodCars).length, 10, 'the first tap only asks');
+  remove.onclick(); await settle(); assert.deepEqual(S.periodCars, {}); assert.match(html, /id="periodMake_2026-10-26"/);
 }); });
 await testAsync('"Opnieuw indelen" plans that one direction again', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '17:30' }]) });
@@ -247,6 +250,81 @@ await testAsync('a parent cannot change anything, even by calling the functions'
   assert.equal(await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f5', 'none')), false);
   assert.equal(toast(), 'Alleen de coördinator kan het tijdelijke rooster aanpassen.'); assert.deepEqual(fake.get('periodCars/2026-10-26_2026-10-27_terug').cars, XCARS);
 });
+
+console.log('\n=== two periods at the same time: Herfstvakantie is running, the Toetsweek is being collected ===');
+const NEXT = { name: 'Toetsweek', firstDay: '2026-11-09', lastDay: '2026-11-13', opensOn: '2026-10-27', deadlineDate: '2026-11-04', deadlineTime: '12:00' };
+const TWO = { '2026-10-26': PERIOD, '2026-11-09': NEXT };
+const NOW2 = '2026-10-28T09:00:00+01:00';   // Herfstvakantie: deadline passed, running. Toetsweek: filling in is open.
+const twoC = (patch = {}) => coord({ periods: TWO, ...patch });
+const twoP = (patch = {}) => parent({ periods: TWO, ...patch });
+const nextCars = { '2026-11-09_2026-11-10_heen': { periodFirstDay: '2026-11-09', date: '2026-11-10', direction: 'heen', madeAt: 1, by: 'x', cars: [] } };
+test('availablePeriods: the coordinator has both from the day filling in opens; the periods are listed oldest first', () => {
+  twoC(); assert.deepEqual(withFakeNow(NOW2, () => availablePeriods()).map(p => p.name), ['Herfstvakantie', 'Toetsweek']);
+  assert.deepEqual(withFakeNow('2026-10-13T09:00:00+02:00', () => availablePeriods()).map(p => p.name), [], 'nothing has opened yet');
+  assert.deepEqual(withFakeNow('2026-10-20T09:00:00+02:00', () => availablePeriods()).map(p => p.name), ['Herfstvakantie'], 'the Toetsweek opens on 27 Oct');
+  assert.deepEqual(withFakeNow('2026-11-03T09:00:00+01:00', () => availablePeriods()).map(p => p.name), ['Toetsweek'], 'the Herfstvakantie is over');
+});
+test('a parent only has the periods whose temporary rooster was made', () => {
+  twoP(); assert.equal(withFakeNow(NOW2, () => periodModeAvailable()), false);
+  twoP({ periodCars: madeCars }); assert.deepEqual(withFakeNow(NOW2, () => availablePeriods()).map(p => p.name), ['Herfstvakantie']);
+  twoP({ periodCars: { ...madeCars, ...nextCars } }); assert.equal(withFakeNow(NOW2, () => availablePeriods()).length, 2);
+});
+test('selectedPeriod: the chosen one; else the one running today; else the next one to come', () => {
+  twoC(); assert.equal(withFakeNow(NOW2, () => selectedPeriod()).name, 'Herfstvakantie');
+  assert.equal(withFakeNow('2026-11-03T09:00:00+01:00', () => selectedPeriod()).name, 'Toetsweek');
+  twoC({ periodSel: '2026-11-09' }); assert.equal(withFakeNow(NOW2, () => selectedPeriod()).name, 'Toetsweek');
+  twoC({ periodSel: '2026-01-01' }); assert.equal(withFakeNow(NOW2, () => selectedPeriod()).name, 'Herfstvakantie', 'a choice that is gone is ignored');
+  const between = twoC({ periods: { '2026-10-26': { ...PERIOD, lastDay: '2026-10-28' }, '2026-11-09': NEXT } });
+  assert.equal(withFakeNow('2026-10-30T09:00:00+01:00', () => selectedPeriod()).name, 'Toetsweek', 'between the two: the next one');
+});
+test('the coordinator gets an overview card per period, each with its own button', () => {
+  twoC(); const h = render(NOW2);
+  assert.match(h, /id="periodOverview_2026-10-26"/); assert.match(h, /id="periodOverview_2026-11-09"/);
+  assert.match(h, /id="periodMake_2026-10-26"/); assert.match(h, /id="periodMake_2026-11-09"/);
+  assert.match(text(h), /Herfstvakantie · 26 – 30 okt .* Toetsweek · 9 – 13 nov/);
+  assert.match(text(h), /Deadline voorbij · nog niet: Eline, Anouk, Evi.*Deadline wo 4 nov 12:00 · nog niet: Eline, Jahaimy, Anouk, Evi, Lois \+1/);
+});
+test('with two periods the view has a field to choose the period; with one it has not', () => {
+  twoC({ roosterMode: 'period' }); const h = render(NOW2);
+  assert.match(h, /<select id="periodPick"[^>]*data-periodpick="1">/); assert.match(h, /<option value="2026-10-26" selected>Herfstvakantie · 26 – 30 okt<\/option>/); assert.match(h, /<option value="2026-11-09">Toetsweek · 9 – 13 nov<\/option>/);
+  assert.match(h, /data-rmode="period" class="active" aria-pressed="true">Herfstvak\.</);
+  coord({ roosterMode: 'period' }); assert.doesNotMatch(render(), /periodPick/);
+});
+test('choosing the other period shows its dates, its explanation and the label of its button', () => {
+  twoC({ roosterMode: 'period' }); render(NOW2);
+  picks.pick[0].value = '2026-11-09'; withFakeNow(NOW2, () => picks.pick[0].onchange());
+  assert.equal(S.periodSel, '2026-11-09'); const h = html;
+  assert.match(text(h), /Tijdelijk rooster Toetsweek \(9 – 13 nov\)/); assert.match(h, /data-rmode="period" class="active" aria-pressed="true">Toetsweek</);
+  assert.match(text(h), /MA 9 .* DI 10 .* WO 11 .* DO 12 .* VR 13/); assert.match(h, /data-perday="2026-11-10"/); assert.doesNotMatch(h, /data-perday="2026-10-27"/);
+  assert.match(text(h), /dinsdag 10 nov|maandag 9 nov/); assert.match(h, /<option value="2026-11-09" selected>/);
+});
+test('choosing a period starts on its first date again', () => {
+  twoC({ roosterMode: 'period', periodDay: '2026-10-29' }); render(NOW2);
+  picks.pick[0].value = '2026-11-09'; withFakeNow(NOW2, () => picks.pick[0].onchange());
+  assert.equal(S.periodDay, null); assert.equal(withFakeNow(NOW2, () => periodViewDay()), '2026-11-09');
+});
+test('a parent chooses between the two too, once both have a temporary rooster', () => {
+  twoP({ periodCars: { ...madeCars, ...nextCars }, roosterMode: 'period' }); const h = render(NOW2);
+  assert.match(h, /id="periodPick"/); assert.doesNotMatch(h, /data-pdrv|periodOverview/);
+  twoP({ periodCars: madeCars, roosterMode: 'period' }); assert.doesNotMatch(render(NOW2), /periodPick/);
+});
+test('the dates of the second period come from their own handed-in times', () => {
+  const e2 = { familyId: 'f2', periodFirstDay: '2026-11-09', submittedAt: 1, by: 'x', days: { '2026-11-10': { heen: '10:00', terug: '14:00' } } };
+  twoC({ periodEntries: { ...entries(), '2026-11-09_f2': e2 } });
+  assert.deepEqual(periodDayChanges('2026-11-10'), { changes: 1, out: 0 }); assert.deepEqual(periodDayChanges('2026-10-27'), { changes: 3, out: 0 }); assert.deepEqual(periodDayChanges('2026-11-02'), { changes: 0, out: 0 });
+});
+await testAsync('the button of one period makes only that period\'s rooster', async () => { await withFakeNowAsync(NOW2, async () => {
+  const fake = useFakeDb(sampleDbSeed()); twoC({ roosterMode: 'week' }); render(NOW2);
+  const next = picks.make.find(b => b.dataset.periodmake === '2026-11-09'); await next.onclick();
+  assert.equal(Object.keys(S.periodCars).length, 10); assert.ok(Object.keys(S.periodCars).every(k => k.startsWith('2026-11-09_'))); assert.ok(fake.get('periodCars/2026-11-09_2026-11-10_heen'));
+  assert.match(html, /id="periodRemake_2026-11-09"/); assert.match(html, /id="periodMake_2026-10-26"/);
+}); });
+await testAsync('removing the rooster of one period leaves the other one', async () => { await withFakeNowAsync(NOW2, async () => {
+  const both = { ...madeCars, ...nextCars }; useFakeDb({ ...sampleDbSeed(), ...Object.fromEntries(Object.entries(both).map(([k, v]) => ['periodCars/' + k, v])) });
+  twoC({ periodCars: both, roosterMode: 'week' }); render(NOW2);
+  const rm = picks.remove.find(b => b.dataset.periodremove === '2026-11-09'); rm.onclick(); await settle(); rm.onclick(); await settle();
+  assert.deepEqual(Object.keys(S.periodCars), ['2026-10-26_2026-10-27_terug']);
+}); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

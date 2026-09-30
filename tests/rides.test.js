@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { sampleFamilies, sampleGroups, sampleDeviations, WEEK_KEY, resetState } from './test-support.js';
+import { sampleFamilies, sampleGroups, sampleDeviations, WEEK_KEY, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import {
   fam, seats, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
@@ -264,7 +264,7 @@ const entries = () => ({
   '2026-10-26_f5': entryOf('f5', { '2026-10-27': { terug: '13:00', heen: '10:15' } }),
 });
 const XCARS = [{ driverFamilyId: 'f4', girlIds: ['f4'], departureTime: '17:30' }];
-const pst = (patch = {}) => state({ currentWeekKey: W44, deviations: {}, period: P, periodEntries: entries(), periodCars: { '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', XCARS) }, ...patch });
+const pst = (patch = {}) => state({ currentWeekKey: W44, deviations: {}, periods: oneP(P), periodEntries: entries(), periodCars: { '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', XCARS) }, ...patch });
 
 test('periodShift: only where the temporary rooster was made, inside the period, in the week of that date', () => {
   const ps = periodShift('Di', 'terug', pst());
@@ -273,16 +273,16 @@ test('periodShift: only where the temporary rooster was made, inside the period,
   assert.equal(periodShift('Wo', 'terug', pst()), null);
   assert.equal(periodShift('Di', 'terug', pst({ currentWeekKey: WEEK_KEY })), null, 'another week');
   assert.equal(periodShift('Di', 'terug', pst({ currentWeekKey: '2026-W45' })), null, 'the week after the period');
-  assert.equal(periodShift('Di', 'terug', pst({ period: null })), null);
+  assert.equal(periodShift('Di', 'terug', pst({ periods: {} })), null);
   assert.equal(periodShift('Di', 'terug', pst({ periodCars: undefined })), null);
   assert.equal(periodShift('Di', 'terug', pst({ periodCars: { '2026-10-26_2026-10-27_terug': { ...shiftDoc('2026-10-27', 'terug', XCARS), periodFirstDay: '2026-12-21' } } })), null, 'a document of another period');
   assert.equal(periodShift('Di', 'terug', pst({ periodCars: { '2026-10-26_2026-10-27_terug': { periodFirstDay: '2026-10-26' } } })), null, 'a broken document');
 });
 test('periodShift: a stored shift outside the period (the period was shortened or moved afterwards) never applies', () => {
   const stale = { '2026-10-26_2026-10-29_terug': shiftDoc('2026-10-29', 'terug', XCARS), '2026-10-26_2026-10-26_heen': shiftDoc('2026-10-26', 'heen', XCARS) };
-  assert.equal(periodShift('Do', 'terug', pst({ period: { ...P, lastDay: '2026-10-28' }, periodCars: stale })), null, 'after the last day');
+  assert.equal(periodShift('Do', 'terug', pst({ periods: oneP({ ...P, lastDay: '2026-10-28' }), periodCars: stale })), null, 'after the last day');
   assert.equal(periodShift('Do', 'terug', pst({ periodCars: stale })).iso, '2026-10-29', 'inside the period it does apply');
-  assert.equal(periodShift('Ma', 'heen', pst({ period: { ...P, firstDay: '2026-10-27' }, periodCars: stale })), null, 'before the first day');
+  assert.equal(periodShift('Ma', 'heen', pst({ periods: oneP({ ...P, firstDay: '2026-10-27' }), periodCars: stale })), null, 'before the first day');
 });
 test('effectiveCars: a one-off change goes before the temporary rooster, which goes before the standard rooster', () => {
   assert.deepEqual(effectiveCars('Di', 'terug', pst()), XCARS);
@@ -314,7 +314,7 @@ test('periodTimeFor: the handed-in time, "" when not riding, the standard time w
   assert.equal(periodTimeFor('f2', '2026-10-26', 'heen', st), '08:30', 'handed in, but nothing for this date: standard');
   assert.equal(periodTimeFor('f1', '2026-10-27', 'terug', st), '17:30', 'no entry at all: standard');
   assert.equal(periodTimeFor('f1', '2026-10-28', 'heen', st), '', 'no standard time either');
-  assert.equal(periodTimeFor('f2', '2026-10-27', 'terug', pst({ period: null })), '17:30');
+  assert.equal(periodTimeFor('f2', '2026-10-27', 'terug', pst({ periods: {} })), '17:30');
 });
 test('a handed-in direction that is left out means she does not ride that way', () => {
   const st = pst({ periodEntries: { '2026-10-26_f2': entryOf('f2', { '2026-10-27': { heen: '10:15' } }) } });
@@ -395,10 +395,10 @@ test('planPeriodShift never plans Flex families and never seats a rider twice', 
   assert.equal(all.includes('f5'), false); assert.equal(new Set(all).size, all.length);
 });
 test('planPeriodRooster: every shift of the period, heen and terug, ten in a two-week period', () => {
-  const plan = planPeriodRooster(pst());
+  const plan = planPeriodRooster(pst(), P);
   assert.equal(plan.length, 10); assert.deepEqual(plan.slice(0, 3).map(s => [s.iso, s.direction]), [['2026-10-26', 'heen'], ['2026-10-26', 'terug'], ['2026-10-27', 'heen']]);
-  assert.equal(planPeriodRooster(pst({ period: { ...P, lastDay: '2026-11-06' } })).length, 20);
-  assert.deepEqual(planPeriodRooster(pst({ period: null })), []);
+  assert.equal(planPeriodRooster(pst(), { ...P, lastDay: '2026-11-06' }).length, 20);
+  assert.deepEqual(planPeriodRooster(pst(), null), []);
 });
 test('a Thursday when nobody rides plans no cars and nobody unplaced, and an out girl is not planned', () => {
   const all = Object.fromEntries(Object.keys(sampleFamilies()).map(id => ['2026-10-26_' + id, entryOf(id, { '2026-10-29': { out: true } })]));

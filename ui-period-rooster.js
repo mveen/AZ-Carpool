@@ -10,48 +10,59 @@ import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { dirLabelHtml, esc, hapticTap, phIcon, shiftLocationHtml, showToast, twoStepConfirm } from './ui-common.js';
 import { plainGirlName, famTime, fam, girlName, isFlex, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
-import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
+import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
 import { driverLineHtml, renderSchedule } from './ui-schedule.js';
 import { myLinkedFamilyId } from './coordinator.js';
 
-const madeShifts = () => {
-  const p = S.period; if(!p) return 0;
-  return Object.values(S.periodCars || {}).filter(d => d && d.periodFirstDay===p.firstDay).length;
-};
+const madeShifts = p => Object.values(S.periodCars || {}).filter(d => d && d.periodFirstDay===p.firstDay).length;
+const todayIso = () => { const d = new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
 
-// Is the third view there? The coordinator has it from the day filling in opens until the period is over;
-// everybody else once the temporary rooster has been made.
-export function periodModeAvailable(nowMs){
-  const p = S.period; if(!p) return false;
-  const phase = periodPhase(p, nowMs);
-  if(phase!=='open' && phase!=='closed') return false;
-  return S.canEdit || madeShifts()>0;
+// The periods that have a temporary view: the coordinator has one for every period from the day filling in opens until it is over;
+// everybody else for the periods whose temporary rooster has been made.
+export function availablePeriods(nowMs){
+  return periodList(S.periods).filter(p => {
+    const phase = periodPhase(p, nowMs);
+    return (phase==='open' || phase==='closed') && (S.canEdit || madeShifts(p)>0);
+  });
+}
+export function periodModeAvailable(nowMs){ return availablePeriods(nowMs).length>0; }
+
+// The period shown in the temporary view: the chosen one; else the one that is running today; else the next one; else the first.
+export function selectedPeriod(nowMs){
+  const list = availablePeriods(nowMs);
+  if(!list.length) return null;
+  const chosen = list.find(p => p.firstDay===S.periodSel);
+  if(chosen) return chosen;
+  const today = todayIso();
+  return list.find(p => p.firstDay<=today && today<=p.lastDay) || list.find(p => p.firstDay>today) || list[0];
 }
 
 // The button is small: a name of more than 10 characters is cut ("Herfstvakantie" -> "Herfstvak.", "Kerst" stays "Kerst").
 export function periodModeLabel(){
-  const n = normalizePeriod(S.period).name;
+  const p = selectedPeriod(); if(!p) return '';
+  const n = normalizePeriod(p).name;
   return n.length>10? n.slice(0,9)+'.' : n;
 }
 
 export function periodModeInfoHtml(){
-  const p = normalizePeriod(S.period);
+  const p = selectedPeriod(); if(!p) return '';
   return esc(t(S.canEdit? 'period.view.coordInfo' : 'period.view.parentInfo', { p1:p.name, p2:isoRangeLabel(p.firstDay, p.lastDay) }));
 }
 
 // The date shown in the temporary view: the chosen one, else the first date of the period that is not past, else the first.
 export function periodViewDay(){
-  const p = S.period; if(!p) return null;
+  const p = selectedPeriod(); if(!p) return null;
   const days = periodWorkdays(p.firstDay, p.lastDay);
   if(S.periodDay && days.includes(S.periodDay)) return S.periodDay;
-  const d = new Date(); const today = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  const today = todayIso();
   return days.find(iso => iso>=today) || days[0] || null;
 }
 
 // How many families handed in something that differs from their standard rooster on a date, and how many of them do not ride.
 export function periodDayChanges(iso){
-  const p = S.period;
+  const p = periodForDate(S.periods, iso);
   let changes = 0, out = 0;
+  if(!p) return { changes, out };
   Object.entries(S.families).forEach(([id, f]) => {
     if(isFlex(f)) return;
     const entry = S.periodEntries[periodEntryId(p, id)];
@@ -63,12 +74,8 @@ export function periodDayChanges(iso){
   return { changes, out };
 }
 
-// ---------- the overview card (coordinator, above the switch) ----------
-export function periodOverviewHtml(nowMs){
-  const p = S.period;
-  if(!S.canEdit || !p || !S.periodEntriesLoaded) return '';
-  const phase = periodPhase(p, nowMs);
-  if(phase!=='open' && phase!=='closed') return '';
+// ---------- the overview cards (coordinator, above the switch): one per period ----------
+function overviewCardHtml(p, phase){
   const v = normalizePeriod(p), pr = periodProgress(p, S.families, S.periodEntries);
   const missing = pr.rows.filter(r => !r.done).map(r => plainGirlName(r.id));
   const shown = missing.slice(0,5).join(', ') + (missing.length>5? ' +'+(missing.length-5) : '');
@@ -83,18 +90,23 @@ export function periodOverviewHtml(nowMs){
         <span class="muted">${esc(c.changes? t('period.ov.dayChanges',{p1:c.changes}) : t('period.ov.noChanges'))}</span>
       </div>`;
   }).join('');
-  const made = madeShifts()>0;
-  return `<div class="card" id="periodOverview">
+  const made = madeShifts(v)>0, k = v.firstDay;
+  return `<div class="card" id="periodOverview_${k}">
       <h2>${esc(t('period.ov.title',{p1:v.name, p2:isoRangeLabel(v.firstDay, v.lastDay)}))}</h2>
       <div class="rowflex"><span class="muted">${t('period.ov.handed')}</span><b>${esc(t('period.ov.handedValue',{p1:pr.done, p2:pr.total}))}</b></div>
       <p class="muted" style="margin:4px 0 0">${esc(deadline)}</p>
       <div class="periodChips">${chips}</div>
       <div class="rowflex" style="gap:6px;margin-top:10px">
-        <button type="button" class="btn small${made? ' secondary' : ''}" id="${made? 'periodRemake' : 'periodMake'}">${t(made? 'period.ov.remake' : 'period.ov.make')}</button>
-        ${made? `<button type="button" class="iconbtn danger" id="periodRemove" aria-label="${esc(t('period.ov.remove'))}" title="${esc(t('period.ov.remove'))}">${phIcon('trash')}</button>` : ''}
+        <button type="button" class="btn small${made? ' secondary' : ''}" id="${made? 'periodRemake_' : 'periodMake_'}${k}" ${made? 'data-periodremake' : 'data-periodmake'}="${k}">${t(made? 'period.ov.remake' : 'period.ov.make')}</button>
+        ${made? `<button type="button" class="iconbtn danger" id="periodRemove_${k}" data-periodremove="${k}" aria-label="${esc(t('period.ov.remove'))}" title="${esc(t('period.ov.remove'))}">${phIcon('trash')}</button>` : ''}
       </div>
       <p class="muted" style="margin:8px 0 0;font-size:12px">${t('period.ov.explain')}</p>
     </div>`;
+}
+
+export function periodOverviewHtml(nowMs){
+  if(!S.canEdit || !S.periodEntriesLoaded) return '';
+  return availablePeriods(nowMs).map(p => overviewCardHtml(p, periodPhase(p, nowMs))).join('');
 }
 
 // ---------- the temporary rooster, one date ----------
@@ -185,10 +197,14 @@ export function periodDirectionHtml(iso, direction){
     </div>`;
 }
 
-// The whole third view: the pills of the period's dates and the open date.
+// The whole third view: a field to choose the period (only when there is more than one), the pills of its dates and the open date.
 export function periodViewHtml(){
-  const p = S.period; if(!p) return '';
+  const p = selectedPeriod(); if(!p) return '';
+  const list = availablePeriods();
   const days = periodWorkdays(p.firstDay, p.lastDay), open = periodViewDay();
+  const pick = list.length>1
+    ? `<div style="margin-bottom:10px"><label class="periodLbl" for="periodPick">${t('period.view.pick')}</label>
+        <select id="periodPick" class="periodSel" data-periodpick="1">${list.map(q => `<option value="${q.firstDay}"${q.firstDay===p.firstDay? ' selected' : ''}>${esc(q.name)} · ${esc(isoRangeLabel(q.firstDay, q.lastDay))}</option>`).join('')}</select></div>` : '';
   const pills = days.map(iso => {
     const carCount = ['heen','terug'].reduce((n, d) => n + (periodCarsFor(iso, d) || []).length, 0);
     const unplaced = ['heen','terug'].reduce((n, d) => n + periodUnplacedFor(iso, d).length, 0);
@@ -198,7 +214,7 @@ export function periodViewHtml(){
         ${unplaced? `<span class="daypillAlert" aria-hidden="true">${unplaced}</span>` : ''}
       </button>`;
   }).join('');
-  return `<div class="daypills periodPills" role="group" aria-label="${esc(t('deviation.kies_een_dag'))}">${pills}</div>
+  return `${pick}<div class="daypills periodPills" role="group" aria-label="${esc(t('deviation.kies_een_dag'))}">${pills}</div>
     <div class="daysection"><h3>${esc(isoDayLabel(open,'long'))}</h3>
       ${periodDirectionHtml(open,'heen')}
       ${periodDirectionHtml(open,'terug')}
@@ -228,13 +244,15 @@ export function setPeriodDriver(iso, direction, index, driverId){
 
 export function wirePeriodRooster(){
   document.querySelectorAll('[data-perday]').forEach(b => b.onclick = () => { S.periodDay = b.dataset.perday; hapticTap(); renderSchedule(); });
+  document.querySelectorAll('[data-periodpick]').forEach(el => el.onchange = () => { S.periodSel = el.value; S.periodDay = null; renderSchedule(); });
   if(!S.canEdit) return;
-  const make = document.getElementById('periodMake'); if(make) make.onclick = () => { hapticTap(); return makePeriodRooster().then(() => renderSchedule()); };
-  const remake = document.getElementById('periodRemake'); if(remake) remake.onclick = () => twoStepConfirm(remake, t('beheer.zeker_nogmaals_klikken'), () => makePeriodRooster().then(() => renderSchedule()));
-  const remove = document.getElementById('periodRemove'); if(remove) remove.onclick = () => twoStepConfirm(remove, t('beheer.zeker_nogmaals_klikken'), () => deletePeriodRooster().then(() => renderSchedule()));
+  const then = () => renderSchedule();
+  document.querySelectorAll('[data-periodmake]').forEach(b => b.onclick = () => { hapticTap(); return makePeriodRooster(b.dataset.periodmake).then(then); });
+  document.querySelectorAll('[data-periodremake]').forEach(b => b.onclick = () => twoStepConfirm(b, t('beheer.zeker_nogmaals_klikken'), () => makePeriodRooster(b.dataset.periodremake).then(then)));
+  document.querySelectorAll('[data-periodremove]').forEach(b => b.onclick = () => twoStepConfirm(b, t('beheer.zeker_nogmaals_klikken'), () => deletePeriodRooster(b.dataset.periodremove).then(then)));
   document.querySelectorAll('[data-preplan]').forEach(b => b.onclick = () => {
     const [iso, direction] = b.dataset.preplan.split('|');
-    hapticTap(); return replanPeriodShift(iso, direction).then(() => renderSchedule());
+    hapticTap(); return replanPeriodShift(iso, direction).then(then);
   });
   document.querySelectorAll('[data-pdrv]').forEach(el => el.onchange = () => setPeriodDriver(el.dataset.iso, el.dataset.dir, +el.dataset.pdrv, el.value));
   document.querySelectorAll('.periodMove').forEach(el => el.onchange = () => { if(el.value) movePeriodGirl(el.dataset.iso, el.dataset.dir, el.dataset.pmove, el.value); });

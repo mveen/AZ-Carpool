@@ -15,7 +15,7 @@ import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, groupsFor, isFlex, planPeriodRooster, planPeriodShift } from './rides.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
-import { isValidIsoDate, isWorkday, periodEntryId, periodEntryState, periodShiftId, periodWorkdays, storedPeriod, validateEntry } from './period.js';
+import { deadlineMs, isValidIsoDate, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
 
 // ============================================================
 // Firestore access. The app talks to `db` only; `db` delegates to whichever adapter
@@ -100,11 +100,11 @@ export async function purgeStaleDeviations(){
 }
 
 // Step 2 of "periode met andere tijden": a family hands in its times for the period (once per period; it can be changed until the
-// deadline, and by the coordinator after it). `rawDays` = the form: { 'YYYY-MM-DD': { out, heen, terug } } for every workday.
+// deadline, and by the coordinator after it). `firstDay` = the period. `rawDays` = the form: { 'YYYY-MM-DD': { out, heen, terug } } for every workday.
 // Nothing is stored unless the times are valid and the moment allows it. Returns true when stored.
-export async function savePeriodEntry(familyId, rawDays){
+export async function savePeriodEntry(familyId, firstDay, rawDays){
   if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
-  const period = S.period, f = S.families[familyId];
+  const period = S.periods[firstDay], f = S.families[familyId];
   if(!period || !f){ showToast(t('period.entry.err.noPeriod')); return false; }
   const id = periodEntryId(period, familyId);
   const st = periodEntryState(period, S.periodEntries[id], { hasFamily:true, isFlex:isFlex(f), canEdit:S.canEdit });
@@ -137,18 +137,20 @@ function periodShiftDocOf(period, iso, direction, cars){
   return { periodFirstDay:period.firstDay, date:iso, direction, cars:cleanPeriodCars(cars), madeAt:Date.now(), by:myDisplayInfo().name };
 }
 
+// Only the coordinator changes a temporary rooster. Returns false (with the reason shown) when not allowed.
 function periodRoosterGuard(){
   if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
   if(!S.canEdit){ showToast(t('period.rooster.err.coordinator')); return false; }
-  if(!S.period){ showToast(t('period.entry.err.noPeriod')); return false; }
   return true;
 }
+const noPeriodToast = () => showToast(t(periodList(S.periods).length? 'period.rooster.err.shift' : 'period.entry.err.noPeriod'));
 
-// Stores the cars of ONE shift (a date of the period and a direction). Returns true when stored.
+// Stores the cars of ONE shift (a date of a period and a direction). The period is the one that date belongs to. Returns true when stored.
 export async function savePeriodShift(iso, direction, cars){
   if(!periodRoosterGuard()) return false;
-  const p = S.period;
-  if(!isValidIsoDate(iso) || !isWorkday(iso) || iso<p.firstDay || iso>p.lastDay || (direction!=='heen' && direction!=='terug')){ showToast(t('period.rooster.err.shift')); return false; }
+  const p = periodForDate(S.periods, iso);
+  if(!p){ noPeriodToast(); return false; }
+  if(!isWorkday(iso) || (direction!=='heen' && direction!=='terug')){ showToast(t('period.rooster.err.shift')); return false; }
   const doc = periodShiftDocOf(p, iso, direction, cars), id = periodShiftId(p, iso, direction);
   try{
     await db.doc("periodCars/"+id).set(doc);
@@ -157,10 +159,12 @@ export async function savePeriodShift(iso, direction, cars){
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
-// "Tijdelijk rooster maken" / "Alles opnieuw indelen": plans every shift of the period with the handed-in times and stores them together.
-export async function makePeriodRooster(){
+// "Tijdelijk rooster maken" / "Alles opnieuw indelen": plans every shift of ONE period with the handed-in times and stores them together.
+export async function makePeriodRooster(firstDay){
   if(!periodRoosterGuard()) return false;
-  const p = S.period, plan = planPeriodRooster();
+  const p = S.periods[firstDay];
+  if(!p){ noPeriodToast(); return false; }
+  const plan = planPeriodRooster(S, p);
   const batch = db.batch(), docs = {};
   plan.forEach(s=>{ const id = periodShiftId(p, s.iso, s.direction); docs[id] = periodShiftDocOf(p, s.iso, s.direction, s.cars); batch.set('periodCars/'+id, docs[id]); });
   try{
@@ -179,10 +183,17 @@ export async function replanPeriodShift(iso, direction){
   return ok;
 }
 
-// Back to the standard rooster for the whole period: removes every shift of this period (the handed-in times stay).
-export async function deletePeriodRooster(){
+// The shifts of one period that have a temporary rooster.
+export function periodShiftIds(period){
+  return periodWorkdays(period.firstDay, period.lastDay).flatMap(iso=>['heen','terug'].map(d=>periodShiftId(period, iso, d))).filter(id=>S.periodCars[id] && S.periodCars[id].periodFirstDay===period.firstDay);
+}
+
+// Back to the standard rooster for the whole of one period: removes every shift of that period (the handed-in times stay).
+export async function deletePeriodRooster(firstDay){
   if(!periodRoosterGuard()) return false;
-  const p = S.period, ids = periodWorkdays(p.firstDay, p.lastDay).flatMap(iso=>['heen','terug'].map(d=>periodShiftId(p, iso, d))).filter(id=>S.periodCars[id]);
+  const p = S.periods[firstDay];
+  if(!p){ noPeriodToast(); return false; }
+  const ids = periodShiftIds(p);
   const batch = db.batch();
   ids.forEach(id=>batch.delete('periodCars/'+id));
   try{
@@ -192,6 +203,85 @@ export async function deletePeriodRooster(){
     showToast(t('period.rooster.removed'));
     return true;
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// ---------- The periods themselves (Beheer, coordinator) ----------
+// periods/<firstDay>: name, first and last day, when filling in opens, the deadline and `deadlineAt` (the deadline as a moment, for firestore.rules).
+// Periods never share a day. The first day is the id and the key of the handed-in times and the temporary rooster, so it cannot change
+// once there is something stored for the period.
+export function periodHasData(firstDay){
+  const p = S.periods[firstDay];
+  const entries = Object.values(S.periodEntries).filter(e => e && e.periodFirstDay===firstDay).length;
+  return { entries, rooster: p? periodShiftIds(p).length : 0 };
+}
+
+// Validates and stores one period. `editing` = the first day of the period being edited ('' = a new one).
+// -> { ok, errors, overlap }: nothing is stored unless ok.
+export async function savePeriodDoc(raw, editing){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return { ok:false, errors:[] }; }
+  const others = periodList(S.periods).filter(p => p.firstDay!==editing);
+  const res = validatePeriod(raw, others);
+  if(!res.ok) return res;
+  const v = res.value;
+  if(editing && editing!==v.firstDay){
+    const d = periodHasData(editing);
+    if(d.entries || d.rooster) return { ...res, ok:false, errors:['period.err.firstDayLocked'] };
+  }
+  try{
+    await db.doc("periods/"+v.firstDay).set({ ...v, deadlineAt:deadlineMs(v) });   // deadlineAt: firestore.rules stop parents after it
+    S.periodsColl = {...S.periodsColl, [v.firstDay]:v};
+    if(editing && editing!==v.firstDay){
+      await db.doc("periods/"+editing).delete();
+      const rest = {...S.periodsColl}; delete rest[editing]; S.periodsColl = rest;
+    }
+    // A period that only lived in the old settings/period document moves over as soon as it is saved.
+    if(S.legacyPeriod && (S.legacyPeriod.firstDay===editing || S.legacyPeriod.firstDay===v.firstDay)){ try{ await db.doc("settings/period").delete(); S.legacyPeriod = null; }catch(e){} }
+    rebuildPeriods();
+    return res;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return { ...res, ok:false, errors:[] }; }
+}
+
+// Removes a period AND what was handed in for it, so nothing invisible stays behind. Refused while a temporary rooster exists
+// (remove that first, in Rooster). -> true when removed.
+export async function deletePeriodCompletely(firstDay){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  if(!S.canEdit){ showToast(t('period.rooster.err.coordinator')); return false; }
+  const p = S.periods[firstDay];
+  if(!p){ showToast(t('period.entry.err.noPeriod')); return false; }
+  if(periodShiftIds(p).length){ showToast(t('period.err.deleteRooster')); return false; }
+  const entryIds = Object.entries(S.periodEntries).filter(([,e])=>e && e.periodFirstDay===firstDay).map(([id])=>id);
+  const batch = db.batch();
+  batch.delete('periods/'+firstDay);
+  entryIds.forEach(id=>batch.delete('periodEntries/'+id));
+  if(S.legacyPeriod && S.legacyPeriod.firstDay===firstDay) batch.delete('settings/period');
+  try{
+    await batch.commit();
+    const coll = {...S.periodsColl}; delete coll[firstDay]; S.periodsColl = coll;
+    if(S.legacyPeriod && S.legacyPeriod.firstDay===firstDay) S.legacyPeriod = null;
+    const ent = {...S.periodEntries}; entryIds.forEach(id=>delete ent[id]); S.periodEntries = ent;
+    rebuildPeriods();
+    showToast(t('period.deleted'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// S.periods = the collection plus the period of the first version of the app (settings/period), see mergePeriods.
+export function rebuildPeriods(){
+  S.periods = mergePeriods(S.periodsColl, S.legacyPeriod);
+}
+
+// The coordinator's app moves the old single period (settings/period) into the periods collection, once. The other apps read both meanwhile.
+let migratingLegacy = false;
+export async function migrateLegacyPeriod(){
+  const p = S.legacyPeriod;
+  if(migratingLegacy || !p || !db || !isRealCoordinator()) return false;
+  migratingLegacy = true;
+  try{
+    if(!S.periodsColl[p.firstDay]) await db.doc("periods/"+p.firstDay).set({ ...p, deadlineAt:deadlineMs(p) });
+    await db.doc("settings/period").delete();
+    return true;
+  }catch(e){ return false; }
+  finally{ migratingLegacy = false; }
 }
 
 export async function recordLastUpdate(kind){
@@ -245,8 +335,15 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
-    db.doc("settings/period").onSnapshot(snap=>{ S.period = snap.exists? storedPeriod(snap.data()) : null; renderBeheer(); renderDeviationTab(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.collection("periods").onSnapshot(snap=>{
+      S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
+      rebuildPeriods(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
+    }, err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    // The first version stored ONE period in settings/period: still read, and moved into periods/ by the coordinator's app.
+    db.doc("settings/period").onSnapshot(snap=>{
+      S.legacyPeriod = snap.exists? storedPeriod(snap.data()) : null;
+      rebuildPeriods(); migrateLegacyPeriod(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
+    }, err=>{});
     db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.collection("periodCars").onSnapshot(snap=>{ S.periodCars={}; snap.docs.forEach(d=>S.periodCars[d.id]=d.data()); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
@@ -305,7 +402,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.period=null; S.periodDraft=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }
