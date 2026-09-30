@@ -3,7 +3,7 @@ import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, PDF_SEED } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
-import { availableDrivers, fam, girlName, seats, sortByShiftPriority } from './rides.js';
+import { availableDrivers, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { esc, foldCards, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
@@ -41,7 +41,7 @@ export function renderAvailabilityTable(){
 }
 
 export function renderPrefsCard(){
-  const girls = Object.entries(S.families).filter(([id,f])=>f.girlName);
+  const girls = sortFamEntriesByGirl(Object.entries(S.families).filter(([id,f])=>f.girlName));
   const ruleRows = (S.prefs.rules||[]).map((r,i)=>{
     const label = r.type==='together'
       ? t('beheer.samen_reizen_2', { p1: (r.ids||[]).map(id=>girlName(id)).join(' &amp; ') })
@@ -485,7 +485,7 @@ export function renderBeheer(){
       <div class="fitbad">${phIcon('warning')} ${t('beheer.mogelijk_dubbele_gezinnen_controleer_en')}</div>
       ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn danger" data-coorddel="${id}" style="margin-left:4px;min-width:30px;min-height:30px" aria-label="${t('beheer.verwijder')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
-  const rows = Object.entries(S.families).map(([id,fd])=>{
+  const rows = sortFamEntriesByGirl(Object.entries(S.families)).map(([id,fd])=>{
     const isCoord = S.coordinatorConfig && S.coordinatorConfig.familyId===id;
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
     const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !S.inviteByFamily[id]? 'code' : ''].filter(Boolean);

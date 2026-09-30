@@ -34,7 +34,7 @@ test('Monday: the existing car with its riders, seats left, and the girls who st
 });
 test('Monday: proposals are offered with the recommended one first', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' })));
-  assert.match(s, /Voorstellen: AANBEVOLEN Optie 1: Nieuwe auto: Piet Pieters Piet Pieters: Lois, Saar, Anouk, Evi \(4\/4 pl\.\) Gebruik deze optie/);
+  assert.match(s, /Voorstellen: AANBEVOLEN Optie 1: Nieuwe auto: Piet Pieters Piet Pieters: Anouk, Evi, Lois, Saar \(4\/4 pl\.\) Gebruik deze optie/);
   assert.match(s, /Optie 2: Nieuwe auto: Kees de Vries/);
   assert.match(s, /Aangepaste combinatie/);
 });

@@ -85,7 +85,7 @@ const carpool = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summ
 test('matchCarRowHtml describes a car: departure, driver and riders; a missing driver or riders is said in words', () => {
   state();
   const s = text(matchCarRowHtml(cars[0], {}));
-  assert.match(s, /09:15/); assert.match(s, /Jan Jansen/); assert.match(s, /Jahaimy, Evi/);
+  assert.match(s, /09:15/); assert.match(s, /Jan Jansen/); assert.match(s, /Evi, Jahaimy/);
   assert.match(text(matchCarRowHtml({ girlIds: [] }, {})), /--:-- .*nog geen chauffeur · geen passagiers/);
 });
 test('more riders than seats is marked, the family that is in the car is highlighted, and the delete button only when editable', () => {
@@ -149,7 +149,7 @@ await testAsync('a valid car is stored on the match document, with the match det
   const fake = useFakeDb(sampleDbSeed()); state(); const save = openForm();
   setForm('f1', '07:15', ['f2', 'f4']); await withFakeNow(NOW, () => save.onclick());
   const d = fake.get('matchCarpools/' + SLUG);
-  assert.deepEqual(d.cars, [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '07:15' }]);
+  assert.deepEqual(d.cars, [{ driverFamilyId: 'f1', girlIds: ['f4', 'f2'], departureTime: '07:15' }]); // riders are picked from an A-Z list
   assert.equal(d.matchSlug, SLUG); assert.equal(d.calendarId, 'cal1'); assert.equal(d.eventId, 'e1'); assert.equal(d.teamLabel, 'AZ O15-1');
   assert.equal(d.summary, home.summary); assert.equal(d.location, home.location); assert.equal(d.startMs, home.start.getTime());
   assert.equal(S.openMatchCarpoolForm, null); assert.equal(toast(), 'Carpool toegevoegd ✓');

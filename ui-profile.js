@@ -223,6 +223,18 @@ export function familyFormHtml(prefix,f){
     const code = (S.inviteByFamily[S.coordEditId]||'');
     return `<div class="rowflex" style="gap:6px">${input}${introWaIconHtml(n, f['parentPhone'+n]||'', code)}</div>`;
   };
+  // Beheer only: newest sign of life among the browsers linked to this family (links/{uid}).
+  // Real session fields win; linkedAt (moment of linking) is the fallback. Nothing is shown without data.
+  const lastSeenHtml = ()=>{
+    if(prefix!=='coord' || !S.coordEditId) return '';
+    let best=null;
+    Object.values(S.links||{}).filter(l=>l && l.familyId===S.coordEditId).forEach(l=>{
+      [['lastSeenAt','Laatste sessie'],['lastLoginAt','Laatst ingelogd'],['lastActionAt','Laatste actie in app'],['linkedAt','Gekoppeld op']].forEach(([k,label])=>{
+        const at=Number(l[k]); if(at>0 && (!best || at>best.at || (at===best.at && k!=='linkedAt'))) best={at,label};
+      });
+    });
+    return best? `<p class="muted" style="font-size:12px;margin:6px 0 0">${best.label}: ${new Date(best.at).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'})}</p>` : '';
+  };
   const phoneInput1 = phoneField(1,'06-12345678'), phoneInput2 = phoneField(2,'06-...');
   return `
     <div class="grid2">
@@ -237,7 +249,7 @@ export function familyFormHtml(prefix,f){
     <div class="grid2">
       <div><label style="margin-top:8px">${prefix==='me'? t('profile.tel_nr_1_wa') : t('profile.tel_nr_1')}</label>${phoneInput1}</div>
       <div><label style="margin-top:8px">${t('profile.tel_nr_2')}</label>${phoneInput2}</div>
-    </div>
+    </div>${lastSeenHtml()}
     <label>${t('profile.totale_autocapaciteit_incl_bestuurder')}</label>
     <div class="stepperCard">
       <div class="stepperInfo">${phIcon('car')}<div>

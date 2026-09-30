@@ -78,6 +78,15 @@ export function fam(id, st=S){return st.families[id]||{parentName:"?",girlName:"
 export function seats(f){ return Math.max(0, (f.capacity||0) - 1); }
 
 export function girlName(id, st=S){ return esc(fam(id, st).girlName||fam(id, st).parentName||id); }
+// Passengers are always listed A-Z. Drivers are NOT sorted with this: their order is the selection order.
+const byNameNl = (a,b)=>a.localeCompare(b,'nl',{sensitivity:'base'});
+export function sortGirlIds(ids, st=S){
+  return [...(ids||[])].map(id=>[id, fam(id, st).girlName||fam(id, st).parentName||id]).sort((a,b)=>byNameNl(a[1],b[1])).map(x=>x[0]);
+}
+// Same for [id, family] entries (Beheer lists, checkbox rows).
+export function sortFamEntriesByGirl(entries){
+  return [...entries].sort((a,b)=>byNameNl(a[1].girlName||a[1].parentName||a[0], b[1].girlName||b[1].parentName||b[0]));
+}
 
 function shiftKeyOf(day,direction){ return day+'_'+direction; }
 

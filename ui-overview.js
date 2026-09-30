@@ -3,7 +3,7 @@
 import { locale, t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, KM_COST_EUR } from './constants.js';
-import { activeDeviation, effectiveCars, fam, plainGirlName, rideTime, seats, tripReserveIds } from './rides.js';
+import { activeDeviation, effectiveCars, fam, plainGirlName, rideTime, seats, sortGirlIds, tripReserveIds } from './rides.js';
 import { weekRangeLabel } from './dates.js';
 import { dayCoordinatorFor } from './coordinator.js';
 import { esc, locationsCfg, phIcon } from './ui-common.js';
@@ -29,7 +29,7 @@ export function overviewData(st = S){
         time: c.departureTime || '',
         driver: c.driverFamilyId ? (fam(c.driverFamilyId, st).parentName || '?') : '',
         driverId: c.driverFamilyId || null,
-        passengers: c.girlIds.map(id => plainGirlName(id, st)),
+        passengers: sortGirlIds(c.girlIds, st).map(id => plainGirlName(id, st)),
         used: c.girlIds.length,
         seats: c.driverFamilyId ? seats(fam(c.driverFamilyId, st)) : null,
       })).sort((a, b) => (a.time || '99:99').localeCompare(b.time || '99:99')).map((r, i) => ({ ...r, car: i + 1 }));

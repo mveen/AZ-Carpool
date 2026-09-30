@@ -130,7 +130,7 @@ test('a day: the handed-in times next to the standard ones (struck through where
   coord({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render(); const s = text(h);
   assert.match(s, /dinsdag 27 okt/);
   assert.match(h, /<s class="muted">17:30<\/s> <strong class="periodChanged">12:30<\/strong>/); assert.match(h, /<s class="muted">17:30<\/s> <strong class="periodChanged">13:00<\/strong>/);
-  assert.match(s, /Vertrek 13:00 .*Jahaimy.*Saar.*Lois/); assert.match(s, /Vertrek 17:30 .*Eline.*Evi/);
+  assert.match(s, /Vertrek 13:00 .*Jahaimy.*Lois.*Saar/); assert.match(s, /Vertrek 17:30 .*Eline.*Evi/);
   assert.equal(picks.pdrv.length, 2, 'the coordinator edits the drivers with selects');
 });
 test('a girl who does not ride that day shows "rijdt niet mee" with her standard time struck through', () => {

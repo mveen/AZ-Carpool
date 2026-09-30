@@ -437,5 +437,14 @@ test('Beheer shows the notice card, and the WhatsApp intro icon wiring is still 
   assert.match(text(dom.html('tab-beheer')), /Melding voor iedereen/);
 });
 
+test('families and the travel-preference checkboxes are listed A-Z by daughter name', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({});
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  const sorted = names => assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')), names.join());
+  sorted([...html.matchAll(/font-size:16px;font-weight:800">([^<]+)</g)].map(m => m[1]));
+  sorted([...html.matchAll(/prefTogetherPick" value="[^"]+">([^<]+)</g)].map(m => m[1]));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
