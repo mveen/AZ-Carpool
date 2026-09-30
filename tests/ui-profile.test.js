@@ -15,7 +15,7 @@ import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, 
 import { S } from '../state.js';
 import {
   renderImpersonateBanner, startImpersonate, stopImpersonate, familyFormHtml, readFamilyForm, renderClaimCoordinator,
-  renderGateOrApp, renderGate, submitGate, renderProfile, saveProfile, weekschemaWarningHtml, isWeekschemaField,
+  renderGateOrApp, renderGate, submitGate, introWaHref, renderProfile, saveProfile, weekschemaWarningHtml, isWeekschemaField,
 } from '../ui-profile.js';
 
 const dom = installFakeDom();
@@ -290,6 +290,32 @@ test('readFamilyForm returns the chosen type for the coordinator form only', () 
   assert.equal('familyType' in readFamilyForm('me'), false, 'a parent saving their own family never changes the type');
   dom.el('coord_familyType').value = 'vast'; assert.equal(readFamilyForm('coord').familyType, 'vast');
   dom.el('coord_familyType').value = 'rubbish'; assert.equal('familyType' in readFamilyForm('coord'), false);
+});
+
+console.log('\n=== WhatsApp-inlogbericht (Beheer) ===');
+test('introWaHref: fixed "Hi!" intro to the number, with app link and code, never a parent name', () => {
+  const href = introWaHref('06-12345678', 'ABCD1234');
+  assert.match(href, /^https:\/\/wa\.me\/31612345678\?text=/);
+  const msg = decodeURIComponent(href.split('?text=')[1]);
+  assert.match(msg, /^Hi! /); assert.match(msg, /mveen\.github\.io\/AZ-Carpool/); assert.match(msg, /ABCD1234/);
+  assert.doesNotMatch(msg, /Piet|ouder/i);
+});
+test('introWaHref: no code -> generic text; no number -> no link', () => {
+  assert.doesNotMatch(decodeURIComponent(introWaHref('0612345678', '').split('?text=')[1]), /: $/);
+  assert.equal(introWaHref('', 'X'), ''); assert.equal(introWaHref('abc', 'X'), '');
+});
+test('Beheer form shows a WhatsApp icon (no button) after each phone field; Mijn gezin form shows none', () => {
+  sampleCoordinatorState();
+  const f = { ...sampleParentState().families.f2, parentPhone1: '0611111111', parentPhone2: '' };
+  const html = familyFormHtml('coord', f);
+  assert.match(html, /data-waintro="1" href="https:\/\/wa\.me\/31611111111/);
+  assert.match(html, /data-waintro="2" hidden/);
+  assert.doesNotMatch(familyFormHtml('me', f), /waIntro/);
+});
+test('Mijn gezin labels Tel.nr. 1 as receiving WhatsApp messages; Beheer keeps the plain label', () => {
+  const f = sampleParentState().families.f2;
+  assert.match(text(familyFormHtml('me', f)), /Tel\.nr\. 1 \(ontvangt WhatsApp-berichtjes\)/);
+  assert.doesNotMatch(text(familyFormHtml('coord', f)), /ontvangt WhatsApp/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

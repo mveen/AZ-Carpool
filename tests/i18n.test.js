@@ -132,3 +132,9 @@ test('the removed shift map-button texts are gone', () => {
   assert.equal(Object.prototype.hasOwnProperty.call(nl, 'loc.mapButton'), false);
   assert.equal(Object.prototype.hasOwnProperty.call(nl, 'loc.mapLabel'), false);
 });
+
+test('WhatsApp login intro texts start with "Hi!" and carry the app link', () => {
+  assert.match(t('profile.wa_intro_text', { url: 'U', code: 'C' }), /^Hi! .*U[\s\S]*C/);
+  assert.match(t('profile.wa_intro_text_nocode', { url: 'U' }), /^Hi! /);
+  assert.equal(t('profile.tel_nr_1_wa'), 'Tel.nr. 1 (ontvangt WhatsApp-berichtjes)');
+});
