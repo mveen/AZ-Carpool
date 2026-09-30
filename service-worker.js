@@ -2,8 +2,9 @@
 // NETWORK-FIRST on purpose: an online user must always get the current deployed
 // files. The cache exists only so the app still opens (to whatever was last seen)
 // when there's genuinely no connection — it must never mask a real update.
-// Bump CACHE_NAME whenever the asset list below changes, so old caches are dropped.
-const CACHE_NAME = 'az-carpool-v15';
+// Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
+// signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
+const CACHE_NAME = 'az-carpool-v16';
 const ASSETS = [
   './',
   './index.html',

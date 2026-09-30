@@ -122,12 +122,28 @@ export function bootstrap(){
     if(btn) btn.onclick=cycleTheme;
   })();
 
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); } });
+  let swReg = null;
+  const checkForAppUpdate = ()=>{ if(swReg) swReg.update().catch(()=>{}); };
+
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); checkForAppUpdate(); } });
 
   setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); }, 60*1000);
 
   if('serviceWorker' in navigator){
-    navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js').catch(()=>{});
+    // A phone keeps the app alive in the background, so the browser rarely re-checks for a new version on its own.
+    // Ask for it whenever the app comes to the foreground (tab switch, back from another app). A new service worker
+    // takes over at once (skipWaiting + claim); when that happens we reload so the new files run. No reload on the
+    // very first install (nothing was controlling the page yet) and never more than once.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+      if(!hadController || reloaded) return;
+      reloaded = true;
+      location.reload();
+    });
+    navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js')
+      .then(reg=>{ swReg = reg; checkForAppUpdate(); })
+      .catch(()=>{});
   }
 
   window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); S.deferredInstallPrompt=e; renderProfile(); });

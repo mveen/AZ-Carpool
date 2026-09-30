@@ -165,7 +165,8 @@ Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {place
 1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `period.js`; earlier: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
 2. GitHub Pages redeploys in about 60 seconds.
 3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v9`) then replaces the old cache.
+4. Open the app once online. The service worker (cache `az-carpool-v14`) then replaces the old cache.
+5. **Always bump `CACHE_NAME` in `service-worker.js` on every deploy.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
 
 ### Manual smoke test on a phone (before every go-live)
 Automated tests cover logic and page output, but not a real phone, real Firebase, or the real WhatsApp app. Check these on a mobile browser:
