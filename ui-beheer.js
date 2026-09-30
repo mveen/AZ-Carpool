@@ -9,7 +9,8 @@ import { esc, foldCards, hapticTap, locationsCfg, phIcon, showToast, twoStepConf
 import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
-import { db, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodHasData, recordLastUpdate, saveCoordFamily, savePeriodDoc } from './data.js';
+import { db, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodHasData, recordLastUpdate, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
+import { backupFileName, buildBackupCsv, parseBackup, planRestore } from './family-backup.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
@@ -99,6 +100,95 @@ export async function movePriority(shiftKeyVal,ids,id,delta){
   if(!db){showToast(t('data.geen_verbinding_met_opslag'));return;}
   try{ await db.doc("settings/priority").set({...S.shiftPriority,[shiftKeyVal]:map}); showToast(t('beheer.volgorde_opgeslagen')); }
   catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
+}
+
+// Back-up gezinnen: download all families as one CSV, or restore (overwrite) from such a file. The file is checked completely first;
+// what was read waits in `pendingBackup` (module variable, so a live update of the Beheer tab does not lose it) until the coordinator confirms.
+let pendingBackup = null;
+const MAX_SHOWN_ERRORS = 8;
+
+export function familyBackupCardHtml(){
+  let pending = '';
+  if(pendingBackup && pendingBackup.errors){
+    const shown = pendingBackup.errors.slice(0, MAX_SHOWN_ERRORS).map(e=>`<li>${esc(e.line? t('backup.line',{p1:e.line,p2:t(e.key,e.params)}) : t(e.key,e.params))}</li>`).join('');
+    const more = pendingBackup.errors.length - MAX_SHOWN_ERRORS;
+    pending = `<div class="group warning" id="backupPending" style="margin-top:10px">
+      <div class="fitbad">${phIcon('warning')} ${t('backup.errors_title')}</div>
+      <ul style="margin:6px 0 8px 18px;padding:0;font-size:14px">${shown}${more>0? `<li>${t('backup.errors_more',{p1:more})}</li>` : ''}</ul>
+      <button type="button" class="btn small secondary" id="backupCancel">${t('backup.cancel')}</button>
+    </div>`;
+  } else if(pendingBackup){
+    const plan = pendingBackup.plan;
+    const fresh = plan.items.filter(i=>i.isNew).length;
+    const coordName = plan.coordinatorFamilyId && plan.items.find(i=>i.id===plan.coordinatorFamilyId);
+    pending = `<div class="group" id="backupPending" style="margin-top:10px">
+      <div><strong>${t('backup.preview_title',{p1:esc(pendingBackup.fileName)})}</strong></div>
+      <p style="margin:6px 0">${t('backup.preview_summary',{p1:plan.items.length-fresh,p2:fresh})}${plan.untouched.length? ' '+t('backup.preview_untouched',{p1:plan.untouched.length}) : ''}</p>
+      ${coordName? `<p class="fitbad" style="margin:6px 0">${phIcon('warning')} ${t('backup.preview_coordinator',{p1:esc(coordName.data.parentName||coordName.data.girlName)})}</p>` : ''}
+      <div class="rowflex" style="gap:8px;justify-content:flex-start">
+        <button type="button" class="btn small" id="backupConfirm">${t('backup.confirm')}</button>
+        <button type="button" class="btn small secondary" id="backupCancel">${t('backup.cancel')}</button>
+      </div>
+    </div>`;
+  }
+  return `<div class="card" id="backupCard">
+      <h2>${t('backup.title')}</h2>
+      <p class="muted">${t('backup.intro')}</p>
+      <div class="rowflex" style="gap:8px;justify-content:flex-start;flex-wrap:wrap">
+        <button type="button" class="btn secondary" id="backupMake">${t('backup.make')}</button>
+        <button type="button" class="btn secondary" id="backupRestore">${t('backup.restore')}</button>
+        <input type="file" id="backupFile" accept=".csv,text/csv,text/plain" style="display:none">
+      </div>
+      ${pending}
+    </div>`;
+}
+
+export function downloadBackup(){
+  const coordId = S.coordinatorConfig && S.coordinatorConfig.familyId;
+  const blob = new Blob([buildBackupCsv(S.families, coordId)], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = backupFileName(); document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  showToast(t('backup.made',{p1:Object.keys(S.families).length}));
+}
+
+// Reads the chosen file's text, checks it and shows either the problems or the preview. Nothing is written yet.
+export function prepareRestore(fileName, text){
+  const res = parseBackup(text);
+  if(!res.ok){ pendingBackup = { fileName, errors:res.errors }; return; }
+  const plan = planRestore(res.rows, S.families, S.coordinatorConfig && S.coordinatorConfig.familyId, d=>{
+    const slug = (d.girlName||d.parentName||'gezin').toLowerCase().replace(/[^a-z0-9]+/g,'-').slice(0,30) || 'gezin';
+    return 'manual-'+slug+'-'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+  });
+  pendingBackup = plan.ok? { fileName, plan } : { fileName, errors:plan.errors };
+}
+
+export async function confirmRestore(){
+  const plan = pendingBackup && pendingBackup.plan;
+  if(!plan) return false;
+  const ok = await restoreFamilies(plan);
+  if(ok) pendingBackup = null;
+  renderBeheer();
+  return ok;
+}
+
+export function cancelRestore(){ pendingBackup = null; renderBeheer(); }
+
+export function wireFamilyBackupCard(){
+  const mk=document.getElementById('backupMake'); if(mk) mk.onclick=downloadBackup;
+  const rs=document.getElementById('backupRestore'), file=document.getElementById('backupFile');
+  if(rs && file) rs.onclick=()=>{ file.value=''; file.click(); };
+  if(file) file.onchange=async ()=>{
+    const f = file.files && file.files[0];
+    if(!f) return;
+    try{ prepareRestore(f.name, await f.text()); }
+    catch(e){ pendingBackup = null; showToast(t('backup.read_error')); }
+    renderBeheer();
+  };
+  const ok=document.getElementById('backupConfirm');
+  if(ok) ok.onclick=()=>twoStepConfirm(ok, t('backup.confirm_again'), confirmRestore);
+  const cn=document.getElementById('backupCancel'); if(cn) cn.onclick=cancelRestore;
 }
 
 // US-02: one family per weekday who handles change requests. Stored as familyIds in settings/dayCoordinators;
@@ -432,6 +522,7 @@ export function renderBeheer(){
       <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
       ${renderPrefsCard()}
     </div>
+    ${familyBackupCardHtml()}
     ${dayCoordinatorsCardHtml()}
     ${noticeCardHtml()}
     ${periodsCardHtml()}
@@ -514,6 +605,7 @@ export function renderBeheer(){
     const locAdd=document.getElementById('locAdd'); if(locAdd) locAdd.onclick=()=>{ hapticTap(); addLocationPlace(); };
     document.querySelectorAll('[data-locremove]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn, t('beheer.zeker_nogmaals_klikken'), ()=>removeLocationPlace(btn.dataset.locremove)));
     wireImpactCard(renderBeheer);
+    wireFamilyBackupCard();
     const atp=document.getElementById('addTogetherPref');
     if(atp) atp.onclick=async ()=>{
       const ids=[...document.querySelectorAll('.prefTogetherPick:checked')].map(c=>c.value);

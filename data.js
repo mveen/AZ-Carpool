@@ -524,6 +524,26 @@ export async function saveCoordFamily(){
   catch(e){showToast(t('data.opslaan_mislukt')+(e&&e.message||e));}
 }
 
+// Back-up restore (Beheer → Back-up gezinnen): writes the planned families (family-backup.js planRestore) in ONE batch, so a restore is
+// all-or-nothing. Fields that are not in the back-up (timeChanges, invite codes, links) stay untouched (merge). Returns true when stored.
+export async function restoreFamilies(plan){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  if(!S.canEdit){ showToast(t('backup.err.coordinator_only')); return false; }
+  if(!plan || !plan.ok || !plan.items.length){ showToast(t('backup.err.nothing')); return false; }
+  try{
+    const batch = db.batch();
+    plan.items.forEach(i=>batch.set('families/'+i.id, i.data, {merge:true}));
+    if(plan.coordinatorFamilyId) batch.set('config/coordinator', {familyId:plan.coordinatorFamilyId});
+    await batch.commit();
+    if(plan.coordinatorFamilyId){
+      S.coordinatorConfig = {familyId:plan.coordinatorFamilyId}; S.coordinatorExists = true;
+      recomputeCanEdit();
+    }
+    showToast(t('backup.restored',{p1:plan.items.length}));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
 // Invite codes live in /invites/{code} (doc id = the code), not on the family doc, so linked
 // parents can't read other families' codes. Returns false (with a toast) when refused.
 export async function saveInviteCode(familyId, code){

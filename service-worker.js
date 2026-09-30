@@ -10,6 +10,7 @@ const ASSETS = [
   './index.html',
   './planning.js',
   './period.js',
+  './family-backup.js',
   './app.js',
   './state.js',
   './constants.js',
