@@ -323,6 +323,16 @@ input[type=time].periodTime.changed{border-color:var(--warn);background:var(--wa
 .periodPill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);white-space:nowrap}
 .periodPill.todo{background:var(--warn2);color:var(--warn-text)}
 .periodPill.done{background:var(--ok2);color:var(--ok)}
+.periodChips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.periodChip{border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 2px;text-align:center;font-size:11px;white-space:nowrap;background:var(--card)}
+.periodChipDay{display:block;font-weight:800;font-size:12px}
+.periodPills{flex-wrap:wrap}
+.periodTimeRow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:14px;border-bottom:1px solid var(--border)}
+.periodChanged{color:var(--warn-text);font-weight:800}
+.periodLbl{display:block;font-size:12px;color:var(--muted);margin:8px 0 2px}
+.periodSel{width:100%;min-height:44px;font-size:14px}
+.periodRider{display:flex;align-items:center;gap:8px;margin-top:6px}
+.periodRider .periodSel{flex:1;min-width:0}
 .periodSummary{display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:14px}
 .devAlert .devAlertTitle{font-size:14px;font-weight:800;color:var(--warn-text);margin:0}
 .devAlert .devAlertBody{font-size:12px;color:var(--warn-text);margin:4px 0 0}

@@ -198,5 +198,38 @@ test('US-21: with a real API key a match that is still being calculated says so;
   assert.doesNotMatch(matchInfoHtml(awayM), /matchDist/);
 });
 
+console.log('\n=== during a period with a temporary rooster ===');
+const P40 = { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' };   // the week of the frozen "now" (Wed 30 Sep 2026)
+const shift40 = (iso, direction, cars) => ({ periodFirstDay: '2026-09-28', date: iso, direction, cars, madeAt: 1, by: 'x' });
+// f2 is out on Monday and hands in Tuesday 09:00 / 12:00; the temporary rooster is made for Monday (nobody) and Tuesday (Kees drives her).
+const period40 = () => ({
+  period: P40,
+  periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-28': { out: true }, '2026-09-29': { heen: '09:00', terug: '12:00' } } } },
+  periodCars: {
+    '2026-09-28_2026-09-28_heen': shift40('2026-09-28', 'heen', []), '2026-09-28_2026-09-28_terug': shift40('2026-09-28', 'terug', []),
+    '2026-09-28_2026-09-29_heen': shift40('2026-09-29', 'heen', [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '08:00' }]),
+    '2026-09-28_2026-09-29_terug': shift40('2026-09-29', 'terug', [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '12:00' }]),
+  },
+});
+test('a day shows the handed-in times and the car of the temporary rooster', () => {
+  const s = text(render({ ...period40(), deviations: {} }));
+  assert.match(s, /09:00 \/ 12:00/); assert.match(s, /Terug/); assert.match(s, /12:00/);
+  assert.match(s, /Rijdt mee met: Kees de Vries/);
+});
+test('a day she does not ride is gone, and is not reported as "niet ingepland"', () => {
+  const s = text(render({ ...period40(), deviations: {} }));
+  assert.doesNotMatch(s, /Maandag · Heen/); assert.doesNotMatch(s, /MA 28/);
+});
+test('outside the days with a temporary rooster the week is exactly as before', () => {
+  const s = text(render({ ...period40(), deviations: {} }));
+  assert.match(s, /Donderdag · Heen \(10:15\)/); assert.match(s, /Vrijdag · Heen \(11:00\)/);
+  assert.equal(text(render({ period: null })), text(render({})));
+});
+test('a one-off change from Wijzigen goes before the temporary rooster', () => {
+  const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
+  const s = text(render({ ...period40(), deviations: dev }));
+  assert.match(s, /Rijdt mee met: Jan Jansen/); assert.match(s, /Wijziging actief/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

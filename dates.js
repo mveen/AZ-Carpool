@@ -80,3 +80,14 @@ export function isoRangeLabel(first, last){
   const dm = d => d.toLocaleDateString(locale(),{day:'numeric',month:'short'}).replace('.','');
   return (m1===m2 && y1===y2)? `${a.getDate()} – ${dm(b)}` : `${dm(a)} – ${dm(b)}`;
 }
+
+// The date ('YYYY-MM-DD') of a weekday key ('Ma'..'Vr') in an ISO week key ('2026-W40'); null for anything else.
+// Works from the week key, not from the clock, so it always agrees with the week the deviations belong to.
+export function weekKeyDayIso(weekKey, day){
+  const m = /^(\d{4})-W(\d{2})$/.exec(String(weekKey||''));
+  const idx = DAYS.findIndex(([k]) => k===day);
+  if(!m || idx<0) return null;
+  const jan4 = new Date(Date.UTC(+m[1], 0, 4));
+  const monday = new Date(jan4.getTime() - ((jan4.getUTCDay()+6)%7)*86400000 + (+m[2]-1)*7*86400000);
+  return new Date(monday.getTime() + idx*86400000).toISOString().slice(0,10);
+}

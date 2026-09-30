@@ -135,5 +135,18 @@ await testAsync('confirming saves for real without asking again, and stores no p
   assert.deepEqual(fake.collection('deviations').map(e => e[0]), ['Ma_heen']);
   assert.deepEqual(fake.collection('settings').map(e => e[0]), ['features', 'lastUpdateDeviation']);   // no preview document
 });
+console.log('\n=== during a period with a temporary rooster ===');
+await testAsync('the preview plans with the handed-in times of that shift (a smoke test of the whole path)', async () => {
+  useFakeDb({ 'settings/features': { impactPreview: true } });
+  sampleParentState({ period: { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }, deviations: {},
+    periodCars: { '2026-09-28_2026-09-28_heen': { periodFirstDay: '2026-09-28', date: '2026-09-28', direction: 'heen', madeAt: 1, by: 'x', cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }] } },
+    periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-28': { heen: '15:00', terug: '17:30' } } } } });
+  const added = []; const realCreate = dom.doc.createElement; dom.doc.createElement = () => { const e = realCreate(); e.querySelector = () => ({ onclick: null, focus() {} }); e.querySelectorAll = () => []; added.push(e); return e; };
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30' }, { driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '14:00' }];
+  const held = await withFakeNowAsync(NOW, () => impactGate('Ma', 'heen', cars, async () => true, null));
+  dom.doc.createElement = realCreate;
+  assert.equal(held, true); assert.ok(added.length && /Opslaan/.test(added[0].innerHTML));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

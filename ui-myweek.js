@@ -7,7 +7,7 @@ import { distanceInfo, hasApiKey } from './distance.js';
 import { mapLink } from './locations.js';
 import { S } from './state.js';
 import { myFamilyId } from './coordinator.js';
-import { activeDeviation, effectiveCars, fam, girlName, groupsFor, ovGirlsFor, plainGirlName, seats } from './rides.js';
+import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, seats } from './rides.js';
 import { dayChanges } from './day-changes.js';
 import { DAYS, DIR_TEXT, KM_COST_EUR, WHATSAPP_SVG, todayKey } from './constants.js';
 import { dateForWeekday, dayUp, effectivePlanningDate, startOfWeek } from './dates.js';
@@ -72,7 +72,7 @@ export function renderMyWeek(){
   const myFam = fam(myId);
 
   function subride(day,direction,label){
-    let s = myFam.schedule && myFam.schedule[day] && myFam.schedule[day][direction];
+    let s = rideTime(myId, day, direction);   // the handed-in time where the temporary rooster applies, else the standard time
     const cars = effectiveCars(day,direction);
     const isOvMe = direction==='terug' && ovGirlsFor(day).includes(myId);   // US-06: home by public transport
     // Flex: no standard schedule; a ride shows only on days she signed up for (in a car, or driving).
@@ -108,7 +108,7 @@ export function renderMyWeek(){
       statusClass = statusClass? statusClass : ''; // the driving BORDER below reflects the daughter's own car only, not this second one
     }
     // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
-    const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(groupsFor(day,direction).map(([,g])=>g), cars).length>0;
+    const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), cars).length>0;
     const devTag = differsFromStandard? `<div class="subrideStatus changed">${phIcon('lightning')} ${t('myweek.wijziging_actief')}</div>` : '';
     // US-15: where the ride starts and ends. US-06: parent toggle "Terug met OV" (no reason needed), not for days already past.
     const ownCar = daughterIdx>=0? cars[daughterIdx] : null;
@@ -156,8 +156,8 @@ export function renderMyWeek(){
     const terugHtml = subride(k,'terug',DIR_TEXT.terug);
     const matchHtml = matchRidesFor(dateForWeekday(k));
     if(!heenHtml && !terugHtml && !matchHtml) return '';
-    const heenTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].heen) || '';
-    const terugTime = (myFam.schedule&&myFam.schedule[k]&&myFam.schedule[k].terug) || '';
+    const heenTime = rideTime(myId, k, 'heen') || '';
+    const terugTime = rideTime(myId, k, 'terug') || '';
     const dateLabel = dateForWeekday(k).toLocaleDateString(locale(),{day:'numeric',month:'short'});
     const onlyMatch = !heenHtml && !terugHtml;
     return `<div class="dayCard ${isToday?'today':''} ${matchHtml?'matchDay':''} ${onlyMatch?'matchOnly':''}">
@@ -220,7 +220,7 @@ export function renderMyWeek(){
   DAYS.forEach(([k,label])=>{
     if(dateForWeekday(k) < todayMidnight) return; // days already past
     ['heen','terug'].forEach(direction=>{
-      const s = myFam.schedule && myFam.schedule[k] && myFam.schedule[k][direction];
+      const s = rideTime(myId, k, direction);
       if(!s || isFlex(myFam)) return; // Flex is never auto-planned, so nothing is 'missing'
       if(effectiveCars(k,direction).some(c=>(c.girlIds||[]).includes(myId))) return;
       if(direction==='terug' && ovGirlsFor(k).includes(myId)) return;   // goes home by public transport

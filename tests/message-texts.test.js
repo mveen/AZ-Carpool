@@ -253,5 +253,40 @@ test('Mijn week message says "terug met OV" for the marked day', () => {
   assert.match(s, /MA 28 — heen: 08:30 \(nog niet ingepland\) \| terug: terug met OV/);
 });
 
+console.log('\n=== during a period with a temporary rooster ===');
+const P40 = { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' };   // the week of the frozen "now" (Wed 30 Sep 2026)
+const shift40 = (iso, direction, cars) => ({ periodFirstDay: '2026-09-28', date: iso, direction, cars, madeAt: 1, by: 'x' });
+// f2 is out on Monday and hands in Tuesday 09:00 / 12:00; the temporary rooster is made for Monday (nobody) and Tuesday (Kees drives her).
+const period40 = () => ({
+  period: P40,
+  periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-28': { out: true }, '2026-09-29': { heen: '09:00', terug: '12:00' } } } },
+  periodCars: {
+    '2026-09-28_2026-09-28_heen': shift40('2026-09-28', 'heen', []), '2026-09-28_2026-09-28_terug': shift40('2026-09-28', 'terug', []),
+    '2026-09-28_2026-09-29_heen': shift40('2026-09-29', 'heen', [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '08:00' }]),
+    '2026-09-28_2026-09-29_terug': shift40('2026-09-29', 'terug', [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '12:00' }]),
+  },
+});
+test('the Mijn week message uses the handed-in times; a day she does not ride is left out; a one-off change still counts', () => {
+  sampleParentState(period40());
+  withFakeNow(NOW, () => assert.equal(buildMyWeekWhatsAppMessage(), [
+    'Carpool deze week – Jahaimy:',
+    'DI 29 (gewijzigd) — heen: 09:00 (nog niet ingepland) | terug: 12:00 met Kees de Vries',   // Tuesday heen: the one-off change (f3 drives f1 and f4) goes before the temporary rooster
+    'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
+    'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
+    '', 'https://mveen.github.io/AZ-Carpool/#myweek',
+  ].join('\n')));
+});
+test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app gives it, else from the standard schedule', () => {
+  const c = ctx({ myId: 'f2', myFam, matchRides: [], rideTime: (id, d, dir) => (d === 'Ma' ? '' : d === 'Di' && dir === 'heen' ? '09:00' : '') });
+  const text = buildMyWeekMessageFrom(c);
+  assert.match(text, /DI 29 — heen: 09:00 \(nog niet ingepland\) \| terug: –/); assert.doesNotMatch(text, /MA 28/);
+  assert.match(buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, matchRides: [] })), /MA 28 — heen: 08:30/);
+});
+test('the conclusie compares with the temporary rooster, not with the standard rooster', () => {
+  sampleParentState({ ...period40(), deviations: {} });
+  const msg = withFakeNow(NOW, () => buildDayWhatsAppMessage('Di'));
+  assert.match(msg, /12:00/); assert.match(msg, /Kees de Vries/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

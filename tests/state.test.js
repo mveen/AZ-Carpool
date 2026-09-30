@@ -56,6 +56,8 @@ test('handed-in period times: nothing loaded, no form open, no state remembered'
   assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null); assert.equal(S.periodView, null); assert.equal(S.periodPhaseKey, null);
 });
 
+test('temporary rooster: no shifts loaded, no date open', () => { assert.deepEqual(S.periodCars, {}); assert.equal(S.periodDay, null); });
+
 test('new fields: places, calculated distances and the impact switch start empty', () => {
   assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false); assert.equal(S.impactPreview, null);
 });

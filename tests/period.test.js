@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import './test-support.js';
-import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress } from '../period.js';
+import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress, periodShiftId, periodMoveGirl, periodSetDriver } from '../period.js';
 
 // The design example: Herfstvakantie, ma 26 okt - vr 30 okt 2026, opens wo 14 okt, deadline vr 16 okt 12:00.
 const GOOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
@@ -208,6 +208,51 @@ test('periodProgress counts the families that handed in for THIS period; Flex fa
 test('periodProgress copes with nothing', () => {
   assert.deepEqual(periodProgress(GOOD, null, null), { total: 0, done: 0, rows: [] });
   assert.equal(periodProgress(GOOD, { f1: null, f2: {} }, undefined).total, 1);
+});
+
+console.log('\n=== the temporary rooster (step 4) ===');
+test('periodShiftId: one document per period, date and direction', () => {
+  assert.equal(periodShiftId(GOOD, '2026-10-27', 'terug'), '2026-10-26_2026-10-27_terug');
+});
+const carsBase = () => [{ driverFamilyId: 'd1', girlIds: ['a', 'b'], departureTime: '09:00' }, { driverFamilyId: 'd2', girlIds: ['c'], departureTime: '10:00' }];
+const dep = ids => 'T' + ids.join('');
+const cap = id => ({ d1: 3, d2: 1 })[id] ?? null;
+test('periodMoveGirl: to another car; both cars get a new departure time', () => {
+  const r = periodMoveGirl(carsBase(), 'a', 'car:1', dep, id => ({ d1: 3, d2: 2 })[id]);
+  assert.equal(r.error, null); assert.deepEqual(r.cars, [{ driverFamilyId: 'd1', girlIds: ['b'], departureTime: 'Tb' }, { driverFamilyId: 'd2', girlIds: ['c', 'a'], departureTime: 'Tca' }]);
+});
+test('periodMoveGirl: a full car is refused and nothing changes', () => {
+  const cars = carsBase(), r = periodMoveGirl(cars, 'a', 'car:1', dep, cap);
+  assert.deepEqual(r.error, { key: 'period.rooster.err.full', p1: 1, p2: 1 }); assert.equal(r.cars, cars);
+});
+test('periodMoveGirl: out of every car ("niet ingedeeld"); an emptied car disappears', () => {
+  const r = periodMoveGirl(carsBase(), 'c', 'none', dep, cap);
+  assert.equal(r.error, null); assert.deepEqual(r.cars, [{ driverFamilyId: 'd1', girlIds: ['a', 'b'], departureTime: '09:00' }].map(c => ({ ...c, departureTime: '09:00' })));
+});
+test('periodMoveGirl: into a new car with that driver', () => {
+  const r = periodMoveGirl(carsBase(), 'b', 'new:d3', dep, cap);
+  assert.deepEqual(r.cars, [{ driverFamilyId: 'd1', girlIds: ['a'], departureTime: 'Ta' }, { driverFamilyId: 'd2', girlIds: ['c'], departureTime: '10:00' }, { driverFamilyId: 'd3', girlIds: ['b'], departureTime: 'Tb' }]);
+});
+test('periodMoveGirl: a girl who is in no car yet can be placed; the input is never changed', () => {
+  const cars = carsBase(), snapshot = JSON.stringify(cars);
+  const r = periodMoveGirl(cars, 'z', 'car:0', dep, cap);
+  assert.deepEqual(r.cars[0].girlIds, ['a', 'b', 'z']); assert.equal(JSON.stringify(cars), snapshot);
+  assert.deepEqual(periodMoveGirl([], 'z', 'new:d1', dep, cap).cars, [{ driverFamilyId: 'd1', girlIds: ['z'], departureTime: 'Tz' }]);
+});
+test('periodMoveGirl: an unknown target or car is an error, not a silent change', () => {
+  assert.equal(periodMoveGirl(carsBase(), 'a', 'car:9', dep, cap).error.key, 'period.rooster.err.unknown');
+  assert.equal(periodMoveGirl(carsBase(), 'a', 'sideways', dep, cap).error.key, 'period.rooster.err.unknown');
+  assert.equal(periodMoveGirl(carsBase(), 'a', '', dep, cap).error.key, 'period.rooster.err.unknown');
+});
+test('periodSetDriver: another driver; not one that already drives another car; not one with too few seats', () => {
+  assert.deepEqual(periodSetDriver(carsBase(), 1, 'd9', cap).cars[1].driverFamilyId, 'd9');
+  assert.equal(periodSetDriver(carsBase(), 1, 'd1', cap).error.key, 'period.rooster.err.driverBusy');
+  assert.deepEqual(periodSetDriver(carsBase(), 0, 'd9', id => ({ d9: 1 })[id]).error, { key: 'period.rooster.err.full', p1: 2, p2: 1 });
+  assert.equal(periodSetDriver(carsBase(), 0, '', cap).cars[0].driverFamilyId, '', 'no driver is allowed: it shows as a warning');
+  assert.equal(periodSetDriver(carsBase(), 5, 'd9', cap).error.key, 'period.rooster.err.unknown');
+});
+test('periodSetDriver keeps the same driver on the same car without complaining', () => {
+  assert.equal(periodSetDriver(carsBase(), 0, 'd1', cap).error, null);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

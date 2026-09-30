@@ -193,6 +193,39 @@ export function planPrimaryAssignment(clusters, priorityDrivers) {
 }
 
 /**
+ * Like planPrimaryAssignment, but never gives up: every cluster that can get a driver gets one (largest first,
+ * drivers in the given priority order). A cluster that is too big for every free driver is not thrown away: the free driver
+ * with the most seats takes the first passengers (earliest first) and the rest is handed back, as are clusters without any
+ * free driver, for the coordinator to solve.
+ *
+ * @param {string[][]} clusters
+ * @param {{id:string,seats:number}[]} priorityDrivers - sorted best-first
+ * @returns {{ assigned: {driverId:string,girlIds:string[]}[], unassigned: string[][] }}
+ */
+export function planPartialAssignment(clusters, priorityDrivers) {
+  const used = new Set();
+  const order = clusters.map((c, i) => i).sort((a, b) => clusters[b].length - clusters[a].length);
+  const byIndex = {}, unassigned = [];
+  for (const i of order) {
+    const cluster = clusters[i];
+    const free = (priorityDrivers || []).filter(d => !used.has(d.id));
+    let driver = free.find(d => d.seats >= cluster.length);
+    if (!driver) {
+      // too big for everybody: the roomiest free driver takes as many as fit (the first in the cluster), the rest goes back
+      driver = free.filter(d => d.seats > 0).sort((a, b) => b.seats - a.seats)[0];
+      if (!driver) { unassigned.push(cluster); continue; }
+      used.add(driver.id);
+      byIndex[i] = { driverId: driver.id, girlIds: cluster.slice(0, driver.seats) };
+      unassigned.push(cluster.slice(driver.seats));
+      continue;
+    }
+    used.add(driver.id);
+    byIndex[i] = { driverId: driver.id, girlIds: cluster };
+  }
+  return { assigned: clusters.map((c, i) => byIndex[i]).filter(Boolean), unassigned };
+}
+
+/**
  * All alternative full driver-pair assignments for a 2-cluster shift (every
  * distinct pair of available drivers that can cover both clusters, in either
  * orientation). Only meaningful for exactly 2 clusters — 1-cluster shifts just

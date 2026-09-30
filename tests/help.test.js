@@ -93,6 +93,14 @@ test('the coordinator articles explain the overview per family and that the coor
   assert.equal(searchHelp('namens een ouder invullen', { canEdit: true })[0].id, 'beheer-periode');
   assert.equal(searchHelp('namens een ouder invullen', { canEdit: false }).some(a => a.coordinatorOnly), false);
 });
+test('the coordinator finds how to make the temporary rooster; parents are told what it is and that Wijzigen goes first', () => {
+  const c = allText(findArticle('periode-rooster', { canEdit: true }));
+  ['Tijdelijk rooster maken', 'Opnieuw indelen', 'Alles opnieuw indelen', 'Niet ingedeeld', 'prullenbak', 'Wijzigen gaan altijd voor'].forEach(w => assert.ok(c.includes(w), w));
+  assert.equal(searchHelp('tijdelijk rooster maken', { canEdit: true }).some(a => a.id === 'periode-rooster'), true);
+  assert.equal(findArticle('periode-rooster', { canEdit: false }), null);
+  assert.match(allText(findArticle('periode-tijden')), /tijdelijk rooster voor de periode/); assert.match(allText(findArticle('rooster')), /derde knop met de naam van de periode/);
+  assert.equal(searchHelp('tijdelijk rooster', { canEdit: false }).some(a => a.coordinatorOnly), false);
+});
 test('accents, capitals and word endings do not matter', () => {
   assert.equal(ids('DAGCOORDINATOR')[0], 'dagcoordinator');
   assert.equal(ids('dagcoördinator')[0], 'dagcoordinator');

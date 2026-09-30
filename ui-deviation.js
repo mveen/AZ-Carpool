@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { FREE_TEXT_MAX, freeText, shiftDefaultId } from './locations.js';
-import { activeDeviation, computeDepartureTime, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats } from './rides.js';
+import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, buildWhatsAppMessage } from './message-texts.js';
@@ -257,7 +257,7 @@ export function attachDeviationHandlers(){
     const {day,direction,caridx,girl}=btn.dataset; const idx=+caridx;
     const cars=effectiveCars(day,direction);
     const newGirlIds=cars[idx].girlIds.filter(id=>id!==girl);
-    cars[idx]={...cars[idx], girlIds:newGirlIds, departureTime: computeDepartureTime(day,direction,newGirlIds)};
+    cars[idx]={...cars[idx], girlIds:newGirlIds, departureTime: computeRideDeparture(day,direction,newGirlIds)};
     const ok = await saveDeviationCars(day,direction,cars);
     if(ok) showToast(girlName(girl)+t('deviation.verwijderd_uit_deze_auto'));
   });
@@ -269,8 +269,8 @@ export function attachDeviationHandlers(){
     const newTo=[...cars[toIdx].girlIds, girl];
     const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
     const overfull = toSeatsAvail!=null && newTo.length>toSeatsAvail;
-    cars[fromIdx]={...cars[fromIdx], girlIds:newFrom, departureTime: computeDepartureTime(day,direction,newFrom)};
-    cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
+    cars[fromIdx]={...cars[fromIdx], girlIds:newFrom, departureTime: computeRideDeparture(day,direction,newFrom)};
+    cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeRideDeparture(day,direction,newTo)};
     const ok = await saveDeviationCars(day,direction,cars);
     if(ok){
       if(overfull) showToast(t('deviation.deze_auto_zit_nu_vol', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
@@ -284,7 +284,7 @@ export function attachDeviationHandlers(){
     const newTo=[...cars[toIdx].girlIds, girl];
     const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
     const overfull = toSeatsAvail!=null && newTo.length>toSeatsAvail;
-    cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeDepartureTime(day,direction,newTo)};
+    cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeRideDeparture(day,direction,newTo)};
     const ok = await saveDeviationCars(day,direction,cars);
     if(ok){
       if(overfull) showToast(t('deviation.deze_auto_zit_nu_vol_2', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});

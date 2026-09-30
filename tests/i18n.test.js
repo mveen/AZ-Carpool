@@ -81,6 +81,10 @@ test('the Wijzigen tab has a badge for the period task, and the period texts fil
   assert.equal(t('period.task.body', { p1: 'Herfstvakantie', p2: '26 – 30 okt', p3: 'Jahaimy' }), 'Herfstvakantie · 26 – 30 okt. Geef door hoe laat Jahaimy heen en terug moet, of dat ze niet meerijdt.');
   assert.equal(t('period.entry.err.order', { p1: 'dinsdag 27 okt' }), 'dinsdag 27 okt: Terug moet later zijn dan Heen.');
   assert.equal(t('period.done.heen', { p1: '10:30' }), 'heen 10:30');
+  assert.equal(t('dayCoord.waText', { when: 'morgen' }), 'Hi! Een vraag over de carpool van morgen: ');   // no name in the text
+  assert.equal(t('period.ov.deadlineOpen', { p1: 'vr 16 okt 12:00', p2: 'Lois, Saar' }), 'Deadline vr 16 okt 12:00 · nog niet: Lois, Saar');
+  assert.equal(t('period.ov.handedValue', { p1: 9, p2: 14 }), '9 van 14'); assert.equal(t('period.ov.dayChanges', { p1: 2 }), '2 wijz.');
+  assert.equal(t('period.view.moveTo', { p1: 1, p2: 'Kees de Vries' }), 'Auto 1 · Kees de Vries'); assert.equal(t('period.rooster.err.full', { p1: 4, p2: 3 }), 'Auto vol: 4 van 3 plekken.');
   assert.equal(t('period.coord.progress', { p1: 9, p2: 14, p3: 5 }), '9 van 14 doorgegeven. Nog 5 te gaan.');
   assert.equal(t('period.coord.allDone', { p2: 14 }), 'Alle 14 gezinnen hebben doorgegeven.');
   assert.equal(t('period.form.onBehalf', { p1: 'Piet Pieters', p2: 'Jahaimy' }), 'Je vult in namens Piet Pieters (Jahaimy).');

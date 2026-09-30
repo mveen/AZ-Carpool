@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {
   timeToMinutes, minutesToTime, computeDepartureTime,
-  planClusters, planPrimaryAssignment, planAlternativeAssignments
+  planClusters, planPrimaryAssignment, planAlternativeAssignments, planPartialAssignment
 } from '../planning.js';
 
 let passed = 0, failed = 0;
@@ -274,6 +274,37 @@ test('planPrimaryAssignment returns null when nobody has enough seats', () => {
 });
 test('planPrimaryAssignment returns null with no drivers at all', () => {
   assert.equal(planPrimaryAssignment([['a']], []), null);
+});
+
+// planPartialAssignment: like planPrimaryAssignment, but never gives up
+const drv = (...pairs) => pairs.map(([id, seats]) => ({ id, seats }));
+test('planPartialAssignment: everything fits, the same result as planPrimaryAssignment', () => {
+  const clusters = [['a', 'b', 'c'], ['d']];
+  const r = planPartialAssignment(clusters, drv(['x', 3], ['y', 2]));
+  assert.deepEqual(r.assigned, planPrimaryAssignment(clusters, drv(['x', 3], ['y', 2]))); assert.deepEqual(r.unassigned, []);
+});
+test('planPartialAssignment: the biggest car gets the first driver that has room, the rest follow in priority order', () => {
+  const r = planPartialAssignment([['a'], ['b', 'c', 'd']], drv(['small', 1], ['big', 3], ['mid', 2]));
+  assert.deepEqual(r.assigned, [{ driverId: 'small', girlIds: ['a'] }, { driverId: 'big', girlIds: ['b', 'c', 'd'] }]);
+});
+test('planPartialAssignment: a cluster that is too big for every driver is filled up by the roomiest driver, the rest is handed back', () => {
+  const r = planPartialAssignment([['a', 'b', 'c', 'd'], ['e'], ['f']], drv(['y', 1], ['x', 2]));
+  assert.deepEqual(r.assigned, [{ driverId: 'x', girlIds: ['a', 'b'] }, { driverId: 'y', girlIds: ['e'] }]);
+  assert.deepEqual(r.unassigned, [['c', 'd'], ['f']]);
+});
+test('planPartialAssignment: a cluster nobody has a free seat for is handed back whole', () => {
+  const r = planPartialAssignment([['a', 'b'], ['c']], drv(['x', 2]));
+  assert.deepEqual(r.assigned, [{ driverId: 'x', girlIds: ['a', 'b'] }]); assert.deepEqual(r.unassigned, [['c']]);
+  assert.deepEqual(planPartialAssignment([['a']], drv(['x', 0])), { assigned: [], unassigned: [['a']] }, 'a driver without seats is no driver');
+});
+test('planPartialAssignment: no drivers at all, or nothing to plan', () => {
+  assert.deepEqual(planPartialAssignment([['a']], []), { assigned: [], unassigned: [['a']] });
+  assert.deepEqual(planPartialAssignment([], drv(['x', 3])), { assigned: [], unassigned: [] });
+  assert.deepEqual(planPartialAssignment([['a']], undefined), { assigned: [], unassigned: [['a']] });
+});
+test('planPartialAssignment uses each driver once', () => {
+  const r = planPartialAssignment([['a'], ['b']], drv(['x', 3]));
+  assert.deepEqual(r.assigned.map(a => a.driverId), ['x']); assert.deepEqual(r.unassigned, [['b']]);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

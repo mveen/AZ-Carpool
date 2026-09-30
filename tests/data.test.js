@@ -18,6 +18,7 @@ import {
   createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
+  savePeriodShift, makePeriodRooster, replanPeriodShift, deletePeriodRooster,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -358,6 +359,90 @@ await testAsync('a refused write is reported and nothing changes in the state', 
   const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periodEntries/', 'permission-denied');
   assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), false);
   assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodEntries, {});
+});
+
+console.log('\n=== the temporary rooster (periodCars) ===');
+const shiftOf = (iso, direction, cars) => ({ periodFirstDay: '2026-10-26', date: iso, direction, cars, madeAt: 1, by: 'x' });
+await testAsync('the temporary rooster is loaded live, and cleared when listeners stop', async () => {
+  const doc = shiftOf('2026-10-27', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '12:30' }]);
+  useFakeDb({ ...sampleDbSeed(), 'periodCars/2026-10-26_2026-10-27_terug': doc }); sampleParentState({ families: {}, groups: {}, periodCars: {} });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.periodCars, { '2026-10-26_2026-10-27_terug': doc });
+  await db.doc('periodCars/2026-10-26_2026-10-27_heen').set(shiftOf('2026-10-27', 'heen', [])); await tick();
+  assert.equal(Object.keys(S.periodCars).length, 2);
+  S.periodDay = '2026-10-27'; stopDataListeners(); assert.deepEqual(S.periodCars, {}); assert.equal(S.periodDay, null);
+});
+const PER = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+const coordP = (patch = {}) => sampleCoordinatorState({ period: PER, periodEntries: {}, periodEntriesLoaded: true, periodCars: {}, ...patch });
+const carsX = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f6', '', 'f5'], departureTime: '13:00' }, { driverFamilyId: 'f4', girlIds: [], departureTime: '' }];
+await testAsync('savePeriodShift stores one shift with clean cars (no empty cars, no doubles) and the details the rules expect', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordP();
+  assert.equal(await withFakeNowAsync(NOW, () => savePeriodShift('2026-10-27', 'terug', carsX)), true);
+  const d = fake.get('periodCars/2026-10-26_2026-10-27_terug');
+  assert.deepEqual(Object.keys(d).sort(), ['by', 'cars', 'date', 'direction', 'madeAt', 'periodFirstDay']);
+  assert.deepEqual(d.cars, [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f5'], departureTime: '13:00' }]);
+  assert.equal(d.periodFirstDay, '2026-10-26'); assert.equal(d.date, '2026-10-27'); assert.equal(d.direction, 'terug'); assert.equal(d.by, 'Coördinator'); assert.equal(d.madeAt, new Date(NOW).getTime());
+  assert.deepEqual(S.periodCars['2026-10-26_2026-10-27_terug'], d);
+});
+await testAsync('a shift with nobody in a car is still stored ("made, nobody rides"): the standard rooster no longer applies there', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordP();
+  assert.equal(await savePeriodShift('2026-10-28', 'heen', []), true); assert.deepEqual(fake.get('periodCars/2026-10-26_2026-10-28_heen').cars, []);
+});
+await testAsync('savePeriodShift refuses: a parent, no period, a date outside the period or a weekend, a wrong direction', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: PER, periodCars: {} });
+  assert.equal(await savePeriodShift('2026-10-27', 'terug', carsX), false); assert.equal(toast(), 'Alleen de coördinator kan het tijdelijke rooster aanpassen.');
+  coordP({ period: null }); assert.equal(await savePeriodShift('2026-10-27', 'terug', carsX), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
+  coordP();
+  for (const [iso, dir] of [['2026-11-02', 'heen'], ['2026-10-25', 'heen'], ['2026-10-31', 'heen'], ['nonsense', 'heen'], ['2026-10-27', 'sideways']]) {
+    assert.equal(await savePeriodShift(iso, dir, carsX), false, iso + dir); assert.equal(toast(), 'Deze dag hoort niet bij de periode.');
+  }
+  assert.equal(fake.writes.filter(w => String(w[1]).startsWith('periodCars/')).length, 0);
+});
+await testAsync('a refused write is reported and the state does not change', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordP(); fake.failWrites('periodCars/', 'permission-denied');
+  assert.equal(await savePeriodShift('2026-10-27', 'terug', carsX), false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodCars, {});
+});
+await testAsync('makePeriodRooster plans and stores every shift of the period in one go', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordP();
+  assert.equal(await withFakeNowAsync(NOW, () => makePeriodRooster()), true);
+  const keys = Object.keys(S.periodCars).sort();
+  assert.equal(keys.length, 10); assert.equal(keys[0], '2026-10-26_2026-10-26_heen'); assert.equal(keys[9], '2026-10-26_2026-10-30_terug');
+  keys.forEach(k => assert.deepEqual(fake.get('periodCars/' + k), S.periodCars[k]));
+  assert.equal(toast(), 'Tijdelijk rooster gemaakt ✓');
+  const monday = S.periodCars['2026-10-26_2026-10-26_heen'];
+  assert.ok(monday.cars.length >= 1); monday.cars.forEach(c => { assert.ok(c.driverFamilyId); assert.match(c.departureTime, /^\d\d:\d\d$/); });
+});
+await testAsync('makePeriodRooster uses the handed-in times', async () => {
+  const fake = useFakeDb(sampleDbSeed());
+  coordP({ periodEntries: { '2026-10-26_f2': { familyId: 'f2', periodFirstDay: '2026-10-26', days: { '2026-10-27': { heen: '10:15', terug: '12:30' } }, submittedAt: 1, by: 'x' } } });
+  await makePeriodRooster();
+  const terug = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
+  const car = terug.find(c => c.girlIds.includes('f2'));
+  assert.deepEqual(car.girlIds, ['f2'], 'she comes home three hours before the others, so she gets her own car');
+  assert.equal(car.departureTime, '12:30'); assert.equal(terug.flatMap(c => c.girlIds).length, 5);
+});
+await testAsync('makePeriodRooster refuses for a parent, and reports a refused write', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: PER, periodCars: {} });
+  assert.equal(await makePeriodRooster(), false); assert.equal(fake.writes.length, 0);
+  coordP(); fake.failWrites('periodCars/', 'permission-denied');
+  assert.equal(await makePeriodRooster(), false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodCars, {});
+});
+await testAsync('replanPeriodShift replaces the cars of one shift with a fresh proposal and leaves the others alone', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordP();
+  await makePeriodRooster();
+  const other = JSON.stringify(fake.get('periodCars/2026-10-26_2026-10-28_terug'));
+  await savePeriodShift('2026-10-27', 'terug', [{ driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '09:00' }]);
+  assert.equal(await replanPeriodShift('2026-10-27', 'terug'), true);
+  assert.notDeepEqual(fake.get('periodCars/2026-10-26_2026-10-27_terug').cars.map(c => c.driverFamilyId), ['f3']);
+  assert.equal(JSON.stringify(fake.get('periodCars/2026-10-26_2026-10-28_terug')), other); assert.equal(toast(), 'Opnieuw ingedeeld ✓');
+});
+await testAsync('deletePeriodRooster removes every shift of this period, and only those', async () => {
+  const stray = shiftOf('2026-12-22', 'heen', []); stray.periodFirstDay = '2026-12-21';
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periodCars/2026-12-21_2026-12-22_heen': stray }); coordP({ periodCars: { '2026-12-21_2026-12-22_heen': stray } });
+  await makePeriodRooster();
+  assert.equal(await deletePeriodRooster(), true);
+  assert.deepEqual(Object.keys(S.periodCars), ['2026-12-21_2026-12-22_heen']); assert.ok(fake.get('periodCars/2026-12-21_2026-12-22_heen'));
+  assert.equal(fake.get('periodCars/2026-10-26_2026-10-27_terug'), undefined); assert.equal(toast(), 'Tijdelijk rooster verwijderd');
 });
 
 console.log('\n=== Terug met OV (US-06) ===');
