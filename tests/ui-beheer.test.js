@@ -258,7 +258,7 @@ await testAsync('Opslaan stores one settings/period document and clears the draf
   const fake = useFakeDb({}); sampleCoordinatorState({ periodDraft: { name: 'x' } });
   fillPeriodForm({ ...PERIOD, name: '  Herfstvakantie ' });
   assert.equal(await savePeriod(), true);
-  assert.deepEqual(fake.get('settings/period'), PERIOD);
+  assert.deepEqual(fake.get('settings/period'), { ...PERIOD, deadlineAt: new Date('2026-10-16T12:00:00+02:00').getTime() });   // deadlineAt: what firestore.rules check
   assert.deepEqual(S.period, PERIOD); assert.equal(S.periodDraft, null); assert.equal(toast(), 'Periode opgeslagen');
 });
 await testAsync('an invalid period is not stored: the first problem is shown and the typed values are kept', async () => {

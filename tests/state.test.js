@@ -52,6 +52,10 @@ test('dayCoordinators starts empty (Beheer fills it)', () => { assert.deepEqual(
 
 test('period (Beheer: periode met andere tijden) starts empty, with no unsaved form edits', () => { assert.equal(S.period, null); assert.equal(S.periodDraft, null); });
 
+test('handed-in period times: nothing loaded, no form open, no state remembered', () => {
+  assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null); assert.equal(S.periodPhaseKey, null);
+});
+
 test('new fields: places, calculated distances and the impact switch start empty', () => {
   assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false); assert.equal(S.impactPreview, null);
 });

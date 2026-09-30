@@ -42,6 +42,10 @@ export const S = {
   dayCoordinators: {},
   period: null,            // settings/period: the period with other times (holiday, exam week); null = none
   periodDraft: null,       // Beheer: the period form while it has unsaved edits (null = show the saved period)
+  periodEntries: {},       // periodEntries/*: the times families handed in for the period, by document id
+  periodEntriesLoaded: false,
+  periodForm: null,        // Wijzigen: the open form for handing in times { familyId, days } (null = closed); it also holds unsaved edits
+  periodPhaseKey: null,    // last shown state of the task card and badge, so the minute check redraws only on a change
   locationsDoc: null,      // settings/locations as stored (locations.js normalises it)
   matchDistances: {},
   matchDistancesLoaded: false,      // settings/matchDistances: calculated km per match

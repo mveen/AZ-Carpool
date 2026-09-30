@@ -17,7 +17,7 @@ import { S } from '../state.js';
 import {
   createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
-  migrateLegacyFamilySecrets, syncListeners, startDataListeners, stopDataListeners,
+  migrateLegacyFamilySecrets, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -293,6 +293,70 @@ await testAsync('without a settings/period document there is no period; a broken
   await db.doc('settings/period').set({ ...PERIOD_DOC, lastDay: '' }); await tick();
   assert.equal(S.period, null);
   stopDataListeners();
+});
+
+await testAsync('the handed-in period times are loaded live, marked as loaded, and cleared when listeners stop', async () => {
+  const entry = { familyId: 'f2', periodFirstDay: '2026-10-26', days: { '2026-10-26': { out: true } }, submittedAt: 1, by: 'Piet' };
+  useFakeDb({ ...sampleDbSeed(), 'periodEntries/2026-10-26_f2': entry }); sampleParentState({ families: {}, groups: {}, periodEntries: {}, periodEntriesLoaded: false });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.periodEntries, { '2026-10-26_f2': entry }); assert.equal(S.periodEntriesLoaded, true);
+  await db.doc('periodEntries/2026-10-26_f1').set({ ...entry, familyId: 'f1' }); await tick();
+  assert.deepEqual(Object.keys(S.periodEntries).sort(), ['2026-10-26_f1', '2026-10-26_f2']);
+  stopDataListeners(); assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null);
+});
+
+console.log('\n=== savePeriodEntry (times handed in for a period) ===');
+const P = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+const daysOk = { '2026-10-26': { out: false, heen: '08:30', terug: '17:30' }, '2026-10-27': { out: true }, '2026-10-28': { out: true }, '2026-10-29': { out: false, heen: '10:15', terug: '' }, '2026-10-30': { out: true } };
+const IN_OPEN = '2026-10-15T09:00:00+02:00', IN_CLOSED = '2026-10-20T09:00:00+02:00';
+await testAsync('stores one document per family and period, with the shape the rules expect, and updates the state', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), true);
+  const d = fake.get('periodEntries/2026-10-26_f2');
+  assert.deepEqual(Object.keys(d).sort(), ['by', 'days', 'familyId', 'periodFirstDay', 'submittedAt']);
+  assert.equal(d.familyId, 'f2'); assert.equal(d.periodFirstDay, '2026-10-26'); assert.equal(d.by, 'Piet Pieters'); assert.equal(d.submittedAt, new Date(IN_OPEN).getTime());
+  assert.deepEqual(d.days, { '2026-10-26': { heen: '08:30', terug: '17:30' }, '2026-10-27': { out: true }, '2026-10-28': { out: true }, '2026-10-29': { heen: '10:15' }, '2026-10-30': { out: true } });
+  assert.deepEqual(S.periodEntries['2026-10-26_f2'], d); assert.equal(toast(), 'Tijden doorgegeven ✓');
+});
+await testAsync('handing in again replaces the first entry (once per period, changeable until the deadline)', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
+  await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk));
+  await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', { ...daysOk, '2026-10-27': { out: false, heen: '09:00', terug: '12:00' } }));
+  assert.equal(fake.writes.filter(w => String(w[1]).startsWith('periodEntries/')).length, 2);   // two writes, one document
+  assert.deepEqual(Object.keys(S.periodEntries), ['2026-10-26_f2']);
+  assert.deepEqual(fake.get('periodEntries/2026-10-26_f2').days['2026-10-27'], { heen: '09:00', terug: '12:00' });
+});
+await testAsync('after the deadline a parent is refused, the coordinator is not', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_CLOSED, () => savePeriodEntry('f2', daysOk)), false);
+  assert.equal(toast(), 'De deadline is voorbij. Alleen de coördinator kan de tijden nog aanpassen.'); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
+  sampleCoordinatorState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_CLOSED, () => savePeriodEntry('f2', daysOk)), true);
+  assert.equal(fake.get('periodEntries/2026-10-26_f2').familyId, 'f2');
+});
+await testAsync('before filling in opens nothing can be handed in', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync('2026-10-13T09:00:00+02:00', () => savePeriodEntry('f2', daysOk)), false);
+  assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
+});
+await testAsync('no period, an unknown family or invalid times: nothing is written and the reason is shown', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: null, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await savePeriodEntry('f2', daysOk), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
+  sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('nope', daysOk)), false);
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', { ...daysOk, '2026-10-26': { out: false, heen: '17:00', terug: '08:00' } })), false);
+  assert.equal(toast(), 'maandag 26 okt: Terug moet later zijn dan Heen.');
+  assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
+});
+await testAsync('a Flex family cannot hand in (it signs up per day in Wijzigen)', async () => {
+  const fake = useFakeDb(sampleDbSeed()); const fams = sampleParentState().families; fams.f2 = { ...fams.f2, familyType: 'flex' };
+  sampleParentState({ families: fams, period: P, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), false); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
+});
+await testAsync('a refused write is reported and nothing changes in the state', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periodEntries/', 'permission-denied');
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), false);
+  assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodEntries, {});
 });
 
 console.log('\n=== Terug met OV (US-06) ===');

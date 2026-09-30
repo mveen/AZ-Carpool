@@ -2,7 +2,7 @@
 import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, PDF_SEED } from './constants.js';
-import { dayUp } from './dates.js';
+import { dayUp, isoDayLabel } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority } from './rides.js';
 import { esc, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
@@ -12,7 +12,7 @@ import { db, doToggleCoord, markTimeChangesSeen, recordLastUpdate, saveCoordFami
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
-import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, normalizePeriod, periodPhase, validatePeriod } from './period.js';
+import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, deadlineMs, normalizePeriod, periodPhase, validatePeriod } from './period.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -136,7 +136,7 @@ export async function saveDayCoordinator(day, familyId){
 // Periode met andere tijden (vakantie, proefwerkweek): the coordinator sets name, first and last day (max 10 workdays),
 // when filling in opens and the deadline. One document, settings/period. Edits stay in S.periodDraft until Opslaan,
 // so a live update from the database cannot wipe what is being typed. Parents fill in their times in a later step.
-const fmtDay = iso => { const [y,m,d] = iso.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString(locale(),{weekday:'short',day:'numeric',month:'short'}).replace('.',''); };
+const fmtDay = iso => isoDayLabel(iso);
 const fmtDeadline = p => fmtDay(p.deadlineDate)+' '+p.deadlineTime;
 
 export function periodPhaseText(p, nowMs){
@@ -192,7 +192,7 @@ export async function savePeriod(){
   const res = validatePeriod(readPeriodForm());
   if(!res.ok){ S.periodDraft = res.value; showToast(t(res.errors[0],{p1:PERIOD_MAX_WORKDAYS})); return false; }
   try{
-    await db.doc("settings/period").set(res.value);
+    await db.doc("settings/period").set({ ...res.value, deadlineAt:deadlineMs(res.value) });   // deadlineAt: firestore.rules stop parents after it
     S.period = res.value; S.periodDraft = null;
     showToast(t('period.saved'));
     renderBeheer();

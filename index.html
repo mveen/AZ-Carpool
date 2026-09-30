@@ -305,6 +305,18 @@ table.avail th,table.avail td{padding:6px 4px}
 :root[data-theme="dark"] .devAlert{border-color:#78350f}
 .devFocus{border-color:var(--warn);box-shadow:0 0 0 2px var(--warn2)}
 .devIntentList{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--warn-text)}
+/* Periode met andere tijden: taak-kaart, ingevuld-kaart en formulier in Wijzigen */
+.periodDone{background:var(--ok2);border:1px solid var(--ok);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
+.periodDone .devAlertBody{font-size:13px;color:var(--text);margin:4px 0 0}
+#periodTask button.btn.small,.periodDone button.btn.small{margin-top:12px}
+.periodDone .periodDoneTitle{font-size:14px;font-weight:800;color:var(--ok);margin:0}
+.periodDayHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.periodDay{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px;margin-top:8px;background:var(--card)}
+.periodDay.changed{border-color:var(--warn);background:var(--warn2)}
+.periodRide{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600;margin:0}
+.periodRide input{width:22px;height:22px;margin:0}
+input[type=time].periodTime.changed{border-color:var(--warn);background:var(--warn2)}
+.periodSummary{display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:14px}
 .devAlert .devAlertTitle{font-size:14px;font-weight:800;color:var(--warn-text);margin:0}
 .devAlert .devAlertBody{font-size:12px;color:var(--warn-text);margin:4px 0 0}
 .devCard{border-color:var(--warn) !important;border-left-width:4px}
@@ -378,7 +390,7 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
   <button type="button" data-tab="deviation" class="navtab"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><path d="M167.84 17.09a8 8 0 0 0-8.85 1L47 121a8 8 0 0 0 3 13l57.63 21.61-14.66 73.33a8 8 0 0 0 13.69 7l112-120a8 8 0 0 0-6.98-13.34l-57.64-6.4 14.66-73.33a8 8 0 0 0-1.16-6.78Z" fill="currentColor"/></svg>
-    </span><span class="navlabel" data-i18n="nav.deviation">Wijzigen</span></button>
+    </span><span class="navlabel" data-i18n="nav.deviation">Wijzigen</span><span id="navDeviationBadge" class="navbadge" style="display:none" aria-live="polite"></span></button>
   <button type="button" data-tab="schedule" class="navtab"><span class="navicon">
       <svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="none" stroke="currentColor" stroke-width="16"/><line x1="40" y1="100" x2="216" y2="100" stroke="currentColor" stroke-width="16"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
       <svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true"><rect x="40" y="40" width="176" height="176" rx="16" fill="currentColor"/><rect x="40" y="88" width="176" height="20" fill="var(--card)"/><line x1="88" y1="24" x2="88" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/><line x1="168" y1="24" x2="168" y2="56" stroke="currentColor" stroke-width="16" stroke-linecap="round"/></svg>
