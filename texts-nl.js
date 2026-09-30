@@ -425,7 +425,7 @@ export default {
   "myweek.rijdt_mee_met": "{p1} Rijdt mee met: {p2}",
   "myweek.niet_ingepland_2": "{p1} niet ingepland",
   "schedule.niet_ingedeeld_2": ", {p1} niet ingedeeld",
-  "schedule.het_standaardrooster_met_de_wijzigingen": "{p1} — het standaardrooster mét de wijzigingen van deze week.",
+  "schedule.het_standaardrooster_met_de_wijzigingen": "{p1} · met wijzigingen.",
   "schedule.het_vaste_rooster_elke_week": "Het vaste rooster, elke week gelijk.{p1}",
   "schedule.aankomst_alkmaar_nodig": "Aankomst Alkmaar nodig: {p1}",
   "schedule.klaar_om_op_te_halen": "Klaar om op te halen: {p1}",

@@ -63,7 +63,7 @@ export function renderSchedule(){
       <button type="button" data-rmode="week" class="${mode==='week'?'active':''}" aria-pressed="${mode==='week'}">${t('schedule.deze_week')}</button>
       <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">${t('schedule.standaardrooster')}</button>${periodMode? `<button type="button" data-rmode="period" class="${mode==='period'?'active':''}" aria-pressed="${mode==='period'}">${esc(periodModeLabel())}</button>` : ''}
     </div>
-    <p class="muted" style="margin:-4px 2px 10px">${mode==='week'
+    <p class="muted" style="margin:-4px 2px 10px">${mode!=='period'? `<button type="button" class="ovLink" id="ovOpen">${phIcon('calendar')}${t('overview.open')}</button>` : ''}${mode==='week'
       ? t('schedule.het_standaardrooster_met_de_wijzigingen', { p1: weekRangeLabel() })
       : mode==='period'? periodModeInfoHtml()
       : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</p>`;
@@ -74,7 +74,6 @@ export function renderSchedule(){
     + timeChangesCardHtml()
     + periodOverviewHtml()
     + segHtml
-    + `<div class="ovOpenRow"><button type="button" class="btn small secondary" id="ovOpen">${phIcon('calendar')} ${t('overview.open')}</button></div>`
     + (mode==='period'
       ? periodViewHtml()
       : `<div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label))
