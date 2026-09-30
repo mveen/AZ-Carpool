@@ -13,6 +13,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, withFakeNowAsync, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
+import { foldCards } from '../ui-common.js';
 import {
   renderBeheer, renderAvailabilityTable, renderPrefsCard, renderPriorityCard, renderShiftPriorityRows, movePriority, renderCoordEditor,
   seedFromPdf, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges,
@@ -350,6 +351,26 @@ test('periodPhaseText says what happens next (none, waiting, open, closed, over)
   assert.match(periodPhaseText(PERIOD, at('2026-10-15T10:00:00+02:00')), /^Invullen is open tot de deadline: vr 16 okt 12:00\.$/);
   assert.match(periodPhaseText(PERIOD, at('2026-10-20T10:00:00+02:00')), /^De deadline is voorbij \(vr 16 okt 12:00\)\. Alleen de coördinator kan nog tijden aanpassen\.$/);
   assert.match(periodPhaseText(PERIOD, at('2026-11-02T10:00:00+01:00')), /^Deze periode is voorbij\./);
+});
+
+test('the Beheer cards become collapsible sections (collapsed by default, own title as summary)', () => {
+  const node = (extra = {}) => ({ dataset: {}, classList: { contains: () => false }, ...extra });
+  const h2 = node({ textContent: ' Titel ', innerHTML: 'Titel', remove() { card.kids.shift(); } });
+  const p = node();
+  const card = node({ id: 'c1', kids: [h2, p], classList: { contains: c => c === 'card' },
+    querySelector: () => h2, replaceWith(n) { card.replacedBy = n; } });
+  const box = { children: [card, node()] };
+  const realCreate = document.createElement;
+  document.createElement = tag => { const e = node({ tag, kids: [], append(...c) { e.kids.push(...c); }, appendChild(c) { e.kids.push(c); card.kids.shift(); return c; } }); return e; };
+  Object.defineProperty(card, 'firstChild', { get() { return card.kids[0] || null; }, configurable: true });
+  S.folds = {};
+  foldCards(box);
+  document.createElement = realCreate;
+  const det = card.replacedBy;
+  assert.equal(det.tag, 'details'); assert.match(det.className, /fold card/); assert.equal(det.id, 'c1'); assert.ok(!det.open);
+  assert.equal(det.dataset.fold, 'card|c1');
+  assert.equal(det.kids[0].tag, 'summary'); assert.equal(det.kids[0].innerHTML, 'Titel');
+  assert.equal(det.kids[1].className, 'foldBody'); assert.equal(det.kids[1].kids[0], p);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

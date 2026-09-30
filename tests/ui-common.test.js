@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import {
-  phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, cycleTheme, isStandaloneDisplay,
+  foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, cycleTheme, isStandaloneDisplay,
   isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts,
 } from '../ui-common.js';
 
@@ -140,6 +140,16 @@ test('without an address the shift still shows the place name and no link', () =
 });
 test('locationsCfg fills in the defaults when nothing is stored', () => {
   resetState({}); assert.equal(locationsCfg().places.length, 3);
+});
+
+console.log('\n=== collapsible sections ===');
+test('a section is collapsed by default and open once its key is in S.folds', () => {
+  resetState({});
+  assert.doesNotMatch(foldHtml('k1', 'Titel', '<p>x</p>', 'card'), / open/);
+  S.folds['k1'] = true;
+  const html = foldHtml('k1', 'Titel', '<p>x</p>', 'card', 'myId');
+  assert.match(html, /<details class="fold card" id="myId" data-fold="k1" open>/); assert.match(html, /<summary>Titel<\/summary>/);
+  S.folds = {};
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

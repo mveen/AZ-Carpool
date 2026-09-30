@@ -22,6 +22,41 @@ export function phIcon(name, opts){
   return `<svg viewBox="0 0 256 256" style="${style}" aria-hidden="true">${body}</svg>`;
 }
 
+// Collapsible section (native <details>), collapsed by default. The open state is kept in S.folds so it survives a redraw.
+// `key` must be unique on the page; `cls` styles the wrapper (e.g. "card" or "group").
+export function foldHtml(key, titleHtml, bodyHtml, cls, id){
+  const open = S.folds && S.folds[key];
+  return `<details class="fold ${cls||''}"${id?` id="${id}"`:''} data-fold="${esc(key)}"${open?' open':''}><summary>${titleHtml}</summary><div class="foldBody">${bodyHtml}</div></details>`;
+}
+
+// Turns every top-level .card in `box` that starts with an <h2> into a collapsible section (used by Beheer).
+export function foldCards(box){
+  if(!box) return;
+  [...box.children].forEach(card=>{
+    if(!card.classList || !card.classList.contains('card')) return;
+    const h2 = card.querySelector(':scope > h2'); if(!h2) return;
+    const key = 'card|'+(card.id||h2.textContent.trim());
+    const det = document.createElement('details');
+    det.className = 'fold card'+(card.classList.contains('timeChangeCard')?' timeChangeCard':'');
+    det.dataset.fold = key; if(S.folds[key]) det.open = true;
+    if(card.id) det.id = card.id;
+    const sum = document.createElement('summary'); sum.innerHTML = h2.innerHTML;
+    const body = document.createElement('div'); body.className = 'foldBody';
+    h2.remove();
+    while(card.firstChild) body.appendChild(card.firstChild);
+    det.append(sum, body);
+    card.replaceWith(det);
+  });
+}
+
+if(typeof document!=='undefined' && document.addEventListener){
+  // 'toggle' does not bubble, so listen in the capture phase.
+  document.addEventListener('toggle', e=>{
+    const el = e.target;
+    if(el && el.dataset && el.dataset.fold) S.folds[el.dataset.fold] = !!el.open;
+  }, true);
+}
+
 // The places (pickup / drop-off, destination) as set in Beheer, with defaults filled in.
 export function locationsCfg(){ return normalizeLocations(S.locationsDoc); }
 

@@ -49,6 +49,7 @@ export const S = {
   periodEntriesLoaded: false,
   periodCars: {},          // periodCars/*: the temporary rooster, one document per shift (see period.js)
   periodDay: null,         // Rooster, temporary view: the open date ('YYYY-MM-DD')
+  folds: {},               // open state of the collapsible sections, by key (default = collapsed); see foldHtml in ui-common.js
   periodView: null,        // Wijzigen (coordinator): '<firstDay>|<familyId>' whose handed-in times are unfolded ("Bekijk")
   periodForm: null,        // Wijzigen: the open form for handing in times { familyId, firstDay, days } (null = closed); it also holds unsaved edits
   periodPhaseKey: null,    // last shown state of the task card and badge, so the minute check redraws only on a change

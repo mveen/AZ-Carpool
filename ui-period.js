@@ -5,7 +5,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
-import { esc, hapticTap, phIcon } from './ui-common.js';
+import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
 import { myFamilyId } from './coordinator.js';
 import { isFlex } from './rides.js';
 import { savePeriodEntry } from './data.js';
@@ -159,12 +159,10 @@ function behalfCardHtml(firstDay, withIntro){
         <button type="button" class="btn small secondary" ${r.done? `data-periodview="${esc(key)}"` : `data-periodfill="${esc(key)}"`}>${t(r.done? (open? 'period.coord.hide' : 'period.coord.view') : 'period.coord.fill')}</button>
       </div>${detail}`;
   }).join('');
-  return `<div class="card" id="periodBehalfCard_${firstDay}">
-      <h2>${esc(t('period.coord.title'))}${periodList(S.periods).length>1? ' · '+esc(p.name) : ''}</h2>
-      ${intro}
+  const title = `${esc(t('period.coord.title'))}${periodList(S.periods).length>1? ' · '+esc(p.name) : ''}`;
+  return foldHtml('periodBehalf|'+firstDay, title, `${intro}
       <p class="muted" id="periodProgress_${firstDay}">${esc(left? t('period.coord.progress',{p1:pr.done, p2:pr.total, p3:left}) : t('period.coord.allDone',{p2:pr.total}))}</p>
-      ${rows}
-    </div>`;
+      ${rows}`, 'card', 'periodBehalfCard_'+firstDay);
 }
 
 // The cards at the top of Wijzigen: per period (oldest first) the task or the "doorgegeven" card, and for the coordinator the overview
