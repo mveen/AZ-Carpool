@@ -145,5 +145,10 @@ test('the help finds the Weekoverzicht (also by "pdf" or "afdrukken") and explai
   assert.ok(ids('back-up invallen').some(id => articles.find(a => a.id === id).body.join(' ').includes('Back-up:')));
 });
 
+test('the back-up / terugzetten help is found by the coordinator and hidden from parents', () => {
+  assert.equal(searchHelp('back-up terugzetten csv', { canEdit: true })[0].id, 'beheer-gezinnen');
+  assert.equal(searchHelp('terugzetten csv excel', { canEdit: false }).some(a => a.id === 'beheer-gezinnen'), false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

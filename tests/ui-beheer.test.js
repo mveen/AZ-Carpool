@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import { foldCards } from '../ui-common.js';
 import {
   renderBeheer, renderAvailabilityTable, renderPrefsCard, renderPriorityCard, renderShiftPriorityRows, movePriority, renderCoordEditor,
-  seedFromPdf, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges,
+  seedFromPdf, familyBackupCardHtml, prepareRestore, confirmRestore, cancelRestore, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges,
 } from '../ui-beheer.js';
 
 const dom = installFakeDom();
@@ -380,6 +380,56 @@ test('the Beheer cards become collapsible sections (collapsed by default, own ti
   assert.equal(det.kids[0].tag, 'summary'); assert.equal(det.kids[0].innerHTML, 'Titel');
   assert.equal(det.kids[1].className, 'foldBody'); assert.equal(det.kids[1].kids[0], p);
 });
+
+
+console.log('=== back-up gezinnen ===');
+import { buildBackupCsv } from '../family-backup.js';
+test('Beheer has a Back-up gezinnen card with Back-up maken and Terugzetten, and no pending check yet', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer'); const s = text(html);
+  assert.match(s, /Back-up gezinnen/); assert.match(s, /Back-up maken/); assert.match(s, /Terugzetten uit bestand/);
+  assert.match(html, /id="backupFile"[^>]*type="file"|type="file"[^>]*id="backupFile"/);
+  assert.ok(!/id="backupPending"/.test(html));
+});
+await testAsync('a good file shows what will happen; Overschrijven needs two taps and then writes the families', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ families: { ...sampleFamiliesForBackup() } });
+  const edited = buildBackupCsv(S.families, 'f1').replace('Piet Pieters', 'Piet P.');
+  prepareRestore('mijn-back-up.csv', edited);
+  withFakeNow(NOW, () => renderBeheer());
+  const s = text(dom.html('tab-beheer'));
+  assert.match(s, /Controle van mijn-back-up\.csv/); assert.match(s, /6 gezinnen worden overschreven, 0 nieuw/);
+  assert.ok(!/coördinator wordt/.test(s));
+  const btn = dom.el('backupConfirm'); btn.onclick(); assert.equal(fake.get('families/f2').parentName, 'Piet Pieters', 'first tap only asks');
+  btn.onclick(); await new Promise(r => setImmediate(r)); await new Promise(r => setImmediate(r));
+  assert.equal(fake.get('families/f2').parentName, 'Piet P.');
+  assert.ok(!/id="backupPending"/.test(dom.html('tab-beheer')), 'the check disappears after restoring');
+});
+test('a bad file lists the problems with their line and offers only Annuleren', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  const csv = buildBackupCsv(S.families, 'f1').replace('0611111111', '0611111111').replace(';4;', ';veel;');
+  prepareRestore('kapot.csv', csv);
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer'), s = text(html);
+  assert.match(s, /er is niets gewijzigd/); assert.match(s, /Regel \d+: Autocapaciteit &quot;veel&quot; klopt niet/);
+  assert.ok(!/id="backupConfirm"/.test(html)); assert.match(html, /id="backupCancel"/);
+  cancelRestore();
+  assert.ok(!/id="backupPending"/.test(dom.html('tab-beheer')));
+});
+test('a file that would make another family coordinator warns about losing access', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  prepareRestore('x.csv', buildBackupCsv(S.families, 'f3'));
+  assert.match(text(familyBackupCardHtml()), /de coördinator wordt Kees de Vries/);
+  cancelRestore();
+});
+test('a file with a thousand errors shows only the first few', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  const head = buildBackupCsv({}, null).trim();
+  prepareRestore('veel.csv', head + '\r\n' + Array.from({ length: 30 }, () => 'O;D;vast;n;kapot').join('\r\n'));
+  assert.match(text(familyBackupCardHtml()), /… en nog \d+ andere meldingen/);
+  cancelRestore();
+});
+function sampleFamiliesForBackup() { return structuredClone(S.families); }
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -245,12 +245,13 @@ export default [
   {
     id: 'beheer-gezinnen',
     title: 'Beheer: gezinnen toevoegen, codes en telefoonnummers',
-    keywords: 'beheer gezin toevoegen code uitnodiging telefoonnummer coördinator maken testweergave ouder dubbel verwijderen oog',
+    keywords: 'back-up backup terugzetten export import csv excel beheer gezin toevoegen code uitnodiging telefoonnummer coördinator maken testweergave ouder dubbel verwijderen oog',
     coordinatorOnly: true,
     body: [
       'Onder Beheer, bij Gezinnen beheren, voeg je gezinnen toe en pas je gegevens aan namens een ouder. Telefoonnummers en de uitnodigingscode staan onder Wijzig. Meerdere mensen kunnen dezelfde code gebruiken.',
       'Het oog-icoon toont de app zoals die ouder hem ziet. Met Stop testen ga je terug naar jouw eigen weergave.',
       'Bij Type gezin kies je Vast of Flex.',
+      'Onder Back-up gezinnen maak je een bestand (CSV, te openen in Excel) van alle gezinnen, met tijden, beschikbaarheid, coördinator, autocapaciteit en telefoonnummers. Met Terugzetten uit bestand zet je een eerder gemaakt bestand terug: de gezinnen in het bestand worden overschreven, gezinnen die er niet in staan blijven staan. Het bestand wordt eerst gecontroleerd; bij een fout wordt er niets gewijzigd.',
       'Geef de code en de link alleen door aan de ouder zelf, niet in een openbare groep.',
     ],
     tab: 'beheer',

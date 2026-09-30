@@ -18,7 +18,7 @@ import {
   createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
-  savePeriodShift, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
+  savePeriodShift, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -633,6 +633,45 @@ await testAsync('the new listeners fill S.locationsDoc and S.matchDistances, and
   assert.deepEqual(S.locationsDoc, { defaults: { heen: 'de-parel' } }); assert.equal(S.matchDistances.m1.km, 5); assert.equal(S.matchDistancesLoaded, true);
   stopDataListeners();
   assert.equal(S.locationsDoc, null); assert.deepEqual(S.matchDistances, {}); assert.equal(S.matchDistancesLoaded, false);
+});
+
+
+console.log('=== restoreFamilies: back-up terugzetten ===');
+const restorePlan = (items, extra = {}) => ({ ok: true, errors: [], items, untouched: [], coordinatorFamilyId: null, ...extra });
+await testAsync('restoreFamilies overwrites the listed fields, keeps the rest of the family (codes, time changes) and creates new ones', async () => {
+  const fake = useFakeDb({ 'families/f2': { parentName: 'Oud', girlName: 'Jahaimy', capacity: 4, timeChanges: [{ day: 'Ma' }], extraField: 'blijft' }, 'families/f9': { parentName: 'Niet in bestand', girlName: 'Zij' } });
+  sampleCoordinatorState();
+  const data = { familyType: 'flex', parentName: 'Piet P.', girlName: 'Jahaimy', parentPhone1: '0622222222', parentPhone2: '', phoneKeys: ['0622222222'], capacity: 7, schedule: { Ma: { heen: '08:30', terug: '' } }, availability: { Ma: { heen: true, terug: false, backupHeen: false, backupTerug: false } } };
+  const ok = await restoreFamilies(restorePlan([{ id: 'f2', isNew: false, data }, { id: 'nieuw', isNew: true, data: { ...data, girlName: 'Nieuw' } }]));
+  assert.equal(ok, true);
+  const f = fake.get('families/f2');
+  assert.equal(f.parentName, 'Piet P.'); assert.equal(f.capacity, 7); assert.equal(f.familyType, 'flex'); assert.deepEqual(f.phoneKeys, ['0622222222']);
+  assert.equal(f.extraField, 'blijft'); assert.equal(f.timeChanges.length, 1);
+  assert.equal(fake.get('families/nieuw').girlName, 'Nieuw');
+  assert.equal(fake.get('families/f9').parentName, 'Niet in bestand');
+  assert.match(toast(), /Teruggezet: 2 gezinnen/);
+});
+await testAsync('restoreFamilies sets the new coordinator only when the plan says so', async () => {
+  const fake = useFakeDb({ 'config/coordinator': { uid: 'coord', familyId: 'f1' }, 'families/f3': { parentName: 'Kees', girlName: 'Anouk' } });
+  sampleCoordinatorState();
+  const item = { id: 'f3', isNew: false, data: { parentName: 'Kees', girlName: 'Anouk' } };
+  await restoreFamilies(restorePlan([item]));
+  assert.deepEqual(fake.get('config/coordinator'), { uid: 'coord', familyId: 'f1' });
+  await restoreFamilies(restorePlan([item], { coordinatorFamilyId: 'f3' }));
+  assert.deepEqual(fake.get('config/coordinator'), { familyId: 'f3' });
+  assert.equal(S.coordinatorConfig.familyId, 'f3');
+});
+await testAsync('restoreFamilies writes nothing for a parent, an invalid plan, or when the batch is refused (all or nothing)', async () => {
+  const fake = useFakeDb({ 'families/f2': { parentName: 'Oud' } });
+  const item = { id: 'f2', isNew: false, data: { parentName: 'Nieuw' } };
+  sampleParentState();
+  assert.equal(await restoreFamilies(restorePlan([item])), false); assert.match(toast(), /Alleen de coördinator/);
+  sampleCoordinatorState();
+  assert.equal(await restoreFamilies({ ok: false, errors: [{}], items: [item] }), false); assert.match(toast(), /niets om terug te zetten/);
+  fake.failWrites('families', 'permission-denied');
+  assert.equal(await restoreFamilies(restorePlan([item, { id: 'x', isNew: true, data: { parentName: 'X' } }])), false);
+  assert.equal(fake.get('families/f2').parentName, 'Oud'); assert.equal(fake.get('families/x'), undefined);
+  assert.match(toast(), /permission-denied/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
