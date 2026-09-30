@@ -3,7 +3,7 @@
 // files. The cache exists only so the app still opens (to whatever was last seen)
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME whenever the asset list below changes, so old caches are dropped.
-const CACHE_NAME = 'az-carpool-v12';
+const CACHE_NAME = 'az-carpool-v13';
 const ASSETS = [
   './',
   './index.html',
@@ -49,6 +49,14 @@ const ASSETS = [
   './apple-touch-icon.png',
   './favicon-32.png',
   './icon.svg',
+  './fonts/plus-jakarta-sans-v12-latin-regular.woff2',
+  './fonts/plus-jakarta-sans-v12-latin-500.woff2',
+  './fonts/plus-jakarta-sans-v12-latin-600.woff2',
+  './fonts/plus-jakarta-sans-v12-latin-700.woff2',
+  './fonts/plus-jakarta-sans-v12-latin-800.woff2',
+  './fonts/jetbrains-mono-v24-latin-600.woff2',
+  './fonts/jetbrains-mono-v24-latin-700.woff2',
+  './fonts/jetbrains-mono-v24-latin-800.woff2',
 ];
 
 self.addEventListener('install', (event) => {
