@@ -218,7 +218,7 @@ export function familyFormHtml(prefix,f){
   }).join('');
   const seats = Math.max(0,(f.capacity||4)-1);
   const phoneField = (n,placeholder)=>{
-    const input = `<input type="tel" inputmode="tel" autocomplete="off" style="flex:1;min-width:0" id="${prefix}_parentPhone${n}" value="${esc(f['parentPhone'+n]||'')}" placeholder="${placeholder}">`;
+    const input = `<input type="tel" inputmode="tel" autocomplete="off" ${prefix==='coord'? 'style="flex:1;min-width:0" ' : ''}id="${prefix}_parentPhone${n}" value="${esc(f['parentPhone'+n]||'')}" placeholder="${placeholder}">`;
     if(prefix!=='coord') return input;
     const code = (S.inviteByFamily[S.coordEditId]||'');
     return `<div class="rowflex" style="gap:6px">${input}${introWaIconHtml(n, f['parentPhone'+n]||'', code)}</div>`;
