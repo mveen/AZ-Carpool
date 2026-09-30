@@ -13,7 +13,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
-import { init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
+import { bootstrap, init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
 
 const dom = installFakeDom();
 const status = () => dom.doc.getElementById('whoami').innerHTML;
@@ -123,6 +123,33 @@ test('checkWeekRollover moves to the new planning week once Saturday starts', ()
 test('the minute check and the return to the app both refresh the period task (badge and card change with the clock)', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   assert.match(src, /setInterval\(\(\)=>\{[^}]*refreshPeriodTask\(\)/); assert.match(src, /visibilitychange[^\n]*refreshPeriodTask\(\)/);
+});
+await testAsync('update check: foreground asks for a new service worker; a takeover reloads once, the first install never', async () => {
+  const saved = { navigator: globalThis.navigator, location: globalThis.location, window: globalThis.window };
+  const run = async (controller) => {
+    const listeners = {}, docListeners = {}; let updates = 0, reloads = 0;
+    const sw = { controller, addEventListener: (t, f) => { listeners[t] = f; }, register: async () => ({ update: async () => { updates++; } }) };
+    Object.defineProperty(globalThis, 'navigator', { value: { serviceWorker: sw }, configurable: true });
+    Object.defineProperty(globalThis, 'location', { value: { hash: '', reload: () => { reloads++; } }, configurable: true });
+    globalThis.window = { addEventListener() {} };
+    const realAdd = dom.doc.addEventListener, realHidden = dom.doc.hidden;
+    dom.doc.addEventListener = (t, f) => { docListeners[t] = f; }; dom.doc.hidden = false;
+    const realSetInterval = globalThis.setInterval; globalThis.setInterval = () => 0;
+    try { installNav(); bootstrap(); } finally { globalThis.setInterval = realSetInterval; dom.doc.addEventListener = realAdd; dom.doc.hidden = realHidden; }
+    for (let i = 0; i < 5; i++) await Promise.resolve();
+    const afterRegister = updates;
+    resetState({}); docListeners.visibilitychange();
+    listeners.controllerchange(); listeners.controllerchange();
+    return { afterRegister, updates, reloads };
+  };
+  try {
+    const upgrade = await run({});
+    assert.equal(upgrade.afterRegister, 1); assert.equal(upgrade.updates, 2); assert.equal(upgrade.reloads, 1);
+    const first = await run(null);
+    assert.equal(first.reloads, 0);
+  } finally {
+    for (const [k, v] of Object.entries(saved)) { if (v === undefined) delete globalThis[k]; else Object.defineProperty(globalThis, k, { value: v, configurable: true, writable: true }); }
+  }
 });
 test('checkWeekRollover does nothing within the same week', () => {
   installNav(); useFakeDb(sampleDbSeed()); sampleParentState({ linksLoaded: true, coordinatorExists: true });
