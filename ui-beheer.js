@@ -10,7 +10,7 @@ import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinat
 import { hasApiKey } from './distance.js';
 import { db, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodHasData, recordLastUpdate, saveCoordFamily, savePeriodDoc } from './data.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
-import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
+import { familyFormHtml, startImpersonate, wireIntroWa, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
 import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, normalizePeriod, periodList, periodPhase, periodProgress } from './period.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
@@ -610,6 +610,7 @@ export function renderCoordEditor(){
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
   wireExclusiveAvailability('coord');
   wireFamilyFormExtras('coord', renderCoordEditor);
+  wireIntroWa('coord');
   const ctb=document.getElementById('coordToggleBtn');
   if(ctb) ctb.onclick=()=>{
     const isCurrently = S.coordinatorConfig && S.coordinatorConfig.familyId===S.coordEditId;

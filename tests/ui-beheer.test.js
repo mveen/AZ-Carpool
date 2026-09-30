@@ -48,6 +48,14 @@ test('the family editor opens for the chosen family, with an invite code field',
   const html = dom.html('coordEditArea');
   assert.match(html, /id="coord_parentName"/); assert.match(html, /value="Piet Pieters"/); assert.match(html, /id="coord_inviteCode"[^>]*value="CODE1234"/);
 });
+test('the family editor has a WhatsApp login-intro icon after the phone field, using the invite code', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
+  withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
+  const html = dom.html('coordEditArea');
+  assert.match(html, /class="waIntro" data-waintro="1"/); assert.doesNotMatch(html, /<button[^>]*waIntro/);
+  assert.match(decodeURIComponent(html), /CODE1234/);
+});
 test('the editor for a new family starts empty', () => {
   sampleCoordinatorState({ coordEditId: null });
   withFakeNow(NOW, () => renderCoordEditor());

@@ -5,7 +5,8 @@ import { adjustMainPadding, esc, hapticTap, installCardHtml, phIcon, showToast, 
 import { fam } from './rides.js';
 import { isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
-import { DAYS, DIR_TEXT } from './constants.js';
+import { APP_URL, DAYS, DIR_TEXT, WA_ICON_SMALL } from './constants.js';
+import { waPhone } from './ui-schedule.js';
 import { dayUp } from './dates.js';
 import { db } from './data.js';
 import { goToWijzigen } from './ui-myweek.js';
@@ -142,6 +143,34 @@ export function isWeekschemaField(id){
   return /^me_(sch|av|bkH|bkT)_/.test(id||'');
 }
 
+// Beheer only: WhatsApp link that sends a fixed login intro ("Hi!", no parent name) to `phone`.
+// Empty href while there is no usable number.
+export function introWaHref(phone, code){
+  const num = waPhone(phone);
+  if(!num) return '';
+  const text = code? t('profile.wa_intro_text', { url: APP_URL, code }) : t('profile.wa_intro_text_nocode', { url: APP_URL });
+  return 'https://wa.me/'+num+'?text='+encodeURIComponent(text);
+}
+function introWaIconHtml(key, phone, code){
+  const href = introWaHref(phone, code);
+  return `<a class="waIntro" data-waintro="${key}" ${href? `href="${esc(href)}"` : 'hidden'} target="_blank" rel="noopener noreferrer" aria-label="${esc(t('profile.wa_intro_label'))}" title="${esc(t('profile.wa_intro_label'))}">${WA_ICON_SMALL}</a>`;
+}
+// Keeps the icons' links in step with what is typed in the phone / code fields.
+export function wireIntroWa(prefix){
+  const code = ()=>{ const el=document.getElementById(`${prefix}_inviteCode`); return el? el.value.trim() : ''; };
+  const refresh = ()=>['parentPhone1','parentPhone2'].forEach((field,i)=>{
+    const a=document.querySelector(`[data-waintro="${i+1}"]`), input=document.getElementById(`${prefix}_${field}`);
+    if(!a||!input) return;
+    const href=introWaHref(input.value, code());
+    if(href){ a.href=href; a.hidden=false; } else { a.removeAttribute('href'); a.hidden=true; }
+  });
+  [`${prefix}_parentPhone1`,`${prefix}_parentPhone2`,`${prefix}_inviteCode`].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('input',refresh);
+  });
+  refresh();
+  const gen=document.getElementById('genCodeBtn'); if(gen) gen.addEventListener('click',()=>setTimeout(refresh,0));
+}
+
 export function familyFormHtml(prefix,f){
   f = f || {parentName:"",girlName:"",capacity:4,schedule:{},availability:{}};
   const activeDay = S.formSelectedDay[prefix]||'Ma';
@@ -188,6 +217,13 @@ export function familyFormHtml(prefix,f){
       <input type="checkbox" style="display:none" id="${prefix}_bkT_${k}" ${oa.backupTerug?'checked':''}>`;
   }).join('');
   const seats = Math.max(0,(f.capacity||4)-1);
+  const phoneField = (n,placeholder)=>{
+    const input = `<input type="tel" inputmode="tel" autocomplete="off" ${prefix==='coord'? 'style="flex:1;min-width:0" ' : ''}id="${prefix}_parentPhone${n}" value="${esc(f['parentPhone'+n]||'')}" placeholder="${placeholder}">`;
+    if(prefix!=='coord') return input;
+    const code = (S.inviteByFamily[S.coordEditId]||'');
+    return `<div class="rowflex" style="gap:6px">${input}${introWaIconHtml(n, f['parentPhone'+n]||'', code)}</div>`;
+  };
+  const phoneInput1 = phoneField(1,'06-12345678'), phoneInput2 = phoneField(2,'06-...');
   return `
     <div class="grid2">
       <div><label style="margin-top:0">${t('profile.naam_ouder')}</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}"></div>
@@ -199,8 +235,8 @@ export function familyFormHtml(prefix,f){
       <option value="flex" ${f.familyType==='flex'?'selected':''}>${t('profile.gezinstype.flex')}</option>
     </select>` : ''}
     <div class="grid2">
-      <div><label style="margin-top:8px">${t('profile.tel_nr_1')}</label><input type="tel" inputmode="tel" autocomplete="off" id="${prefix}_parentPhone1" value="${esc(f.parentPhone1||'')}" placeholder="06-12345678"></div>
-      <div><label style="margin-top:8px">${t('profile.tel_nr_2')}</label><input type="tel" inputmode="tel" autocomplete="off" id="${prefix}_parentPhone2" value="${esc(f.parentPhone2||'')}" placeholder="06-..."></div>
+      <div><label style="margin-top:8px">${prefix==='me'? t('profile.tel_nr_1_wa') : t('profile.tel_nr_1')}</label>${phoneInput1}</div>
+      <div><label style="margin-top:8px">${t('profile.tel_nr_2')}</label>${phoneInput2}</div>
     </div>
     <label>${t('profile.totale_autocapaciteit_incl_bestuurder')}</label>
     <div class="stepperCard">
