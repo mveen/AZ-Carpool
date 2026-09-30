@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import './test-support.js';
-import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState } from '../period.js';
+import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress } from '../period.js';
 
 // The design example: Herfstvakantie, ma 26 okt - vr 30 okt 2026, opens wo 14 okt, deadline vr 16 okt 12:00.
 const GOOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
@@ -194,6 +194,20 @@ test('no family (not linked yet), or a Flex family (signs up per day): no task a
   assert.equal(periodEntryState(GOOD, undefined, ctx({ hasFamily: false }), at('2026-10-15T09:00:00+02:00')).show, null);
   assert.equal(periodEntryState(GOOD, undefined, ctx({ isFlex: true }), at('2026-10-15T09:00:00+02:00')).badge, false);
   assert.equal(periodEntryState(GOOD, undefined, undefined, at('2026-10-15T09:00:00+02:00')).show, null);
+});
+
+console.log('\n=== who has handed in (step 3) ===');
+test('periodProgress counts the families that handed in for THIS period; Flex families are not counted', () => {
+  const fams = { f1: { girlName: 'A' }, f2: { girlName: 'B' }, f3: { girlName: 'C', familyType: 'flex' }, f4: { girlName: 'D' } };
+  const entries = { '2026-10-26_f2': {}, '2026-10-26_f3': {}, '2026-12-21_f1': {}, '2026-10-26_zzz': {} };   // f3 is Flex, f1 handed in for another period, zzz is no family
+  const pr = periodProgress(GOOD, fams, entries);
+  assert.equal(pr.total, 3); assert.equal(pr.done, 1);
+  assert.deepEqual(pr.rows.map(r => [r.id, r.done]), [['f1', false], ['f2', true], ['f4', false]]);
+  assert.equal(pr.rows[1].family, fams.f2);
+});
+test('periodProgress copes with nothing', () => {
+  assert.deepEqual(periodProgress(GOOD, null, null), { total: 0, done: 0, rows: [] });
+  assert.equal(periodProgress(GOOD, { f1: null, f2: {} }, undefined).total, 1);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

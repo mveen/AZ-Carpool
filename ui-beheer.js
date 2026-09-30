@@ -12,7 +12,7 @@ import { db, doToggleCoord, markTimeChangesSeen, recordLastUpdate, saveCoordFami
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
-import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, deadlineMs, normalizePeriod, periodPhase, validatePeriod } from './period.js';
+import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, deadlineMs, normalizePeriod, periodPhase, periodProgress, validatePeriod } from './period.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -149,6 +149,15 @@ export function periodPhaseText(p, nowMs){
   return t('period.phase.over');
 }
 
+// "Doorgegeven: 9 van 14 gezinnen" (Flex families are not counted): only once filling in has opened and the entries are loaded.
+export function periodStatusHtml(nowMs){
+  if(!S.period || !S.periodEntriesLoaded) return '';
+  const phase = periodPhase(S.period, nowMs);
+  if(phase!=='open' && phase!=='closed' && phase!=='over') return '';
+  const pr = periodProgress(S.period, S.families, S.periodEntries);
+  return `<div class="rowflex" id="periodStatus" style="margin-top:10px"><span class="muted">${t('period.status.label')}</span><b>${esc(t('period.status.value',{p1:pr.done, p2:pr.total}))}</b></div>`;
+}
+
 export function periodCardHtml(){
   const v = normalizePeriod(S.periodDraft || S.period);
   const field = (id,labelKey,type,val,extra='') => `<div style="margin-top:10px;flex:1"><label for="${id}" style="margin-top:0">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
@@ -169,7 +178,7 @@ export function periodCardHtml(){
         ${field('periodDlDate','period.deadlineDate','date',v.deadlineDate)}
         ${field('periodDlTime','period.deadlineTime','time',v.deadlineTime)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>
+      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>${S.periodDraft? '' : periodStatusHtml()}
       <div class="rowflex" style="gap:6px;margin-top:8px">
         <button type="button" class="btn small" id="periodSave">${t('period.save')}</button>
         <button type="button" class="btn small secondary" id="periodCancel">${t('period.cancel')}</button>

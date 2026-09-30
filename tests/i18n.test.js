@@ -81,6 +81,11 @@ test('the Wijzigen tab has a badge for the period task, and the period texts fil
   assert.equal(t('period.task.body', { p1: 'Herfstvakantie', p2: '26 – 30 okt', p3: 'Jahaimy' }), 'Herfstvakantie · 26 – 30 okt. Geef door hoe laat Jahaimy heen en terug moet, of dat ze niet meerijdt.');
   assert.equal(t('period.entry.err.order', { p1: 'dinsdag 27 okt' }), 'dinsdag 27 okt: Terug moet later zijn dan Heen.');
   assert.equal(t('period.done.heen', { p1: '10:30' }), 'heen 10:30');
+  assert.equal(t('period.coord.progress', { p1: 9, p2: 14, p3: 5 }), '9 van 14 doorgegeven. Nog 5 te gaan.');
+  assert.equal(t('period.coord.allDone', { p2: 14 }), 'Alle 14 gezinnen hebben doorgegeven.');
+  assert.equal(t('period.form.onBehalf', { p1: 'Piet Pieters', p2: 'Jahaimy' }), 'Je vult in namens Piet Pieters (Jahaimy).');
+  assert.equal(t('period.status.value', { p1: 9, p2: 14 }), '9 van 14 gezinnen');
+  assert.deepEqual(['notYet', 'done', 'fill', 'view', 'hide'].map(k => t('period.coord.' + k)), ['Nog niet', 'Doorgegeven', 'Invullen', 'Bekijk', 'Sluiten']);
 });
 test('the Weekschema warning texts exist', () => {
   assert.ok(hasKey('profile.weekschema_waarschuwing_titel') && hasKey('profile.weekschema_waarschuwing_tekst') && hasKey('profile.weekschema_naar_wijzigen'));

@@ -302,7 +302,8 @@ await testAsync('the handed-in period times are loaded live, marked as loaded, a
   assert.deepEqual(S.periodEntries, { '2026-10-26_f2': entry }); assert.equal(S.periodEntriesLoaded, true);
   await db.doc('periodEntries/2026-10-26_f1').set({ ...entry, familyId: 'f1' }); await tick();
   assert.deepEqual(Object.keys(S.periodEntries).sort(), ['2026-10-26_f1', '2026-10-26_f2']);
-  stopDataListeners(); assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null);
+  S.periodView = 'f2'; S.periodForm = { familyId: 'f2', days: {} };
+  stopDataListeners(); assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null); assert.equal(S.periodView, null);
 });
 
 console.log('\n=== savePeriodEntry (times handed in for a period) ===');

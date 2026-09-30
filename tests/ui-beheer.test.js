@@ -205,7 +205,7 @@ await testAsync('a refused save shows the error and returns false', async () => 
 });
 
 console.log('\n=== Periode met andere tijden (Beheer) ===');
-import { periodCardHtml, periodPhaseText, rememberPeriodDraft, savePeriod, cancelPeriodEdit, deletePeriod } from '../ui-beheer.js';
+import { periodStatusHtml, periodCardHtml, periodPhaseText, rememberPeriodDraft, savePeriod, cancelPeriodEdit, deletePeriod } from '../ui-beheer.js';
 const PERIOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
 const fillPeriodForm = v => {
   const ids = { name: 'periodName', firstDay: 'periodFirst', lastDay: 'periodLast', opensOn: 'periodOpens', deadlineDate: 'periodDlDate', deadlineTime: 'periodDlTime' };
@@ -288,6 +288,25 @@ await testAsync('the trash button removes the period from the database and the s
   const fake = useFakeDb({ 'settings/period': PERIOD }); sampleCoordinatorState({ period: PERIOD });
   assert.equal(await deletePeriod(), true);
   assert.equal(fake.get('settings/period'), undefined); assert.equal(S.period, null); assert.equal(toast(), 'Periode verwijderd');
+});
+
+test('Beheer shows how many families handed in ("9 van 14 gezinnen"): only from the day filling in opens, Flex families not counted', () => {
+  const fams = sampleCoordinatorState().families; fams.f6 = { ...fams.f6, familyType: 'flex' };
+  const entries = { '2026-10-26_f2': {}, '2026-10-26_f3': {}, '2026-10-26_f6': {} };
+  sampleCoordinatorState({ period: PERIOD, families: fams, periodEntries: entries, periodEntriesLoaded: true });
+  const at = iso => new Date(iso).getTime();
+  assert.equal(periodStatusHtml(at('2026-10-13T12:00:00+02:00')), '', 'before filling in opens');
+  assert.match(text(periodStatusHtml(at('2026-10-15T12:00:00+02:00'))), /^Doorgegeven 2 van 5 gezinnen$/);
+  assert.match(text(periodStatusHtml(at('2026-10-20T12:00:00+02:00'))), /^Doorgegeven 2 van 5 gezinnen$/);
+  assert.equal(periodStatusHtml(at('2026-11-05T12:00:00+01:00')).includes('2 van 5'), true, 'still shown after the period, as a record');
+  sampleCoordinatorState({ period: PERIOD, periodEntries: entries, periodEntriesLoaded: false }); assert.equal(periodStatusHtml(at('2026-10-15T12:00:00+02:00')), '', 'not before the entries are loaded');
+  sampleCoordinatorState({ periodEntries: {}, periodEntriesLoaded: true }); assert.equal(periodStatusHtml(at('2026-10-15T12:00:00+02:00')), '', 'no period');
+});
+test('the status is part of the card, but not while the form has unsaved edits', () => {
+  sampleCoordinatorState({ period: PERIOD, periodEntries: { '2026-10-26_f2': {} }, periodEntriesLoaded: true });
+  assert.match(text(withFakeNow('2026-10-15T12:00:00+02:00', () => periodCardHtml())), /Staat in de melding voor ouders\. Doorgegeven 1 van 6 gezinnen/);
+  sampleCoordinatorState({ period: PERIOD, periodDraft: { ...PERIOD, name: 'x' }, periodEntries: {}, periodEntriesLoaded: true });
+  assert.doesNotMatch(withFakeNow('2026-10-15T12:00:00+02:00', () => periodCardHtml()), /periodStatus/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

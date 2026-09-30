@@ -13,7 +13,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync } from './test-support.js';
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
-import { periodTask, periodFormFrom, periodDaySummary, periodFormHtml, periodFormActive, periodCardsHtml, updatePeriodBadge, refreshPeriodTask, openPeriodForm, submitPeriodForm } from '../ui-period.js';
+import { periodTask, periodTaskFor, periodBehalfRows, togglePeriodView, periodFormFrom, periodDaySummary, periodFormHtml, periodFormActive, periodCardsHtml, updatePeriodBadge, refreshPeriodTask, openPeriodForm, submitPeriodForm } from '../ui-period.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -35,7 +35,9 @@ Object.defineProperty(box, 'innerHTML', { get: () => html, set: v => { html = v;
 function registry(h) {
   const ids = re => [...h.matchAll(re)].map(m => dom.el(m[1]));
   const time = ids(/class="periodTime[^"]*" id="([^"]+)"/g), ride = ids(/class="periodRideInput" id="([^"]+)"/g);
-  dom.doc.querySelectorAll = sel => (sel === '.periodTime' ? time : sel === '.periodRideInput' ? ride : []);
+  const btns = attr => [...h.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map(m => ({ dataset: { [attr]: m[1] }, onclick: null }));
+  const fill = btns('periodfill'), view = btns('periodview');
+  dom.doc.querySelectorAll = sel => (sel === '.periodTime' ? time : sel === '.periodRideInput' ? ride : sel === '[data-periodfill]' ? fill : sel === '[data-periodview]' ? view : []);
 }
 const render = (now = OPEN) => { withFakeNow(now, () => renderDeviationTab()); return html; };
 // Types a whole form the way a user would: riding days checked, times filled in.
@@ -237,6 +239,113 @@ test('periodDaySummary: cleared directions are named', () => {
 });
 test('periodCardsHtml is empty when there is nothing for this user', () => {
   parent({ period: null }); assert.equal(periodCardsHtml(), '');
+});
+
+console.log('\n=== the coordinator fills in on behalf of a parent (A4) ===');
+// Families of the sample: f1 Eline (the coordinator's own), f2 Jahaimy, f3 Anouk, f4 Evi, f5 Lois, f6 Saar.
+const entryFor = (id, first = '2026-10-26') => ({ ...handedIn, familyId: id });
+const others = () => [...html.matchAll(/data-periodfamily="([^"]+)"/g)].map(m => m[1]);
+test('the coordinator sees the overview from the day filling in opens until the period is over; a parent, or before opening, never', () => {
+  coordinator(); assert.match(render(OPEN), /id="periodBehalfCard"/); assert.match(render(CLOSED), /id="periodBehalfCard"/);
+  assert.doesNotMatch(render(WAITING), /periodBehalfCard/); assert.doesNotMatch(render(OVER), /periodBehalfCard/);
+  parent(); assert.doesNotMatch(render(OPEN), /periodBehalfCard/);
+  coordinator({ period: null }); assert.doesNotMatch(render(OPEN), /periodBehalfCard/);
+});
+test('not in the "test as parent" view, where the coordinator has parent rights only', () => {
+  coordinator({ impersonateFamilyId: 'f2', canEdit: false }); assert.doesNotMatch(render(OPEN), /periodBehalfCard/);
+});
+test('the list: families that still have to hand in first, then the others, each in name order; own family and Flex families are left out', () => {
+  const fams = sampleCoordinatorState().families; fams.f6 = { ...fams.f6, familyType: 'flex' };
+  coordinator({ families: fams, periodEntries: { '2026-10-26_f3': entryFor('f3'), '2026-10-26_f1': entryFor('f1') } }); render(OPEN);
+  assert.deepEqual(others(), ['f4', 'f2', 'f5', 'f3']);   // Evi, Jahaimy, Lois (not yet) then Anouk (done); f1 is the own family, f6 is Flex
+  const s = text(html);
+  assert.match(s, /Namens een ouder invullen 2 van 5 doorgegeven\. Nog 3 te gaan\. Evi Mo Bakker Nog niet Invullen Jahaimy Piet Pieters Nog niet Invullen Lois Sanne Smit Nog niet Invullen Anouk Kees de Vries Doorgegeven Bekijk/);
+});
+test('within each group the families are in name order, not in the order of the database', () => {
+  coordinator({ periodEntries: { '2026-10-26_f2': entryFor('f2'), '2026-10-26_f4': entryFor('f4') } }); render(OPEN);
+  assert.deepEqual(others(), ['f3', 'f5', 'f6', 'f4', 'f2']);   // Anouk, Lois, Saar (not yet) then Evi, Jahaimy (done): f2 comes before f4 in the database
+});
+test('when everybody has handed in the overview says so', () => {
+  const fams = sampleCoordinatorState().families; delete fams.f6; delete fams.f5;
+  coordinator({ families: fams, periodEntries: Object.fromEntries(['f1', 'f2', 'f3', 'f4'].map(id => ['2026-10-26_' + id, entryFor(id)])) });
+  assert.match(text(render(OPEN)), /Alle 4 gezinnen hebben doorgegeven\./);
+});
+test('the coordinator\'s own task says they can also fill in for a parent; a parent\'s task does not', () => {
+  coordinator(); assert.match(text(render(OPEN)), /Geef je eigen tijden door\. Als coördinator kun je ook invullen namens een ouder\./);
+  parent(); assert.doesNotMatch(text(render(OPEN)), /namens een ouder/);
+});
+test('a coordinator without a family of their own gets the overview with its own introduction and the deadline', () => {
+  sampleCoordinatorState({ period: PERIOD, periodEntries: {}, periodEntriesLoaded: true });
+  const s = text(render(OPEN));
+  assert.doesNotMatch(html, /id="periodTask"/); assert.match(s, /Namens een ouder invullen Herfstvakantie · 26 – 30 okt\. Als coördinator kun je invullen namens een ouder\. Deadline: vrijdag 16 okt 12:00 0 van 6 doorgegeven\. Nog 6 te gaan\./);
+  assert.equal(others().length, 6);
+  assert.match(text(render(CLOSED)), /De deadline is voorbij\. Alleen jij kunt als coördinator de tijden nog invullen\./);
+});
+test('"Invullen" opens the form for that family: their standard rooster, and a note that this is on behalf of the parent', () => {
+  coordinator(); render(OPEN);
+  assert.equal(withFakeNow(OPEN, () => openPeriodForm('f5')), true);
+  assert.equal(S.periodForm.familyId, 'f5');
+  const s = text(html);
+  assert.match(s, /Je vult in namens Sanne Smit \(Lois\)\./);
+  assert.match(html, /id="periodHeen_2026-10-26" value="08:30"/, 'the times of family f5, not of the coordinator');
+  assert.doesNotMatch(s, /namens Eline|Actie nodig/);
+  const own = withFakeNow(OPEN, () => openPeriodForm()); assert.equal(own, true); assert.doesNotMatch(html, /periodOnBehalf/, 'no note for the own family');
+});
+test('the row buttons call openPeriodForm with the family of that row', () => {
+  coordinator(); render(OPEN);
+  const fam = others()[0];
+  withFakeNow(OPEN, () => dom.doc.querySelectorAll('[data-periodfill]')[0].onclick());
+  assert.equal(S.periodForm.familyId, fam);
+});
+await testAsync('the coordinator hands in for another family: stored under THAT family, the row moves to "Doorgegeven", also after the deadline', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordinator(); render(OPEN); withFakeNow(OPEN, () => openPeriodForm('f5'));
+  fill({ ...S.periodForm.days, '2026-10-27': { heen: '09:00', terug: '12:00' } });
+  assert.equal(await withFakeNowAsync(OPEN, () => submitPeriodForm()), true);
+  const d = fake.get('periodEntries/2026-10-26_f5');
+  assert.equal(d.familyId, 'f5'); assert.deepEqual(d.days['2026-10-27'], { heen: '09:00', terug: '12:00' }); assert.equal(d.by, 'Jan Jansen');
+  assert.equal(fake.get('periodEntries/2026-10-26_f1'), undefined, 'not for the coordinator\'s own family');
+  assert.equal(S.periodForm, null); assert.match(text(render(OPEN)), /1 van 6 doorgegeven\. Nog 5 te gaan\./);
+  const rows = others(); assert.equal(rows[rows.length - 1], 'f5');
+  withFakeNow(CLOSED, () => openPeriodForm('f3')); fill(S.periodForm.days);
+  assert.equal(await withFakeNowAsync(CLOSED, () => submitPeriodForm()), true); assert.equal(fake.get('periodEntries/2026-10-26_f3').familyId, 'f3');
+});
+// Anouk (f3) rides Ma, Wo and Do normally, not Di and Vr: the lines compare with HER rooster, not with the coordinator's.
+test('"Bekijk" unfolds what that family handed in, with a button to change it; a second tap folds it again', () => {
+  coordinator({ periodEntries: { '2026-10-26_f3': entryFor('f3') } }); render(OPEN);
+  assert.doesNotMatch(html, /periodBehalfDetail/);
+  withFakeNow(OPEN, () => dom.doc.querySelectorAll('[data-periodview]')[0].onclick());
+  assert.equal(S.periodView, 'f3'); const s = text(html);
+  assert.match(s, /Anouk Kees de Vries Doorgegeven Sluiten Ma 26 okt heen 08:30 · terug 17:30 Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt rijdt niet mee Do 29 okt niet heen · terug 12:30 Vr 30 okt vast rooster Tijden aanpassen/);
+  assert.match(html, /data-periodfill="f3"/);
+  withFakeNow(OPEN, () => togglePeriodView('f3')); assert.equal(S.periodView, null); assert.doesNotMatch(html, /periodBehalfDetail/);
+});
+test('"Tijden aanpassen" in that view opens the form with what the family handed in', () => {
+  coordinator({ periodEntries: { '2026-10-26_f3': entryFor('f3') }, periodView: 'f3' }); render(OPEN);
+  withFakeNow(OPEN, () => openPeriodForm('f3'));
+  assert.equal(S.periodView, null); assert.match(html, /id="periodHeen_2026-10-27" value="10:30"/); assert.match(text(html), /Je vult in namens Kees de Vries \(Anouk\)\./);
+});
+test('only the coordinator can open the form for another family', () => {
+  parent(); render(OPEN); assert.equal(withFakeNow(OPEN, () => openPeriodForm('f3')), false); assert.equal(S.periodForm, null);
+  assert.equal(withFakeNow(OPEN, () => periodTaskFor('f3').canEdit), true, 'the state alone does not decide: openPeriodForm checks the coordinator rights');
+});
+test('a form for another family closes when the coordinator rights go away (test view), a form for the own family does not', () => {
+  coordinator(); render(OPEN); withFakeNow(OPEN, () => openPeriodForm('f5'));
+  assert.equal(withFakeNow(OPEN, () => periodFormActive()), true);
+  S.canEdit = false; assert.equal(withFakeNow(OPEN, () => periodFormActive()), false); assert.equal(S.periodForm, null);
+});
+test('the minute check redraws the coordinator overview when it appears or disappears', () => {
+  coordinator(); withFakeNow(WAITING, () => renderDeviationTab());
+  assert.equal(withFakeNow(OPEN, () => refreshPeriodTask()), true); assert.match(html, /periodBehalfCard/);
+  assert.equal(withFakeNow(OVER, () => refreshPeriodTask()), true); assert.doesNotMatch(html, /periodBehalfCard/);
+});
+test('periodBehalfRows: the counts include the own family, the list does not', () => {
+  coordinator({ periodEntries: { '2026-10-26_f1': entryFor('f1') } });
+  const r = withFakeNow(OPEN, () => periodBehalfRows());
+  assert.equal(r.total, 6); assert.equal(r.done, 1); assert.equal(r.rows.length, 5); assert.ok(!r.rows.some(x => x.id === 'f1'));
+});
+test('the badge stays for the coordinator\'s own task only, not for families still to go', () => {
+  coordinator(); render(OPEN); assert.equal(dom.el('navDeviationBadge').textContent, '1');
+  coordinator({ periodEntries: { '2026-10-26_f1': entryFor('f1') } }); render(OPEN); assert.equal(dom.el('navDeviationBadge').style.display, 'none');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

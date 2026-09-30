@@ -179,7 +179,7 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/period").onSnapshot(snap=>{ S.period = snap.exists? storedPeriod(snap.data()) : null; renderBeheer(); renderDeviationTab(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
-    db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); },
+    db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
@@ -235,7 +235,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.period=null; S.periodDraft=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.period=null; S.periodDraft=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   updateStatusLine();
 }

@@ -172,3 +172,15 @@ export function periodEntryState(period, entry, ctx, nowMs){
   if(phase!=='open' && phase!=='closed') return none;
   return { show: entry ? 'done' : 'task', canEdit, badge: phase==='open' && !entry, phase };
 }
+
+// ---------- Step 3: who has handed in (coordinator overview) ----------
+// Flex families sign up per day and are not counted. Rows are in the order of `families`.
+//   -> { total, done, rows: [{ id, family, done }] }
+export function periodProgress(period, families, entries){
+  const rows = [];
+  Object.entries(families || {}).forEach(([id, family]) => {
+    if(!family || family.familyType==='flex') return;
+    rows.push({ id, family, done: !!(entries && entries[periodEntryId(period, id)]) });
+  });
+  return { total: rows.length, done: rows.filter(r => r.done).length, rows };
+}
