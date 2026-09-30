@@ -82,6 +82,9 @@ test('the Wijzigen tab has a badge for the period task, and the period texts fil
   assert.equal(t('period.entry.err.order', { p1: 'dinsdag 27 okt' }), 'dinsdag 27 okt: Terug moet later zijn dan Heen.');
   assert.equal(t('period.done.heen', { p1: '10:30' }), 'heen 10:30');
   assert.equal(t('dayCoord.waText', { when: 'morgen' }), 'Hi! Een vraag over de carpool van morgen: ');   // no name in the text
+  assert.equal(t('period.err.overlap', { p1: 'Herfstvakantie' }), 'Deze periode overlapt met Herfstvakantie. Perioden mogen geen dag delen.');
+  assert.equal(t('period.delete.confirmData', { p1: 9 }), 'Zeker? 9 gezinnen verliezen hun tijden'); assert.equal(t('period.list.edit', { p1: 'Toetsweek' }), 'Wijzig Toetsweek');
+  assert.deepEqual(['add', 'list.roosterMade', 'form.addTitle', 'form.editTitle', 'view.pick', 'err.deleteRooster', 'err.firstDayLocked', 'firstDayLockedHint'].map(k => hasKey('period.' + k)), Array(8).fill(true));
   assert.equal(t('period.ov.deadlineOpen', { p1: 'vr 16 okt 12:00', p2: 'Lois, Saar' }), 'Deadline vr 16 okt 12:00 · nog niet: Lois, Saar');
   assert.equal(t('period.ov.handedValue', { p1: 9, p2: 14 }), '9 van 14'); assert.equal(t('period.ov.dayChanges', { p1: 2 }), '2 wijz.');
   assert.equal(t('period.view.moveTo', { p1: 1, p2: 'Kees de Vries' }), 'Auto 1 · Kees de Vries'); assert.equal(t('period.rooster.err.full', { p1: 4, p2: 3 }), 'Auto vol: 4 van 3 plekken.');

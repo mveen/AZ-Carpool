@@ -1,5 +1,6 @@
-// ui-period.js — "periode met andere tijden" for parents and the coordinator's own family (Wijzigen, step 2):
-// the task card ("Actie nodig"), the form for the whole period, the "doorgegeven" card and the badge on the Wijzigen tab.
+// ui-period.js — "periode met andere tijden" for parents and the coordinator (Wijzigen): the task card ("Actie nodig"), the form for
+// the whole period, the "doorgegeven" card, the coordinator's overview per family and the badge on the Wijzigen tab.
+// Several periods can run at the same time: every period has its own cards; the badge counts the open tasks.
 // Rules: see period.js (periodEntryState) and README. The standard rooster is never changed; times live in periodEntries/*.
 import { t } from './i18n.js';
 import { S } from './state.js';
@@ -9,21 +10,26 @@ import { myFamilyId } from './coordinator.js';
 import { isFlex } from './rides.js';
 import { savePeriodEntry } from './data.js';
 import { renderDeviationTab } from './ui-deviation.js';
-import { defaultEntryDays, describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodEntryState, periodProgress, periodWorkdays, standardDay } from './period.js';
+import { defaultEntryDays, describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodEntryState, periodList, periodProgress, periodWorkdays, standardDay } from './period.js';
 
-const NO_TASK = { show:null, canEdit:false, badge:false, phase:'none', familyId:null, family:null, entry:null };
+const NO_TASK = { show:null, canEdit:false, badge:false, phase:'none', familyId:null, family:null, entry:null, period:null };
 
-// What the current user sees for the period: see periodEntryState. Nothing until the period and the entries are loaded,
-// so the card and the badge never flash up for a family that already handed in.
-// The same for any family: the coordinator uses it to fill in on behalf of a parent (canEdit is then always true, also after the deadline).
-export function periodTaskFor(familyId, nowMs){
-  if(!S.period || !S.periodEntriesLoaded || !S.me) return NO_TASK;
+// What one family sees for one period (`firstDay`): see periodEntryState. Nothing until the periods and the entries are loaded,
+// so a card and the badge never flash up for a family that already handed in.
+// The coordinator uses it for any family, to fill in on behalf of a parent (canEdit is then always true, also after the deadline).
+export function periodTaskFor(familyId, firstDay, nowMs){
+  const period = S.periods[firstDay];
+  if(!period || !S.periodEntriesLoaded || !S.me) return NO_TASK;
   const family = S.families[familyId];
-  const entry = S.periodEntries[periodEntryId(S.period, familyId)] || null;
-  const st = periodEntryState(S.period, entry || undefined, { hasFamily:!!family, isFlex:isFlex(family), canEdit:S.canEdit }, nowMs);
-  return { ...st, familyId, family, entry };
+  const entry = S.periodEntries[periodEntryId(period, familyId)] || null;
+  const st = periodEntryState(period, entry || undefined, { hasFamily:!!family, isFlex:isFlex(family), canEdit:S.canEdit }, nowMs);
+  return { ...st, familyId, family, entry, period };
 }
-export function periodTask(nowMs){ return periodTaskFor(myFamilyId(), nowMs); }
+
+// The own tasks, one per period (oldest first); `show` is null where there is nothing to show for that period.
+export function periodTasks(nowMs){
+  return periodList(S.periods).map(p => periodTaskFor(myFamilyId(), p.firstDay, nowMs));
+}
 
 const girlOf = f => (f && (f.girlName || f.parentName)) || '';
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
@@ -52,35 +58,35 @@ export function periodDaySummary(family, iso, day){
 }
 
 function taskCardHtml(tk){
-  const p = normalizePeriod(S.period), girl = girlOf(tk.family);
+  const p = normalizePeriod(tk.period), girl = girlOf(tk.family);
   const locked = tk.phase==='closed';
-  return `<div class="devAlert" id="periodTask">
+  return `<div class="devAlert" id="periodTask_${p.firstDay}" data-periodtask="${p.firstDay}">
       <p class="devAlertTitle">${phIcon('lightning')} ${t('period.task.title')}</p>
       <p class="devAlertBody">${esc(t(S.canEdit? 'period.task.bodyCoord' : 'period.task.body',{p1:p.name, p2:isoRangeLabel(p.firstDay,p.lastDay), p3:girl}))}</p>
       <p class="devAlertBody" style="font-weight:700">${esc(locked? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>
       <p class="devAlertBody" style="font-size:12px">${t('period.task.standardStays')}</p>
-      <button type="button" class="btn small" id="periodOpen">${t('period.task.button')}</button>
+      <button type="button" class="btn small" id="periodOpen_${p.firstDay}" data-periodopen="${p.firstDay}">${t('period.task.button')}</button>
     </div>`;
 }
 
 function doneCardHtml(tk){
-  const p = normalizePeriod(S.period), girl = girlOf(tk.family);
+  const p = normalizePeriod(tk.period), girl = girlOf(tk.family);
   const rows = periodWorkdays(p.firstDay, p.lastDay).map(iso =>
     `<div class="periodSummary"><span>${esc(cap(isoDayLabel(iso)))}</span><span class="muted">${esc(periodDaySummary(tk.family, iso, tk.entry.days[iso]))}</span></div>`).join('');
-  return `<div class="periodDone" id="periodDone">
+  return `<div class="periodDone" id="periodDone_${p.firstDay}">
       <p class="periodDoneTitle">${phIcon('check')} ${t('period.done.title')}</p>
       <p class="devAlertBody">${esc(t(tk.canEdit? 'period.done.body' : 'period.done.locked', { p1:p.name, p2:girl, p3:deadlineLabel(p) }))}</p>
       <h3 style="margin:10px 0 2px;font-size:14px">${esc(t('period.done.yours',{p1:p.name}))}</h3>
       ${rows}
-      ${tk.canEdit? `<button type="button" class="btn small secondary" id="periodEdit">${t('period.done.edit')}</button>` : ''}
+      ${tk.canEdit? `<button type="button" class="btn small secondary" id="periodEdit_${p.firstDay}" data-periodedit="${p.firstDay}">${t('period.done.edit')}</button>` : ''}
     </div>`;
 }
 
 // The form: one block per workday, a switch Rijdt mee / Rijdt niet mee and the two times. Changed values are amber.
 export function periodFormHtml(){
-  const f = S.periodForm, tk = f ? periodTaskFor(f.familyId) : NO_TASK;
+  const f = S.periodForm, tk = f ? periodTaskFor(f.familyId, f.firstDay) : NO_TASK;
   if(!f || !tk.canEdit) return '';
-  const p = normalizePeriod(S.period), girl = girlOf(tk.family);
+  const p = normalizePeriod(tk.period), girl = girlOf(tk.family);
   const onBehalf = f.familyId!==myFamilyId()? `<p class="periodBehalf" id="periodOnBehalf">${esc(t('period.form.onBehalf',{p1:tk.family.parentName||'', p2:girl}))}</p>` : '';
   const rows = Object.keys(f.days).sort().map(iso => {
     const d = f.days[iso], std = standardDay(tk.family, iso);
@@ -113,73 +119,80 @@ export function periodFormHtml(){
 // True while the form is what Wijzigen shows (the rest of the tab is hidden then, to keep the focus on the form).
 export function periodFormActive(){
   if(!S.periodForm) return false;
-  const tk = periodTaskFor(S.periodForm.familyId);
+  const tk = periodTaskFor(S.periodForm.familyId, S.periodForm.firstDay);
   const other = S.periodForm.familyId!==myFamilyId();
-  // Closed in the meantime: the deadline passed, or the family was another one than the one now shown, or the coordinator rights are gone.
+  // Closed in the meantime: the period is gone, the deadline passed, the family shown is another one, or the coordinator rights are gone.
   if(!tk.canEdit || (other && !S.canEdit)) S.periodForm = null;
   return !!S.periodForm;
 }
 
 // The coordinator can fill in for other families while filling in is open and after the deadline; not in the "test as parent" view.
-function behalfAllowed(){
-  if(!S.canEdit || !S.period || !S.periodEntriesLoaded) return false;
-  const phase = periodTaskFor(myFamilyId()).phase;
+function behalfAllowed(firstDay){
+  if(!S.canEdit || !S.periods[firstDay] || !S.periodEntriesLoaded) return false;
+  const phase = periodTaskFor(myFamilyId(), firstDay).phase;
   return phase==='open' || phase==='closed';
 }
 
 // The families that still have to hand in come first, then the ones that did, each in name order. The own family is the own task.
-export function periodBehalfRows(){
-  const pr = periodProgress(S.period, S.families, S.periodEntries);
+export function periodBehalfRows(firstDay){
+  const pr = periodProgress(S.periods[firstDay], S.families, S.periodEntries);
   const own = myFamilyId();
   const byName = (a, b) => girlOf(a.family).localeCompare(girlOf(b.family), 'nl');
   const rows = pr.rows.filter(r => r.id!==own);
   return { total: pr.total, done: pr.done, rows: [...rows.filter(r => !r.done).sort(byName), ...rows.filter(r => r.done).sort(byName)] };
 }
 
-function behalfCardHtml(withIntro){
-  const p = normalizePeriod(S.period), pr = periodBehalfRows(), left = pr.total - pr.done;
+function behalfCardHtml(firstDay, withIntro){
+  const p = normalizePeriod(S.periods[firstDay]), pr = periodBehalfRows(firstDay), left = pr.total - pr.done;
   const intro = withIntro? `<p class="muted">${esc(t('period.coord.intro',{p1:p.name, p2:isoRangeLabel(p.firstDay,p.lastDay)}))}</p>
-      <p class="muted" style="font-weight:700">${esc(periodTaskFor(myFamilyId()).phase==='closed'? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>` : '';
+      <p class="muted" style="font-weight:700">${esc(periodTaskFor(myFamilyId(), firstDay).phase==='closed'? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>` : '';
   const rows = pr.rows.map(r => {
-    const open = S.periodView===r.id && r.done;
-    const entry = S.periodEntries[periodEntryId(S.period, r.id)];
-    const detail = open? `<div class="periodBehalfDetail" data-periodrow="${esc(r.id)}">${periodWorkdays(p.firstDay,p.lastDay).map(iso =>
+    const key = firstDay+'|'+r.id;
+    const open = S.periodView===key && r.done;
+    const entry = S.periodEntries[periodEntryId(S.periods[firstDay], r.id)];
+    const detail = open? `<div class="periodBehalfDetail" data-periodrow="${esc(key)}">${periodWorkdays(p.firstDay,p.lastDay).map(iso =>
         `<div class="periodSummary"><span>${esc(cap(isoDayLabel(iso)))}</span><span class="muted">${esc(periodDaySummary(r.family, iso, entry.days[iso]))}</span></div>`).join('')}
-        <button type="button" class="btn small secondary" data-periodfill="${esc(r.id)}">${t('period.done.edit')}</button></div>` : '';
-    return `<div class="periodBehalfRow" data-periodfamily="${esc(r.id)}">
+        <button type="button" class="btn small secondary" data-periodfill="${esc(key)}">${t('period.done.edit')}</button></div>` : '';
+    return `<div class="periodBehalfRow" data-periodfamily="${esc(key)}">
         <div class="periodBehalfName"><strong>${esc(girlOf(r.family))}</strong><div class="muted" style="font-size:12px">${esc(r.family.parentName||'')}</div></div>
         <span class="periodPill${r.done? ' done' : ' todo'}">${t(r.done? 'period.coord.done' : 'period.coord.notYet')}</span>
-        <button type="button" class="btn small secondary" ${r.done? `data-periodview="${esc(r.id)}"` : `data-periodfill="${esc(r.id)}"`}>${t(r.done? (open? 'period.coord.hide' : 'period.coord.view') : 'period.coord.fill')}</button>
+        <button type="button" class="btn small secondary" ${r.done? `data-periodview="${esc(key)}"` : `data-periodfill="${esc(key)}"`}>${t(r.done? (open? 'period.coord.hide' : 'period.coord.view') : 'period.coord.fill')}</button>
       </div>${detail}`;
   }).join('');
-  return `<div class="card" id="periodBehalfCard">
-      <h2>${t('period.coord.title')}</h2>
+  return `<div class="card" id="periodBehalfCard_${firstDay}">
+      <h2>${esc(t('period.coord.title'))}${periodList(S.periods).length>1? ' · '+esc(p.name) : ''}</h2>
       ${intro}
-      <p class="muted" id="periodProgress">${esc(left? t('period.coord.progress',{p1:pr.done, p2:pr.total, p3:left}) : t('period.coord.allDone',{p2:pr.total}))}</p>
+      <p class="muted" id="periodProgress_${firstDay}">${esc(left? t('period.coord.progress',{p1:pr.done, p2:pr.total, p3:left}) : t('period.coord.allDone',{p2:pr.total}))}</p>
       ${rows}
     </div>`;
 }
 
-// The card at the top of Wijzigen: the task, or the "doorgegeven" card. '' when there is nothing for this user.
+// The cards at the top of Wijzigen: per period (oldest first) the task or the "doorgegeven" card, and for the coordinator the overview
+// per family. '' when there is nothing for this user.
 export function periodCardsHtml(){
-  const tk = periodTask();
-  const own = tk.show==='task'? taskCardHtml(tk) : tk.show==='done'? doneCardHtml(tk) : '';
-  return own + (behalfAllowed()? behalfCardHtml(!own) : '');
+  return periodTasks().map(tk => {
+    if(!tk.period) return '';
+    const own = tk.show==='task'? taskCardHtml(tk) : tk.show==='done'? doneCardHtml(tk) : '';
+    return own + (behalfAllowed(tk.period.firstDay)? behalfCardHtml(tk.period.firstDay, !own) : '');
+  }).join('');
 }
+
+// The red number on the Wijzigen tab: how many periods wait for this family's times.
+export function periodBadgeCount(nowMs){ return periodTasks(nowMs).filter(tk => tk.badge).length; }
 
 export function updatePeriodBadge(){
   const el = document.getElementById('navDeviationBadge');
   if(!el) return;
-  const on = periodTask().badge;
-  el.textContent = on ? '1' : '';
-  el.style.display = on ? '' : 'none';
-  if(on) el.setAttribute('aria-label', t('period.badge.aria')); else el.removeAttribute('aria-label');
+  const n = periodBadgeCount();
+  el.textContent = n? String(n) : '';
+  el.style.display = n ? '' : 'none';
+  if(n) el.setAttribute('aria-label', t('period.badge.aria')); else el.removeAttribute('aria-label');
 }
 
-const taskKey = () => { const tk = periodTask(); return [tk.show, tk.canEdit, tk.badge, tk.phase, behalfAllowed()].join('|'); };
+const taskKey = () => periodTasks().map(tk => [tk.period && tk.period.firstDay, tk.show, tk.canEdit, tk.badge, tk.phase, tk.period && behalfAllowed(tk.period.firstDay)].join(':')).join('|');
 // Called on every render of Wijzigen: remembers what was shown, and refreshes the badge.
 export function markPeriodShown(){ S.periodPhaseKey = taskKey(); updatePeriodBadge(); }
-// Called every minute: the moment filling in opens, or the deadline passes, changes what is shown without any database update.
+// Called every minute: the moment filling in opens, or a deadline passes, changes what is shown without any database update.
 export function refreshPeriodTask(){
   if(taskKey()===S.periodPhaseKey) return false;
   renderDeviationTab();
@@ -202,7 +215,7 @@ function readForm(){
 // Amber follows what is typed, without redrawing the form (a redraw would take the focus away).
 function markChanged(){
   const f = S.periodForm; if(!f) return;
-  const tk = periodTaskFor(f.familyId);
+  const tk = periodTaskFor(f.familyId, f.firstDay);
   Object.keys(f.days).forEach(iso => {
     const d = f.days[iso], std = standardDay(tk.family, iso);
     const row = document.querySelector && document.querySelector(`[data-periodday="${iso}"]`);
@@ -215,19 +228,20 @@ function markChanged(){
 }
 
 // Own family by default; the coordinator can pass another family (on behalf of that parent).
-export function openPeriodForm(familyId){
+export function openPeriodForm(firstDay, familyId){
   const id = familyId || myFamilyId();
   if(id!==myFamilyId() && !S.canEdit) return false;
-  const tk = periodTaskFor(id);
+  const tk = periodTaskFor(id, firstDay);
   if(!tk.canEdit) return false;
-  S.periodForm = { familyId:id, days:periodFormFrom(S.period, tk.family, tk.entry) };
+  S.periodForm = { familyId:id, firstDay, days:periodFormFrom(tk.period, tk.family, tk.entry) };
   S.periodView = null;
   renderDeviationTab();
   return true;
 }
 
-export function togglePeriodView(familyId){
-  S.periodView = S.periodView===familyId? null : familyId;
+export function togglePeriodView(firstDay, familyId){
+  const key = firstDay+'|'+familyId;
+  S.periodView = S.periodView===key? null : key;
   renderDeviationTab();
 }
 
@@ -236,18 +250,20 @@ export function cancelPeriodForm(){ S.periodForm = null; renderDeviationTab(); }
 export async function submitPeriodForm(){
   if(!S.periodForm) return false;
   readForm();
-  const ok = await savePeriodEntry(S.periodForm.familyId, S.periodForm.days);
+  const ok = await savePeriodEntry(S.periodForm.familyId, S.periodForm.firstDay, S.periodForm.days);
   if(ok){ S.periodForm = null; renderDeviationTab(); }
   return ok;
 }
 
+const splitKey = key => { const i = String(key).indexOf('|'); return [String(key).slice(0,i), String(key).slice(i+1)]; };
+
 export function wirePeriod(){
-  const open = document.getElementById('periodOpen'); if(open) open.onclick = () => { hapticTap(); openPeriodForm(); };
-  const edit = document.getElementById('periodEdit'); if(edit) edit.onclick = () => { hapticTap(); openPeriodForm(); };
+  document.querySelectorAll('[data-periodopen]').forEach(b => b.onclick = () => { hapticTap(); openPeriodForm(b.dataset.periodopen); });
+  document.querySelectorAll('[data-periodedit]').forEach(b => b.onclick = () => { hapticTap(); openPeriodForm(b.dataset.periodedit); });
   const cancel = document.getElementById('periodCancel'); if(cancel) cancel.onclick = () => cancelPeriodForm();
   const submit = document.getElementById('periodSubmit'); if(submit) submit.onclick = () => { hapticTap(); return submitPeriodForm(); };
-  document.querySelectorAll('[data-periodfill]').forEach(b => b.onclick = () => { hapticTap(); openPeriodForm(b.dataset.periodfill); });
-  document.querySelectorAll('[data-periodview]').forEach(b => b.onclick = () => { hapticTap(); togglePeriodView(b.dataset.periodview); });
+  document.querySelectorAll('[data-periodfill]').forEach(b => b.onclick = () => { hapticTap(); const [fd, id] = splitKey(b.dataset.periodfill); openPeriodForm(fd, id); });
+  document.querySelectorAll('[data-periodview]').forEach(b => b.onclick = () => { hapticTap(); const [fd, id] = splitKey(b.dataset.periodview); togglePeriodView(fd, id); });
   document.querySelectorAll('.periodTime').forEach(el => el.oninput = () => { readForm(); markChanged(); });
   document.querySelectorAll('.periodRideInput').forEach(el => el.onchange = () => { readForm(); renderDeviationTab(); });
 }

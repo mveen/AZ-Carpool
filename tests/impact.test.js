@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, resetState, sampleFamilies, sampleGroups, sampleParentState, withFakeNowAsync, NOW } from './test-support.js';
+import { installFakeDom, useFakeDb, resetState, sampleFamilies, sampleGroups, sampleParentState, withFakeNowAsync, NOW, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { analyzeImpact, impactText, impactEnabled, setImpactEnabled, impactCardHtml, wireImpactCard, impactGate } from '../impact.js';
 import { saveDeviationCars } from '../data.js';
@@ -138,7 +138,7 @@ await testAsync('confirming saves for real without asking again, and stores no p
 console.log('\n=== during a period with a temporary rooster ===');
 await testAsync('the preview plans with the handed-in times of that shift (a smoke test of the whole path)', async () => {
   useFakeDb({ 'settings/features': { impactPreview: true } });
-  sampleParentState({ period: { name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }, deviations: {},
+  sampleParentState({ periods: oneP({ name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }), deviations: {},
     periodCars: { '2026-09-28_2026-09-28_heen': { periodFirstDay: '2026-09-28', date: '2026-09-28', direction: 'heen', madeAt: 1, by: 'x', cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }] } },
     periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-28': { heen: '15:00', terug: '17:30' } } } } });
   const added = []; const realCreate = dom.doc.createElement; dom.doc.createElement = () => { const e = realCreate(); e.querySelector = () => ({ onclick: null, focus() {} }); e.querySelectorAll = () => []; added.push(e); return e; };

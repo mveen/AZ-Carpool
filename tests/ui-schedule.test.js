@@ -12,7 +12,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot } from './test-support.js';
+import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
@@ -173,13 +173,13 @@ test('a one-off place chosen in Wijzigen shows on that ride only', () => {
 });
 
 test('without a period the switch has two views and a stale "period" mode falls back to "Deze week"', () => {
-  sampleParentState({ roosterMode: 'period', period: null });
+  sampleParentState({ roosterMode: 'period', periods: {} });
   const html = withFakeNow(NOW, () => { renderSchedule(); return dom.html('tab-schedule'); });
   assert.equal((html.match(/data-rmode=/g) || []).length, 2); assert.equal(S.roosterMode, 'week');
 });
 test('the standard views are untouched while a period is set: same html with and without the period', () => {
   const plain = withFakeNow(NOW, () => { sampleParentState({ roosterMode: 'standard' }); renderSchedule(); return dom.html('tab-schedule'); });
-  const withPeriod = withFakeNow(NOW, () => { sampleParentState({ roosterMode: 'standard', period: { name: 'x', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' }, periodCars: {}, periodEntries: {}, periodEntriesLoaded: true }); renderSchedule(); return dom.html('tab-schedule'); });
+  const withPeriod = withFakeNow(NOW, () => { sampleParentState({ roosterMode: 'standard', periods: oneP({ name: 'x', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' }), periodCars: {}, periodEntries: {}, periodEntriesLoaded: true }); renderSchedule(); return dom.html('tab-schedule'); });
   assert.equal(plain, withPeriod);
 });
 

@@ -52,7 +52,7 @@ test('shows title, paragraphs (list lines get their own style), a back button an
   resetState({ canEdit: true }); navTabs = {};
   const html = helpArticleHtml('beheer-periode');
   assert.match(html, /id="helpBack"/); assert.match(html, /<h3 class="helpTitle">Beheer: een periode met andere tijden instellen/);
-  assert.match(html, /<p class="helpP helpLine">• Naam:/); assert.match(html, /<p class="helpP">Onder Periode met andere tijden/);
+  assert.match(html, /<p class="helpP helpLine">• Naam:/); assert.match(html, /<p class="helpP">Onder Perioden met andere tijden/);
   assert.match(text(html), /Kom je er niet uit\? Vraag het aan de coördinator\.$/);
 });
 test('"Ga naar <tab>" appears only when that tab is visible in the navigation', () => {

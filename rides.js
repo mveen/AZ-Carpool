@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { deviationKey, weekKeyDayIso } from './dates.js';
-import { periodDayKey, periodEntryId, periodShiftId, periodWorkdays } from './period.js';
+import { periodDayKey, periodEntryId, periodForDate, periodShiftId, periodWorkdays } from './period.js';
 import { ovIds } from './ov.js';
 import { esc } from './ui-common.js';
 import { computeDepartureTime as pureComputeDepartureTime, minutesToTime as pureMinutesToTime, planAlternativeAssignments, planClusters as pureplanClusters, planPartialAssignment, planPrimaryAssignment, timeToMinutes as pureTimeToMinutes } from './planning.js';
@@ -39,17 +39,17 @@ export function baseCars(day,direction, st=S){
 // The temporary rooster of one shift of the current planning week: only where the coordinator made it, and only for a date inside the
 // period. Everything else (other dates, other weeks, no rooster made) runs on the standard rooster, exactly as before.
 export function periodShift(day,direction, st=S){
-  const p = st.period;
-  if(!p || !st.periodCars) return null;
+  if(!st.periodCars) return null;
   const iso = weekKeyDayIso(st.currentWeekKey, day);
-  if(!iso || iso<p.firstDay || iso>p.lastDay) return null;
+  const p = iso && periodForDate(st.periods, iso);   // the period that date belongs to: periods never share a day
+  if(!p) return null;
   const id = periodShiftId(p, iso, direction), doc = st.periodCars[id];
   return doc && doc.periodFirstDay===p.firstDay && Array.isArray(doc.cars)? { id, iso, doc } : null;
 }
 
 // The time a family handed in for a date of the period ('' = does not ride that way). A family that handed in nothing keeps its standard time.
 export function periodTimeFor(id, iso, direction, st=S){
-  const p = st.period, entry = p && st.periodEntries && st.periodEntries[periodEntryId(p,id)];
+  const p = periodForDate(st.periods, iso), entry = p && st.periodEntries && st.periodEntries[periodEntryId(p,id)];
   const d = entry && entry.days && entry.days[iso];
   if(d) return d.out? '' : (d[direction]||'');
   return famTime(id, periodDayKey(iso), direction, st);
@@ -258,7 +258,7 @@ export function periodRidersFor(iso,direction, st=S){
 
 // The cars of one made shift, or null while that shift has no temporary rooster yet.
 export function periodCarsFor(iso,direction, st=S){
-  const p = st.period, doc = p && st.periodCars && st.periodCars[periodShiftId(p,iso,direction)];
+  const p = periodForDate(st.periods, iso), doc = p && st.periodCars && st.periodCars[periodShiftId(p,iso,direction)];
   return doc && doc.periodFirstDay===p.firstDay && Array.isArray(doc.cars)? doc.cars : null;
 }
 
@@ -296,9 +296,8 @@ export function planPeriodShift(iso,direction, st=S){
   };
 }
 
-// Every shift of the period, planned: [{ iso, direction, cars, unplaced }] for each workday of the period, heen and terug.
-export function planPeriodRooster(st=S){
-  const p = st.period;
+// Every shift of one period, planned: [{ iso, direction, cars, unplaced }] for each workday of the period, heen and terug.
+export function planPeriodRooster(st=S, p){
   if(!p) return [];
   return periodWorkdays(p.firstDay, p.lastDay).flatMap(iso => ['heen','terug'].map(direction => ({ iso, direction, ...planPeriodShift(iso,direction, st) })));
 }

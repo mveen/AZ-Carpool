@@ -152,3 +152,6 @@ export function expectSnapshot(file, name, actual) {
   }
   assert.equal(actual, snaps[name], `Snapshot "${name}" in ${file}.snap.json changed. If the change is intended, run: UPDATE_SNAPSHOTS=1 npm test`);
 }
+
+// The periods list the app keeps (S.periods) for a single period: { firstDay: period }, or nothing.
+export const oneP = p => (p ? { [p.firstDay]: p } : {});

@@ -43,8 +43,11 @@ export function normalizePeriod(raw){
 }
 
 // -> { ok, errors: [text key, ...], value: normalised period }. `errors` lists every problem, in the order shown to the coordinator.
-export function validatePeriod(raw){
-  const v = normalizePeriod(raw); const errors = [];
+// others (optional): the periods that already exist, without the one being edited. Two periods may not share a day
+// (the temporary rooster of a date belongs to exactly one period); the filling-in windows may overlap freely.
+// -> { ok, errors, value, overlap } where `overlap` is the period in the way (for its name in the message) or null.
+export function validatePeriod(raw, others){
+  const v = normalizePeriod(raw); const errors = []; let overlap = null;
   if(!v.name) errors.push('period.err.name');
   else if(v.name.length>PERIOD_NAME_MAX) errors.push('period.err.nameLong');
   const firstOk = isValidIsoDate(v.firstDay), lastOk = isValidIsoDate(v.lastDay);
@@ -53,13 +56,17 @@ export function validatePeriod(raw){
     if(!isWorkday(v.firstDay) || !isWorkday(v.lastDay)) errors.push('period.err.weekend');
     if(v.lastDay < v.firstDay) errors.push('period.err.order');
     else if(periodWorkdays(v.firstDay, v.lastDay).length > PERIOD_MAX_WORKDAYS) errors.push('period.err.tooLong');
+    if(v.lastDay >= v.firstDay){
+      overlap = (others || []).map(normalizePeriod).find(o => o.firstDay && o.lastDay && v.firstDay <= o.lastDay && v.lastDay >= o.firstDay) || null;
+      if(overlap) errors.push('period.err.overlap');
+    }
   }
   const opensOk = isValidIsoDate(v.opensOn), dlOk = isValidIsoDate(v.deadlineDate) && isValidTime(v.deadlineTime);
   if(!opensOk) errors.push('period.err.opens');
   if(!dlOk) errors.push('period.err.deadline');
   if(opensOk && dlOk && v.deadlineDate < v.opensOn) errors.push('period.err.deadlineBeforeOpen');
   if(dlOk && firstOk && v.deadlineDate >= v.firstDay) errors.push('period.err.deadlineAfterStart');
-  return { ok: errors.length===0, errors, value: v };
+  return { ok: errors.length===0, errors, value: v, overlap };
 }
 
 // The stored period, or null when nothing (valid) is stored. A broken document counts as "no period".
@@ -221,4 +228,29 @@ export function periodSetDriver(cars, index, driverId, capOf){
   const cap = driverId? capOf(driverId) : null;
   if(cap!=null && (car.girlIds || []).length > cap) return { cars, error: { key:'period.rooster.err.full', p1:(car.girlIds || []).length, p2:cap } };
   return { cars: cars.map((c, i) => i===index ? { ...c, driverFamilyId: driverId || '' } : c), error: null };
+}
+
+// ---------- Several periods at the same time (the periods list) ----------
+// Every period has its own document, periods/<firstDay>. The first day is the id, and also the key of the handed-in times and
+// of the temporary rooster of that period, so it identifies the period everywhere. Periods never share a day.
+
+// The valid periods, oldest first. `periods` is { firstDay: period }.
+export function periodList(periods){
+  return Object.entries(periods || {}).map(([k, p]) => storedPeriod(p)).filter(Boolean).sort((a, b) => a.firstDay.localeCompare(b.firstDay));
+}
+
+// The period a date ('YYYY-MM-DD') belongs to, or null.
+export function periodForDate(periods, iso){
+  if(!isValidIsoDate(iso)) return null;
+  return periodList(periods).find(p => p.firstDay <= iso && iso <= p.lastDay) || null;
+}
+
+// Combines the periods collection with the period the first version of the app stored in settings/period.
+// A document whose id is not its own first day is ignored; the collection wins over the old document.
+export function mergePeriods(collection, legacy){
+  const out = {};
+  const old = storedPeriod(legacy);
+  if(old) out[old.firstDay] = old;
+  Object.entries(collection || {}).forEach(([id, raw]) => { const p = storedPeriod(raw); if(p && p.firstDay===id) out[id] = p; });
+  return out;
 }

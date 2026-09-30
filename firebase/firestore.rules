@@ -133,19 +133,35 @@ service cloud.firestore {
       );
     }
 
+    // ---- Perioden met andere tijden: the periods themselves (doc id = the first day) ----
+    // Members read (every parent sees the task and the dates). Only the coordinator writes. `deadlineAt` is the deadline as a moment (ms):
+    // the rules below compare it with the server clock. Periods never share a day; that is checked in the app, not here.
+    match /periods/{firstDay} {
+      allow read: if isMember();
+      allow create, update: if isCoordinator()
+        && request.resource.data.keys().hasOnly(['name', 'firstDay', 'lastDay', 'opensOn', 'deadlineDate', 'deadlineTime', 'deadlineAt'])
+        && request.resource.data.firstDay == firstDay
+        && request.resource.data.name is string && request.resource.data.lastDay is string
+        && request.resource.data.deadlineAt is number;
+      allow delete: if isCoordinator();
+    }
+
     // ---- Periode met andere tijden: times a family hands in (doc id = <firstDay>_<familyId>) ----
-    // Members read. The coordinator writes for anyone, at any time. A parent writes only for the OWN family, only for the
-    // period that is set now, and only before the deadline (settings/period.deadlineAt, ms, saved by Beheer): the server
-    // clock decides, not the phone.
-    function periodPath() { return /databases/$(database)/documents/settings/period; }
+    // Members read. The coordinator writes for anyone, at any time. A parent writes only for the OWN family, only for an existing period,
+    // and only before THAT period's deadline (periods/<firstDay>.deadlineAt, ms, saved by Beheer): the server clock decides, not the phone.
+    // The first version of the app kept one period in settings/period: it counts as the period with its first day until it is moved.
+    function periodOf(first) {
+      return exists(/databases/$(database)/documents/periods/$(first))
+        ? get(/databases/$(database)/documents/periods/$(first)).data
+        : get(/databases/$(database)/documents/settings/period).data;
+    }
     function periodOpenForMyFamily(entryId) {
       let d = request.resource.data;
-      let p = get(periodPath()).data;
-      return exists(periodPath())
-        && isLinked()
+      let p = periodOf(d.periodFirstDay);
+      return isLinked()
         && d.familyId == linkedFamilyId()
+        && p.firstDay == d.periodFirstDay
         && entryId == p.firstDay + '_' + linkedFamilyId()
-        && d.periodFirstDay == p.firstDay
         && ('deadlineAt' in p) && p.deadlineAt is number
         && request.time.toMillis() < p.deadlineAt;
     }

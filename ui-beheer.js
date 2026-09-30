@@ -2,17 +2,17 @@
 import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, PDF_SEED } from './constants.js';
-import { dayUp, isoDayLabel } from './dates.js';
+import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority } from './rides.js';
 import { esc, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
-import { db, doToggleCoord, markTimeChangesSeen, recordLastUpdate, saveCoordFamily } from './data.js';
+import { db, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodHasData, recordLastUpdate, saveCoordFamily, savePeriodDoc } from './data.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode, slugify } from './coordinator.js';
-import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, deadlineMs, normalizePeriod, periodPhase, periodProgress, validatePeriod } from './period.js';
+import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, normalizePeriod, periodList, periodPhase, periodProgress } from './period.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -133,9 +133,10 @@ export async function saveDayCoordinator(day, familyId){
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
-// Periode met andere tijden (vakantie, proefwerkweek): the coordinator sets name, first and last day (max 10 workdays),
-// when filling in opens and the deadline. One document, settings/period. Edits stay in S.periodDraft until Opslaan,
-// so a live update from the database cannot wipe what is being typed. Parents fill in their times in a later step.
+// Periodes met andere tijden (vakantie, proefwerkweek): the coordinator keeps a LIST of periods, each with a name, first and last day
+// (max 10 workdays), when filling in opens and a deadline. Periods never share a day; the filling-in windows may overlap, so the next
+// period can be collected while the current one is running. One document per period: periods/<firstDay>. Edits of the form stay in
+// S.periodDraft until Opslaan, so a live update from the database cannot wipe what is being typed.
 const fmtDay = iso => isoDayLabel(iso);
 const fmtDeadline = p => fmtDay(p.deadlineDate)+' '+p.deadlineTime;
 
@@ -150,40 +151,67 @@ export function periodPhaseText(p, nowMs){
 }
 
 // "Doorgegeven: 9 van 14 gezinnen" (Flex families are not counted): only once filling in has opened and the entries are loaded.
-export function periodStatusHtml(nowMs){
-  if(!S.period || !S.periodEntriesLoaded) return '';
-  const phase = periodPhase(S.period, nowMs);
+export function periodStatusHtml(p, nowMs){
+  if(!p || !S.periodEntriesLoaded) return '';
+  const phase = periodPhase(p, nowMs);
   if(phase!=='open' && phase!=='closed' && phase!=='over') return '';
-  const pr = periodProgress(S.period, S.families, S.periodEntries);
-  return `<div class="rowflex" id="periodStatus" style="margin-top:10px"><span class="muted">${t('period.status.label')}</span><b>${esc(t('period.status.value',{p1:pr.done, p2:pr.total}))}</b></div>`;
+  const pr = periodProgress(p, S.families, S.periodEntries);
+  return `<div class="rowflex periodStatus" style="margin-top:4px"><span class="muted">${t('period.status.label')}</span><b>${esc(t('period.status.value',{p1:pr.done, p2:pr.total}))}</b></div>`;
 }
 
-export function periodCardHtml(){
-  const v = normalizePeriod(S.periodDraft || S.period);
+// The label of the delete button when it asks "sure?": says how many families lose what they handed in.
+export function periodDeleteConfirmLabel(p){
+  const n = periodHasData(p.firstDay).entries;
+  return n? t('period.delete.confirmData',{p1:n}) : t('beheer.zeker_nogmaals_klikken');
+}
+
+function periodRowHtml(p, nowMs){
+  const v = normalizePeriod(p), d = periodHasData(v.firstDay);
+  const info = [periodPhaseText(v, nowMs), d.rooster? t('period.list.roosterMade') : ''].filter(Boolean).join(' · ');
+  return `<div class="periodListRow" data-periodlist="${v.firstDay}">
+      <div style="flex:1;min-width:0">
+        <div><strong>${esc(v.name)}</strong> <span class="muted">${esc(isoRangeLabel(v.firstDay, v.lastDay))}</span></div>
+        <div class="muted" style="font-size:12px">${esc(info)}</div>
+        ${periodStatusHtml(v, nowMs)}
+      </div>
+      <button type="button" class="iconbtn" data-plistedit="${v.firstDay}" aria-label="${esc(t('period.list.edit',{p1:v.name}))}" title="${esc(t('period.list.edit',{p1:v.name}))}">${phIcon('pencil')}</button>
+      <button type="button" class="iconbtn danger" data-plistdelete="${v.firstDay}" aria-label="${esc(t('period.delete'))}: ${esc(v.name)}" title="${esc(t('period.delete'))}: ${esc(v.name)}">${phIcon('trash')}</button>
+    </div>`;
+}
+
+function periodFormCardHtml(){
+  const dr = S.periodDraft, v = normalizePeriod(dr.value);
+  const locked = !!dr.editing && (periodHasData(dr.editing).entries>0 || periodHasData(dr.editing).rooster>0);
   const field = (id,labelKey,type,val,extra='') => `<div style="margin-top:10px;flex:1"><label for="${id}" style="margin-top:0">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
-  const status = S.period && !S.periodDraft? `<p class="muted" id="periodPhase">${esc(periodPhaseText(S.period))}</p>` : (!S.period? `<p class="muted" id="periodPhase">${t('period.phase.none')}</p>` : '');
-  return `<div class="card" id="periodCard">
-      <h2>${t('period.title')}</h2>
-      <p class="muted">${t('period.intro')}</p>
-      ${status}
+  return `<div class="periodFormCard" id="periodDraftForm">
+      <h3 style="margin:12px 0 0;font-size:15px">${t(dr.editing? 'period.form.editTitle' : 'period.form.addTitle')}</h3>
       ${field('periodName','period.name','text',v.name,`maxlength="${PERIOD_NAME_MAX}" placeholder="${esc(t('period.namePlaceholder'))}"`)}
       <div class="rowflex" style="gap:8px">
-        ${field('periodFirst','period.firstDay','date',v.firstDay)}
+        ${field('periodFirst','period.firstDay','date',v.firstDay, locked? 'disabled' : '')}
         ${field('periodLast','period.lastDay','date',v.lastDay)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}</p>
+      <p class="muted" style="margin-top:3px">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}${locked? ' '+t('period.firstDayLockedHint') : ''}</p>
       ${field('periodOpens','period.opensOn','date',v.opensOn)}
       <p class="muted" style="margin-top:3px">${t('period.opensHint')}</p>
       <div class="rowflex" style="gap:8px">
         ${field('periodDlDate','period.deadlineDate','date',v.deadlineDate)}
         ${field('periodDlTime','period.deadlineTime','time',v.deadlineTime)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>${S.periodDraft? '' : periodStatusHtml()}
+      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>
       <div class="rowflex" style="gap:6px;margin-top:8px">
-        <button type="button" class="btn small" id="periodSave">${t('period.save')}</button>
-        <button type="button" class="btn small secondary" id="periodCancel">${t('period.cancel')}</button>
-        ${S.period? `<button type="button" class="iconbtn danger" id="periodDelete" aria-label="${t('period.delete')}" title="${t('period.delete')}">${phIcon('trash')}</button>` : ''}
+        <button type="button" class="btn small" id="periodDraftSave">${t('period.save')}</button>
+        <button type="button" class="btn small secondary" id="periodDraftCancel">${t('period.cancel')}</button>
       </div>
+    </div>`;
+}
+
+export function periodsCardHtml(nowMs){
+  const list = periodList(S.periods);
+  return `<div class="card" id="periodCard">
+      <h2>${t('period.title')}</h2>
+      <p class="muted">${t('period.intro')}</p>
+      ${list.length? list.map(p => periodRowHtml(p, nowMs)).join('') : (S.periodDraft? '' : `<p class="muted" id="periodPhase">${t('period.phase.none')}</p>`)}
+      ${S.periodDraft? periodFormCardHtml() : `<button type="button" class="btn small secondary" id="periodAdd" data-plistadd style="margin-top:10px">${t('period.add')}</button>`}
     </div>`;
 }
 
@@ -193,33 +221,37 @@ function readPeriodForm(){
     opensOn:periodField('periodOpens'), deadlineDate:periodField('periodDlDate'), deadlineTime:periodField('periodDlTime') });
 }
 
+// Opens the form for a new period (no argument) or to edit one.
+export function startPeriodEdit(firstDay){
+  S.periodDraft = { editing: firstDay||'', value: firstDay && S.periods[firstDay]? normalizePeriod(S.periods[firstDay]) : normalizePeriod({}) };
+  renderBeheer();
+}
+
 // Keeps what is typed while the form is open (see the note above).
-export function rememberPeriodDraft(){ S.periodDraft = readPeriodForm(); }
+export function rememberPeriodDraft(){ if(S.periodDraft) S.periodDraft = { editing:S.periodDraft.editing, value:readPeriodForm() }; }
 
 export async function savePeriod(){
-  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
-  const res = validatePeriod(readPeriodForm());
-  if(!res.ok){ S.periodDraft = res.value; showToast(t(res.errors[0],{p1:PERIOD_MAX_WORKDAYS})); return false; }
-  try{
-    await db.doc("settings/period").set({ ...res.value, deadlineAt:deadlineMs(res.value) });   // deadlineAt: firestore.rules stop parents after it
-    S.period = res.value; S.periodDraft = null;
-    showToast(t('period.saved'));
-    renderBeheer();
-    return true;
-  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+  if(!S.periodDraft) return false;
+  const editing = S.periodDraft.editing;
+  const res = await savePeriodDoc(readPeriodForm(), editing);
+  if(!res.ok){
+    S.periodDraft = { editing, value:res.value || readPeriodForm() };
+    if(res.errors && res.errors.length) showToast(t(res.errors[0],{p1:res.overlap? res.overlap.name : PERIOD_MAX_WORKDAYS}));
+    return false;
+  }
+  S.periodDraft = null;
+  showToast(t('period.saved'));
+  renderBeheer();
+  return true;
 }
 
 export function cancelPeriodEdit(){ S.periodDraft = null; renderBeheer(); }
 
-export async function deletePeriod(){
-  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
-  try{
-    await db.doc("settings/period").delete();
-    S.period = null; S.periodDraft = null;
-    showToast(t('period.deleted'));
-    renderBeheer();
-    return true;
-  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+export async function deletePeriod(firstDay){
+  const ok = await deletePeriodCompletely(firstDay);
+  if(ok && S.periodDraft && S.periodDraft.editing===firstDay) S.periodDraft = null;
+  renderBeheer();
+  return ok;
 }
 
 // US-15 / US-21: the pickup and drop-off places (up to 6) with names and addresses, the destination in Alkmaar,
@@ -400,7 +432,7 @@ export function renderBeheer(){
       ${renderPrefsCard()}
     </div>
     ${dayCoordinatorsCardHtml()}
-    ${periodCardHtml()}
+    ${periodsCardHtml()}
     ${locationsCardHtml()}
     ${apiKeysCardHtml()}
     ${impactCardHtml()}
@@ -466,9 +498,11 @@ export function renderBeheer(){
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
     document.querySelectorAll('.periodInput').forEach(el=>el.oninput=rememberPeriodDraft);
-    const perSave=document.getElementById('periodSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); savePeriod(); };
-    const perCancel=document.getElementById('periodCancel'); if(perCancel) perCancel.onclick=()=>cancelPeriodEdit();
-    const perDel=document.getElementById('periodDelete'); if(perDel) perDel.onclick=()=>twoStepConfirm(perDel, t('beheer.zeker_nogmaals_klikken'), ()=>deletePeriod());
+    const perSave=document.getElementById('periodDraftSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); return savePeriod(); };
+    const perCancel=document.getElementById('periodDraftCancel'); if(perCancel) perCancel.onclick=()=>cancelPeriodEdit();
+    document.querySelectorAll('[data-plistadd]').forEach(b=>b.onclick=()=>{ hapticTap(); startPeriodEdit(); });
+    document.querySelectorAll('[data-plistedit]').forEach(b=>b.onclick=()=>{ hapticTap(); startPeriodEdit(b.dataset.plistedit); });
+    document.querySelectorAll('[data-plistdelete]').forEach(b=>b.onclick=()=>{ const p=S.periods[b.dataset.plistdelete]; if(p) twoStepConfirm(b, periodDeleteConfirmLabel(p), ()=>deletePeriod(b.dataset.plistdelete)); });
     document.querySelectorAll('.locInput').forEach(el=>el.onchange=()=>saveLocations());
     const orsSave=document.getElementById('apiKeyOrsSave'); if(orsSave) orsSave.onclick=()=>{ hapticTap(); saveOrsApiKey(); };
     const orsClear=document.getElementById('apiKeyOrsClear'); if(orsClear) orsClear.onclick=()=>twoStepConfirm(orsClear, t('beheer.zeker_nogmaals_klikken'), ()=>saveOrsApiKey(''));

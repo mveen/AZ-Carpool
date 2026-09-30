@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState } from './test-support.js';
+import { installFakeDom, withFakeNowAsync, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import {
   renderBeheer, renderAvailabilityTable, renderPrefsCard, renderPriorityCard, renderShiftPriorityRows, movePriority, renderCoordEditor,
@@ -204,109 +204,152 @@ await testAsync('a refused save shows the error and returns false', async () => 
   assert.equal(await saveLocations(), false); assert.match(dom.doc.getElementById('toast').innerHTML, /permission-denied/);
 });
 
-console.log('\n=== Periode met andere tijden (Beheer) ===');
-import { periodStatusHtml, periodCardHtml, periodPhaseText, rememberPeriodDraft, savePeriod, cancelPeriodEdit, deletePeriod } from '../ui-beheer.js';
+console.log('\n=== Perioden met andere tijden (Beheer) ===');
+import { periodStatusHtml, periodsCardHtml, periodPhaseText, periodDeleteConfirmLabel, startPeriodEdit, rememberPeriodDraft, savePeriod, cancelPeriodEdit, deletePeriod } from '../ui-beheer.js';
 const PERIOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+const NEXT = { name: 'Toetsweek', firstDay: '2026-11-09', lastDay: '2026-11-13', opensOn: '2026-10-27', deadlineDate: '2026-11-04', deadlineTime: '12:00' };
+const at = iso => new Date(iso).getTime(), OPENNOW = '2026-10-15T12:00:00+02:00';
+const two = () => ({ [PERIOD.firstDay]: PERIOD, [NEXT.firstDay]: NEXT });
+const state = (patch = {}) => sampleCoordinatorState({ periods: two(), periodsColl: two(), periodEntries: {}, periodEntriesLoaded: true, periodCars: {}, ...patch });
 const fillPeriodForm = v => {
   const ids = { name: 'periodName', firstDay: 'periodFirst', lastDay: 'periodLast', opensOn: 'periodOpens', deadlineDate: 'periodDlDate', deadlineTime: 'periodDlTime' };
   Object.entries(ids).forEach(([k, id]) => { dom.el(id).value = v[k]; });
 };
-test('with no period the card shows an empty form, the limit and the hints from the design', () => {
-  sampleCoordinatorState();
-  const html = periodCardHtml(); const s = text(html);
-  assert.match(s, /^Periode met andere tijden Ouders geven voor deze periode één keer hun tijden door\. Het vaste rooster blijft staan\./);
-  assert.match(s, /Nog geen periode ingesteld\./); assert.match(s, /Periode is maximaal 10 werkdagen \(2 weken\)\./);
-  assert.match(s, /Vanaf dan krijgt iedereen de melding op Wijzigen\./); assert.match(s, /Staat in de melding voor ouders\./);
-  assert.match(html, /id="periodName"[^>]*value=""/); assert.match(html, /id="periodFirst"[^>]*type="date"|type="date"[^>]*id="periodFirst"/);
-  assert.match(html, /id="periodSave"/); assert.match(html, /id="periodCancel"/);
-  assert.ok(!/id="periodDelete"/.test(html), 'nothing to delete yet');
+// The buttons of the list, made from the html so the handlers the page wired up can be used.
+function pageButtons(html) {
+  const mk = attr => [...html.matchAll(new RegExp(`<button[^>]*data-${attr}(?:="([^"]*)")?`, 'g'))].map(m => ({ dataset: { [attr]: m[1] || '' }, onclick: null, textContent: '', innerHTML: '' }));
+  const reg = { '[data-plistadd]': mk('plistadd'), '[data-plistedit]': mk('plistedit'), '[data-plistdelete]': mk('plistdelete') };
+  dom.doc.querySelectorAll = sel => reg[sel] || [];
+  return reg;
+}
+test('with no period the card explains, says so and offers "+ Periode toevoegen"; no form yet', () => {
+  sampleCoordinatorState({ periods: {}, periodEntries: {}, periodEntriesLoaded: true });
+  const html = periodsCardHtml(); const s = text(html);
+  assert.match(s, /^Perioden met andere tijden Ouders geven voor een periode één keer hun tijden door\. Het vaste rooster blijft staan\. Je kunt meerdere perioden hebben.*Perioden mogen geen dag delen\./);
+  assert.match(s, /Nog geen periode ingesteld\./); assert.match(s, /\+ Periode toevoegen$/);
+  assert.doesNotMatch(html, /id="periodName"|periodDraftSave|data-plistedit|data-plistdelete/);
 });
-test('a saved period fills the form and shows where it stands; only then a trash button appears', () => {
-  sampleCoordinatorState({ period: PERIOD });
-  const html = withFakeNow(NOW, () => periodCardHtml());
-  assert.match(html, /id="periodName"[^>]*value="Herfstvakantie"/);
-  assert.match(html, /type="date" id="periodFirst" class="periodInput" value="2026-10-26"/); assert.match(html, /id="periodLast"[^>]*value="2026-10-30"/);
-  assert.match(html, /id="periodOpens"[^>]*value="2026-10-14"/); assert.match(html, /id="periodDlDate"[^>]*value="2026-10-16"/); assert.match(html, /id="periodDlTime"[^>]*value="12:00"/);
-  assert.match(text(html), /Invullen opent op/); assert.match(html, /id="periodDelete"[^>]*aria-label="Verwijder periode"/);
+test('every period is a row: name, dates, where it stands, how many handed in, and edit and delete buttons', () => {
+  state(); const s = text(withFakeNow(OPENNOW, () => periodsCardHtml())); const html = withFakeNow(OPENNOW, () => periodsCardHtml());
+  assert.match(s, /Herfstvakantie 26 – 30 okt Invullen is open tot de deadline: vr 16 okt 12:00\. Doorgegeven 0 van 6 gezinnen/);
+  assert.match(s, /Toetsweek 9 – 13 nov Invullen opent op di 27 okt\./);
+  assert.ok(html.indexOf('Herfstvakantie') < html.indexOf('Toetsweek'), 'oldest first');
+  assert.equal((html.match(/data-plistedit=/g) || []).length, 2); assert.equal((html.match(/data-plistdelete=/g) || []).length, 2);
+  assert.match(html, /data-plistedit="2026-10-26"[^>]*aria-label="Wijzig Herfstvakantie"/); assert.match(html, /data-plistdelete="2026-11-09"[^>]*aria-label="Verwijder periode: Toetsweek"/);
+  assert.match(html, /data-plistdelete="[^"]*"[^>]*>\s*<svg/, 'the trash icon');
 });
-test('unsaved edits (the draft) win over the saved period, so a live update cannot wipe what is typed', () => {
-  sampleCoordinatorState({ period: PERIOD, periodDraft: { ...PERIOD, name: 'Proefwerkweek' } });
-  const html = periodCardHtml();
-  assert.match(html, /id="periodName"[^>]*value="Proefwerkweek"/); assert.ok(!/id="periodPhase"/.test(html), 'no status line for an unsaved form');
+test('the status line counts per period, only once filling in has opened, without Flex families', () => {
+  const fams = sampleCoordinatorState().families; fams.f6 = { ...fams.f6, familyType: 'flex' };
+  state({ families: fams, periodEntries: { '2026-10-26_f2': {}, '2026-10-26_f3': {}, '2026-10-26_f6': {}, '2026-11-09_f2': {} } });
+  assert.equal(periodStatusHtml(PERIOD, at('2026-10-13T12:00:00+02:00')), '', 'before filling in opens');
+  assert.match(text(periodStatusHtml(PERIOD, at(OPENNOW))), /^Doorgegeven 2 van 5 gezinnen$/); assert.match(text(periodStatusHtml(NEXT, at('2026-10-28T12:00:00+01:00'))), /^Doorgegeven 1 van 5 gezinnen$/);
+  assert.match(text(periodStatusHtml(PERIOD, at('2026-11-05T12:00:00+01:00'))), /2 van 5/, 'still shown after the period, as a record');
+  state({ periodEntriesLoaded: false }); assert.equal(periodStatusHtml(PERIOD, at(OPENNOW)), ''); assert.equal(periodStatusHtml(null, at(OPENNOW)), '');
 });
-test('the phase text says what happens next (waiting, open, closed, over)', () => {
-  const at = iso => new Date(iso).getTime();
+test('a period with a temporary rooster says so in its row', () => {
+  state({ periodCars: { '2026-10-26_2026-10-27_terug': { periodFirstDay: '2026-10-26', date: '2026-10-27', direction: 'terug', cars: [] } } });
+  const s = text(withFakeNow(OPENNOW, () => periodsCardHtml())); assert.match(s, /Herfstvakantie 26 – 30 okt .*tijdelijk rooster gemaakt/); assert.doesNotMatch(s.slice(s.indexOf('Toetsweek')), /tijdelijk rooster gemaakt/);
+});
+test('the delete button asks "Zeker?" and says how many families lose their times', () => {
+  state({ periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' }, '2026-10-26_f3': { periodFirstDay: '2026-10-26' } } });
+  assert.equal(periodDeleteConfirmLabel(PERIOD), 'Zeker? 2 gezinnen verliezen hun tijden'); assert.equal(periodDeleteConfirmLabel(NEXT), 'Zeker? Nogmaals klikken');
+});
+test('"+ Periode toevoegen" opens an empty form: title, fields, limit and hints from the design, Opslaan and Annuleren', () => {
+  state(); startPeriodEdit();
+  assert.deepEqual([S.periodDraft.editing, S.periodDraft.value.name], ['', '']);
+  const html = periodsCardHtml(); const s = text(html);
+  assert.match(s, /Periode toevoegen Naam Eerste dag Laatste dag Periode is maximaal 10 werkdagen \(2 weken\)\. Invullen open vanaf Vanaf dan krijgt iedereen de melding op Wijzigen\. Deadline \(datum\) Deadline \(tijd\) Staat in de melding voor ouders\. Opslaan Annuleren/);
+  assert.match(html, /id="periodName"[^>]*value=""/); assert.match(html, /type="date" id="periodFirst"/); assert.match(html, /type="time" id="periodDlTime"/);
+  assert.match(html, /id="periodDraftSave"/); assert.match(html, /id="periodDraftCancel"/); assert.doesNotMatch(html, /data-plistadd/, 'no second form at the same time');
+  assert.match(html, /data-plistedit/, 'the list stays visible');
+});
+test('editing fills the form with that period; its first day is locked as soon as something is stored for it', () => {
+  state(); startPeriodEdit('2026-11-09'); let html = periodsCardHtml();
+  assert.match(html, /Periode wijzigen/); assert.match(html, /id="periodName"[^>]*value="Toetsweek"/); assert.match(html, /id="periodFirst" class="periodInput" value="2026-11-09" >/); assert.doesNotMatch(html, /firstDayLocked|kan niet meer worden gewijzigd/);
+  state({ periodEntries: { '2026-11-09_f2': { periodFirstDay: '2026-11-09' } } }); startPeriodEdit('2026-11-09'); html = periodsCardHtml();
+  assert.match(html, /id="periodFirst"[^>]*disabled/); assert.match(text(html), /De eerste dag kan niet meer worden gewijzigd/);
+  state(); startPeriodEdit('2099-01-01'); assert.equal(S.periodDraft.value.name, '', 'an unknown period opens an empty form');
+});
+test('unsaved edits (the draft) survive a redraw of the Beheer tab', () => {
+  state(); startPeriodEdit(); fillPeriodForm({ ...NEXT, name: 'Half getypt' }); rememberPeriodDraft();
+  assert.equal(S.periodDraft.value.name, 'Half getypt'); assert.match(withFakeNow(NOW, () => { renderBeheer(); return dom.html('tab-beheer'); }), /id="periodName"[^>]*value="Half getypt"/);
+  S.periodDraft = null; rememberPeriodDraft(); assert.equal(S.periodDraft, null, 'nothing to remember without a form');
+});
+await testAsync('Opslaan stores a new period next to the others, closes the form and shows it in the list', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD }); state({ periods: { [PERIOD.firstDay]: PERIOD }, periodsColl: { [PERIOD.firstDay]: PERIOD } });
+  startPeriodEdit(); fillPeriodForm({ ...NEXT, name: '  Toetsweek ' });
+  assert.equal(await savePeriod(), true);
+  assert.deepEqual(fake.get('periods/2026-11-09'), { ...NEXT, deadlineAt: new Date('2026-11-04T12:00:00+01:00').getTime() });
+  assert.equal(S.periodDraft, null); assert.deepEqual(Object.keys(S.periods), ['2026-10-26', '2026-11-09']); assert.equal(toast(), 'Periode opgeslagen');
+  assert.match(text(withFakeNow(OPENNOW, () => periodsCardHtml())), /Toetsweek 9 – 13 nov/);
+});
+await testAsync('a period that shares a day with another is refused: the message names it and what was typed stays', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD }); state({ periods: { [PERIOD.firstDay]: PERIOD }, periodsColl: { [PERIOD.firstDay]: PERIOD } });
+  startPeriodEdit(); fillPeriodForm({ ...NEXT, firstDay: '2026-10-29', lastDay: '2026-11-03', opensOn: '2026-10-14', deadlineDate: '2026-10-16' });
+  assert.equal(await savePeriod(), false); assert.equal(toast(), 'Deze periode overlapt met Herfstvakantie. Perioden mogen geen dag delen.');
+  assert.equal(S.periodDraft.value.firstDay, '2026-10-29'); assert.equal(fake.get('periods/2026-10-29'), undefined);
+});
+await testAsync('an invalid period is not stored: the first problem is shown', async () => {
+  const fake = useFakeDb({}); state({ periods: {}, periodsColl: {} }); startPeriodEdit();
+  fillPeriodForm({ ...PERIOD, lastDay: '2026-11-09' }); assert.equal(await savePeriod(), false); assert.equal(toast(), 'Een periode is maximaal 10 werkdagen.');
+  fillPeriodForm({ ...PERIOD, name: '' }); await savePeriod(); assert.equal(toast(), 'Vul een naam in.');
+  fillPeriodForm({ ...PERIOD, deadlineDate: '2026-10-26' }); await savePeriod(); assert.equal(toast(), 'De deadline moet vóór de eerste dag van de periode liggen.');
+  assert.equal(fake.writes.length, 0); assert.ok(S.periodDraft);
+});
+await testAsync('editing a period does not conflict with itself; other fields stay editable when the first day is locked', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD }); state({ periods: { [PERIOD.firstDay]: PERIOD }, periodsColl: { [PERIOD.firstDay]: PERIOD }, periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' } } });
+  startPeriodEdit('2026-10-26'); fillPeriodForm({ ...PERIOD, name: 'Herfst', lastDay: '2026-10-29' });
+  assert.equal(await savePeriod(), true); assert.equal(fake.get('periods/2026-10-26').name, 'Herfst'); assert.equal(fake.get('periods/2026-10-26').lastDay, '2026-10-29');
+  startPeriodEdit('2026-10-26'); fillPeriodForm({ ...PERIOD, firstDay: '2026-10-19', lastDay: '2026-10-23', opensOn: '2026-10-05', deadlineDate: '2026-10-09' });
+  assert.equal(await savePeriod(), false); assert.match(toast(), /De eerste dag kan niet meer worden gewijzigd/); assert.ok(fake.get('periods/2026-10-26'));
+});
+await testAsync('a refused write is reported and the form stays open', async () => {
+  const fake = useFakeDb({}); state({ periods: {}, periodsColl: {} }); fake.failWrites('periods/', 'permission-denied');
+  startPeriodEdit(); fillPeriodForm(PERIOD); assert.equal(await savePeriod(), false); assert.match(toast(), /permission-denied/); assert.ok(S.periodDraft); assert.deepEqual(S.periods, {});
+});
+test('Annuleren throws away the unsaved edits', () => {
+  useFakeDb(sampleDbSeed()); state(); startPeriodEdit('2026-11-09'); withFakeNow(NOW, () => cancelPeriodEdit());
+  assert.equal(S.periodDraft, null); assert.doesNotMatch(dom.html('tab-beheer'), /periodDraftSave/); assert.match(dom.html('tab-beheer'), /data-plistadd/);
+});
+await testAsync('deleting removes that period and what was handed in for it; the other period stays', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD, 'periods/2026-11-09': NEXT, 'periodEntries/2026-10-26_f2': { periodFirstDay: '2026-10-26' }, 'periodEntries/2026-11-09_f2': { periodFirstDay: '2026-11-09' } });
+  state({ periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' }, '2026-11-09_f2': { periodFirstDay: '2026-11-09' } } });
+  assert.equal(await withFakeNowAsync(NOW, () => deletePeriod('2026-10-26')), true);
+  assert.equal(fake.get('periods/2026-10-26'), undefined); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined); assert.ok(fake.get('periods/2026-11-09')); assert.ok(fake.get('periodEntries/2026-11-09_f2'));
+  assert.doesNotMatch(dom.html('tab-beheer'), /Herfstvakantie/); assert.match(dom.html('tab-beheer'), /Toetsweek/);
+});
+await testAsync('a period with a temporary rooster cannot be deleted; deleting the period being edited closes its form', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD }); state({ periods: { [PERIOD.firstDay]: PERIOD }, periodsColl: { [PERIOD.firstDay]: PERIOD }, periodCars: { '2026-10-26_2026-10-27_terug': { periodFirstDay: '2026-10-26', cars: [] } } });
+  assert.equal(await withFakeNowAsync(NOW, () => deletePeriod('2026-10-26')), false); assert.match(toast(), /Verwijder eerst het tijdelijke rooster/); assert.ok(fake.get('periods/2026-10-26'));
+  state({ periods: { [PERIOD.firstDay]: PERIOD }, periodsColl: { [PERIOD.firstDay]: PERIOD } }); startPeriodEdit('2026-10-26');
+  assert.equal(await withFakeNowAsync(NOW, () => deletePeriod('2026-10-26')), true); assert.equal(S.periodDraft, null);
+});
+await testAsync('the buttons of the list are wired: add, edit and (two taps) delete', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD, 'periods/2026-11-09': NEXT, 'periodEntries/2026-11-09_f2': { periodFirstDay: '2026-11-09' } });
+  state({ periodEntries: { '2026-11-09_f2': { periodFirstDay: '2026-11-09' } } });
+  const draw = () => withFakeNow(NOW, () => { renderBeheer(); return dom.html('tab-beheer'); });
+  let reg = pageButtons(draw()); draw();   // the second drawing wires the buttons that were made from the first one
+  reg['[data-plistedit]'][1].onclick(); assert.equal(S.periodDraft.editing, '2026-11-09'); assert.match(dom.html('tab-beheer'), /id="periodName"[^>]*value="Toetsweek"/);
+  reg = pageButtons(draw()); draw(); assert.equal(reg['[data-plistadd]'].length, 0, 'the add button is gone while a form is open');
+  dom.el('periodDraftCancel').onclick(); assert.equal(S.periodDraft, null);
+  reg = pageButtons(draw()); draw(); reg['[data-plistadd]'][0].onclick(); assert.equal(S.periodDraft.editing, ''); cancelPeriodEdit();
+  reg = pageButtons(draw()); draw();
+  const del = reg['[data-plistdelete]'][1]; del.dataset.origLabel = ''; del.onclick();
+  assert.equal(del.textContent, 'Zeker? 1 gezinnen verliezen hun tijden', 'the first tap asks and says what is lost'); assert.ok(fake.get('periods/2026-11-09'));
+  await withFakeNowAsync(NOW, async () => { del.onclick(); for (let i = 0; i < 5; i++) await new Promise(r => setImmediate(r)); });
+  assert.equal(fake.get('periods/2026-11-09'), undefined); assert.equal(fake.get('periodEntries/2026-11-09_f2'), undefined); assert.ok(fake.get('periods/2026-10-26'));
+});
+test('the periods card is part of the Beheer page for the coordinator, and a parent never gets it', () => {
+  useFakeDb(sampleDbSeed()); state();
+  assert.match(withFakeNow(NOW, () => { renderBeheer(); return dom.html('tab-beheer'); }), /id="periodCard"/);
+  sampleParentState(); withFakeNow(NOW, () => renderBeheer()); assert.ok(!/periodCard/.test(dom.html('tab-beheer')));
+});
+test('periodPhaseText says what happens next (none, waiting, open, closed, over)', () => {
   assert.equal(periodPhaseText(null), 'Nog geen periode ingesteld.');
   assert.match(periodPhaseText(PERIOD, at('2026-10-01T10:00:00+02:00')), /^Invullen opent op wo 14 okt\.$/);
   assert.match(periodPhaseText(PERIOD, at('2026-10-15T10:00:00+02:00')), /^Invullen is open tot de deadline: vr 16 okt 12:00\.$/);
   assert.match(periodPhaseText(PERIOD, at('2026-10-20T10:00:00+02:00')), /^De deadline is voorbij \(vr 16 okt 12:00\)\. Alleen de coördinator kan nog tijden aanpassen\.$/);
   assert.match(periodPhaseText(PERIOD, at('2026-11-02T10:00:00+01:00')), /^Deze periode is voorbij\./);
-});
-test('the card is part of the Beheer page for the coordinator, and a parent never gets it', () => {
-  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
-  withFakeNow(NOW, () => renderBeheer());
-  assert.match(dom.html('tab-beheer'), /id="periodCard"/);
-  sampleParentState(); withFakeNow(NOW, () => renderBeheer());
-  assert.ok(!/periodCard/.test(dom.html('tab-beheer')));
-});
-test('rememberPeriodDraft keeps what is typed in the form', () => {
-  sampleCoordinatorState(); fillPeriodForm({ ...PERIOD, name: ' Half getypt ' });
-  rememberPeriodDraft();
-  assert.equal(S.periodDraft.name, 'Half getypt'); assert.equal(S.periodDraft.deadlineTime, '12:00');
-});
-await testAsync('Opslaan stores one settings/period document and clears the draft', async () => {
-  const fake = useFakeDb({}); sampleCoordinatorState({ periodDraft: { name: 'x' } });
-  fillPeriodForm({ ...PERIOD, name: '  Herfstvakantie ' });
-  assert.equal(await savePeriod(), true);
-  assert.deepEqual(fake.get('settings/period'), { ...PERIOD, deadlineAt: new Date('2026-10-16T12:00:00+02:00').getTime() });   // deadlineAt: what firestore.rules check
-  assert.deepEqual(S.period, PERIOD); assert.equal(S.periodDraft, null); assert.equal(toast(), 'Periode opgeslagen');
-});
-await testAsync('an invalid period is not stored: the first problem is shown and the typed values are kept', async () => {
-  const fake = useFakeDb({}); sampleCoordinatorState();
-  fillPeriodForm({ ...PERIOD, lastDay: '2026-11-09' });
-  assert.equal(await savePeriod(), false);
-  assert.equal(fake.get('settings/period'), undefined); assert.equal(S.period, null);
-  assert.equal(toast(), 'Een periode is maximaal 10 werkdagen.');
-  assert.equal(S.periodDraft.lastDay, '2026-11-09');
-  fillPeriodForm({ ...PERIOD, name: '' });
-  await savePeriod(); assert.equal(toast(), 'Vul een naam in.');
-  fillPeriodForm({ ...PERIOD, deadlineDate: '2026-10-26' });
-  await savePeriod(); assert.equal(toast(), 'De deadline moet vóór de eerste dag van de periode liggen.');
-});
-await testAsync('a refused save is reported and the saved period is not changed', async () => {
-  const fake = useFakeDb({ 'settings/period': PERIOD }); sampleCoordinatorState({ period: PERIOD }); fake.failWrites('settings/period', 'permission-denied');
-  fillPeriodForm({ ...PERIOD, name: 'Anders' });
-  assert.equal(await savePeriod(), false);
-  assert.match(toast(), /permission-denied/); assert.equal(S.period.name, 'Herfstvakantie'); assert.equal(fake.get('settings/period').name, 'Herfstvakantie');
-});
-test('Annuleren throws away the unsaved edits and shows the saved period again', () => {
-  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ period: PERIOD, periodDraft: { ...PERIOD, name: 'Anders' } });
-  withFakeNow(NOW, () => cancelPeriodEdit());
-  assert.equal(S.periodDraft, null); assert.match(dom.html('tab-beheer'), /id="periodName"[^>]*value="Herfstvakantie"/);
-});
-await testAsync('the trash button removes the period from the database and the state', async () => {
-  const fake = useFakeDb({ 'settings/period': PERIOD }); sampleCoordinatorState({ period: PERIOD });
-  assert.equal(await deletePeriod(), true);
-  assert.equal(fake.get('settings/period'), undefined); assert.equal(S.period, null); assert.equal(toast(), 'Periode verwijderd');
-});
-
-test('Beheer shows how many families handed in ("9 van 14 gezinnen"): only from the day filling in opens, Flex families not counted', () => {
-  const fams = sampleCoordinatorState().families; fams.f6 = { ...fams.f6, familyType: 'flex' };
-  const entries = { '2026-10-26_f2': {}, '2026-10-26_f3': {}, '2026-10-26_f6': {} };
-  sampleCoordinatorState({ period: PERIOD, families: fams, periodEntries: entries, periodEntriesLoaded: true });
-  const at = iso => new Date(iso).getTime();
-  assert.equal(periodStatusHtml(at('2026-10-13T12:00:00+02:00')), '', 'before filling in opens');
-  assert.match(text(periodStatusHtml(at('2026-10-15T12:00:00+02:00'))), /^Doorgegeven 2 van 5 gezinnen$/);
-  assert.match(text(periodStatusHtml(at('2026-10-20T12:00:00+02:00'))), /^Doorgegeven 2 van 5 gezinnen$/);
-  assert.equal(periodStatusHtml(at('2026-11-05T12:00:00+01:00')).includes('2 van 5'), true, 'still shown after the period, as a record');
-  sampleCoordinatorState({ period: PERIOD, periodEntries: entries, periodEntriesLoaded: false }); assert.equal(periodStatusHtml(at('2026-10-15T12:00:00+02:00')), '', 'not before the entries are loaded');
-  sampleCoordinatorState({ periodEntries: {}, periodEntriesLoaded: true }); assert.equal(periodStatusHtml(at('2026-10-15T12:00:00+02:00')), '', 'no period');
-});
-test('the status is part of the card, but not while the form has unsaved edits', () => {
-  sampleCoordinatorState({ period: PERIOD, periodEntries: { '2026-10-26_f2': {} }, periodEntriesLoaded: true });
-  assert.match(text(withFakeNow('2026-10-15T12:00:00+02:00', () => periodCardHtml())), /Staat in de melding voor ouders\. Doorgegeven 1 van 6 gezinnen/);
-  sampleCoordinatorState({ period: PERIOD, periodDraft: { ...PERIOD, name: 'x' }, periodEntries: {}, periodEntriesLoaded: true });
-  assert.doesNotMatch(withFakeNow('2026-10-15T12:00:00+02:00', () => periodCardHtml()), /periodStatus/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

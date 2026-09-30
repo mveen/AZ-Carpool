@@ -101,6 +101,13 @@ test('the coordinator finds how to make the temporary rooster; parents are told 
   assert.match(allText(findArticle('periode-tijden')), /tijdelijk rooster voor de periode/); assert.match(allText(findArticle('rooster')), /derde knop met de naam van de periode/);
   assert.equal(searchHelp('tijdelijk rooster', { canEdit: false }).some(a => a.coordinatorOnly), false);
 });
+test('the help explains several periods at once: the list, overlap, deleting with the times, the field to choose a period', () => {
+  const b = allText(findArticle('beheer-periode', { canEdit: true }));
+  ['Perioden met andere tijden', '+ Periode toevoegen', 'meerdere perioden tegelijk', 'geen dag delen', 'ook verwijderd', 'verwijder dat dan eerst bij Rooster'].forEach(w => assert.ok(b.includes(w), w));
+  assert.match(allText(findArticle('periode-tijden')), /twee perioden tegelijk.*twee kaarten.*een 2/);
+  const r = allText(findArticle('periode-rooster', { canEdit: true })); assert.match(r, /kaart per periode/); assert.match(r, /veld Periode/); assert.match(r, /alleen het tijdelijke rooster van die periode/);
+  assert.equal(searchHelp('twee perioden toetsweek herfstvakantie overlap', { canEdit: true })[0].id, 'beheer-periode');
+});
 test('accents, capitals and word endings do not matter', () => {
   assert.equal(ids('DAGCOORDINATOR')[0], 'dagcoordinator');
   assert.equal(ids('dagcoördinator')[0], 'dagcoordinator');

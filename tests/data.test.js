@@ -11,14 +11,14 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleCoordinatorState, sampleParentState } from './test-support.js';
+import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleCoordinatorState, sampleParentState, oneP } from './test-support.js';
 import { createFakeFirestore } from './fake-db.js';
 import { S } from '../state.js';
 import {
   createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
-  savePeriodShift, makePeriodRooster, replanPeriodShift, deletePeriodRooster,
+  savePeriodShift, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -277,22 +277,47 @@ await testAsync('without a settings document there are simply no day coordinator
 });
 
 const PERIOD_DOC = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
-await testAsync('the period from Beheer is loaded live, and cleared when listeners stop', async () => {
-  useFakeDb({ ...sampleDbSeed(), 'settings/period': PERIOD_DOC }); sampleParentState({ families: {}, groups: {}, period: null });
+const NEXT_DOC = { name: 'Toetsweek', firstDay: '2026-11-09', lastDay: '2026-11-13', opensOn: '2026-10-27', deadlineDate: '2026-11-04', deadlineTime: '12:00' };
+await testAsync('the periods are loaded live (all of them, by first day), and cleared when listeners stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD_DOC, 'periods/2026-11-09': NEXT_DOC }); sampleParentState({ families: {}, groups: {}, periods: {} });
   startDataListeners(); await tick(); await tick();
-  assert.deepEqual(S.period, PERIOD_DOC);
-  await db.doc('settings/period').set({ ...PERIOD_DOC, name: 'Proefwerkweek' }); await tick();
-  assert.equal(S.period.name, 'Proefwerkweek');
-  await db.doc('settings/period').delete(); await tick();
-  assert.equal(S.period, null);
-  stopDataListeners(); assert.equal(S.period, null); assert.equal(S.periodDraft, null);
+  assert.deepEqual(S.periods, { '2026-10-26': PERIOD_DOC, '2026-11-09': NEXT_DOC });
+  await db.doc('periods/2026-10-26').set({ ...PERIOD_DOC, name: 'Proefwerkweek' }); await tick();
+  assert.equal(S.periods['2026-10-26'].name, 'Proefwerkweek');
+  await db.doc('periods/2026-11-09').delete(); await tick();
+  assert.deepEqual(Object.keys(S.periods), ['2026-10-26']);
+  S.periodSel = '2026-10-26'; S.periodDraft = { editing: '', value: {} };
+  stopDataListeners(); assert.deepEqual(S.periods, {}); assert.deepEqual(S.periodsColl, {}); assert.equal(S.legacyPeriod, null); assert.equal(S.periodDraft, null); assert.equal(S.periodSel, null);
 });
-await testAsync('without a settings/period document there is no period; a broken document counts as none', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ families: {}, groups: {}, period: { stale: true } });
+await testAsync('a broken period document, or one whose id is not its first day, is ignored', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': { ...PERIOD_DOC, lastDay: '' }, 'periods/whatever': PERIOD_DOC, 'periods/2026-11-09': NEXT_DOC }); sampleParentState({ families: {}, groups: {}, periods: oneP({ stale: true }) });
   startDataListeners(); await tick(); await tick();
-  assert.equal(S.period, null);
-  await db.doc('settings/period').set({ ...PERIOD_DOC, lastDay: '' }); await tick();
-  assert.equal(S.period, null);
+  assert.deepEqual(Object.keys(S.periods), ['2026-11-09']);
+  stopDataListeners();
+});
+await testAsync('the single period of the first version (settings/period) is still read; the collection wins over it', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/period': PERIOD_DOC, 'periods/2026-11-09': NEXT_DOC }); sampleParentState({ families: {}, groups: {}, periods: {} });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(Object.keys(S.periods).sort(), ['2026-10-26', '2026-11-09']); assert.equal(S.legacyPeriod.name, 'Herfstvakantie');
+  await db.doc('periods/2026-10-26').set({ ...PERIOD_DOC, name: 'Nieuwe naam' }); await tick();
+  assert.equal(S.periods['2026-10-26'].name, 'Nieuwe naam');
+  stopDataListeners();
+});
+await testAsync('the coordinator\'s app moves the old period into the collection (once) and removes the old document; a parent\'s app only reads it', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': PERIOD_DOC }); sampleCoordinatorState({ families: {}, groups: {}, periods: {} });
+  startDataListeners(); await tick(); await tick(); await tick();
+  assert.deepEqual(fake.get('periods/2026-10-26'), { ...PERIOD_DOC, deadlineAt: new Date('2026-10-16T12:00:00+02:00').getTime() });
+  assert.equal(fake.get('settings/period'), undefined); assert.deepEqual(Object.keys(S.periods), ['2026-10-26']);
+  stopDataListeners();
+  const fake2 = useFakeDb({ ...sampleDbSeed(), 'settings/period': PERIOD_DOC }); sampleParentState({ families: {}, groups: {}, periods: {} });
+  startDataListeners(); await tick(); await tick(); await tick();
+  assert.equal(fake2.get('periods/2026-10-26'), undefined); assert.ok(fake2.get('settings/period')); assert.deepEqual(Object.keys(S.periods), ['2026-10-26']);
+  stopDataListeners();
+});
+await testAsync('an old period whose first day is already in the collection is not overwritten, only the old document goes', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': PERIOD_DOC, 'periods/2026-10-26': { ...PERIOD_DOC, name: 'Al verhuisd', deadlineAt: 1 } }); sampleCoordinatorState({ families: {}, groups: {}, periods: {} });
+  startDataListeners(); await tick(); await tick(); await tick();
+  assert.equal(fake.get('periods/2026-10-26').name, 'Al verhuisd'); assert.equal(fake.get('settings/period'), undefined);
   stopDataListeners();
 });
 
@@ -303,7 +328,7 @@ await testAsync('the handed-in period times are loaded live, marked as loaded, a
   assert.deepEqual(S.periodEntries, { '2026-10-26_f2': entry }); assert.equal(S.periodEntriesLoaded, true);
   await db.doc('periodEntries/2026-10-26_f1').set({ ...entry, familyId: 'f1' }); await tick();
   assert.deepEqual(Object.keys(S.periodEntries).sort(), ['2026-10-26_f1', '2026-10-26_f2']);
-  S.periodView = 'f2'; S.periodForm = { familyId: 'f2', days: {} };
+  S.periodView = '2026-10-26|f2'; S.periodForm = { familyId: 'f2', firstDay: '2026-10-26', days: {} };
   stopDataListeners(); assert.deepEqual(S.periodEntries, {}); assert.equal(S.periodEntriesLoaded, false); assert.equal(S.periodForm, null); assert.equal(S.periodView, null);
 });
 
@@ -312,8 +337,8 @@ const P = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30
 const daysOk = { '2026-10-26': { out: false, heen: '08:30', terug: '17:30' }, '2026-10-27': { out: true }, '2026-10-28': { out: true }, '2026-10-29': { out: false, heen: '10:15', terug: '' }, '2026-10-30': { out: true } };
 const IN_OPEN = '2026-10-15T09:00:00+02:00', IN_CLOSED = '2026-10-20T09:00:00+02:00';
 await testAsync('stores one document per family and period, with the shape the rules expect, and updates the state', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), true);
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', '2026-10-26', daysOk)), true);
   const d = fake.get('periodEntries/2026-10-26_f2');
   assert.deepEqual(Object.keys(d).sort(), ['by', 'days', 'familyId', 'periodFirstDay', 'submittedAt']);
   assert.equal(d.familyId, 'f2'); assert.equal(d.periodFirstDay, '2026-10-26'); assert.equal(d.by, 'Piet Pieters'); assert.equal(d.submittedAt, new Date(IN_OPEN).getTime());
@@ -321,43 +346,43 @@ await testAsync('stores one document per family and period, with the shape the r
   assert.deepEqual(S.periodEntries['2026-10-26_f2'], d); assert.equal(toast(), 'Tijden doorgegeven ✓');
 });
 await testAsync('handing in again replaces the first entry (once per period, changeable until the deadline)', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
-  await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk));
-  await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', { ...daysOk, '2026-10-27': { out: false, heen: '09:00', terug: '12:00' } }));
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', '2026-10-26', daysOk));
+  await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', '2026-10-26', { ...daysOk, '2026-10-27': { out: false, heen: '09:00', terug: '12:00' } }));
   assert.equal(fake.writes.filter(w => String(w[1]).startsWith('periodEntries/')).length, 2);   // two writes, one document
   assert.deepEqual(Object.keys(S.periodEntries), ['2026-10-26_f2']);
   assert.deepEqual(fake.get('periodEntries/2026-10-26_f2').days['2026-10-27'], { heen: '09:00', terug: '12:00' });
 });
 await testAsync('after the deadline a parent is refused, the coordinator is not', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await withFakeNowAsync(IN_CLOSED, () => savePeriodEntry('f2', daysOk)), false);
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_CLOSED, () => savePeriodEntry('f2', '2026-10-26', daysOk)), false);
   assert.equal(toast(), 'De deadline is voorbij. Alleen de coördinator kan de tijden nog aanpassen.'); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
-  sampleCoordinatorState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await withFakeNowAsync(IN_CLOSED, () => savePeriodEntry('f2', daysOk)), true);
+  sampleCoordinatorState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_CLOSED, () => savePeriodEntry('f2', '2026-10-26', daysOk)), true);
   assert.equal(fake.get('periodEntries/2026-10-26_f2').familyId, 'f2');
 });
 await testAsync('before filling in opens nothing can be handed in', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await withFakeNowAsync('2026-10-13T09:00:00+02:00', () => savePeriodEntry('f2', daysOk)), false);
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync('2026-10-13T09:00:00+02:00', () => savePeriodEntry('f2', '2026-10-26', daysOk)), false);
   assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
 });
 await testAsync('no period, an unknown family or invalid times: nothing is written and the reason is shown', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: null, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await savePeriodEntry('f2', daysOk), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
-  sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('nope', daysOk)), false);
-  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', { ...daysOk, '2026-10-26': { out: false, heen: '17:00', terug: '08:00' } })), false);
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: {}, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await savePeriodEntry('f2', '2026-10-26', daysOk), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
+  sampleParentState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('nope', '2026-10-26', daysOk)), false);
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', '2026-10-26', { ...daysOk, '2026-10-26': { out: false, heen: '17:00', terug: '08:00' } })), false);
   assert.equal(toast(), 'maandag 26 okt: Terug moet later zijn dan Heen.');
   assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
 });
 await testAsync('a Flex family cannot hand in (it signs up per day in Wijzigen)', async () => {
   const fake = useFakeDb(sampleDbSeed()); const fams = sampleParentState().families; fams.f2 = { ...fams.f2, familyType: 'flex' };
-  sampleParentState({ families: fams, period: P, periodEntries: {}, periodEntriesLoaded: true });
-  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), false); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
+  sampleParentState({ families: fams, periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', '2026-10-26', daysOk)), false); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
 });
 await testAsync('a refused write is reported and nothing changes in the state', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: P, periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periodEntries/', 'permission-denied');
-  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', daysOk)), false);
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(P), periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periodEntries/', 'permission-denied');
+  assert.equal(await withFakeNowAsync(IN_OPEN, () => savePeriodEntry('f2', '2026-10-26', daysOk)), false);
   assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodEntries, {});
 });
 
@@ -373,7 +398,7 @@ await testAsync('the temporary rooster is loaded live, and cleared when listener
   S.periodDay = '2026-10-27'; stopDataListeners(); assert.deepEqual(S.periodCars, {}); assert.equal(S.periodDay, null);
 });
 const PER = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
-const coordP = (patch = {}) => sampleCoordinatorState({ period: PER, periodEntries: {}, periodEntriesLoaded: true, periodCars: {}, ...patch });
+const coordP = (patch = {}) => sampleCoordinatorState({ periods: oneP(PER), periodEntries: {}, periodEntriesLoaded: true, periodCars: {}, ...patch });
 const carsX = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f6', '', 'f5'], departureTime: '13:00' }, { driverFamilyId: 'f4', girlIds: [], departureTime: '' }];
 await testAsync('savePeriodShift stores one shift with clean cars (no empty cars, no doubles) and the details the rules expect', async () => {
   const fake = useFakeDb(sampleDbSeed()); coordP();
@@ -389,9 +414,9 @@ await testAsync('a shift with nobody in a car is still stored ("made, nobody rid
   assert.equal(await savePeriodShift('2026-10-28', 'heen', []), true); assert.deepEqual(fake.get('periodCars/2026-10-26_2026-10-28_heen').cars, []);
 });
 await testAsync('savePeriodShift refuses: a parent, no period, a date outside the period or a weekend, a wrong direction', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: PER, periodCars: {} });
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(PER), periodCars: {} });
   assert.equal(await savePeriodShift('2026-10-27', 'terug', carsX), false); assert.equal(toast(), 'Alleen de coördinator kan het tijdelijke rooster aanpassen.');
-  coordP({ period: null }); assert.equal(await savePeriodShift('2026-10-27', 'terug', carsX), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
+  coordP({ periods: {} }); assert.equal(await savePeriodShift('2026-10-27', 'terug', carsX), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
   coordP();
   for (const [iso, dir] of [['2026-11-02', 'heen'], ['2026-10-25', 'heen'], ['2026-10-31', 'heen'], ['nonsense', 'heen'], ['2026-10-27', 'sideways']]) {
     assert.equal(await savePeriodShift(iso, dir, carsX), false, iso + dir); assert.equal(toast(), 'Deze dag hoort niet bij de periode.');
@@ -404,7 +429,7 @@ await testAsync('a refused write is reported and the state does not change', asy
 });
 await testAsync('makePeriodRooster plans and stores every shift of the period in one go', async () => {
   const fake = useFakeDb(sampleDbSeed()); coordP();
-  assert.equal(await withFakeNowAsync(NOW, () => makePeriodRooster()), true);
+  assert.equal(await withFakeNowAsync(NOW, () => makePeriodRooster('2026-10-26')), true);
   const keys = Object.keys(S.periodCars).sort();
   assert.equal(keys.length, 10); assert.equal(keys[0], '2026-10-26_2026-10-26_heen'); assert.equal(keys[9], '2026-10-26_2026-10-30_terug');
   keys.forEach(k => assert.deepEqual(fake.get('periodCars/' + k), S.periodCars[k]));
@@ -415,21 +440,21 @@ await testAsync('makePeriodRooster plans and stores every shift of the period in
 await testAsync('makePeriodRooster uses the handed-in times', async () => {
   const fake = useFakeDb(sampleDbSeed());
   coordP({ periodEntries: { '2026-10-26_f2': { familyId: 'f2', periodFirstDay: '2026-10-26', days: { '2026-10-27': { heen: '10:15', terug: '12:30' } }, submittedAt: 1, by: 'x' } } });
-  await makePeriodRooster();
+  await makePeriodRooster('2026-10-26');
   const terug = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
   const car = terug.find(c => c.girlIds.includes('f2'));
   assert.deepEqual(car.girlIds, ['f2'], 'she comes home three hours before the others, so she gets her own car');
   assert.equal(car.departureTime, '12:30'); assert.equal(terug.flatMap(c => c.girlIds).length, 5);
 });
 await testAsync('makePeriodRooster refuses for a parent, and reports a refused write', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ period: PER, periodCars: {} });
-  assert.equal(await makePeriodRooster(), false); assert.equal(fake.writes.length, 0);
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ periods: oneP(PER), periodCars: {} });
+  assert.equal(await makePeriodRooster('2026-10-26'), false); assert.equal(fake.writes.length, 0);
   coordP(); fake.failWrites('periodCars/', 'permission-denied');
-  assert.equal(await makePeriodRooster(), false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodCars, {});
+  assert.equal(await makePeriodRooster('2026-10-26'), false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodCars, {});
 });
 await testAsync('replanPeriodShift replaces the cars of one shift with a fresh proposal and leaves the others alone', async () => {
   const fake = useFakeDb(sampleDbSeed()); coordP();
-  await makePeriodRooster();
+  await makePeriodRooster('2026-10-26');
   const other = JSON.stringify(fake.get('periodCars/2026-10-26_2026-10-28_terug'));
   await savePeriodShift('2026-10-27', 'terug', [{ driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '09:00' }]);
   assert.equal(await replanPeriodShift('2026-10-27', 'terug'), true);
@@ -439,10 +464,122 @@ await testAsync('replanPeriodShift replaces the cars of one shift with a fresh p
 await testAsync('deletePeriodRooster removes every shift of this period, and only those', async () => {
   const stray = shiftOf('2026-12-22', 'heen', []); stray.periodFirstDay = '2026-12-21';
   const fake = useFakeDb({ ...sampleDbSeed(), 'periodCars/2026-12-21_2026-12-22_heen': stray }); coordP({ periodCars: { '2026-12-21_2026-12-22_heen': stray } });
-  await makePeriodRooster();
-  assert.equal(await deletePeriodRooster(), true);
+  await makePeriodRooster('2026-10-26');
+  assert.equal(await deletePeriodRooster('2026-10-26'), true);
   assert.deepEqual(Object.keys(S.periodCars), ['2026-12-21_2026-12-22_heen']); assert.ok(fake.get('periodCars/2026-12-21_2026-12-22_heen'));
   assert.equal(fake.get('periodCars/2026-10-26_2026-10-27_terug'), undefined); assert.equal(toast(), 'Tijdelijk rooster verwijderd');
+});
+
+console.log('\n=== several periods at the same time ===');
+const A = PERIOD_DOC, B = NEXT_DOC;   // Herfstvakantie 26-30 Oct (deadline 16 Oct), Toetsweek 9-13 Nov (opens 27 Oct, deadline 4 Nov)
+const twoP = (patch = {}) => sampleCoordinatorState({ periods: { [A.firstDay]: A, [B.firstDay]: B }, periodsColl: { [A.firstDay]: A, [B.firstDay]: B }, periodEntries: {}, periodEntriesLoaded: true, periodCars: {}, ...patch });
+const rooster = (patch = {}) => sampleParentState({ periods: { [A.firstDay]: A, [B.firstDay]: B }, periodEntries: {}, periodEntriesLoaded: true, periodCars: {}, ...patch });
+const daysB = { '2026-11-09': { out: true }, '2026-11-10': { out: false, heen: '10:00', terug: '14:00' }, '2026-11-11': { out: true }, '2026-11-12': { out: true }, '2026-11-13': { out: true } };
+await testAsync('a family hands in for the next period while the first one is closed: each period has its own deadline', async () => {
+  const fake = useFakeDb(sampleDbSeed()); rooster();
+  const at = '2026-10-28T09:00:00+01:00';   // Herfstvakantie: deadline passed; Toetsweek: filling in is open
+  assert.equal(await withFakeNowAsync(at, () => savePeriodEntry('f2', '2026-10-26', daysOk)), false); assert.match(toast(), /De deadline is voorbij/);
+  assert.equal(await withFakeNowAsync(at, () => savePeriodEntry('f2', '2026-11-09', daysB)), true);
+  assert.deepEqual(fake.get('periodEntries/2026-11-09_f2').days['2026-11-10'], { heen: '10:00', terug: '14:00' }); assert.equal(fake.get('periodEntries/2026-11-09_f2').periodFirstDay, '2026-11-09');
+  assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined);
+});
+await testAsync('a period that does not exist cannot be handed in for', async () => {
+  const fake = useFakeDb(sampleDbSeed()); rooster();
+  assert.equal(await withFakeNowAsync('2026-10-28T09:00:00+01:00', () => savePeriodEntry('f2', '2026-12-21', daysB)), false); assert.equal(toast(), 'Er is geen periode ingesteld.');
+  assert.equal(fake.writes.length, 0);
+});
+await testAsync('each period has its own temporary rooster: making one leaves the other alone', async () => {
+  const fake = useFakeDb(sampleDbSeed()); twoP();
+  assert.equal(await makePeriodRooster('2026-11-09'), true);
+  assert.equal(Object.keys(S.periodCars).length, 10); assert.ok(Object.keys(S.periodCars).every(k => k.startsWith('2026-11-09_')));
+  assert.equal(periodHasData('2026-11-09').rooster, 10); assert.equal(periodHasData('2026-10-26').rooster, 0);
+  assert.equal(await makePeriodRooster('2026-10-26'), true); assert.equal(Object.keys(S.periodCars).length, 20);
+  assert.equal(await deletePeriodRooster('2026-11-09'), true);
+  assert.ok(Object.keys(S.periodCars).every(k => k.startsWith('2026-10-26_'))); assert.equal(Object.keys(S.periodCars).length, 10);
+  assert.equal(fake.get('periodCars/2026-11-09_2026-11-10_heen'), undefined); assert.ok(fake.get('periodCars/2026-10-26_2026-10-27_heen'));
+});
+await testAsync('a shift is stored under the period its date belongs to; a date between the periods belongs to none', async () => {
+  const fake = useFakeDb(sampleDbSeed()); twoP();
+  assert.equal(await savePeriodShift('2026-11-10', 'heen', [{ driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '09:00' }]), true);
+  assert.equal(fake.get('periodCars/2026-11-09_2026-11-10_heen').periodFirstDay, '2026-11-09');
+  assert.equal(await savePeriodShift('2026-11-02', 'heen', []), false); assert.equal(toast(), 'Deze dag hoort niet bij de periode.');
+  assert.equal(await makePeriodRooster('2026-12-21'), false);
+});
+await testAsync('periodHasData counts the families that handed in and the shifts of that period only', async () => {
+  useFakeDb(sampleDbSeed()); twoP({ periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' }, '2026-10-26_f3': { periodFirstDay: '2026-10-26' }, '2026-11-09_f2': { periodFirstDay: '2026-11-09' } } });
+  assert.deepEqual(periodHasData('2026-10-26'), { entries: 2, rooster: 0 }); assert.deepEqual(periodHasData('2026-11-09'), { entries: 1, rooster: 0 }); assert.deepEqual(periodHasData('2027-01-01'), { entries: 0, rooster: 0 });
+});
+
+console.log('\n=== savePeriodDoc / deletePeriodCompletely (Beheer) ===');
+await testAsync('a new period is stored as periods/<firstDay> with its deadline as a moment, and shows up in S.periods', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ periods: {}, periodEntries: {}, periodEntriesLoaded: true });
+  const res = await savePeriodDoc({ ...A, name: '  Herfstvakantie ' }, '');
+  assert.equal(res.ok, true); assert.deepEqual(fake.get('periods/2026-10-26'), { ...A, deadlineAt: new Date('2026-10-16T12:00:00+02:00').getTime() });
+  assert.deepEqual(S.periods, { '2026-10-26': A });
+});
+await testAsync('a second period next to the first is fine, also while the first is still open', async () => {
+  const fake = useFakeDb(sampleDbSeed()); twoP({ periods: oneP(A), periodsColl: oneP(A) });
+  assert.equal((await savePeriodDoc(B, '')).ok, true); assert.deepEqual(Object.keys(S.periods), ['2026-10-26', '2026-11-09']); assert.ok(fake.get('periods/2026-11-09'));
+});
+await testAsync('a period that shares a day with another is refused and names the one in the way', async () => {
+  const fake = useFakeDb(sampleDbSeed()); twoP({ periods: oneP(A), periodsColl: oneP(A) });
+  const res = await savePeriodDoc({ ...B, firstDay: '2026-10-29', lastDay: '2026-11-03', opensOn: '2026-10-14', deadlineDate: '2026-10-16' }, '');
+  assert.equal(res.ok, false); assert.deepEqual(res.errors, ['period.err.overlap']); assert.equal(res.overlap.name, 'Herfstvakantie'); assert.equal(fake.get('periods/2026-10-29'), undefined);
+  assert.equal((await savePeriodDoc({ ...A, name: 'Zelfde eerste dag' }, '')).ok, false, 'a new period may not use the first day of an existing one');
+});
+await testAsync('editing a period never conflicts with itself; invalid input is refused and nothing is written', async () => {
+  const fake = useFakeDb(sampleDbSeed()); twoP();
+  assert.equal((await savePeriodDoc({ ...A, name: 'Herfst', lastDay: '2026-10-29' }, '2026-10-26')).ok, true); assert.equal(S.periods['2026-10-26'].name, 'Herfst'); assert.equal(fake.get('periods/2026-10-26').name, 'Herfst');
+  const writes = fake.writes.length;
+  const bad = await savePeriodDoc({ ...A, name: '' }, '2026-10-26'); assert.equal(bad.ok, false); assert.deepEqual(bad.errors, ['period.err.name']); assert.equal(fake.writes.length, writes);
+});
+await testAsync('the first day can be moved only while nothing is stored for the period; then the old document goes', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': A }); twoP({ periods: oneP(A), periodsColl: oneP(A) });
+  const moved = { ...A, firstDay: '2026-10-19', lastDay: '2026-10-23', opensOn: '2026-10-05', deadlineDate: '2026-10-09' };
+  assert.equal((await savePeriodDoc(moved, '2026-10-26')).ok, true);
+  assert.deepEqual(Object.keys(S.periods), ['2026-10-19']); assert.ok(fake.get('periods/2026-10-19')); assert.equal(fake.get('periods/2026-10-26'), undefined);
+  useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': A }); twoP({ periods: oneP(A), periodsColl: oneP(A), periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' } } });
+  const locked = await savePeriodDoc(moved, '2026-10-26'); assert.equal(locked.ok, false); assert.deepEqual(locked.errors, ['period.err.firstDayLocked']); assert.deepEqual(Object.keys(S.periods), ['2026-10-26']);
+  assert.equal((await savePeriodDoc({ ...A, name: 'Wel andere naam' }, '2026-10-26')).ok, true, 'other fields stay editable');
+});
+await testAsync('saving a period that only lived in the old settings/period document moves it over', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': A }); sampleCoordinatorState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal((await savePeriodDoc({ ...A, name: 'Bijgewerkt' }, '2026-10-26')).ok, true);
+  assert.equal(fake.get('periods/2026-10-26').name, 'Bijgewerkt'); assert.equal(fake.get('settings/period'), undefined); assert.equal(S.legacyPeriod, null); assert.equal(S.periods['2026-10-26'].name, 'Bijgewerkt');
+});
+await testAsync('a refused write is reported and nothing changes', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ periods: {}, periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periods/', 'permission-denied');
+  const res = await savePeriodDoc(A, ''); assert.equal(res.ok, false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periods, {});
+});
+await testAsync('deleting a period removes it AND what was handed in for it, and nothing of the other period', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': A, 'periods/2026-11-09': B, 'periodEntries/2026-10-26_f2': { periodFirstDay: '2026-10-26' }, 'periodEntries/2026-10-26_f3': { periodFirstDay: '2026-10-26' }, 'periodEntries/2026-11-09_f2': { periodFirstDay: '2026-11-09' } });
+  twoP({ periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' }, '2026-10-26_f3': { periodFirstDay: '2026-10-26' }, '2026-11-09_f2': { periodFirstDay: '2026-11-09' } } });
+  assert.equal(await deletePeriodCompletely('2026-10-26'), true);
+  assert.equal(fake.get('periods/2026-10-26'), undefined); assert.equal(fake.get('periodEntries/2026-10-26_f2'), undefined); assert.equal(fake.get('periodEntries/2026-10-26_f3'), undefined);
+  assert.ok(fake.get('periods/2026-11-09')); assert.ok(fake.get('periodEntries/2026-11-09_f2'));
+  assert.deepEqual(Object.keys(S.periods), ['2026-11-09']); assert.deepEqual(Object.keys(S.periodEntries), ['2026-11-09_f2']); assert.equal(toast(), 'Periode verwijderd');
+});
+await testAsync('a period with a temporary rooster cannot be deleted: remove the rooster first', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': A }); twoP({ periods: oneP(A), periodsColl: oneP(A) });
+  await makePeriodRooster('2026-10-26'); const writes = fake.writes.length;
+  assert.equal(await deletePeriodCompletely('2026-10-26'), false); assert.equal(toast(), 'Verwijder eerst het tijdelijke rooster van deze periode (bij Rooster).'); assert.equal(fake.writes.length, writes); assert.ok(S.periods['2026-10-26']);
+  await deletePeriodRooster('2026-10-26'); assert.equal(await deletePeriodCompletely('2026-10-26'), true);
+});
+await testAsync('the old settings/period document goes with its period; a parent cannot delete; an unknown period is reported', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': A }); sampleCoordinatorState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
+  sampleParentState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await deletePeriodCompletely('2026-10-26'), false); assert.equal(toast(), 'Alleen de coördinator kan het tijdelijke rooster aanpassen.'); assert.ok(fake.get('settings/period'));
+  sampleCoordinatorState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
+  assert.equal(await deletePeriodCompletely('nope'), false); assert.equal(await deletePeriodCompletely('2026-10-26'), true);
+  assert.equal(fake.get('settings/period'), undefined); assert.equal(S.legacyPeriod, null); assert.deepEqual(S.periods, {});
+});
+await testAsync('a refused delete is reported and nothing is removed from the state', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': A }); twoP({ periods: oneP(A), periodsColl: oneP(A) }); fake.failWrites('periods/', 'permission-denied');
+  assert.equal(await deletePeriodCompletely('2026-10-26'), false); assert.match(toast(), /permission-denied/); assert.ok(S.periods['2026-10-26']);
+});
+test('rebuildPeriods and migrateLegacyPeriod are safe without anything to do', async () => {
+  resetState({ periodsColl: {}, legacyPeriod: null }); rebuildPeriods(); assert.deepEqual(S.periods, {});
+  assert.equal(migrateLegacyPeriod() instanceof Promise, true);
 });
 
 console.log('\n=== Terug met OV (US-06) ===');
