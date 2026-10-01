@@ -29,8 +29,25 @@ export function hasApiKey(k) { return !!k && !/^PASTE_/.test(k); }
 
 export function roundKm(km) { return km >= 100 ? Math.round(km) : Math.round(km * 10) / 10; }
 
+// Resilience: an outside service must never be able to hang the app. Every call gets a time limit.
+export const FETCH_TIMEOUT_MS = 10000;
+// After this many failed routes in a row the service is treated as down: stop for this session (circuit breaker),
+// so a broken or rate-limited service is not hammered once per match.
+export const MAX_CONSECUTIVE_ERRORS = 2;
+
+// fetch(url) with a time limit. Rejects with 'timeout' when the service does not answer in time.
+export function fetchWithTimeout(fetchFn, url, ms = FETCH_TIMEOUT_MS) {
+  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
+  let timer;
+  const limit = new Promise((_, reject) => {
+    timer = setTimeout(() => { if (ctrl) ctrl.abort(); reject(new Error('timeout')); }, ms);
+  });
+  return Promise.race([Promise.resolve(fetchFn(url, ctrl ? { signal: ctrl.signal } : undefined)), limit])
+    .finally(() => clearTimeout(timer));
+}
+
 async function getJson(fetchFn, url) {
-  const res = await fetchFn(url);
+  const res = await fetchWithTimeout(fetchFn, url);
   if (!res.ok) throw new Error('HTTP ' + res.status);
   return res.json();
 }
@@ -70,8 +87,9 @@ const attempted = new Set();
 export function forgetAttempts() { attempted.clear(); }
 export async function ensureDistances({ matches, storedByKey, fixedKm, fetchFn, apiKey, originText, store }) {
   if (!hasApiKey(apiKey)) return 0;
-  let calls = 0;
+  let calls = 0, errorsInARow = 0;
   for (const m of matches) {
+    if (errorsInARow >= MAX_CONSECUTIVE_ERRORS) break;   // circuit open: the rest is tried in a later session
     const info = distanceInfo({ isHome: m.isHome, location: m.location, stored: storedByKey[m.key], fixedKm });
     if (!info || info.kind !== 'pending') continue;
     const loc = String(m.location).trim();
@@ -80,6 +98,7 @@ export async function ensureDistances({ matches, storedByKey, fixedKm, fetchFn, 
     attempted.add(id);
     calls++;
     const r = await routeKm({ fetchFn, apiKey, originText, destinationText: loc });
+    errorsInARow = r.ok || r.reason === 'notfound' ? 0 : errorsInARow + 1;
     if (r.ok) await store(m.key, { loc, km: r.km, at: Date.now() });
     else if (r.reason === 'notfound') await store(m.key, { loc, unknown: true, at: Date.now() });
     // a network error stores nothing: it is tried again in a later session

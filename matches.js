@@ -6,7 +6,7 @@ import { db } from './data.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { fam, seats } from './rides.js';
-import { ensureDistances, hasApiKey } from './distance.js';
+import { ensureDistances, hasApiKey, fetchWithTimeout } from './distance.js';
 import { normalizeLocations } from './locations.js';
 import { isMemberNow } from './coordinator.js';
 
@@ -99,7 +99,7 @@ async function fetchTeamMatches(feed){
     const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(feed.calendarId)}/events`
       + `?key=${encodeURIComponent(db.calendarApiKey)}&singleEvents=true&orderBy=startTime`
       + `&timeMin=${encodeURIComponent(timeMin.toISOString())}&timeMax=${encodeURIComponent(timeMax.toISOString())}&maxResults=50`;
-    const res = await fetch(url);
+    const res = await fetchWithTimeout(fetch, url);
     if(!res.ok){
       let detail='';
       try{ const body=await res.json(); detail = body && body.error && body.error.message ? ' — '+body.error.message : ''; }catch(e){}
@@ -236,7 +236,7 @@ export async function calculateMatchDistances(list){
   try{
     return await ensureDistances({
       matches, storedByKey:S.matchDistances, fixedKm:cfg.fixedKm, apiKey:S.orsApiKey, originText,
-      fetchFn:(url)=>fetch(url),
+      fetchFn:(url,opts)=>fetch(url,opts),
       store: async (key,val)=>{
         S.matchDistances = {...S.matchDistances, [key]:val};
         try{ await db.doc("settings/matchDistances").set({[key]:val},{merge:true}); }catch(e){ /* not stored: it is calculated again next session */ }
