@@ -137,6 +137,12 @@ test('the removed shift map-button texts are gone', () => {
   assert.equal(Object.prototype.hasOwnProperty.call(nl, 'loc.mapLabel'), false);
 });
 
+test('the daughter-picker texts are gone; the coordinator-without-family text exists', () => {
+  for (const k of ['profile.welkom_selecteer_je_dochter_om', 'profile.mijn_dochter', 'profile.dit_is_mijn_dochter', 'profile.er_zijn_nog_geen_gezinnen', 'profile.gekoppeld', 'profile.koppelen_mislukt'])
+    assert.equal(Object.prototype.hasOwnProperty.call(nl, k), false, k);
+  assert.match(t('profile.coordinator_zonder_gezin'), /geen eigen gezin/);
+});
+
 test('WhatsApp login intro texts start with "Hi!" and carry the app link', () => {
   assert.match(t('profile.wa_intro_text', { url: 'U', code: 'C' }), /^Hi! .*U[\s\S]*C/);
   assert.match(t('profile.wa_intro_text_nocode', { url: 'U' }), /^Hi! /);

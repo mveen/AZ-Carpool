@@ -128,7 +128,7 @@ import nl from '../texts-nl.js';
 // Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
 const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
   'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Vrije invoer', 'Plek toevoegen',
-  'Terug met OV', 'Toch met de auto', 'Weekoverzicht', 'Afdrukken / PDF', 'Stem af met chauffeur', 'Deel update via WhatsApp', '+ Auto toevoegen', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Dit is mijn dochter', 'Toegang aanvragen', 'Nu verversen'];
+  'Terug met OV', 'Toch met de auto', 'Weekoverzicht', 'Afdrukken / PDF', 'Stem af met chauffeur', 'Deel update via WhatsApp', '+ Auto toevoegen', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen'];
 const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
 const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
 test('every quoted name exists in the app texts', () => {

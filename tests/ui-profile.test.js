@@ -104,6 +104,21 @@ test('a parent sees own family form, linked name and an unlink button', () => {
   assert.match(dom.html('tab-profile'), /value="Piet Pieters"/);
   expectSnapshot('ui-profile', 'parent profile', dom.html('tab-profile'));
 });
+test('a coordinator without a family gets no daughter picker, only a pointer to Beheer', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState(); S.links = {};
+  withFakeNow(NOW, () => renderProfile());
+  const html = dom.html('tab-profile');
+  assert.match(text(html), /geen eigen gezin/);
+  assert.doesNotMatch(html, /linkSelect|linkBtn|<select/);
+  assert.doesNotMatch(text(html), /Mijn dochter|Dit is mijn dochter/);
+});
+test('an unlinked parent is held at the gate and never reaches a daughter picker', () => {
+  useFakeDb(sampleDbSeed()); resetState({ me: 'u9', appReady: true, linksLoaded: true, coordinatorExists: true, canEdit: false, links: {}, families: sampleDbSeed().families });
+  renderGateOrApp();
+  assert.equal(dom.el('tab-gate').style.display, 'block');
+  assert.match(text(dom.html('tab-gate')), /Toegang tot AZ Carpool/);
+  assert.doesNotMatch(dom.html('tab-profile') + dom.html('tab-gate'), /linkSelect|linkBtn/);
+});
 test('without an account, the profile says the account was not recognised', () => {
   useFakeDb({}); resetState({ me: null });
   renderProfile();

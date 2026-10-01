@@ -26,7 +26,7 @@ test('an unrecognised visitor is asked to reload', () => {
   assert.match(text(render({ me: null })), /Mijn week Kon je account niet herkennen\. Herlaad de pagina\./);
 });
 test('a visitor who is not linked to a daughter yet is sent to Mijn gezin', () => {
-  assert.match(text(render({ me: 'x', links: {} })), /Koppel eerst je dochter via 'Mijn gezin'/);
+  assert.match(text(render({ me: 'x', links: {} })), /Je hebt geen eigen gezin/);
 });
 
 console.log('\n=== a parent\'s week ===');
