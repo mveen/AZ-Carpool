@@ -169,6 +169,13 @@ await testAsync('a missing API key is reported instead of calling Google', async
   assert.match(S.matchFetchFailedTeams[0].error, /API-key/);
 });
 test('activeMatchFeeds returns the feeds from Beheer', () => { resetState({ matchFeeds: feeds }); assert.equal(activeMatchFeeds(), S.matchFeeds); });
+await testAsync('a calendar that never answers is cut off after the time limit: loading finishes and the cached matches stay (the app does not hang)', async () => {
+  useFakeDb({}); resetState({ matchFeeds: feeds, matchFeedsLoaded: true, matchFetchFailedTeams: [{ label: 'x', error: 'y' }], cachedMatches: [m()] });
+  stubFetch(() => new Promise(() => {}));
+  const keepAlive = setInterval(() => {}, 1000);   // test-support unrefs timers: keep the process alive until the limit fires
+  try { await loadAllMatches(); } finally { clearInterval(keepAlive); }
+  assert.equal(currentMatchList().length, 1, 'it finished, and the last cached matches are still shown');
+});
 globalThis.fetch = realFetch;
 
 console.log('\n=== calculateMatchDistances (US-21) ===');

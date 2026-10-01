@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { hasApiKey, distanceInfo, roundKm, geocode, routeKm, ensureDistances, forgetAttempts, ORS_BASE } from '../distance.js';
+import { hasApiKey, distanceInfo, roundKm, geocode, routeKm, ensureDistances, forgetAttempts, fetchWithTimeout, ORS_BASE } from '../distance.js';
 
 const fixedKm = { AFC: 36, ATC: null };
 
@@ -120,6 +120,43 @@ await testAsync('without an API key (or the placeholder) nothing is requested', 
     assert.equal(await ensureDistances({ matches, storedByKey: {}, fixedKm, fetchFn: f.fetchFn, apiKey, originText: 'x', store: async () => {} }), 0);
   }
   assert.equal(f.urls.length, 0);
+});
+
+console.log('\n=== resilience: time limit and circuit breaker ===');
+await testAsync('fetchWithTimeout: a service that never answers is cut off and the request is aborted', async () => {
+  let aborted = false;
+  const hang = (url, opts) => new Promise(() => { opts.signal.addEventListener('abort', () => { aborted = true; }); });
+  await assert.rejects(fetchWithTimeout(hang, 'x', 20), /timeout/);
+  assert.equal(aborted, true);
+});
+await testAsync('fetchWithTimeout: a normal answer passes through', async () => {
+  const r = await fetchWithTimeout(async () => ({ ok: true }), 'x', 1000);
+  assert.deepEqual(r, { ok: true });
+});
+await testAsync('routeKm: a hanging service becomes an "error" (try again later)', async () => {
+  const hang = () => new Promise(() => {});
+  const r = await Promise.race([
+    routeKm({ fetchFn: hang, apiKey: 'K', originText: 'A', destinationText: 'B' }),
+    new Promise(res => setTimeout(() => res('still waiting'), 11000)),
+  ]);
+  assert.equal(r.reason, 'error'); assert.match(r.error, /timeout/);
+});
+await testAsync('circuit breaker: after 2 failed matches in a row the rest is not requested', async () => {
+  forgetAttempts(); const f = fakeOrs({ fail: 503 }); const saved = {};
+  const many = ['a', 'b', 'c', 'd', 'e'].map(k => ({ key: k, isHome: false, location: 'Plaats ' + k }));
+  const calls = await ensureDistances({ matches: many, storedByKey: {}, fixedKm, fetchFn: f.fetchFn, apiKey: 'K', originText: 'x', store: async (k, v) => { saved[k] = v; } });
+  assert.equal(calls, 2); assert.deepEqual(saved, {});
+  assert.equal(f.urls.length, 2, 'one failing request per match, none after the breaker opened');
+  // the skipped matches are not marked as attempted: a later run may still do them
+  const f2 = fakeOrs(); const saved2 = {};
+  const calls2 = await ensureDistances({ matches: many, storedByKey: {}, fixedKm, fetchFn: f2.fetchFn, apiKey: 'K', originText: 'x', store: async (k, v) => { saved2[k] = v; } });
+  assert.equal(calls2, 3); assert.deepEqual(Object.keys(saved2).sort(), ['c', 'd', 'e']);
+});
+await testAsync('circuit breaker: a "not found" address does not count as a service failure', async () => {
+  forgetAttempts(); const f = fakeOrs({ geo: { 'Plaats a': null, 'Plaats b': null, 'Plaats c': null } }); const saved = {};
+  const many = ['a', 'b', 'c'].map(k => ({ key: k, isHome: false, location: 'Plaats ' + k }));
+  assert.equal(await ensureDistances({ matches: many, storedByKey: {}, fixedKm, fetchFn: f.fetchFn, apiKey: 'K', originText: 'x', store: async (k, v) => { saved[k] = v; } }), 3);
+  assert.equal(Object.keys(saved).length, 3);
 });
 
 test('hasApiKey: the placeholder of firebase-config.js is not a key', () => {

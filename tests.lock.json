@@ -24,8 +24,8 @@
     "test": "2782ebd7004352873dcde8dd2485472fc982e2afc90c0c0c213e1db538abb419"
   },
   "distance.js": {
-    "module": "7bccce6ee4655d6996efd4dc88049b99238a0372350a2812d7599d4d0bfde555",
-    "test": "d1ffd32cd34b6f863786b29ac423010c6dc327b210f2e968d6f4455663020b64"
+    "module": "a68c0a7d5c0944168839fb92458ae754bebde6417b0fd5b0d77b5b1ec80582ac",
+    "test": "cc1e0f70cc32b901b0ffbb58aa915501074b22ab381ec53e86b36a91a64e4225"
   },
   "family-backup.js": {
     "module": "7dafc8feafdb630cb577aea75272a42e5bad0aaeba86b9a30475374df09c8706",
@@ -56,8 +56,8 @@
     "test": "c4566ca26489a52d7b4d5aac88208a9de880b91f4801626d9ac724937d38419e"
   },
   "matches.js": {
-    "module": "be8d9265a6f1948dafa2805ec22944df5e70da94c7fc2586fede7e93d8d177b1",
-    "test": "ff4315041eb7b4fbb93fa44981107757a176dee7af427c3490d0f83077826d13"
+    "module": "e5eb0788eaac6ca1c193340821833410fd04c62e3dc88138a310cc377f87d1c0",
+    "test": "9f3a34190bccb6bbedbab4367b218ea5ea888da47dd00af202ecf3b7d300cf54"
   },
   "message-texts.js": {
     "module": "dcbe641d244739e7342c67cbb4ebec0de7de58152d7e6e53307e396c27d28999",
