@@ -1,0 +1,5 @@
+.DS_Store
+backups/
+node_modules/
+*.before-*
+Claude outputs/
