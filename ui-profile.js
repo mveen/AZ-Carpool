@@ -484,12 +484,10 @@ export function renderProfile(){
         ${unlinkCtl}
       </div>`;
     } else {
-      const options = Object.entries(S.families);
+      // Only a coordinator without a family of their own gets here: everyone else is held at the gate until
+      // a code links the browser to its family.
       html += `<div class="card"><h2>${t('profile.mijn_gezin')}</h2>
-        <p class="muted">${t('profile.welkom_selecteer_je_dochter_om')}</p>
-        ${options.length? `<label>${t('profile.mijn_dochter')}</label><select id="linkSelect">${options.map(([id,f])=>`<option value="${id}">${esc(f.girlName||f.parentName||id)}</option>`).join('')}</select>
-        <button type="button" class="btn secondary" id="linkBtn">${t('profile.dit_is_mijn_dochter')}</button>
-        <span id="linkMsg" class="muted"></span>` : `<p class="muted">${t('profile.er_zijn_nog_geen_gezinnen')}</p>`}
+        <p class="muted">${t('profile.coordinator_zonder_gezin')}</p>
       </div>`;
     }
   }
@@ -509,12 +507,6 @@ export function renderProfile(){
       const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=()=>twoStepConfirm(ub,t('profile.zeker_tik_nogmaals_om_te'),async ()=>{
         try{ await db.doc("links/"+S.me).delete(); showToast(t('profile.ontkoppeld')); }catch(e){showToast(t('data.mislukt')+(e&&e.message||e));}
       });
-    } else {
-      const lb=document.getElementById('linkBtn'); if(lb) lb.onclick=async ()=>{
-        const sel=document.getElementById('linkSelect'); if(!sel||!db)return;
-        try{ const link={familyId:sel.value, linkedAt:Date.now()}; await db.doc("links/"+S.me).set(link); S.links[S.me]=link; afterLinksChanged(); showToast(t('profile.gekoppeld')); }
-        catch(e){showToast(t('profile.koppelen_mislukt')+(e&&e.message||e));}
-      };
     }
   }
   updateStatusLine();
