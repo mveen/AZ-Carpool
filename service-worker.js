@@ -4,7 +4,7 @@
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v21';
+const CACHE_NAME = 'az-carpool-v22';
 const ASSETS = [
   './',
   './index.html',
@@ -80,13 +80,24 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
+// Only the app's own files and the Firebase SDK are worth keeping for offline use. Everything else (Firestore, Google Calendar,
+// OpenRouteService: URLs with API keys, addresses and family data) goes straight to the network and is never stored here.
+function isCacheable(url){
+  return url.origin === self.location.origin
+    || (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/'));
+}
+
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  if (!isCacheable(new URL(event.request.url))) return;
   event.respondWith(
     fetch(event.request)
       .then((response) => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        // Never keep an error page: it would be served as the app when offline.
+        if (response.ok && response.status === 200) {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        }
         return response;
       })
       .catch(() => caches.match(event.request))

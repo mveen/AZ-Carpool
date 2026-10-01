@@ -39,6 +39,21 @@ test('the file starts with a BOM (Excel reads UTF-8) and quotes cells with ; " o
   const csv = buildBackupCsv({ a: { parentName: 'Jan; "de" man', girlName: 'Ë', capacity: 4 } });
   assert.equal(csv.charCodeAt(0), 0xFEFF); assert.match(csv, /"Jan; ""de"" man"/);
 });
+test('text that a spreadsheet would run as a formula is written as plain text; phone numbers stay as they are', () => {
+  const csv = buildBackupCsv({ a: { parentName: '=HYPERLINK("https://evil.example","Klik")', girlName: '@SUM(1+1)', parentPhone1: '+31612345678', parentPhone2: '06-12345678', capacity: 4 } });
+  const data = parseCsv(csv)[1];
+  assert.equal(data[1], '\'=HYPERLINK("https://evil.example","Klik")'); assert.equal(data[2], "'@SUM(1+1)");
+  assert.equal(data[6], '+31612345678'); assert.equal(data[7], '06-12345678');
+  for (const bad of ['+cmd|x', '-2+3+cmd', '\t=1+1']) assert.equal(parseCsv(buildBackupCsv({ a: { parentName: bad, capacity: 4 } }))[1][1][0], "'");
+});
+test('restoring a back-up gives back the original names, also the ones that start with = + - @', () => {
+  const fams = sampleFamilies();
+  fams.f1.parentName = '=Jan'; fams.f1.girlName = '-Emma'; fams.f1.parentPhone1 = '+31612345678';
+  const res = parseBackup(buildBackupCsv(fams, 'f1'));
+  assert.ok(res.ok, JSON.stringify(res.errors));
+  const r = res.rows.find(x => x.id === 'f1');
+  assert.equal(r.data.parentName, '=Jan'); assert.equal(r.data.girlName, '-Emma'); assert.equal(r.data.parentPhone1, '+31612345678');
+});
 test('the file name carries the date', () => { assert.equal(backupFileName(new Date(2026, 8, 5)), 'az-carpool-gezinnen-2026-09-05.csv'); });
 
 console.log('=== reading CSV ===');
