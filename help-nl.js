@@ -3,7 +3,7 @@
 //  - Plain, short Dutch for parents who are not technical. Name buttons and tabs exactly as they appear in the app.
 //  - NEVER put a secret, API key, password, invite code, phone number, e-mail address or the name of a
 //    parent or child in here. This file is public (GitHub Pages). It explains how the app works, nothing else.
-//    (The developer's name in 'over-achtergrond' is there on purpose.)
+//    (The developer's name in 'over-achtergrond' and 'over-privacy' is there on purpose.)
 //  - Each article: id (unique), title (a question or a short topic), keywords (extra words people may type),
 //    body (list of paragraphs; a paragraph that starts with "• " or "1. " is shown as its own line),
 //    tab (optional: the tab where this happens; adds a "Ga naar ..." button, one of the data-tab values),
@@ -364,14 +364,26 @@ export default [
   {
     id: 'over-privacy',
     group: 'over',
-    title: 'Over deze app: privacy en veiligheid',
-    keywords: 'privacy avg gegevens opgeslagen persoonsgegevens cookies tracking analytics meting ip adres veilig veiligheid security beveiliging verwijderen wissen cookiebanner toegang',
+    title: 'Over deze app: privacy en AVG (GDPR)',
+    keywords: 'privacy avg gdpr gegevens opgeslagen persoonsgegevens cookies tracking analytics meting ip adres veilig veiligheid security beveiliging verwijderen wissen cookiebanner toegang verantwoordelijke toestemming rechten inzage kopie bewaartermijn bewaren klacht autoriteit persoonsgegevens europa eu firebase telefoonnummer zichtbaar',
     body: [
-      'De app bewaart zo weinig mogelijk gegevens: naam ouder, telefoonnummer(s), voornaam dochter (tenzij zelf anders ingevuld), rijtijden en beschikbaarheid. Er worden geen adressen, geboortedata of e-mailadressen opgeslagen.',
+      'De app houdt zich aan de Algemene verordening gegevensbescherming (AVG, in het Engels GDPR). De app bewaart zo weinig mogelijk gegevens.',
+      'Verantwoordelijk voor de gegevens is Michiel Veen, ontwikkelaar van de app en coördinator. De app is een initiatief van ouders voor ouders en is geen onderdeel van de club.',
+      'Welke gegevens worden bewaard:',
+      '• Ouders: het telefoonnummer (of de telefoonnummers) en de naam die je zelf invult. De naam is niet verplicht.',
+      '• Dochters: alleen de voornaam, tenzij de ouder die zelf aanpast.',
+      '• Verder: rijtijden en beschikbaarheid, het rooster en wijzigingen, voor zover nodig voor de carpool.',
+      'Er worden geen woonadressen, geboortedata of e-mailadressen opgeslagen. De adressen in de app zijn openbare plaatsen, zoals voetbalvelden.',
+      'Naam en telefoonnummer zijn zichtbaar voor alle gebruikers. Dat is bewust: carpoolers moeten elkaar kunnen bereiken, bijvoorbeeld bij een wijziging of vertraging. De app is alleen bedoeld voor de carpoolgroep en niet openbaar.',
+      'De gegevens worden alleen gebruikt om de carpool te organiseren en elkaar daarover te bereiken. Ze worden niet verkocht en niet voor reclame of andere doelen gebruikt. De grondslag is jouw toestemming: je vult de gegevens zelf in en doet vrijwillig mee. Je kunt die toestemming altijd intrekken.',
+      'De gegevens staan in een database van Google Firebase op servers in de Europese Unie. De app wordt gehost op GitHub Pages.',
       'Toegang is alleen mogelijk met telefoonnummer en code. De database weigert toegang voor niet-leden, ook buiten de app om.',
       'De app gebruikt geen cookies en heeft geen tracking of meting (geen Google Analytics, Sentry of Hotjar, geen advertenties). Het toestel bewaart alleen wat nodig is voor de werking: een anonieme inlogcode en de themakeuze. Er is daarom geen cookiebanner.',
-      'Het IP-adres is zichtbaar voor de partijen die de app laden: GitHub (hosting), Google (database, agenda-opvraging) en OpenRouteService (routes). Dat geldt voor elke website.',
-      'Na elke grote wijziging wordt de app gecontroleerd op security- en privacy-risico\'s. Verwijdering van gegevens kan worden aangevraagd bij de coördinator.',
+      'Naar externe diensten gaan geen persoonsgegevens. Het IP-adres is wel zichtbaar voor de partijen die de app laden: GitHub (hosting), Google (database, agenda-opvraging) en OpenRouteService (routes). Dat geldt voor elke website. OpenRouteService ontvangt alleen de adressen van de voetbalvelden en Google Agenda alleen het agenda-ID.',
+      'Na elke grote wijziging wordt de app gecontroleerd op security- en privacy-risico\'s.',
+      'Gegevens blijven bewaard tot je de carpool verlaat of om verwijdering vraagt. De coördinator verwijdert de gegevens als iemand stopt, of aan het einde van het seizoen.',
+      'Je mag je gegevens inzien, laten aanpassen of laten verwijderen. Je naam kun je zelf wijzigen in de app. Voor inzage, een kopie of verwijdering vraag je het aan de coördinator. Dan worden ook de gegevens van je dochter(s) verwijderd, waarna je niet meer in de app kunt. Je krijgt meestal binnen 3 dagen antwoord, uiterlijk binnen een maand.',
+      'Neem bij vragen over privacy contact op met de coördinator. Je kunt ook een klacht indienen bij de Autoriteit Persoonsgegevens.',
     ],
   },
   {

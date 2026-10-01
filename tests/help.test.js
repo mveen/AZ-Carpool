@@ -159,7 +159,20 @@ test('questions about privacy, who built the app, services and upkeep find the r
 });
 test('the privacy text says what the app stores and what it does not do', () => {
   const s = allText(findArticle('over-privacy'));
-  assert.match(s, /geen cookies/); assert.match(s, /geen tracking/); assert.match(s, /IP-adres/); assert.match(s, /naam ouder, telefoonnummer/);
+  assert.match(s, /geen cookies/); assert.match(s, /geen tracking/); assert.match(s, /IP-adres/); assert.match(s, /Ouders: het telefoonnummer.*en de naam die je zelf invult/);
+});
+test('the privacy text covers the AVG/GDPR: controller, data, visibility, basis, location, retention, rights, reaction time, complaint', () => {
+  const s = allText(findArticle('over-privacy'));
+  [/AVG, in het Engels GDPR/, /Verantwoordelijk.*Michiel Veen.*coördinator/, /initiatief van ouders voor ouders.*geen onderdeel van de club/, /Dochters: alleen de voornaam, tenzij de ouder die zelf aanpast/, /rijtijden en beschikbaarheid/,
+   /geen woonadressen, geboortedata of e-mailadressen/, /zichtbaar voor alle gebruikers/, /toestemming.*altijd intrekken/, /servers in de Europese Unie/, /GitHub Pages/,
+   /Sentry of Hotjar/, /geen cookiebanner/, /OpenRouteService ontvangt alleen de adressen van de voetbalvelden/, /Google Agenda alleen het agenda-ID/,
+   /security- en privacy-risico/, /tot je de carpool verlaat of om verwijdering vraagt/, /einde van het seizoen/, /inzien, laten aanpassen of laten verwijderen/,
+   /gegevens van je dochter\(s\) verwijderd/, /binnen 3 dagen.*uiterlijk binnen een maand/, /Autoriteit Persoonsgegevens/].forEach(re => assert.match(s, re, String(re)));
+  assert.ok(!/Er worden geen adressen/.test(s), 'the venues are stored, so only "geen woonadressen" is true');
+});
+test('searching AVG, GDPR, verwijderen or bewaartermijn finds the privacy article', () => {
+  ['avg', 'gdpr', 'verwijderen', 'bewaartermijn', 'klacht autoriteit persoonsgegevens'].forEach(q => assert.ok(ids(q).includes('over-privacy'), q));
+  assert.equal(top('avg'), 'over-privacy'); assert.equal(top('gdpr'), 'over-privacy');
 });
 test('the services article names every service the app loads (GitHub, Google, OpenRouteService, WhatsApp)', () => {
   const s = allText(findArticle('over-diensten')); ['GitHub', 'Google Firebase', 'OpenRouteService', 'WhatsApp'].forEach(x => assert.ok(s.includes(x), x));
