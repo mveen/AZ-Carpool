@@ -143,6 +143,11 @@ test('the daughter-picker texts are gone; the coordinator-without-family text ex
   assert.match(t('profile.coordinator_zonder_gezin'), /geen eigen gezin/);
 });
 
+test('the not-linked status line points to the gate (phone number + code), not to a picker', () => {
+  assert.match(t('common.nog_niet_gekoppeld_ga_naar'), /telefoonnummer en code/);
+  assert.doesNotMatch(t('common.nog_niet_gekoppeld_ga_naar'), /Mijn gezin/);
+});
+
 test('WhatsApp login intro texts start with "Hi!" and carry the app link', () => {
   assert.match(t('profile.wa_intro_text', { url: 'U', code: 'C' }), /^Hi! .*U[\s\S]*C/);
   assert.match(t('profile.wa_intro_text_nocode', { url: 'U' }), /^Hi! /);

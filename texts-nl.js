@@ -156,7 +156,7 @@ export default {
   "common.kan_geen_verbinding_maken_met": "Kan geen verbinding maken met de database. Dit betekent meestal dat het Firebase-configuratieblok bovenaan het bestand nog niet is ingevuld, of dat er geen internetverbinding is.",
   "common.foutmelding": "Foutmelding:",
   "common.coordinator": " (Coördinator)",
-  "common.nog_niet_gekoppeld_ga_naar": "Nog niet gekoppeld — ga naar Mijn gezin",
+  "common.nog_niet_gekoppeld_ga_naar": "Nog niet gekoppeld — vul je telefoonnummer en code in",
   // coordinator
   "coordinator.coordinator": "Coördinator",
   // data

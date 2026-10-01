@@ -57,7 +57,7 @@ test('updateStatusLine: parent name; coordinator suffix; unlinked; nobody', () =
   sampleParentState(); updateStatusLine(); assert.equal(dom.html('whoami'), 'Piet Pieters');
   sampleCoordinatorState({ links: { coord: { familyId: 'f1' } } }); updateStatusLine(); assert.equal(dom.html('whoami'), 'Jan Jansen (Coördinator)');
   sampleCoordinatorState(); updateStatusLine(); assert.equal(dom.html('whoami'), 'Coördinator');
-  resetState({ me: 'x' }); updateStatusLine(); assert.equal(dom.html('whoami'), 'Nog niet gekoppeld — ga naar Mijn gezin');
+  resetState({ me: 'x' }); updateStatusLine(); assert.equal(dom.html('whoami'), 'Nog niet gekoppeld — vul je telefoonnummer en code in');
   resetState({ me: null }); updateStatusLine(); assert.equal(dom.html('whoami'), '');
 });
 test('twoStepConfirm: first tap asks, second tap acts and restores the label (also an icon-only button)', () => {
