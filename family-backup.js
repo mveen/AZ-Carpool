@@ -19,8 +19,13 @@ export const BACKUP_HEADERS = [
 ];
 
 const AV = { yes: 'beschikbaar', backup: 'back-up' };
+// A cell that starts with = + - @ is read as a formula by Excel / LibreOffice, so a parent could name herself "=HYPERLINK(...)".
+// Such text gets a ' in front (shown as plain text). Phone numbers like +31612345678 are left alone, and the restore removes the '.
+const FORMULA_START = /^[=+\-@\t\r]/, PLAIN_NUMBER = /^[+-]?[\d\s().-]+$/;
+const guardFormula = s => FORMULA_START.test(s) && !PLAIN_NUMBER.test(s) ? "'" + s : s;
+const unguardFormula = s => /^'[=+\-@\t\r]/.test(s) ? s.slice(1) : s;
 const cell = v => {
-  const s = v == null ? '' : String(v);
+  const s = guardFormula(v == null ? '' : String(v));
   return /[;"\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 };
 const avLabel = (on, backup) => on ? AV.yes : backup ? AV.backup : '';
@@ -116,7 +121,7 @@ export function parseBackup(text){
   const seenIds = new Set();
   table.slice(1).forEach((r, n) => {
     const line = n + 2;
-    const get = h => (h in idx ? norm(r[idx[h]]) : '');
+    const get = h => (h in idx ? unguardFormula(norm(r[idx[h]])) : '');
     const err = (key, params) => errors.push({ line, key, params: params || {} });
     const parentName = get(COL_PARENT), girlName = get(COL_GIRL);
     if(!parentName && !girlName) return err('backup.err.noName');
