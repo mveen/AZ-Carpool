@@ -37,15 +37,15 @@
   },
   "help-nl.js": {
     "module": "c5a243a1f8c72a0f3e8666b9c167bd6611dcc0c4e085ef34a317d7057ad5fcb8",
-    "test": "7bdc355ced4069afe48ff8bc2d8636ef66b7817ac8cc1fe6328737771c8c6413"
+    "test": "d92f58690f8bce54c14ef6b68ac1e09b55081628f3a128a40b3339dee45123c3"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "7bdc355ced4069afe48ff8bc2d8636ef66b7817ac8cc1fe6328737771c8c6413"
+    "test": "d92f58690f8bce54c14ef6b68ac1e09b55081628f3a128a40b3339dee45123c3"
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "dd59907b364512289ae1e68e08ef15139a383677fe4f45f4f971777501c0fc6d"
+    "test": "c8bbe78c6d7bdb0053343313c149752fef2485bc7b25a63b96533c7ada8e5ced"
   },
   "impact.js": {
     "module": "b8324f916a3b681c343c58767a9dd0ba80e6a28fcfbc0bf7fc0c0ea9e2758586",
@@ -65,7 +65,7 @@
   },
   "notice.js": {
     "module": "ca411ae280a728d29651e7887023e319f11e5d6ccddd92cd60cc880c994811b5",
-    "test": "b3f31bd4d244619db528d5b1baa93d003981be7dd7479e942ba150ad407e8ffc"
+    "test": "05a24507fecca8852f594c2920beeef297cc36b3608336abd47d44caf63a3b46"
   },
   "ov.js": {
     "module": "5072f7dfd75a2f4f52541a1288bc3dd85418aa867e50e2c8a8b63febd16f7d08",
@@ -92,8 +92,8 @@
     "test": "cf6acee00fdde31711080a7f09272a9e036d4a86adb57c802422c8ca4f2652b5"
   },
   "texts-nl.js": {
-    "module": "65a59b1e3b24a8faff44009bb15fa910774d9bc62b812fddce33741a34a05509",
-    "test": "dd59907b364512289ae1e68e08ef15139a383677fe4f45f4f971777501c0fc6d"
+    "module": "d3addda76a64c6910a3f1f37925264e3cab3ee9f82530c4cc49861e32cd65f94",
+    "test": "c8bbe78c6d7bdb0053343313c149752fef2485bc7b25a63b96533c7ada8e5ced"
   },
   "ui-beheer.js": {
     "module": "676a95b17911e62ef9fe753e726dac506be5309fe0426e48aeadb2a1a97a0864",
@@ -101,15 +101,15 @@
   },
   "ui-common.js": {
     "module": "3378607b38d5215de6bec1e9d77887fee8ee95f1d57dc679719fd21304db282e",
-    "test": "917f1d8f9b04848810601415cdbec54d89e29e4afdfce98215fa3d25a8ee5cf2"
+    "test": "5af99e0d30f9c9255a46f540d560f70d3405228ff6a832cf27e9c4fafa1b2ef2"
   },
   "ui-deviation.js": {
     "module": "669c715a0549a3bc200f00dbe41f516614ba7e764967f90feb29f4df503cc531",
     "test": "06709df08fa9a5016538ab2171290926855066a8e21f365c32b814c65e2d2c08"
   },
   "ui-help.js": {
-    "module": "40d215a2b77e58d52eac8f125c8a71fa8a3ce331e31af0253e26ac5981bff795",
-    "test": "bc6e36c7d4c6755f65b684e8f8db6bbfeb7e68ef6a4c251e06ae5496e4a57824"
+    "module": "030d1c46f5a82c67aa5541323ef4749a48620aa197794cf7c6d25ae45439acc5",
+    "test": "869b0860df6d0433d24c532be7741c46ba5eb56c5433c8031bb5950c0d51e3b7"
   },
   "ui-matches.js": {
     "module": "53788284c41f07ecbfca9b0e662bb58605f1f26f80ca734581548e6dad6f45a2",
@@ -121,7 +121,7 @@
   },
   "ui-notice.js": {
     "module": "2baa22febd237d86597fe4fc6dcd582f13fbc291d696fc8be2cc6429da91e100",
-    "test": "575b3bfd3647c0261bcbc2da4a9854055c488b1c606273024fd716b4ae8f81b8"
+    "test": "e7f2ca6a38dd1b15697a4a496accfd0c16eb40aea4c0faf7a016c0cb291c363d"
   },
   "ui-overview.js": {
     "module": "e0f1be1b8539c4b1a38942e4c55b6d16ddb68da056ffe7823d9fe4b1ba1fd29e",
