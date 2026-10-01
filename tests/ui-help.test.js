@@ -37,6 +37,14 @@ test('a search shows "Resultaten" with the best match first', () => {
   assert.match(html, /<h3 class="helpHead">Resultaten<\/h3>/);
   assert.equal(html.match(/data-helpid="([^"]+)"/)[1], 'wijzigen');
 });
+test('the list shows the topics first and "Over deze app" as its own group at the bottom', () => {
+  resetState({ canEdit: false });
+  const html = helpListHtml('');
+  const iAbout = html.indexOf('Over deze app</h3>'), iFirst = html.indexOf('data-helpid="wat-is"'), iOver = html.indexOf('data-helpid="over-privacy"');
+  assert.ok(iFirst > -1 && iFirst < iAbout && iAbout < iOver, 'order');
+  assert.equal((html.match(/class="helpHead"/g) || []).length, 2);
+  assert.equal((helpListHtml('cookies').match(/class="helpHead"/g) || []).length, 1, 'a search result list has one heading');
+});
 test('nothing found: a friendly message that points to the coordinator', () => {
   resetState({ canEdit: false });
   assert.match(text(helpListHtml('xyzzyqq')), /^Niets gevonden\. Probeer een ander woord, of vraag het aan de coördinator\.$/);

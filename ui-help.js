@@ -18,8 +18,12 @@ export function helpListHtml(query){
   const q = String(query || '').trim();
   const list = searchHelp(q, { canEdit: !!S.canEdit });
   if(!list.length) return `<p class="muted helpEmpty">${esc(t('help.no_results'))}</p>`;
-  const head = q ? t('help.results') : t('help.topics');
-  return `<h3 class="helpHead">${esc(head)}</h3>` + list.map(a => `<button type="button" class="helpItem" data-helpid="${esc(a.id)}"><span>${esc(a.title)}</span>${phIcon('arrow-right')}</button>`).join('');
+  const item = a => `<button type="button" class="helpItem" data-helpid="${esc(a.id)}"><span>${esc(a.title)}</span>${phIcon('arrow-right')}</button>`;
+  if(q) return `<h3 class="helpHead">${esc(t('help.results'))}</h3>` + list.map(item).join('');
+  // No search: the topics, then "Over deze app" as its own group at the bottom.
+  const topics = list.filter(a => a.group !== 'over'), about = list.filter(a => a.group === 'over');
+  return `<h3 class="helpHead">${esc(t('help.topics'))}</h3>` + topics.map(item).join('')
+    + (about.length ? `<h3 class="helpHead">${esc(t('help.about'))}</h3>` + about.map(item).join('') : '');
 }
 
 export function helpArticleHtml(id){

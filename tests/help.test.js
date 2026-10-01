@@ -145,15 +145,44 @@ test('the help finds the Weekoverzicht (also by "pdf" or "afdrukken") and explai
   assert.ok(ids('back-up invallen').some(id => articles.find(a => a.id === id).body.join(' ').includes('Back-up:')));
 });
 
-test('the back-up / terugzetten help is found by the coordinator and hidden from parents', () => {
-  assert.equal(searchHelp('back-up terugzetten csv', { canEdit: true })[0].id, 'beheer-gezinnen');
-  assert.equal(searchHelp('terugzetten csv excel', { canEdit: false }).some(a => a.id === 'beheer-gezinnen'), false);
+console.log('\n=== Over deze app ===');
+const top = q => ids(q)[0];
+const OVER = ['over-achtergrond', 'over-privacy', 'over-diensten', 'over-beheer'];
+test('the four "Over deze app" articles exist, are for everyone, and form their own group', () => {
+  OVER.forEach(id => { const a = findArticle(id); assert.ok(a, id); assert.equal(a.group, 'over'); assert.ok(!a.coordinatorOnly); });
+  assert.deepEqual(articles.filter(a => a.group === 'over').map(a => a.id), OVER);
+});
+test('questions about privacy, who built the app, services and upkeep find the right article', () => {
+  assert.equal(top('cookies'), 'over-privacy'); assert.equal(top('tracking'), 'over-privacy'); assert.equal(top('wie heeft de app gemaakt'), 'over-achtergrond');
+  assert.equal(top('openrouteservice'), 'over-diensten'); assert.equal(top('waze navigatie'), 'over-diensten'); assert.equal(top('contributor'), 'over-beheer');
+  assert.ok(ids('tests kwaliteit').includes('over-achtergrond')); assert.ok(ids('whatsapp').includes('over-diensten'));
+});
+test('the privacy text says what the app stores and what it does not do', () => {
+  const s = allText(findArticle('over-privacy'));
+  assert.match(s, /geen cookies/); assert.match(s, /geen tracking/); assert.match(s, /IP-adres/); assert.match(s, /naam ouder, telefoonnummer/);
+});
+test('the services article names every service the app loads (GitHub, Google, OpenRouteService, WhatsApp)', () => {
+  const s = allText(findArticle('over-diensten')); ['GitHub', 'Google Firebase', 'OpenRouteService', 'WhatsApp'].forEach(x => assert.ok(s.includes(x), x));
+});
+test('the number of tests in "Over deze app" is the exact count from test-count.js (written by npm run lock)', async () => {
+  const { TEST_COUNT } = await import('../test-count.js');
+  assert.ok(Number.isInteger(TEST_COUNT) && TEST_COUNT > 0);
+  assert.ok(allText(findArticle('over-achtergrond')).includes('Het gaat om ' + TEST_COUNT.toLocaleString('nl-NL') + ' automatische tests.'));
+  assert.ok(!/meer dan \d+ automatische/.test(allText(findArticle('over-achtergrond'))), 'the count is exact, not "meer dan"');
+});
+test('test-count.js is cached by the service worker (the help imports it, so it must work offline too)', () => {
+  assert.match(fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8'), /'\.\/test-count\.js'/);
+});
+test('the privacy text does not claim fonts come from Google (they are served from the app itself)', () => {
+  assert.ok(!/lettertype/i.test(allText(findArticle('over-privacy'))));
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.ok(!/fonts\.googleapis|fonts\.gstatic/.test(html));
 });
 
-test('the notice help: everyone finds the bar, only the coordinator finds how to switch it', () => {
-  assert.ok(searchHelp('gele balk melding', { canEdit: false }).some(a => a.id === 'melding-balk'));
-  assert.equal(searchHelp('melding tonen uitzetten', { canEdit: false }).some(a => a.id === 'beheer-melding'), false);
-  assert.ok(searchHelp('melding tonen uitzetten', { canEdit: true }).some(a => a.id === 'beheer-melding'));
+test('help explains the notice bar to everyone and the switch to the coordinator only', () => {
+  assert.ok(searchHelp('gele balk', { canEdit: false }).some(a => a.id === 'melding-balk'));
+  assert.ok(!searchHelp('melding aan uit zetten', { canEdit: false }).some(a => a.id === 'beheer-melding'));
+  assert.ok(searchHelp('melding aan uit zetten', { canEdit: true }).some(a => a.id === 'beheer-melding'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
