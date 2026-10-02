@@ -234,6 +234,10 @@ a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .daypill.active .daypillToday{background:#fff}
 .daypill .daypillAlert{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:#fff;font-size:12px;font-weight:800;line-height:16px;text-align:center;border:2px solid var(--bg)}
 .daypills{padding-top:8px;padding-right:8px}
+/* Mon–Fri pills: 5 equal columns, always fit the screen (period pills keep wrapping) */
+.daypills:not(.periodPills){display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;overflow:visible;padding-right:6px}
+.daypills:not(.periodPills) .daypill{min-width:0;padding:6px 2px}
+.daypills:not(.periodPills) .devDayDot{right:4px}
 .daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px;font-weight:800}
 .group{border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin:10px 0;background:var(--card);box-shadow:var(--shadow-card)}
 /* A coloured left stripe means STATUS only. A plain car (.confirmed) has none, like a Mijn week day card. */
