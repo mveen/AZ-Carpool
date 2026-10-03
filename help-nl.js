@@ -118,11 +118,11 @@ export default [
   },
   {
     id: 'terug-met-ov',
-    title: 'Mijn dochter gaat terug met het openbaar vervoer',
+    title: 'Mijn dochter rijdt deze terugrit niet mee',
     keywords: 'ov openbaar vervoer trein bus terug zelf naar huis niet met de auto toch met de auto',
     body: [
-      'Ga naar Mijn week, zoek de terugrit op de dag en tik op Terug met OV. Je dochter gaat dan uit haar auto. De vertrektijd van de auto wordt opnieuw uitgerekend. Er hoeft geen reden bij.',
-      'Ander plan? Tik op Toch met de auto om haar terug in de auto te zetten.',
+      'Ga naar Mijn week, zoek de terugrit op de dag en tik op Rijdt niet mee. Je dochter gaat dan uit haar auto en regelt zelf haar terugreis. De vertrektijd van de auto wordt opnieuw uitgerekend. Er hoeft geen reden bij.',
+      'Ander plan? Tik op Toch meerijden om haar terug in de auto te zetten.',
     ],
     tab: 'myweek',
   },

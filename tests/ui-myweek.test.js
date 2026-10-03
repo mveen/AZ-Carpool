@@ -110,20 +110,20 @@ test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', (
 console.log('\n=== Terug met OV, places, distance, route link (US-06, US-15, US-21, US-22) ===');
 import { withFakeNowAsync } from './test-support.js';
 import { locationLinkHtml } from '../ui-myweek.js';
-test('every upcoming terug ride has a "Terug met OV" button (Thursday, Friday); heen never has one', () => {
+test('every upcoming terug ride has a "Rijdt niet mee" button (Thursday, Friday); heen never has one', () => {
   const html = render({});
-  assert.match(html, /data-ovtoggle="Do" data-ovon="1" aria-pressed="false">Terug met OV<\/button>/);
-  assert.match(html, /data-ovtoggle="Vr" data-ovon="1" aria-pressed="false">Terug met OV<\/button>/);
+  assert.match(html, /data-ovtoggle="Do" data-ovon="1" aria-pressed="false"><svg[^>]*>.*<\/svg>Rijdt niet mee<\/button><div class="ovHint">Je dochter regelt zelf haar terugreis<\/div>/);
+  assert.match(html, /data-ovtoggle="Vr" data-ovon="1" aria-pressed="false"><svg[^>]*>.*<\/svg>Rijdt niet mee<\/button><div class="ovHint">Je dochter regelt zelf haar terugreis<\/div>/);
   assert.equal((html.match(/data-ovtoggle=/g) || []).length, 2);
 });
 test('days that are already past (Monday, Tuesday; "now" is Wednesday) and days without a ride have no button', () => {
   const html = render({});
   ['Ma', 'Di', 'Wo'].forEach(d => assert.ok(!html.includes(`data-ovtoggle="${d}"`), d));
 });
-test('when marked: status "Terug met OV", no departure time, an undo button, and no "niet ingepland" alert for that ride', () => {
+test('when marked: status "Rijdt niet mee", no departure time, an undo button, and no "niet ingepland" alert for that ride', () => {
   const dev = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [], ovGirlIds: ['f2'], ovFrom: { f2: null } } };
   const html = render({ deviations: dev }); const s = text(html);
-  assert.match(s, /Terug · Alkmaar → Aalsmeer – Terug met OV Toch met de auto/);
+  assert.match(s, /Terug · Alkmaar → Aalsmeer – Rijdt niet mee Toch meerijden/);
   assert.match(html, /data-ovtoggle="Do" data-ovon="0" aria-pressed="true"/);
   assert.doesNotMatch(s, /Terug \(17:30\): niet ingepland/);
 });
@@ -141,7 +141,7 @@ await testAsync('pressing the button stores the mark (no reason asked) and confi
   await pressOv('Ma', true);
   const d = fake.get('deviations/Ma_terug');
   assert.ok(d.ovGirlIds.includes('f2')); assert.ok(!d.cars[0].girlIds.includes('f2'));
-  assert.match(dom.doc.getElementById('toast').innerHTML, /Jahaimy gaat terug met OV/);
+  assert.match(dom.doc.getElementById('toast').innerHTML, /Jahaimy rijdt niet mee/);
 });
 test('the ride shows where it starts and ends, as plain text without a map button', () => {
   const html = render({});

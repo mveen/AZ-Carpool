@@ -110,12 +110,12 @@ export function renderMyWeek(){
     // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
     const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), cars).length>0;
     const devTag = differsFromStandard? `<div class="subrideStatus changed">${phIcon('lightning')} ${t('myweek.wijziging_actief')}</div>` : '';
-    // US-15: where the ride starts and ends. US-06: parent toggle "Terug met OV" (no reason needed), not for days already past.
+    // US-15: where the ride starts and ends. US-06: parent toggle "Rijdt niet mee" (no reason needed), not for days already past.
     const ownCar = daughterIdx>=0? cars[daughterIdx] : null;
     const locHtml = ownCar? shiftLocationHtml(ownCar,direction,{day}) : '';
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const ovBtn = direction==='terug' && !dayPassed && !isFlex(myFam)
-      ? `<button type="button" class="btn small secondary ovBtn" data-ovtoggle="${day}" data-ovon="${isOvMe?0:1}" aria-pressed="${isOvMe}">${t(isOvMe?'ov.undo':'ov.button')}</button>` : '';
+      ? `<button type="button" class="btn small secondary ovBtn" data-ovtoggle="${day}" data-ovon="${isOvMe?0:1}" aria-pressed="${isOvMe}">${isOvMe? '' : phIcon('car-slash')}${t(isOvMe?'ov.undo':'ov.button')}</button>${isOvMe? '' : `<div class="ovHint">${t('ov.hint')}</div>`}` : '';
     return `<div class="subride ${drivingIdx>=0?'driving':''} ${statusClass==='unplanned'?'unplanned':''}">
       <div class="subrideHead"><span>${label}</span><span class="subrideDep">${isOvMe? '–' : dep}</span></div>
       <div class="subrideStatus ${statusClass}">${statusHtml}</div>

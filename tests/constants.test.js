@@ -48,6 +48,7 @@ test('PDF_SEED: every entry has a name and only valid HH:MM times', () => {
 });
 
 test('the info icon exists (used by the notice bar)', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.includes('circle')); });
+test('the car-slash icon ("Rijdt niet mee" button) exists and draws a slash over the car', () => { assert.ok(PH_PATHS['car-slash'] && PH_PATHS['car-slash'].includes('<line')); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
