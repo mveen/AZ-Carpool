@@ -228,29 +228,36 @@ test('the wrapper reads the running app: Tuesday has a deviation in the sample d
   assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Vr')), 'Vrijdag: volgens schema. Zie Mijn week: ' + CURL);
 });
 
-console.log('\n=== Terug met OV in the conclusie-appje and Mijn week (US-06) ===');
-test('a girl going home by public transport is named in the conclusie-appje, and the day is no longer "volgens schema"', () => {
-  const s = buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => ['f3'] }), 'Ma');
-  assert.match(s, /^Anouk terug met OV\n/); assert.doesNotMatch(s, /volgens schema/);
+console.log('\n=== Rijdt niet mee in the conclusie-appje and Mijn week (US-06) ===');
+test('a girl who does not ride along is named in the conclusie-appje, and the day is no longer "volgens schema"', () => {
+  const s = buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: (d, dir) => dir === 'terug' ? ['f3'] : [] }), 'Ma');
+  assert.match(s, /^Rijdt niet mee terug: Anouk\n/); assert.doesNotMatch(s, /volgens schema/);
 });
 test('several girls: one line with all names', () => {
-  assert.match(buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => ['f3', 'f1'] }), 'Ma'), /^Anouk, Eline terug met OV\n/);
+  assert.match(buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: (d, dir) => dir === 'terug' ? ['f3', 'f1'] : [] }), 'Ma'), /^Rijdt niet mee terug: Anouk, Eline\n/);
+});
+test('heen works the same way, and heen and terug get a line each', () => {
+  assert.match(buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: (d, dir) => dir === 'heen' ? ['f3'] : [] }), 'Ma'), /^Rijdt niet mee heen: Anouk\n/);
+  const both = buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => ['f3'] }), 'Ma');
+  assert.match(both, /Rijdt niet mee heen: Anouk\nRijdt niet mee terug: Anouk\n/);
 });
 test('her leaving the car is not also reported as "Rijdt niet mee terug"', () => {
   const base = [{ driverFamilyId: 'f1', girlIds: ['f2', 'f3'], departureTime: '17:00' }], now = [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '17:00' }];
   const cx = ctx({ baseCars: (d, dir) => dir === 'terug' ? base : [], cars: (d, dir) => dir === 'terug' ? now : [], ovGirls: () => ['f3'] });
   const s = buildConclusieFrom(cx, 'Ma');
-  assert.match(s, /Anouk terug met OV/); assert.doesNotMatch(s, /Rijdt niet mee/);
+  assert.equal((s.match(/Rijdt niet mee terug: Anouk/g) || []).length, 1);
   assert.match(buildConclusieFrom({ ...cx, ovGirls: () => [] }, 'Ma'), /Rijdt niet mee terug: Anouk/);
 });
 test('without any OV nothing changes: still "volgens schema"', () => {
   assert.match(buildConclusieFrom(ctx({ baseCars: () => [], ovGirls: () => [] }), 'Ma'), /volgens schema/);
   assert.match(buildConclusieFrom(ctx({ baseCars: () => [] }), 'Ma'), /volgens schema/);
 });
-test('Mijn week message says "terug met OV" for the marked day', () => {
+test('Mijn week message says "rijdt niet mee" for the marked shift (heen or terug)', () => {
   const myFam = { girlName: 'Jahaimy', schedule: { Ma: { heen: '08:30', terug: '17:30' } } };
-  const s = buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, matchRides: [], isOv: (d, id) => d === 'Ma' && id === 'f2' }));
-  assert.match(s, /MA 28 — heen: 08:30 \(nog niet ingepland\) \| terug: terug met OV/);
+  const s = buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, matchRides: [], isOv: (d, id, dir) => d === 'Ma' && id === 'f2' && dir === 'terug' }));
+  assert.match(s, /MA 28 — heen: 08:30 \(nog niet ingepland\) \| terug: rijdt niet mee/);
+  const h = buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, matchRides: [], isOv: (d, id, dir) => d === 'Ma' && id === 'f2' && dir === 'heen' }));
+  assert.match(h, /MA 28 — heen: rijdt niet mee \| terug: /);
 });
 
 console.log('\n=== during a period with a temporary rooster ===');

@@ -246,7 +246,12 @@ test('a girl who goes home by public transport is no longer "not planned" on tha
   assert.deepEqual(ids(unplacedFor('Ma', 'terug', 'week', state())), ['f3', 'f4', 'f5']);
   assert.deepEqual(ids(unplacedFor('Ma', 'terug', 'week', state({ deviations: ovDev }))), ['f4', 'f5']);
 });
-test('the mark only concerns the terug ride of that day in this week: heen and the standard rooster are unchanged', () => {
+test('a heen mark works the same: ovGirlsFor(…, "heen") and unplacedFor heen', () => {
+  const st = state({ deviations: { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: WEEK_KEY, expiresAt: 1791500000000, cars: [], ovGirlIds: ['f3'] } } });
+  assert.deepEqual(ovGirlsFor('Ma', st, 'heen'), ['f3']); assert.deepEqual(ovGirlsFor('Ma', st), []);
+  assert.ok(!ids(unplacedFor('Ma', 'heen', 'week', st)).includes('f3')); assert.ok(ids(unplacedFor('Ma', 'terug', 'week', st)).includes('f3'));
+});
+test('a terug mark only concerns that terug ride in this week: heen and the standard rooster are unchanged', () => {
   const st = state({ deviations: ovDev });
   assert.deepEqual(ids(unplacedFor('Ma', 'heen', 'week', st)), ids(unplacedFor('Ma', 'heen', 'week', state())));
   assert.deepEqual(ids(unplacedFor('Ma', 'terug', 'standard', st)), ['f3', 'f4', 'f5']);
