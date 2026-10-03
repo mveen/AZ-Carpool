@@ -486,23 +486,23 @@ export async function saveDeviationCars(day,direction,cars,opts){
   if(!(opts&&opts.skipGate) && await impactGate(day,direction,cars, ()=>saveDeviationCars(day,direction,cars,{skipGate:true}), renderDeviationTab)) return false;
   try{
     refreshWeekKey();
-    // "Terug met OV" marks (US-06) live on the terug deviation and survive other edits, unless the girl is in a car again.
-    const extra = direction==='terug'? keepOv(currentDeviationDoc(day,direction), cars) : {};
+    // "Rijdt niet mee" marks (US-06, both directions) live on the deviation and survive other edits, unless the girl is in a car again.
+    const extra = keepOv(currentDeviationDoc(day,direction), cars);
     await writeDeviation(day,direction,cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
 }
 
-// US-06: a parent marks (or unmarks) that a daughter goes home by public transport on one day.
-// She leaves her terug car (departure time recalculated) and drops out of the planning for that ride.
-export async function setReturnByPublicTransport(day,girlId,on){
+// US-06: a parent marks (or unmarks) that a daughter does not ride along on one shift (heen or terug).
+// She leaves her car (departure time recalculated) and drops out of the planning for that ride.
+export async function setReturnByPublicTransport(day,girlId,on,direction='terug'){
   if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
   try{
     refreshWeekKey();
-    const cur = currentDeviationDoc(day,'terug');
-    const r = applyOv({cars:effectiveCars(day,'terug'), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,'terug',ids));
+    const cur = currentDeviationDoc(day,direction);
+    const r = applyOv({cars:effectiveCars(day,direction), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,direction,ids));
     const extra = r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {};
-    await writeDeviation(day,'terug',r.cars,extra);
+    await writeDeviation(day,direction,r.cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
 }

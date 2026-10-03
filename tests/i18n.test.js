@@ -111,10 +111,9 @@ test('the wording from the user stories is exact', () => {
 
 test('the texts of the five new stories exist and fill their placeholders', () => {
   assert.equal(t('impact.needSeat', { name: 'Kees' }), 'Extra plek nodig → voorstel: Kees');
-  assert.equal(t('wa.conclusie.ov', { names: 'Anouk' }), 'Anouk terug met OV');
   assert.equal(t('dist.unknown'), 'locatie onbekend');
   assert.equal(t('dist.km', { km: '42,3' }), '± 42,3 km enkele reis');
-  assert.equal(t('ov.button'), 'Rijdt niet mee');
+  assert.equal(t('ov.switchLabel', { p1: 'Heen', p2: 'Donderdag' }), 'Rijdt mee Heen Donderdag'); assert.equal(t('wa.my.ov'), 'rijdt niet mee');
   assert.ok(hasKey('loc.beheerTitle') && hasKey('geo.route') && hasKey('impact.beheerIntro'));
 });
 

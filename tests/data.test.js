@@ -642,6 +642,18 @@ await testAsync('a girl who is in no car can be marked; the mark is stored even 
   await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f3', true));
   assert.deepEqual(fake.get('deviations/Ma_terug').ovGirlIds, ['f3']);
 });
+await testAsync('the same works for the heen ride: stored on Ma_heen, undone again, and kept by another heen edit', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  assert.equal(await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true, 'heen')), true);
+  const d = fake.get('deviations/Ma_heen');
+  assert.deepEqual(d.ovGirlIds, ['f6']); assert.ok(d.cars.every(c => !c.girlIds.includes('f6'))); assert.equal(fake.get('deviations/Ma_terug'), undefined);
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Ma', 'heen', d.cars.map(c => ({ ...c, departureTime: '07:00' }))));
+  assert.deepEqual(fake.get('deviations/Ma_heen').ovGirlIds, ['f6']);
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', false, 'heen'));
+  assert.ok(!('ovGirlIds' in fake.get('deviations/Ma_heen')));
+});
 await testAsync('a failed write shows a message and returns false', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState(); fake.failWrites('deviations/', 'permission-denied');
   assert.equal(await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true)), false);

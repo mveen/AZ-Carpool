@@ -229,14 +229,14 @@ export function unplacedFor(day,direction,mode, st=S){
   const cars = mode==='week'? effectiveCars(day,direction, st) : groupsFor(day,direction, st).map(([,g])=>g);
   const riders = mode==='week'? girlsForRide(day,direction, st) : girlsFor(day,direction, st);
   const placed = new Set(cars.flatMap(c=>c.girlIds||[]));
-  // A girl who goes home by public transport ("Terug met OV") is out of the planning for that ride.
-  const ov = mode==='week' && direction==='terug'? new Set(ovGirlsFor(day, st)) : new Set();
+  // A girl marked "Rijdt niet mee" is out of the planning for that ride.
+  const ov = mode==='week'? new Set(ovGirlsFor(day, st, direction)) : new Set();
   return riders.filter(([id])=>!placed.has(id) && !ov.has(id));
 }
 
-// Girls marked "Terug met OV" on this day of the current week (US-06).
-export function ovGirlsFor(day, st=S){
-  const dev = st.deviations[deviationKey(day,'terug')];
+// Girls marked "Rijdt niet mee" on this shift of the current week (US-06). direction defaults to 'terug'.
+export function ovGirlsFor(day, st=S, direction='terug'){
+  const dev = st.deviations[deviationKey(day,direction)];
   return dev && dev.weekKey===st.currentWeekKey ? ovIds(dev) : [];
 }
 

@@ -12,8 +12,8 @@
     "test": "77bded5a0fa10ce5a22aa20a3b9b27f7a50e18fe7e6a613df6f5a7f6a77a041c"
   },
   "data.js": {
-    "module": "47f504f4bddf090f27561b1fda6cd1baf5d8a1e4f76537843284ed8972bc1e09",
-    "test": "86c48e1a22c07918d3e581dae5c052081961b62f106114b76e3de3cd9d00dd6d"
+    "module": "59f94a98a0e7043b6105ebd65a4dec2ad13cdcd8bff8884503dd04898f5f7e2f",
+    "test": "f08537958a17d19085ca644c0325947e7367369428e63688fe4dd12fa7b046dc"
   },
   "dates.js": {
     "module": "f502addd4970229e55d30d8e73096b2ad739a7a000b75d09d6932a6946f26272",
@@ -36,16 +36,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "37ac2887ed368170070f7e76905c0800335d886cd1ed79330955a66779efccab",
-    "test": "31c4d89276534ddc4ebdab5d115988132bbc790e5043ca70690d10a9a7102651"
+    "module": "4db6c3be26c44f56fb2f24cfbe865b9240d4dd9edd338f34d039b2d58721b859",
+    "test": "cbb2f0eed1bb2b81bda7f65f66ff18b1d65d7e55cb244f72046943361dce0c8b"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "31c4d89276534ddc4ebdab5d115988132bbc790e5043ca70690d10a9a7102651"
+    "test": "cbb2f0eed1bb2b81bda7f65f66ff18b1d65d7e55cb244f72046943361dce0c8b"
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "e804ff38b3bd533920edf295cbe89be0e9a90420206980ba377d09b9b31b0388"
+    "test": "17807143db491f3fc688b171690f45a6726325a105c03ce1834ba14a398b78f9"
   },
   "impact.js": {
     "module": "b8324f916a3b681c343c58767a9dd0ba80e6a28fcfbc0bf7fc0c0ea9e2758586",
@@ -60,8 +60,8 @@
     "test": "9f3a34190bccb6bbedbab4367b218ea5ea888da47dd00af202ecf3b7d300cf54"
   },
   "message-texts.js": {
-    "module": "dcbe641d244739e7342c67cbb4ebec0de7de58152d7e6e53307e396c27d28999",
-    "test": "0ec4eabe27464675dd0141570f27342d9e981a45db4c940e68462d9f380242c4"
+    "module": "6c4e9cf1ed5314ac0cd2879bf4bf29b0dd323d1e25d5f2e39d46363e9732aa11",
+    "test": "708b48ecaf5cb8cda61cbffc4ff244a09abe1f190f27c4e5bec48094dcabf301"
   },
   "notice.js": {
     "module": "ca411ae280a728d29651e7887023e319f11e5d6ccddd92cd60cc880c994811b5",
@@ -80,8 +80,8 @@
     "test": "790679aabc604f9e50998e73399511f6f10c80c279886317b39db64de30816ec"
   },
   "rides.js": {
-    "module": "dcf0704fd00a76974675fe9a5b116ca9752556285b11991c51cbe15ad7277280",
-    "test": "05738220f205cf31e16dbab334c383123c608369865862e5f5130c07fd5f6740"
+    "module": "fa1de94ecb023e638dff26492950c7bed5327f28c3095200eaef976954c515c3",
+    "test": "39303d9d51b05b2ed38ff000721ae28011c38aab7cbff29621cb0aa434f4238e"
   },
   "schedule-changes.js": {
     "module": "0b69458d4a2e942cdc63184f90768ea837d702b72c21ade9b6a3591e6ef6bce1",
@@ -92,8 +92,8 @@
     "test": "cf6acee00fdde31711080a7f09272a9e036d4a86adb57c802422c8ca4f2652b5"
   },
   "texts-nl.js": {
-    "module": "07dce9a8d2b118b77c8e3d9b0a73478ff4f385008c2e4675e7a6d91b8fb48bae",
-    "test": "e804ff38b3bd533920edf295cbe89be0e9a90420206980ba377d09b9b31b0388"
+    "module": "53f52b10ec7d72918307b34ac63e08c23ea387ff58ba9911801c90a157c03a38",
+    "test": "17807143db491f3fc688b171690f45a6726325a105c03ce1834ba14a398b78f9"
   },
   "ui-beheer.js": {
     "module": "676a95b17911e62ef9fe753e726dac506be5309fe0426e48aeadb2a1a97a0864",
@@ -116,8 +116,8 @@
     "test": "1a5375254dc556dea0ec12f1af04bbf655c61fd9c92452fd818c2e035080e01a"
   },
   "ui-myweek.js": {
-    "module": "53231d35cc6bfc339bf6ed47fc1d5e19a25b4ff1c83dacae11b9d51271470c48",
-    "test": "830c87ae2a7aa1f05d85774c7e38d4f7a043d1b9050d03bde5aee0dd57e87e53"
+    "module": "a53fdc2d0097be496881dfde808fc5bc42635a468d16fad8cf16581738867f36",
+    "test": "22146858919c0a83b9b0a8d249f62876d0cabed0e082a41f2a22f4b4b6219038"
   },
   "ui-notice.js": {
     "module": "2baa22febd237d86597fe4fc6dcd582f13fbc291d696fc8be2cc6429da91e100",

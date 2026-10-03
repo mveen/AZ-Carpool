@@ -74,7 +74,7 @@ export function renderMyWeek(){
   function subride(day,direction,label){
     let s = rideTime(myId, day, direction);   // the handed-in time where the temporary rooster applies, else the standard time
     const cars = effectiveCars(day,direction);
-    const isOvMe = direction==='terug' && ovGirlsFor(day).includes(myId);   // US-06: home by public transport
+    const isOvMe = ovGirlsFor(day,undefined,direction).includes(myId);   // US-06: marked "Rijdt niet mee" on this shift
     // Flex: no standard schedule; a ride shows only on days she signed up for (in a car, or driving).
     if(isFlex(myFam)){
       s = '';
@@ -95,7 +95,7 @@ export function renderMyWeek(){
         statusHtml = rideWithHtml(g.driverFamilyId);
       }
     } else if(isOvMe){
-      statusHtml = t('ov.status', { p1: phIcon('check-circle') });
+      statusHtml = t('ov.status', { p1: phIcon('car-slash') });
     } else {
       statusHtml = t('myweek.niet_ingepland_2', { p1: phIcon('warning') }); statusClass='unplanned';
     }
@@ -114,12 +114,13 @@ export function renderMyWeek(){
     const ownCar = daughterIdx>=0? cars[daughterIdx] : null;
     const locHtml = ownCar? shiftLocationHtml(ownCar,direction,{day}) : '';
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
-    const ovBtn = direction==='terug' && !dayPassed && !isFlex(myFam)
-      ? `<button type="button" class="btn small secondary ovBtn" data-ovtoggle="${day}" data-ovon="${isOvMe?0:1}" aria-pressed="${isOvMe}">${isOvMe? '' : phIcon('car-slash')}${t(isOvMe?'ov.undo':'ov.button')}</button>${isOvMe? '' : `<div class="ovHint">${t('ov.hint')}</div>`}` : '';
-    return `<div class="subride ${drivingIdx>=0?'driving':''} ${statusClass==='unplanned'?'unplanned':''}">
-      <div class="subrideHead"><span>${label}</span><span class="subrideDep">${isOvMe? '–' : dep}</span></div>
+    // Switch in the ride header (heen and terug): on = she rides along. Tap area is 44px; state also shows as text (status line) and via aria-checked.
+    const ovSwitch = !dayPassed && !isFlex(myFam)
+      ? `<button type="button" class="ovSwitch${isOvMe?' off':''}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: direction==='heen'? t('dir.heenShort') : t('dir.terugShort'), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="ovTrack">${phIcon(isOvMe?'car-slash':'car')}</span></button>` : '';
+    return `<div class="subride ${drivingIdx>=0?'driving':''} ${statusClass==='unplanned'?'unplanned':''} ${isOvMe?'ovOff':''}">
+      <div class="subrideHead"><span>${label}</span><span class="subrideEnd"><span class="subrideDep">${isOvMe? '–' : dep}</span>${ovSwitch}</span></div>
       <div class="subrideStatus ${statusClass}">${statusHtml}</div>
-      ${locHtml}${extraDriving}${devTag}${ovBtn}
+      ${locHtml}${extraDriving}${devTag}
     </div>`;
   }
 
@@ -223,7 +224,7 @@ export function renderMyWeek(){
       const s = rideTime(myId, k, direction);
       if(!s || isFlex(myFam)) return; // Flex is never auto-planned, so nothing is 'missing'
       if(effectiveCars(k,direction).some(c=>(c.girlIds||[]).includes(myId))) return;
-      if(direction==='terug' && ovGirlsFor(k).includes(myId)) return;   // goes home by public transport
+      if(ovGirlsFor(k,undefined,direction).includes(myId)) return;   // marked "Rijdt niet mee"
       const when = k===todayKey? t('myweek.vandaag') : label;
       unplannedRows.push(`<div class="row"><span><strong>${when}</strong> · ${direction==='heen'?t('dir.heenShort'):t('dir.terugShort')} (${s}${t('myweek.niet_ingepland')}</span>
         <button type="button" class="btn small" data-gowijzig="${k}">${t('myweek.regelen')}</button></div>`);
@@ -252,11 +253,11 @@ export function renderMyWeek(){
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';
-    const day = b.dataset.ovtoggle;
-    if(await setReturnByPublicTransport(day, myId, on)){
+    const day = b.dataset.ovtoggle, direction = b.dataset.ovdir;
+    if(await setReturnByPublicTransport(day, myId, on, direction)){
       // Toast with an Undo action: one tap puts it back the way it was.
       showToast(t(on? 'ov.on' : 'ov.off', { p1: plainGirlName(myId) }), { action: { label: t('ov.toastUndo'), run: async ()=>{
-        if(await setReturnByPublicTransport(day, myId, !on)) showToast(t(on? 'ov.off' : 'ov.on', { p1: plainGirlName(myId) }));
+        if(await setReturnByPublicTransport(day, myId, !on, direction)) showToast(t(on? 'ov.off' : 'ov.on', { p1: plainGirlName(myId) }));
       } } });
     }
   });

@@ -110,37 +110,47 @@ test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', (
 console.log('\n=== Terug met OV, places, distance, route link (US-06, US-15, US-21, US-22) ===');
 import { withFakeNowAsync } from './test-support.js';
 import { locationLinkHtml } from '../ui-myweek.js';
-test('every upcoming terug ride has a "Rijdt niet mee" button (Thursday, Friday); heen never has one', () => {
+test('every upcoming ride (heen and terug, Thursday and Friday) has a "Rijdt mee" switch, on by default', () => {
   const html = render({});
-  assert.match(html, /data-ovtoggle="Do" data-ovon="1" aria-pressed="false"><svg[^>]*>.*<\/svg>Rijdt niet mee<\/button><div class="ovHint">Je dochter regelt zelf haar terugreis<\/div>/);
-  assert.match(html, /data-ovtoggle="Vr" data-ovon="1" aria-pressed="false"><svg[^>]*>.*<\/svg>Rijdt niet mee<\/button><div class="ovHint">Je dochter regelt zelf haar terugreis<\/div>/);
-  assert.equal((html.match(/data-ovtoggle=/g) || []).length, 2);
+  assert.match(html, /<button type="button" class="ovSwitch" role="switch" aria-checked="true" aria-label="Rijdt mee Terug Donderdag" data-ovtoggle="Do" data-ovdir="terug" data-ovon="1">/);
+  assert.match(html, /aria-label="Rijdt mee Heen Donderdag" data-ovtoggle="Do" data-ovdir="heen" data-ovon="1"/);
+  assert.match(html, /data-ovtoggle="Vr" data-ovdir="terug" data-ovon="1"/);
+  const found = [...html.matchAll(/data-ovtoggle="(\w+)" data-ovdir="(\w+)"/g)].map(m => m[1] + '_' + m[2]);
+  assert.deepEqual(found, ['Do_heen', 'Do_terug', 'Vr_heen', 'Vr_terug']);
 });
 test('days that are already past (Monday, Tuesday; "now" is Wednesday) and days without a ride have no button', () => {
   const html = render({});
   ['Ma', 'Di', 'Wo'].forEach(d => assert.ok(!html.includes(`data-ovtoggle="${d}"`), d));
 });
-test('when marked: status "Rijdt niet mee", no departure time, an undo button, and no "niet ingepland" alert for that ride', () => {
+test('when marked: status "Rijdt niet mee", no departure time, the switch is off, and no "niet ingepland" alert for that ride', () => {
   const dev = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [], ovGirlIds: ['f2'], ovFrom: { f2: null } } };
   const html = render({ deviations: dev }); const s = text(html);
-  assert.match(s, /Terug · Alkmaar → Aalsmeer – Rijdt niet mee Toch meerijden/);
-  assert.match(html, /data-ovtoggle="Do" data-ovon="0" aria-pressed="true"/);
+  assert.match(s, /Terug · Alkmaar → Aalsmeer – Rijdt niet mee/);
+  assert.match(html, /class="ovSwitch off" role="switch" aria-checked="false"[^>]*data-ovtoggle="Do" data-ovdir="terug" data-ovon="0"/);
+  assert.match(html, /class="subride\s+ovOff/);
+  assert.doesNotMatch(s, /Toch meerijden/);
   assert.doesNotMatch(s, /Terug \(17:30\): niet ingepland/);
 });
 test('an unmarked, unplanned ride still gets the "Regelen" alert', () => {
   assert.match(text(render({})), /Donderdag · Heen \(10:15\): niet ingepland/);
 });
-async function pressOv(day, on) {
-  const btn = { dataset: { ovtoggle: day, ovon: on ? '1' : '0' } };
+async function pressOv(day, on, direction = 'terug') {
+  const btn = { dataset: { ovtoggle: day, ovon: on ? '1' : '0', ovdir: direction } };
   const box = dom.el('tab-myweek'); const q = box.querySelectorAll;
   box.querySelectorAll = s => s === '[data-ovtoggle]' ? [btn] : q(s);
   try { await withFakeNowAsync(NOW, async () => { sampleParentState(); renderMyWeek(); await btn.onclick(); }); } finally { box.querySelectorAll = q; }
 }
-await testAsync('pressing the button stores the mark (no reason asked) and confirms', async () => {
+await testAsync('pressing the switch stores the mark (no reason asked) and confirms', async () => {
   const fake = useFakeDb(sampleDbSeed());
   await pressOv('Ma', true);
   const d = fake.get('deviations/Ma_terug');
   assert.ok(d.ovGirlIds.includes('f2')); assert.ok(!d.cars[0].girlIds.includes('f2'));
+  assert.match(dom.doc.getElementById('toast').innerHTML, /Jahaimy rijdt niet mee/);
+});
+await testAsync('pressing the heen switch stores the mark on the heen ride only', async () => {
+  const fake = useFakeDb(sampleDbSeed());
+  await pressOv('Ma', true, 'heen');
+  assert.ok(fake.get('deviations/Ma_heen').ovGirlIds.includes('f2')); assert.equal(fake.get('deviations/Ma_terug'), undefined);
   assert.match(dom.doc.getElementById('toast').innerHTML, /Jahaimy rijdt niet mee/);
 });
 test('the ride shows where it starts and ends, as plain text without a map button', () => {

@@ -118,11 +118,11 @@ export default [
   },
   {
     id: 'terug-met-ov',
-    title: 'Mijn dochter rijdt deze terugrit niet mee',
-    keywords: 'ov openbaar vervoer trein bus terug zelf naar huis niet met de auto toch met de auto',
+    title: 'Mijn dochter rijdt een rit niet mee',
+    keywords: 'rijdt niet mee heen terug schakelaar afmelden ov openbaar vervoer zelf naar huis niet met de auto toch meerijden',
     body: [
-      'Ga naar Mijn week, zoek de terugrit op de dag en tik op Rijdt niet mee. Je dochter gaat dan uit haar auto en regelt zelf haar terugreis. De vertrektijd van de auto wordt opnieuw uitgerekend. Er hoeft geen reden bij.',
-      'Ander plan? Tik op Toch meerijden om haar terug in de auto te zetten.',
+      'Ga naar Mijn week, zoek de heen- of terugrit op de dag en zet de schakelaar rechts bij de rit uit. Je dochter gaat dan uit haar auto. De vertrektijd van de auto wordt opnieuw uitgerekend. Er hoeft geen reden bij.',
+      'Ander plan? Zet de schakelaar weer aan om haar terug in de auto te zetten.',
     ],
     tab: 'myweek',
   },
