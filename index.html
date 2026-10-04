@@ -349,10 +349,15 @@ table.avail th,table.avail td{padding:6px 4px}
 .devFocus{border-color:var(--warn);box-shadow:0 0 0 2px var(--warn2)}
 .devIntentList{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--warn-text)}
 /* Periode met andere tijden: taak-kaart, ingevuld-kaart en formulier in Wijzigen */
-.periodDone{background:var(--ok2);border:1px solid var(--ok);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
+.periodDone{background:var(--ok2);border:1px solid var(--ok);border-radius:var(--radius-xl);padding:10px 16px;margin-bottom:14px}
 .periodDone .devAlertBody{font-size:13px;color:var(--text);margin:4px 0 0}
 #periodTask button.btn.small,.periodDone button.btn.small{margin-top:12px}
 .periodDone .periodDoneTitle{font-size:14px;font-weight:800;color:var(--ok);margin:0}
+.periodDone .periodDoneName{font-weight:400;color:var(--text)}
+.periodDone>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.periodDone>summary::-webkit-details-marker{display:none}
+.periodDone>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:rotate(45deg);transition:transform .15s;flex-shrink:0;margin-right:4px}
+.periodDone[open]>summary::after{transform:rotate(-135deg)}
 .periodDayHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .periodDay{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px;margin-top:8px;background:var(--card)}
 .periodDay.changed{border-color:var(--warn);background:var(--warn2)}

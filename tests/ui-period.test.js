@@ -225,7 +225,8 @@ await testAsync('a parent cannot hand in after the deadline, not even with an ol
 console.log('\n=== the "doorgegeven" card (A3) ===');
 test('it lists every day: the standard rooster, "rijdt niet mee", or only the times that differ', () => {
   parent({ periodEntries: { [ID]: handedIn } }); const s = text(render());
-  assert.match(s, /^Tijden doorgegeven Herfstvakantie · Jahaimy\. Wijzigen kan tot vrijdag 16 okt 12:00\. Jouw tijden · Herfstvakantie Ma 26 okt vast rooster Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt vast rooster Do 29 okt niet heen · terug 12:30 Vr 30 okt rijdt niet mee Tijden aanpassen /);
+  assert.match(s, /^Tijden doorgegeven · Herfstvakantie Herfstvakantie · Jahaimy\. Wijzigen kan tot vrijdag 16 okt 12:00\. Jouw tijden · Herfstvakantie Ma 26 okt vast rooster Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt vast rooster Do 29 okt niet heen · terug 12:30 Vr 30 okt rijdt niet mee Tijden aanpassen /);
+  assert.match(html, /<details class="periodDone" id="periodDone_2026-10-26">/);
 });
 test('"Tijden aanpassen" opens the form with what was handed in', () => {
   parent({ periodEntries: { [ID]: handedIn } }); render(); assert.match(html, /id="periodEdit_2026-10-26"/);

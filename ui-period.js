@@ -73,13 +73,13 @@ function doneCardHtml(tk){
   const p = normalizePeriod(tk.period), girl = girlOf(tk.family);
   const rows = periodWorkdays(p.firstDay, p.lastDay).map(iso =>
     `<div class="periodSummary"><span>${esc(cap(isoDayLabel(iso)))}</span><span class="muted">${esc(periodDaySummary(tk.family, iso, tk.entry.days[iso]))}</span></div>`).join('');
-  return `<div class="periodDone" id="periodDone_${p.firstDay}">
-      <p class="periodDoneTitle">${phIcon('check')} ${t('period.done.title')}</p>
+  return `<details class="periodDone" id="periodDone_${p.firstDay}">
+      <summary><p class="periodDoneTitle">${phIcon('check')} ${t('period.done.title')} <span class="periodDoneName">· ${esc(p.name)}</span></p></summary>
       <p class="devAlertBody">${esc(t(tk.canEdit? 'period.done.body' : 'period.done.locked', { p1:p.name, p2:girl, p3:deadlineLabel(p) }))}</p>
       <h3 style="margin:10px 0 2px;font-size:14px">${esc(t('period.done.yours',{p1:p.name}))}</h3>
       ${rows}
       ${tk.canEdit? `<button type="button" class="btn small secondary" id="periodEdit_${p.firstDay}" data-periodedit="${p.firstDay}">${t('period.done.edit')}</button>` : ''}
-    </div>`;
+    </details>`;
 }
 
 // The form: one block per workday, a switch Rijdt mee / Rijdt niet mee and the two times. Changed values are amber.
