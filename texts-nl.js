@@ -694,7 +694,6 @@ export default {
   "period.done.body": "{p1} · {p2}. Wijzigen kan tot {p3}.",
   "period.done.locked": "{p1} · {p2}. De deadline is voorbij. Tijden aanpassen kan alleen nog via de coördinator.",
   "period.done.yours": "Jouw tijden · {p1}",
-  "period.done.standard": "vast rooster",
   "period.done.out": "rijdt niet mee",
   "period.done.heen": "heen {p1}",
   "period.done.terug": "terug {p1}",

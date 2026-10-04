@@ -92,7 +92,7 @@
     "test": "cf6acee00fdde31711080a7f09272a9e036d4a86adb57c802422c8ca4f2652b5"
   },
   "texts-nl.js": {
-    "module": "53f52b10ec7d72918307b34ac63e08c23ea387ff58ba9911801c90a157c03a38",
+    "module": "e2131fd482bc6a4ac9b9c002831e7b41fb7c823a7ac55e85c626a76d38adf281",
     "test": "17807143db491f3fc688b171690f45a6726325a105c03ce1834ba14a398b78f9"
   },
   "ui-beheer.js": {
@@ -132,8 +132,8 @@
     "test": "18dc0706f62df6b8788d7ab206c781bbd286d2198f41cc63b6c54048e5bd97fa"
   },
   "ui-period.js": {
-    "module": "15dceb4eaeaf20d89f872a0b752e5b3b676723fc44ad6aa5553651b72dbd57fd",
-    "test": "b5e65768eefa74bf97837b15c74a80d84abe64c3989e772c1faa46ac7104cfa8"
+    "module": "8baeecff25b342ac189a2c4d3047aa63b58d67c1aa878a47eaf883441c8ffdef",
+    "test": "675f396c2211a830ff5ceb7c5443a122531d2d6e870984819a33710fe795de75"
   },
   "ui-profile.js": {
     "module": "7b6e16700a4000a4a8b54d2da7e1c9254ece4ed3cb8f76b2508dd5d177296906",

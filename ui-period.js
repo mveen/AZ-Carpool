@@ -46,14 +46,14 @@ export function periodFormFrom(period, family, entry){
   return days;
 }
 
-// One line for a handed-in day, compared with the standard rooster.
+// One line for a handed-in day. Always the actual times, also when they are the standard rooster, so a day never looks like "not riding".
 export function periodDaySummary(family, iso, day){
-  const d = describeEntryDay(family, iso, day);
-  if(d.kind==='standard') return t('period.done.standard');
-  if(d.kind==='out') return t('period.done.out');
+  const d = describeEntryDay(family, iso, day), std = standardDay(family, iso);
+  if(d.kind==='out' || (d.kind==='standard' && !std.heen && !std.terug)) return t('period.done.out');
+  const eff = d.kind==='standard' ? std : { heen: (day && day.heen) || '', terug: (day && day.terug) || '' };
   const parts = [];
-  if('heen' in d) parts.push(d.heen ? t('period.done.heen',{p1:d.heen}) : t('period.done.noHeen'));
-  if('terug' in d) parts.push(d.terug ? t('period.done.terug',{p1:d.terug}) : t('period.done.noTerug'));
+  if(eff.heen) parts.push(t('period.done.heen',{p1:eff.heen})); else if(std.heen) parts.push(t('period.done.noHeen'));
+  if(eff.terug) parts.push(t('period.done.terug',{p1:eff.terug})); else if(std.terug) parts.push(t('period.done.noTerug'));
   return parts.join(' · ');
 }
 

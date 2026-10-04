@@ -225,7 +225,7 @@ await testAsync('a parent cannot hand in after the deadline, not even with an ol
 console.log('\n=== the "doorgegeven" card (A3) ===');
 test('it lists every day: the standard rooster, "rijdt niet mee", or only the times that differ', () => {
   parent({ periodEntries: { [ID]: handedIn } }); const s = text(render());
-  assert.match(s, /^Tijden doorgegeven · Herfstvakantie Herfstvakantie · Jahaimy\. Wijzigen kan tot vrijdag 16 okt 12:00\. Jouw tijden · Herfstvakantie Ma 26 okt vast rooster Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt vast rooster Do 29 okt niet heen · terug 12:30 Vr 30 okt rijdt niet mee Tijden aanpassen /);
+  assert.match(s, /^Tijden doorgegeven · Herfstvakantie Herfstvakantie · Jahaimy\. Wijzigen kan tot vrijdag 16 okt 12:00\. Jouw tijden · Herfstvakantie Ma 26 okt heen 08:30 · terug 17:30 Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt rijdt niet mee Do 29 okt niet heen · terug 12:30 Vr 30 okt rijdt niet mee Tijden aanpassen /);
   assert.match(html, /<details class="periodDone" id="periodDone_2026-10-26">/);
 });
 test('"Tijden aanpassen" opens the form with what was handed in', () => {
@@ -239,9 +239,11 @@ test('after the deadline a parent still sees what was handed in, but cannot chan
 });
 test('periodDaySummary: cleared directions are named', () => {
   const fam = sampleParentState().families.f2;
-  assert.equal(periodDaySummary(fam, '2026-10-26', { heen: '08:30' }), 'niet terug');
-  assert.equal(periodDaySummary(fam, '2026-10-26', { terug: '17:30' }), 'niet heen');
-  assert.equal(periodDaySummary(fam, '2026-10-28', { out: true }), 'vast rooster');
+  assert.equal(periodDaySummary(fam, '2026-10-26', { heen: '08:30' }), 'heen 08:30 · niet terug');
+  assert.equal(periodDaySummary(fam, '2026-10-26', { terug: '17:30' }), 'niet heen · terug 17:30');
+  assert.equal(periodDaySummary(fam, '2026-10-28', { out: true }), 'rijdt niet mee');
+  assert.equal(periodDaySummary(fam, '2026-10-26', { heen: '08:30', terug: '17:30' }), 'heen 08:30 · terug 17:30');   // the standard rooster shows its times, not "vast rooster"
+  assert.equal(periodDaySummary(fam, '2026-10-26', { heen: '09:00', terug: '17:30' }), 'heen 09:00 · terug 17:30');   // one changed time still shows the other, standard time
 });
 test('periodCardsHtml is empty when there is nothing for this user', () => {
   parent({ periods: {} }); assert.equal(periodCardsHtml(), '');
@@ -321,7 +323,7 @@ test('"Bekijk" unfolds what that family handed in, with a button to change it; a
   assert.doesNotMatch(html, /periodBehalfDetail/);
   withFakeNow(OPEN, () => dom.doc.querySelectorAll('[data-periodview]')[0].onclick());
   assert.equal(S.periodView, '2026-10-26|f3'); const s = text(html);
-  assert.match(s, /Anouk Kees de Vries Doorgegeven Sluiten Ma 26 okt heen 08:30 · terug 17:30 Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt rijdt niet mee Do 29 okt niet heen · terug 12:30 Vr 30 okt vast rooster Tijden aanpassen/);
+  assert.match(s, /Anouk Kees de Vries Doorgegeven Sluiten Ma 26 okt heen 08:30 · terug 17:30 Di 27 okt heen 10:30 · terug 12:30 Wo 28 okt rijdt niet mee Do 29 okt niet heen · terug 12:30 Vr 30 okt rijdt niet mee Tijden aanpassen/);
   assert.match(html, /data-periodfill="2026-10-26|f3"/);
   withFakeNow(OPEN, () => toggleV('f3')); assert.equal(S.periodView, null); assert.doesNotMatch(html, /periodBehalfDetail/);
 });
