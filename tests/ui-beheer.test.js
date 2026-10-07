@@ -214,7 +214,7 @@ await testAsync('a refused save shows the error and returns false', async () => 
 });
 
 console.log('\n=== Perioden met andere tijden (Beheer) ===');
-import { periodStatusHtml, periodsCardHtml, periodPhaseText, periodDeleteConfirmLabel, startPeriodEdit, rememberPeriodDraft, savePeriod, cancelPeriodEdit, deletePeriod } from '../ui-beheer.js';
+import { periodStatusHtml, periodWhoHtml, periodsCardHtml, periodPhaseText, periodDeleteConfirmLabel, startPeriodEdit, rememberPeriodDraft, savePeriod, cancelPeriodEdit, deletePeriod } from '../ui-beheer.js';
 const PERIOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
 const NEXT = { name: 'Toetsweek', firstDay: '2026-11-09', lastDay: '2026-11-13', opensOn: '2026-10-27', deadlineDate: '2026-11-04', deadlineTime: '12:00' };
 const at = iso => new Date(iso).getTime(), OPENNOW = '2026-10-15T12:00:00+02:00';
@@ -240,8 +240,8 @@ test('with no period the card explains, says so and offers "+ Periode toevoegen"
 });
 test('every period is a row: name, dates, where it stands, how many handed in, and edit and delete buttons', () => {
   state(); const s = text(withFakeNow(OPENNOW, () => periodsCardHtml())); const html = withFakeNow(OPENNOW, () => periodsCardHtml());
-  assert.match(s, /Herfstvakantie 26 – 30 okt Invullen is open tot de deadline: vr 16 okt 12:00\. Doorgegeven 0 van 6 gezinnen/);
-  assert.match(s, /Toetsweek 9 – 13 nov Invullen opent op di 27 okt\./);
+  assert.match(s, /Herfstvakantie 26 – 30 okt Open Invullen is open tot de deadline: vr 16 okt 12:00\. Doorgegeven 0 van 6 gezinnen/);
+  assert.match(s, /Toetsweek 9 – 13 nov Gepland Invullen opent op di 27 okt\./);
   assert.ok(html.indexOf('Herfstvakantie') < html.indexOf('Toetsweek'), 'oldest first');
   assert.equal((html.match(/data-plistedit=/g) || []).length, 2); assert.equal((html.match(/data-plistdelete=/g) || []).length, 2);
   assert.match(html, /data-plistedit="2026-10-26"[^>]*aria-label="Wijzig Herfstvakantie"/); assert.match(html, /data-plistdelete="2026-11-09"[^>]*aria-label="Verwijder periode: Toetsweek"/);
@@ -255,9 +255,29 @@ test('the status line counts per period, only once filling in has opened, withou
   assert.match(text(periodStatusHtml(PERIOD, at('2026-11-05T12:00:00+01:00'))), /2 van 5/, 'still shown after the period, as a record');
   state({ periodEntriesLoaded: false }); assert.equal(periodStatusHtml(PERIOD, at(OPENNOW)), ''); assert.equal(periodStatusHtml(null, at(OPENNOW)), '');
 });
+test('the status shows a progress bar and a folded list of who has and has not handed in', () => {
+  const fams = { f1: { parentName: 'Anna', girlName: 'Emma' }, f2: { parentName: 'Bram', girlName: 'Sanne' }, f3: { parentName: 'Cor', girlName: 'Lotte' }, f4: { parentName: 'Dirk', girlName: 'Fien' }, f5: { parentName: 'Eva', girlName: 'Mila', familyType: 'flex' } };
+  state({ families: fams, periodEntries: { '2026-10-26_f1': {}, '2026-10-26_f3': {} } });
+  const bar = periodStatusHtml(PERIOD, at(OPENNOW));
+  assert.match(bar, /role="progressbar"[^>]*aria-valuemax="4"[^>]*aria-valuenow="2"[^>]*aria-valuetext="2 van 4 gezinnen"/); assert.match(bar, /<span style="width:50%">/); assert.doesNotMatch(bar, /periodBar full/);
+  state({ families: fams, periodEntries: { '2026-10-26_f1': {}, '2026-10-26_f2': {}, '2026-10-26_f3': {}, '2026-10-26_f4': {} } });
+  assert.match(periodStatusHtml(PERIOD, at(OPENNOW)), /periodBar full/, 'complete turns green'); assert.match(periodStatusHtml(PERIOD, at(OPENNOW)), /width:100%/);
+  state({ families: fams, periodEntries: { '2026-10-26_f1': {}, '2026-10-26_f3': {} } });
+  const html = periodWhoHtml(PERIOD, at(OPENNOW)); const s = text(html);
+  assert.match(html, /<details class="fold periodFold" data-fold="periodWho\|2026-10-26">/, 'folded by default');
+  assert.match(s, /^Wie heeft ingevuld\? Nog niet: Sanne, Fien /); assert.match(s, /Nog niet doorgegeven \(2\) Sanne Bram Nog niet Fien Dirk Nog niet Doorgegeven \(2\) Emma Anna Doorgegeven Lotte Cor Doorgegeven/);
+  assert.doesNotMatch(s, /Mila|Eva/, 'Flex families are not counted');
+  assert.ok(s.indexOf('Nog niet doorgegeven') < s.indexOf('Doorgegeven (2)'), 'who is missing comes first');
+  state({ families: fams, periodEntries: { '2026-10-26_f1': {}, '2026-10-26_f2': {}, '2026-10-26_f3': {}, '2026-10-26_f4': {} } });
+  assert.match(text(periodWhoHtml(PERIOD, at(OPENNOW))), /^Wie heeft ingevuld\? Iedereen heeft doorgegeven/); assert.doesNotMatch(text(periodWhoHtml(PERIOD, at(OPENNOW))), /Nog niet doorgegeven/);
+  const many = { ...fams, f6: { parentName: 'Fred', girlName: 'Noor' }, f7: { parentName: 'Gea', girlName: 'Roos' } };
+  state({ families: many, periodEntries: {} }); assert.match(text(periodWhoHtml(PERIOD, at(OPENNOW))), /^Wie heeft ingevuld\? Nog niet: Emma, Sanne, Lotte \+3 /);
+  assert.equal(periodWhoHtml(PERIOD, at('2026-10-13T12:00:00+02:00')), '', 'nothing before filling in opens');
+  state({ periodEntriesLoaded: false }); assert.equal(periodWhoHtml(PERIOD, at(OPENNOW)), '');
+});
 test('a period with a temporary rooster says so in its row', () => {
   state({ periodCars: { '2026-10-26_2026-10-27_terug': { periodFirstDay: '2026-10-26', date: '2026-10-27', direction: 'terug', cars: [] } } });
-  const s = text(withFakeNow(OPENNOW, () => periodsCardHtml())); assert.match(s, /Herfstvakantie 26 – 30 okt .*tijdelijk rooster gemaakt/); assert.doesNotMatch(s.slice(s.indexOf('Toetsweek')), /tijdelijk rooster gemaakt/);
+  const s = text(withFakeNow(OPENNOW, () => periodsCardHtml())); assert.match(s, /Herfstvakantie 26 – 30 okt .*Tijdelijk rooster gemaakt/); assert.doesNotMatch(s.slice(s.indexOf('Toetsweek')), /Tijdelijk rooster gemaakt/);
 });
 test('the delete button asks "Zeker?" and says how many families lose their times', () => {
   state({ periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' }, '2026-10-26_f3': { periodFirstDay: '2026-10-26' } } });
@@ -267,10 +287,16 @@ test('"+ Periode toevoegen" opens an empty form: title, fields, limit and hints 
   state(); startPeriodEdit();
   assert.deepEqual([S.periodDraft.editing, S.periodDraft.value.name], ['', '']);
   const html = periodsCardHtml(); const s = text(html);
-  assert.match(s, /Periode toevoegen Naam Eerste dag Laatste dag Periode is maximaal 10 werkdagen \(2 weken\)\. Invullen open vanaf Vanaf dan krijgt iedereen de melding op Wijzigen\. Deadline \(datum\) Deadline \(tijd\) Staat in de melding voor ouders\. Opslaan Annuleren/);
+  assert.match(s, /Periode toevoegen Naam Eerste dag Laatste dag Periode is maximaal 10 werkdagen \(2 weken\)\. Invullen door ouders Invullen open vanaf Vanaf dan krijgt iedereen de melding op Wijzigen\. Deadline \(datum\) Deadline \(tijd\) Staat in de melding voor ouders\. Opslaan Annuleren/);
   assert.match(html, /id="periodName"[^>]*value=""/); assert.match(html, /type="date" id="periodFirst"/); assert.match(html, /type="time" id="periodDlTime"/);
   assert.match(html, /id="periodDraftSave"/); assert.match(html, /id="periodDraftCancel"/); assert.doesNotMatch(html, /data-plistadd/, 'no second form at the same time');
   assert.match(html, /data-plistedit/, 'the list stays visible');
+});
+test('editing a period puts the form in that period\'s spot; the other periods stay, adding goes at the bottom', () => {
+  state(); startPeriodEdit('2026-10-26'); let html = withFakeNow(OPENNOW, () => periodsCardHtml());
+  assert.equal((html.match(/id="periodDraftForm"/g) || []).length, 1); assert.ok(html.indexOf('periodDraftForm') < html.indexOf('Toetsweek'), 'in the first period\'s spot');
+  assert.doesNotMatch(html, /data-plistedit="2026-10-26"/, 'that row is replaced'); assert.match(html, /data-plistedit="2026-11-09"/);
+  startPeriodEdit(); html = withFakeNow(OPENNOW, () => periodsCardHtml()); assert.ok(html.indexOf('periodDraftForm') > html.indexOf('Toetsweek'), 'a new period goes below the list');
 });
 test('editing fills the form with that period; its first day is locked as soon as something is stored for it', () => {
   state(); startPeriodEdit('2026-11-09'); let html = periodsCardHtml();
@@ -468,7 +494,7 @@ test('every period has a folded Back-ups line with its explanation and a "Back-u
   const html = withFakeNow(OPENNOW, () => periodsCardHtml()); const s = text(html);
   assert.equal((html.match(/data-pbmake=/g) || []).length, 2); assert.match(html, /data-pbmake="2026-10-26"/); assert.match(html, /data-pbmake="2026-11-09"/);
   assert.match(s, /Back-ups \(0\) Een back-up bewaart de periode, de doorgegeven tijden en het tijdelijke rooster\. Zo kun je veilig testen en daarna alles terugzetten\. Back-up maken/);
-  assert.match(html, /<details class="fold " data-fold="periodBackups\|2026-10-26">/, 'folded by default: no extra height');
+  assert.match(html, /<details class="fold periodFold" data-fold="periodBackups\|2026-10-26">/, 'folded by default: no extra height');
   assert.doesNotMatch(html, /data-pbrestore|data-pbdelete/);
 });
 test('a back-up row shows when, how much it holds and what is different since; restore and trash buttons have names', () => {

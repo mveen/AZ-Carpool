@@ -423,9 +423,51 @@ input[type=time].periodTime.changed{border-color:var(--warn);background:var(--wa
 .periodPill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);white-space:nowrap}
 .periodPill.todo{background:var(--warn2);color:var(--warn-text)}
 .periodPill.done{background:var(--ok2);color:var(--ok)}
-.periodListRow{display:flex;align-items:flex-start;gap:8px;padding:10px 0;border-top:1px solid var(--border);margin-top:6px}
-.periodListRow .iconbtn{flex-shrink:0}
-.periodFormCard{border-top:1px solid var(--border);margin-top:10px}
+/* Beheer: Perioden met andere tijden. One block per period (no box, so the fold arrows line up with the arrow of the card itself). */
+.periodItem{padding:14px 0;border-top:1px solid var(--border);margin-top:6px}
+.periodHead{display:flex;align-items:flex-start;gap:10px}
+.periodHeadText{flex:1;min-width:0}
+.periodTitle{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:16px}
+.periodInfo{font-size:13px;color:var(--muted);margin-top:3px}
+.periodInfo.ok{color:var(--ok);font-weight:600}
+.periodInfo.ok svg{margin-right:2px}
+.periodActions{display:flex;gap:8px;flex-shrink:0}
+.periodActions .iconbtn{flex-shrink:0}
+.periodPill.s-open{background:var(--ok2);color:var(--ok)}
+.periodPill.s-closed{background:var(--warn2);color:var(--warn-text)}
+.periodPill.s-waiting,.periodPill.s-over{background:var(--pill2);color:var(--pill)}
+.periodStatus{margin-top:12px}
+.periodStatusText{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:14px}
+.periodBar{height:8px;border-radius:var(--radius-full);background:var(--pill2);overflow:hidden;margin-top:6px}
+.periodBar>span{display:block;height:100%;border-radius:inherit;background:var(--info);transition:width .3s}
+.periodBar.full>span{background:var(--ok)}
+details.periodFold{margin-top:10px;border-top:1px solid var(--border)}
+details.periodFold>summary{min-height:48px;font-size:14px;font-weight:700}
+details.periodFold[open]>summary{margin-bottom:6px}
+.periodFoldTitle{display:flex;flex-direction:column;gap:1px;min-width:0}
+.periodFoldSub{font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.periodFoldSub.todo{color:var(--warn-text)}
+.periodFoldSub.done{color:var(--ok)}
+.periodHint{margin:0 0 10px;font-size:13px;line-height:1.4;color:var(--muted)}
+button.btn.small.periodMakeBtn{font-size:13px;font-weight:600;min-height:40px;padding:6px 14px}
+.periodWhoGroup+.periodWhoGroup{margin-top:12px}
+.periodWhoHead{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:2px}
+.periodWhoList{list-style:none;margin:0;padding:0}
+.periodWhoRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.periodWhoMark{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.periodWhoMark.done{background:var(--ok2);color:var(--ok)}
+.periodWhoMark.todo{border:2px solid var(--warn)}
+.periodWhoName{flex:1;min-width:0;overflow-wrap:anywhere}
+.periodWhoState{font-size:12px;color:var(--muted);white-space:nowrap}
+.periodBackupList{margin-top:12px}
+.periodBackupRow{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid var(--border)}
+.periodBackupMain{flex:1;min-width:0}
+.periodBackupWhen{font-weight:600;font-size:14px}
+.periodBackupMeta{font-size:12px;color:var(--muted)}
+.periodForm{border-left:3px solid var(--accent);padding-left:12px}
+.periodFormTitle{margin:0;font-size:15px}
+.periodFormGroup{margin:18px 0 0;font-size:13px;font-weight:800}
+.periodFormActions{display:flex;gap:8px;margin-top:14px}
 .periodChips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
 .periodChip{border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 2px;text-align:center;font-size:11px;white-space:nowrap;background:var(--card)}
 .periodChipDay{display:block;font-weight:800;font-size:12px}
