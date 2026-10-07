@@ -218,5 +218,11 @@ test('help tells the coordinator about the progress bar and the "Wie heeft ingev
   assert.ok(a.body.some(l => l.includes('voortgangsbalk')));
 });
 
+test('the Beheer article explains the planning order: back-ups last, then cars, rank, wait, wishes', () => {
+  const a = articles.find(x => x.id === 'beheer-instellingen');
+  const s = a.body.join(' ');
+  assert.ok(/back-up/.test(s) && /Selectievolgorde/.test(s) && /Een grotere auto krijgt nooit voorrang op tijd/.test(s));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

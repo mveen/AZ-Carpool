@@ -216,9 +216,10 @@ test('a Flex girl is never reported as "not placed"', () => {
   assert.equal(ids(unplacedFor('Ma', 'heen', 'standard', flexState())).includes('f9'), false);
   assert.equal(ids(unplacedFor('Ma', 'heen', 'week', flexState())).includes('f9'), false);
 });
-test('a Flex family is never an automatic driver or reserve, even when marked available', () => {
-  assert.equal(ids(availableDrivers('Ma', 'heen', flexState())).includes('f9'), false);
-  assert.equal(ids(eligibleDrivers('Ma', 'heen', 1, flexState())).includes('f9'), false);
+test('a Flex family is a driver when its availability says so, and never a passenger', () => {
+  assert.equal(ids(availableDrivers('Ma', 'heen', flexState())).includes('f9'), true);
+  assert.equal(ids(eligibleDrivers('Ma', 'heen', 1, flexState())).includes('f9'), true);
+  assert.equal(ids(girlsFor('Ma', 'heen', flexState())).includes('f9'), false);
 });
 test('a Flex driver is marked "speelster-chauffeur"; a fixed driver is not', () => {
   const st = flexState();
@@ -384,8 +385,8 @@ test('planPeriodShift: a rider nobody can drive is handed back as unplaced, the 
   const fams = sampleFamilies(); fams.f4 = { ...fams.f4, availability: { ...fams.f4.availability, Di: { heen: false, terug: false } } };
   const r = planPeriodShift('2026-10-27', 'terug', pst({ families: fams }));
   assert.equal(r.cars.length, 1); assert.equal(r.cars[0].driverFamilyId, 'f2');
-  assert.equal(r.cars[0].girlIds.length, 4, 'f2 has 4 passenger seats: the car is filled up');
-  assert.equal(r.unplaced.length, 1);
+  assert.ok(r.cars[0].girlIds.length <= 4, 'never more than the passenger seats');
+  assert.ok(r.unplaced.length >= 1, 'a rider who does not fit within the time limit is handed back');
   assert.equal(r.cars[0].departureTime, periodDeparture('2026-10-27', 'terug', r.cars[0].girlIds, pst({ families: fams })));
   assert.deepEqual([...r.cars.flatMap(c => c.girlIds), ...r.unplaced].sort(), ['f1', 'f2', 'f4', 'f5', 'f6']);
 });

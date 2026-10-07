@@ -148,5 +148,11 @@ await testAsync('the preview plans with the handed-in times of that shift (a smo
   assert.equal(held, true); assert.ok(added.length && /Opslaan/.test(added[0].innerHTML));
 });
 
+test('a Flex family that is available is a driver for the planning engine, never a passenger', () => {
+  const f = { ...fams, f9: { ...fams.f1, parentName: 'Flex Fam', girlName: 'Fleur', familyType: 'flex', capacity: 5, schedule: { Ma: { heen: '08:30', terug: '' } }, availability: { Ma: { heen: true, terug: false } } } };
+  const before = [car('f1', ['f1'])]; const after = [car('f1', ['f1', 'f2'])];
+  assert.deepEqual(analyzeImpact({ ...base, families: f, before, after }), { kind: 'none' });
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

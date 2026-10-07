@@ -289,23 +289,25 @@ export function renderDirectionStandard(day,direction){
     // 2) New car(s), from the planning engine.
     // (options that would give a parent a second car on this same trip are left out)
     const drivingThisTrip = new Set(grps.map(([,g])=>g.driverFamilyId).filter(Boolean));
-    const options = planOptions(day,direction,ungrouped).filter(o=>!o.assignment.some(a=>drivingThisTrip.has(a.driverId)));
+    const options = planOptions(day,direction,ungrouped, undefined, drivingThisTrip).filter(o=>!o.assignment.some(a=>drivingThisTrip.has(a.driverId)));
     const all = [...addOpts, ...options.map(o=>({kind:'new', ...o}))];
     window.__planOptions = window.__planOptions||{};
     window.__planOptions[day+'|'+direction] = all;
     const intro = `<p class="muted" style="margin:10px 0 4px" id="sugg-${direction}">${n===1? t('schedule.nog_niet_ingedeeld', { p1: names }) : t('schedule.nog_niet_ingedeeld_2', { p1: n, p2: names })} ${t('schedule.voorstellen_2')}</p>`;
     if(all.length){
       suggestHtml = intro + all.map((opt,i)=>{
+        // "Aanbevolen" only for the first option, and only when it is a checked, complete planning (or an add to an existing car).
+        const rec = i===0 && (opt.kind==='add' || !!opt.primary);
         const title = opt.kind==='add'
           ? (opt.touched.length===1? t('schedule.toevoegen_aan_auto', { p1: opt.touched[0].num, p2: esc(fam(opt.touched[0].driverId).parentName) }) : t('schedule.toevoegen_aan_bestaande_auto_s'))
           : t('schedule.nieuwe_auto', { p1: opt.label });
         const sub = opt.kind==='add'
           ? opt.touched.map(c=>t('schedule.auto_regel',{p1:c.num,p2:c.ids.map(id=>girlName(id)).join(', '),p3:c.ids.length,p4:c.cap,p5:c.dep})).join(' · ')
           : opt.assignment.map(a=>`${esc(fam(a.driverId).parentName)}: ${sortGirlIds(a.girlIds).map(id=>girlName(id)).join(', ')} (${a.girlIds.length}/${seats(fam(a.driverId))} pl.)`).join(' · ');
-        return `<div class="group suggestion${i===0?t('schedule.primary'):''}">
-          <div class="fitok">${i===0?t('schedule.span_class_badge_rec_aanbevolen'):''}${t('schedule.optie')} ${i+1}: ${title}</div>
+        return `<div class="group suggestion${rec?t('schedule.primary'):''}">
+          <div class="fitok">${rec?t('schedule.span_class_badge_rec_aanbevolen'):''}${t('schedule.optie')} ${i+1}: ${title}</div>
           <div class="subtime">${sub}</div>
-          <button type="button" class="btn small${i===0?'':t('schedule.secondary')}" data-useoption="${day}|${direction}|${i}" style="margin-top:8px">${t('schedule.gebruik_deze_optie')}</button>
+          <button type="button" class="btn small${rec?'':t('schedule.secondary')}" data-useoption="${day}|${direction}|${i}" style="margin-top:8px">${t('schedule.gebruik_deze_optie')}</button>
         </div>`;
       }).join('');
     } else {

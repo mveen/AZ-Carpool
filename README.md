@@ -115,7 +115,7 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 
 ### Step 4 (done): Rooster: progress and the temporary rooster
 - **Overview (A5, coordinator).** Above the switch in Rooster, from the day filling in opens until the period is over: name and dates, *Doorgegeven 9 van 14*, the deadline with the girls that have not handed in yet (five names and "+n"), one chip per workday with the number of changes compared with the standard rooster, and *Tijdelijk rooster maken*. Once made it becomes *Alles opnieuw indelen* (tap twice) plus a trash button (back to the standard rooster; the handed-in times stay).
-- **Making it.** One tap plans every shift of the period (heen and terug of every workday) with the SAME planning as the standard rooster (`planning.js`, the availability, the *Selectievolgorde* and the preferences of that weekday), but with the handed-in times (a family that handed in nothing keeps its standard time; a Flex family is never planned). A rider no driver can take is not lost: the roomiest free driver is filled up and the rest is shown as *niet ingedeeld* (`planPartialAssignment`).
+- **Making it.** One tap plans every shift of the period (heen and terug of every workday) with the SAME planning as the standard rooster (`planning.js`, the availability, the *Selectievolgorde* and the preferences of that weekday), but with the handed-in times (a family that handed in nothing keeps its standard time; a Flex family is never planned). A rider no driver can take is not lost: the best fitting part is planned within the same rules and the rest is shown as *niet ingedeeld* (`planShift` returns it as `unplaced`).
 - **Storage.** One document per shift: `periodCars/<firstDay>_<date>_<direction>` = `{ periodFirstDay, date, direction, cars:[{ driverFamilyId, girlIds, departureTime }], madeAt, by }`. A shift without a document runs on the standard rooster. Only the coordinator writes.
 - **Third view.** Next to *Deze week* and *Vast rooster* a button with the period name (cut at 10 characters: "Herfstvak."). The coordinator has it from the day filling in opens; parents once the rooster has been made. Pills for every workday of the period (two weeks: two rows) with the number of cars and an alert for riders without a car. Per direction: the handed-in times next to the standard ones (struck through where they differ, or "rijdt niet mee"), the cars, and for the coordinator: *Opnieuw indelen* for that direction, a driver select per car (only drivers available that weekday, one car per driver), a move select per rider (another car, *Niet ingedeeld*) and for riders without a car a select to put them in a car or in a new car with a free driver. A full car is refused, nothing is stored on an error. Parents see it read only.
 - **Where it counts.** `rides.js` (`effectiveCars`): a one-off change from Wijzigen (`deviations`) goes first, then the temporary rooster, then the standard rooster. This is only for a date inside the period where that shift was made; every other week and date runs exactly as before (the whole old test suite passes unchanged). Mijn week, Rooster *Deze week*, Wijzigen (its cars and the departure time it computes) and the WhatsApp texts read the temporary rooster on those dates: the handed-in times (`rideTime`), the cars, and "changed" is compared with the temporary rooster (`baseCars`). The impact preview plans with the handed-in times too.
@@ -212,3 +212,24 @@ Automated tests cover logic and page output, but not a real phone, real Firebase
 - The gate (phone number + invite code) is enforced by `firestore.rules`, not just in the browser.
 - Invite codes live in the `invites` collection (doc id = the code). They are not on the family doc, and only the coordinator can list them.
 - Families store `phoneKeys` (normalised phone numbers) for the gate check.
+
+
+## Planningslogica (standard rooster and period rooster)
+
+One engine plans a shift (weekday + heen/terug): `planShift` in `planning.js`. `checkPlan` re-checks every result independently; a plan that fails the check is not offered as *Aanbevolen* (and logged with `console.error`).
+
+**Who.** Riders are the non-Flex families with a time in that shift. Drivers are families whose availability for that shift is *beschikbaar* (standard) or *back-up*, in the *Selectievolgorde* (Flex families included when their availability says so; a Flex family is never a passenger). A driver has capacity − 1 passenger seats.
+
+**Wait.** Heen: rider time minus the earliest time in the car. Terug: latest time in the car minus rider time. The spread inside one car may never exceed the gap limit (default 3 hours, inclusive).
+
+**Hard rules.** Every rider in exactly one car; a driver has at most one car; seats are enough; spread within the limit; together-rules are kept when possible.
+
+**Order of importance among valid plans.**
+1. As few back-up drivers as possible (only when the standard drivers cannot cover the shift: seats or the time limit).
+2. As few cars as possible.
+3. Lowest sum of *Selectievolgorde* ranks of the used drivers.
+4. Least total waiting time.
+5. Wishes, in this order: samen reizen, the own parent drives the own child, voorkeur. A wish may cost extra waiting only within its window (`prefWindowMinutes` for samen reizen and voorkeur, `parentPrefWindowMinutes` for the own parent), measured per girl as her own waiting time.
+6. Tie: the highest ranked driver takes the earliest-leaving car.
+
+The size of a car or a group never decides who gets which group; time decides, seats only decide whether it fits. The search tries all divisions (with a node cap) and is verified against a brute-force reference on 300 random shifts (`tests/planning.test.js`); real roster cases are in `tests/planning-scenarios.test.js`.

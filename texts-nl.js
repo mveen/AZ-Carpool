@@ -65,6 +65,7 @@ export default {
   "beheer.shift": "Shift",
   "beheer.geen_beschikbare_chauffeurs_voor_deze": "Geen beschikbare chauffeurs voor deze shift.",
   "beheer.pl": "pl.)",
+  "beheer.pl_back_up": "pl., back-up)",
   "beheer.volgorde_opgeslagen": "Volgorde opgeslagen ✓",
   "beheer.deze_pagina_is_alleen_voor": "Deze pagina is alleen voor de coördinator.",
   "beheer.mogelijk_dubbele_gezinnen_controleer_en": "Mogelijk dubbele gezinnen — controleer en verwijder de onjuiste:",

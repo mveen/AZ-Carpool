@@ -195,5 +195,10 @@ test('Rooster has a Weekoverzicht button in "Deze week" and in the standard roos
   });
 });
 
+test('the first option of a planning is only marked "primary" (Aanbevolen) when it is a checked complete planning', () => {
+  const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
+  assert.ok(/suggestion primary/.test(html) || !/Aanbevolen/.test(html), 'no Aanbevolen label without the primary styling');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

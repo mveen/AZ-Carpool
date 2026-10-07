@@ -5,7 +5,7 @@ import { deviationKey, weekKeyDayIso } from './dates.js';
 import { periodDayKey, periodEntryId, periodForDate, periodShiftId, periodWorkdays } from './period.js';
 import { ovIds } from './ov.js';
 import { esc } from './ui-common.js';
-import { computeDepartureTime as pureComputeDepartureTime, minutesToTime as pureMinutesToTime, planAlternativeAssignments, planClusters as pureplanClusters, planPartialAssignment, planPrimaryAssignment, timeToMinutes as pureTimeToMinutes } from './planning.js';
+import { checkPlan, computeDepartureTime as pureComputeDepartureTime, minutesToTime as pureMinutesToTime, planAlternativeAssignments, planShift, timeToMinutes as pureTimeToMinutes } from './planning.js';
 
 // Day labels are always shown in capitals ("MA"); the keys themselves ("Ma") stay as stored data.
 // A family's time for one day+direction; '' when the family, its schedule or that day is missing
@@ -99,19 +99,6 @@ export function sortByShiftPriority(day,direction,entries, st=S){
   return [...entries].sort((a,b)=>shiftPriorityOf(day,direction,a[0], st)-shiftPriorityOf(day,direction,b[0], st));
 }
 
-// Standaard-beschikbaar drivers are preferred as a whole GROUP over back-up-only drivers when
-// actually filling a shift — Selectievolgorde rank only decides order WITHIN each tier. This is
-// deliberately separate from the reserve-list display, which stays pure Selectievolgorde order
-// regardless of standaard/back-up (that distinction doesn't matter for "who could step in").
-function sortByAvailabilityTier(day,direction,entries, st=S){
-  return [...entries].sort((a,b)=>{
-    const aTier = isStandaardAvailable(a[1],day,direction)? 0 : 1;
-    const bTier = isStandaardAvailable(b[1],day,direction)? 0 : 1;
-    if(aTier!==bTier) return aTier-bTier;
-    return shiftPriorityOf(day,direction,a[0], st)-shiftPriorityOf(day,direction,b[0], st);
-  });
-}
-
 function backupField(direction){ return direction==='heen' ? 'backupHeen' : 'backupTerug'; }
 
 function isStandaardAvailable(f,day,direction){
@@ -126,7 +113,8 @@ export function isAvailable(f,day,direction){
 
 export function plainGirlName(id, st=S){ const f=fam(id, st); return f.girlName||f.parentName||id; }
 
-// Flex families ride only on days they sign up for: never auto-planned, not as passenger and not as driver.
+// Flex families ride only on days they sign up for: never auto-planned as a passenger. A Flex family that is marked available
+// (standaard or back-up) for a shift IS a possible driver there (a "speelster-chauffeur"), like any other driver.
 export function isFlex(f){ return !!f && f.familyType==='flex'; }
 
 // A Flex driver is a player who drives herself: marked "speelster-chauffeur" wherever her name shows.
@@ -158,18 +146,20 @@ export function alreadyGrouped(day,direction, st=S){
 }
 
 export function eligibleDrivers(day,direction,count, st=S){
-  return sortByShiftPriority(day,direction, Object.entries(st.families).filter(([id,f])=>
-    !isFlex(f) && isAvailable(f,day,direction) && seats(f)>=count
-  ), st);
+  return sortByShiftPriority(day,direction, availableDrivers(day,direction, st).filter(([id,f])=>seats(f)>=count), st);
 }
 
+// THE one list of who can drive a shift (standaard or back-up, Flex drivers included). The Selectievolgorde in Beheer and the
+// planning both use it, so a family can never be in one and missing from the other.
 export function availableDrivers(day,direction, st=S){
-  return Object.entries(st.families).filter(([id,f])=> !isFlex(f) && isAvailable(f,day,direction));
+  return Object.entries(st.families).filter(([id,f])=> isAvailable(f,day,direction));
 }
 
-// timeToMinutes/minutesToTime/computeDepartureTime/planClusters/planPrimaryOption/planOptions
-// are now thin wrappers around the tested, standalone planning.js module (see that file's
-// own test suite — planning.test.js — for the actual algorithm's correctness guarantees).
+// Standaard (true) or back-up only (false) for one shift.
+export function isStandaardDriver(f,day,direction){ return isStandaardAvailable(f,day,direction); }
+
+// timeToMinutes/minutesToTime/computeDepartureTime/planOptions are thin wrappers around the tested, standalone planning.js module
+// (see planning.test.js and planning-scenarios.test.js for the actual rules and the real roster cases).
 export function timeToMinutes(t){ return pureTimeToMinutes(t); }
 
 function minutesToTime(min){ return pureMinutesToTime(min); }
@@ -179,42 +169,51 @@ export function computeDepartureTime(day,direction,girlIds, st=S){
   return pureComputeDepartureTime(direction, minutesList, st.settings.travelLeadMinutes||60);
 }
 
-// timeOf (optional): where a girl's time comes from; the standard schedule unless the temporary rooster is being planned.
-function planClusters(day,direction,list, st=S, timeOf){
-  const girlsInput = list.map(([id,f])=>({id, min: pureTimeToMinutes(timeOf? timeOf(id) : f.schedule[day][direction])}));
-  const driverSeats = availableDrivers(day,direction, st).map(([id,f])=>seats(f));
-  const togetherRules = (st.prefs.rules||[]).filter(r=>r.type==='together');
-  const preferRules = (st.prefs.rules||[]).filter(r=>r.type==='prefer');
-  const gapLimitMinutes = (st.settings.gapThresholdHours||3)*60;
-  const prefWindowMinutes = st.settings.prefWindowMinutes!=null? st.settings.prefWindowMinutes : 30;
-  return pureplanClusters({ girls: girlsInput, driverSeats, gapLimitMinutes, togetherRules, preferRules, prefWindowMinutes });
+// Everything planShift needs for one shift. timeOf (optional): where a girl's time comes from; the standard schedule unless the
+// temporary rooster is being planned. excludeIds (optional): drivers that must not be used (they already drive a car of this trip).
+function planInput(day,direction,list, st=S, timeOf, excludeIds){
+  const riders = list.map(([id,f])=>({id, min: pureTimeToMinutes(timeOf? timeOf(id) : f.schedule[day][direction])}));
+  const drivers = availableDrivers(day,direction, st).filter(([id])=>!(excludeIds && excludeIds.has(id)))
+    .map(([id,f])=>({id, seats: seats(f), standard: isStandaardAvailable(f,day,direction), rank: shiftPriorityOf(day,direction,id, st)}));
+  const rules = st.prefs.rules||[];
+  return {
+    riders, drivers, direction,
+    gapLimitMinutes: (st.settings.gapThresholdHours||3)*60,
+    togetherRules: rules.filter(r=>r.type==='together'),
+    preferRules: rules.filter(r=>r.type==='prefer'),
+    prefWindowMinutes: st.settings.prefWindowMinutes!=null? st.settings.prefWindowMinutes : 30,
+    parentPrefWindowMinutes: st.settings.parentPrefWindowMinutes!=null? st.settings.parentPrefWindowMinutes : 60,
+  };
 }
 
-function planPrimaryOption(day,direction,list, st=S){
-  const clusters = planClusters(day,direction,list, st);
-  if(!clusters.length) return null;
-  const priorityDrivers = sortByAvailabilityTier(day,direction, availableDrivers(day,direction, st), st)
-    .map(([id,f])=>({id, seats: seats(f)}));
-  const assignment = planPrimaryAssignment(clusters, priorityDrivers);
-  if(!assignment) return null;
-  const label = assignment.map(a=>esc(fam(a.driverId, st).parentName)).join(' &amp; ');
-  return {label, assignment};
+const optionLabel = (assignment, st)=>assignment.map(a=>esc(fam(a.driverId, st).parentName)).join(' &amp; ');
+
+// The recommended option: a complete planning that passed the safety check. A planning that is incomplete or fails the check is
+// never offered as "Aanbevolen" (a failed check is also written to the console, so it cannot go unnoticed).
+function planPrimaryOption(day,direction,list, st=S, excludeIds){
+  const input = planInput(day,direction,list, st, null, excludeIds);
+  const plan = planShift(input);
+  if(!plan.cars.length || plan.unplaced.length) return null;
+  const problems = checkPlan(input, plan);
+  if(problems.length){ console.error('Planning check failed for '+day+' '+direction+':', problems); return null; }
+  const assignment = plan.cars.map(c=>({driverId:c.driverId, girlIds:c.girlIds}));
+  return {label: optionLabel(assignment, st), assignment, primary:true};
 }
 
-export function planOptions(day,direction,list, st=S){
-  const clusters = planClusters(day,direction,list, st);
-  const availForAlts = availableDrivers(day,direction, st).map(([id,f])=>({id, seats: seats(f)}));
-  const rawAlts = planAlternativeAssignments(clusters, availForAlts);
-  let opts = rawAlts.map(assignment=>({
-    label: assignment.map(a=>esc(fam(a.driverId, st).parentName)).join(' &amp; '),
-    assignment
-  }));
-  opts.sort((a,b)=>{
-    const pa=a.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId, st),0);
-    const pb=b.assignment.reduce((s,x)=>s+shiftPriorityOf(day,direction,x.driverId, st),0);
-    return pa-pb;
-  });
-  const primary = planPrimaryOption(day,direction,list, st);
+export function planOptions(day,direction,list, st=S, excludeIds){
+  const input = planInput(day,direction,list, st, null, excludeIds);
+  const plan = planShift(input);
+  let opts = [];
+  if(!plan.partial){
+    // Other drivers for the same cars (1 or 2 cars): standaard before back-up, then the Selectievolgorde.
+    const clusters = plan.cars.map(c=>c.girlIds);
+    const byId = new Map(input.drivers.map(d=>[d.id,d]));
+    const cost = a=>a.assignment.reduce((s,x)=>s+(byId.get(x.driverId).standard?0:100000)+shiftPriorityOf(day,direction,x.driverId, st),0);
+    opts = planAlternativeAssignments(clusters, input.drivers.map(d=>({id:d.id, seats:d.seats})))
+      .map(assignment=>({label: optionLabel(assignment, st), assignment}))
+      .sort((a,b)=>cost(a)-cost(b));
+  }
+  const primary = planPrimaryOption(day,direction,list, st, excludeIds);
   if(primary){
     const key=a=>a.assignment.map(x=>x.driverId).sort().join('+');
     opts = opts.filter(o=>key(o)!==key(primary));
@@ -296,12 +295,10 @@ export function planPeriodShift(iso,direction, st=S){
   const list = day? periodRidersFor(iso,direction, st) : [];
   if(!list.length) return { cars:[], unplaced:[] };
   const timeOf = id => periodTimeFor(id,iso,direction, st);
-  const clusters = planClusters(day,direction,list, st, timeOf);
-  const drivers = sortByAvailabilityTier(day,direction, availableDrivers(day,direction, st), st).map(([id,f])=>({id, seats:seats(f)}));
-  const r = planPartialAssignment(clusters, drivers);
+  const plan = planShift(planInput(day,direction,list, st, timeOf));
   return {
-    cars: r.assigned.map(a=>({ driverFamilyId:a.driverId, girlIds:a.girlIds, departureTime:periodDeparture(iso,direction,a.girlIds, st) })),
-    unplaced: r.unassigned.flat(),
+    cars: plan.cars.map(c=>({ driverFamilyId:c.driverId, girlIds:c.girlIds, departureTime:periodDeparture(iso,direction,c.girlIds, st) })),
+    unplaced: plan.unplaced,
   };
 }
 
