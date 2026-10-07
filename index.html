@@ -47,6 +47,7 @@
   /* Color language: green = ok / you're driving · amber = a change · neutral = labels.
      --ok and --warn-text are dark enough for small text (>= 4.5:1 on white and on their tints). */
   --ok:#047857; --ok2:#d1fae5; --warn:#d97706; --warn2:#fef3c7; --warn-text:#92400e;
+  --warn-line:#fcd34d; --warn-edge:#f3c58d; --warn-bar:#e07b00;   /* amber frame of an alert / frame of a ride card / its left bar */
   --danger:#b91c1c;
   --backup:#64748b; --info:#2563eb; --info2:#dbeafe; --pill:#334155; --pill2:#f1f5f9;
 
@@ -65,10 +66,15 @@
   --shadow-card:0 0 0 1px rgba(148,163,184,.08),0 4px 12px rgba(0,0,0,.45);
   --accent:var(--az-red); --accent2:#3a1414;
   --ok:#34d399; --ok2:#0f2b21; --warn:#fbbf24; --warn2:#3a2e0f; --warn-text:#fbbf24;
+  --warn-line:#78350f; --warn-edge:#78350f; --warn-bar:#e07b00;
   --backup:#94a3b8; --info:#60a5fa; --info2:#122036; --pill:#cbd5e1; --pill2:#1e293b;
   --danger:#f87171;
 }
 *{box-sizing:border-box}
+/* Keyboard focus: one visible ring for every control. The specific :focus-visible rules further down only adjust colour or offset. */
+:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+header :focus-visible{outline-color:#fff}
+.navtab:focus-visible{outline-offset:-4px}
 html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%;overflow:hidden}
 /* ---------- Flex-shell layout (deliberately NOT position:fixed for header/nav) ----------
    Firefox for Android has a confirmed, still-open bug where position:fixed elements ride up
@@ -94,14 +100,14 @@ header p{margin:2px 0 0;font-size:12px;opacity:.95}
 .helpSearchLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .helpSearch{width:100%;box-sizing:border-box;min-height:48px;font-size:16px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);color:var(--text)}
 .helpBody{flex:1;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
-.helpHead{margin:8px 0 0;font-size:13px;font-weight:700;color:var(--muted)}
+.helpHead{margin:8px 0 0;font-size:12px;font-weight:700;color:var(--muted)}
 .helpItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);color:var(--text);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
 .helpBack{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 4px;border:0;background:none;color:var(--accent);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
-.helpTitle{margin:4px 0 8px;font-size:17px;font-weight:800}
+.helpTitle{margin:4px 0 8px;font-size:16px;font-weight:800}
 .helpP{margin:0 0 10px;font-size:14px;line-height:1.5}
 .helpLine{padding-left:6px}
 .helpGo{width:100%;margin-top:6px}
-.helpContact,.helpEmpty{font-size:13px;margin-top:14px}
+.helpContact,.helpEmpty{font-size:12px;margin-top:14px}
 /* ---------- Bottom tab bar (flex item, safe-area aware, thumb-reachable) ---------- */
 #bottomnav{flex-shrink:0;display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:var(--sab);height:calc(56px + var(--sab));box-sizing:border-box}
 .navtab{flex:1 1 0;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;background:none;border:none;padding:0;height:56px;cursor:pointer;color:var(--muted);position:relative}
@@ -127,7 +133,7 @@ details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s;flex-shrink:0;margin-right:4px}
 details.fold[open]>summary::after{transform:rotate(-135deg)}
 details.fold[open]>summary{margin-bottom:10px}
-details.group.fold>summary{font-size:15px}
+details.group.fold>summary{font-size:14px}
 /* Melding voor iedereen: dunne gele balk bovenaan (alle gebruikers) + kaart in Beheer. Geen knop, dus ruim lager dan de testbalk. */
 .noticeBar{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--warn2);color:var(--warn-text);padding:4px 12px;font-size:12px;line-height:1.35;font-weight:600;border-bottom:1px solid var(--border);text-align:center}
 .noticeBar svg{flex-shrink:0}
@@ -140,13 +146,13 @@ details.group.fold>summary{font-size:15px}
 :root[data-theme="dark"] .maintLogo{color:#ef4444}
 .maintTitle{font-size:22px;font-weight:800;margin:0 0 10px;color:var(--text)}
 .maintText{font-size:16px;line-height:1.5;margin:0 0 10px;overflow-wrap:anywhere}
-.maintAuto{font-size:13px;color:var(--muted);margin:0}
+.maintAuto{font-size:12px;color:var(--muted);margin:0}
 .maintPreview{padding:14px 12px}
-.maintPreview .maintTitle{font-size:17px}
+.maintPreview .maintTitle{font-size:16px}
 .maintPreview .maintText{font-size:14px}
 .noticePreview{border:1px dashed var(--control-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg)}
 .noticeCount{text-align:right;font-size:12px;margin-top:3px}
-.switchRow{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font-size:15px;font-weight:700;color:var(--text);margin:4px 0}
+.switchRow{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font-size:14px;font-weight:700;color:var(--text);margin:4px 0}
 input.switch{appearance:none;-webkit-appearance:none;width:52px;height:30px;min-height:0;border-radius:15px;background:var(--control-border);border:none;position:relative;cursor:pointer;flex-shrink:0;padding:0;margin:0;transition:background .15s}
 input.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
 input.switch:checked{background:var(--ok)}
@@ -356,18 +362,16 @@ table.avail th,table.avail td{padding:6px 4px}
 .conclusiePreview{white-space:pre-wrap;background:var(--bg,#f6f6f6);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;font-size:14px;margin:8px 0}
 .oneOnOneHint{font-size:12px;color:var(--muted);margin:6px 0 0}
 .flexBadge{background:var(--pill2);color:var(--pill);font-weight:700}   /* neutral label, like .capbadge: red is for alerts and 'mine' */
-.devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
-:root[data-theme="dark"] .devAlert{border-color:#78350f}
+.devAlert{background:var(--warn2);border:1px solid var(--warn-line);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
 /* Wijzigen: compact ride card (one line when closed, "Wijzig" unfolds the form). Amber on purpose: one-off changes. */
-.devRide{border:1px solid #f3c58d;border-left:4px solid #e07b00;border-radius:14px;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;margin:10px 0;background:var(--card);box-shadow:none}
-:root[data-theme="dark"] .devRide{border-color:#78350f;border-left-color:#e07b00}
+.devRide{border:1px solid var(--warn-edge);border-left:4px solid var(--warn-bar);border-radius:14px;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;margin:10px 0;background:var(--card);box-shadow:none}
 .devRideHead{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:56px;width:100%}
 .devRideHead:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
 .devRideTime{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
 .devRideMain{display:flex;flex-direction:column;min-width:0}
-.devRideDriver{font-weight:700;font-size:15px}
-.devRideRoute{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.devRideToggle{font-size:13px;font-weight:700;color:var(--pill);border:1px solid var(--control-border);background:var(--pill2);border-radius:var(--radius-full);padding:6px 12px}   /* neutral: red is for alerts and 'mine' */
+.devRideDriver{font-weight:700;font-size:14px}
+.devRideRoute{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devRideToggle{font-size:12px;font-weight:700;color:var(--pill);border:1px solid var(--control-border);background:var(--pill2);border-radius:var(--radius-full);padding:6px 12px}   /* neutral: red is for alerts and 'mine' */
 .devKids{display:flex;gap:6px;flex-wrap:wrap}
 .devKid{display:inline-block;background:var(--pill2);color:var(--pill);border:1px solid transparent;border-radius:var(--radius-full);padding:5px 11px;font-size:12px;font-weight:600;font-family:var(--font-sans)}   /* same look as .pill */
 .devKid.mine{background:var(--accent2);color:var(--danger);border-color:var(--accent);font-weight:800}
@@ -375,7 +379,7 @@ table.avail th,table.avail td{padding:6px 4px}
 .devFormTop{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
 .devField{display:flex;flex-direction:column;gap:4px;margin:0}
 .devField>span{font-size:12px;font-weight:600;color:var(--muted)}
-.devInput{height:44px;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--bg);padding:0 10px;font-size:15px;color:var(--text);box-sizing:border-box;width:100%;margin:0}
+.devInput{height:44px;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--bg);padding:0 10px;font-size:14px;color:var(--text);box-sizing:border-box;width:100%;margin:0}
 .devRide .timeBig{width:100%!important;min-height:44px!important;padding:0 10px!important;font-size:16px!important}
 .devDestRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .devDest{text-align:left;min-height:52px;border-radius:10px;padding:6px 12px;cursor:pointer;border:1px solid var(--control-border);background:var(--bg);color:var(--text);display:flex;flex-direction:column;justify-content:center;font-family:inherit}
@@ -385,22 +389,22 @@ table.avail th,table.avail td{padding:6px 4px}
 .devKidList{display:flex;flex-direction:column}
 .devKidRow{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
 .devKidLine{display:flex;align-items:center;gap:10px;min-height:48px}
-.devKidName{flex:1;font-size:15px}
+.devKidName{flex:1;font-size:14px}
 .devKidName.mine{font-weight:800;color:var(--danger)}
 .devKidMore{width:44px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:18px;font-weight:800;color:var(--muted);cursor:pointer;line-height:1;font-family:inherit}
 .devKidMore.on{background:var(--accent2);border-color:var(--danger)}
 .devKidActions{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:10px}
-.devKidBtn{flex:1 1 120px;min-width:0;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--card);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;padding:0 10px;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devKidBtn{flex:1 1 120px;min-width:0;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;padding:0 10px;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .devKidBtn.danger{flex:0 0 44px;width:44px;padding:0;border-color:#fecaca;color:var(--danger);display:inline-flex;align-items:center;justify-content:center}
 .devKidBtn.danger svg{width:20px;height:20px}
 :root[data-theme="dark"] .devKidBtn.danger{border-color:#7f1d1d}
 .devToast{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--text);color:var(--card);border-radius:10px;padding:4px 4px 4px 12px;font-size:14px}
 .devToastUndo{min-height:44px;border:0;background:transparent;color:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:0 10px;text-decoration:underline;font-family:inherit}
 .devFocus{border-color:var(--warn);box-shadow:0 0 0 2px var(--warn2)}
-.devIntentList{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--warn-text)}
+.devIntentList{margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--warn-text)}
 /* Periode met andere tijden: taak-kaart, ingevuld-kaart en formulier in Wijzigen */
 .periodDone{background:var(--ok2);border:1px solid var(--ok);border-radius:var(--radius-xl);padding:10px 16px;margin-bottom:14px}
-.periodDone .devAlertBody{font-size:13px;color:var(--text);margin:4px 0 0}
+.periodDone .devAlertBody{font-size:12px;color:var(--text);margin:4px 0 0}
 #periodTask button.btn.small,.periodDone button.btn.small{margin-top:12px}
 .periodDone .periodDoneTitle{font-size:14px;font-weight:800;color:var(--ok);margin:0}
 .periodDone .periodDoneName{font-weight:400;color:var(--text)}
@@ -417,7 +421,7 @@ input[type=time].periodTime.changed{border-color:var(--warn);background:var(--wa
 .periodBehalfRow{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border)}
 .periodBehalfName{flex:1;min-width:0}
 .periodBehalfDetail{padding:0 0 10px}
-.periodBehalf{font-size:13px;font-weight:700;color:var(--warn-text);background:var(--warn2);border-radius:var(--radius-md);padding:8px 10px;margin:8px 0 0}
+.periodBehalf{font-size:12px;font-weight:700;color:var(--warn-text);background:var(--warn2);border-radius:var(--radius-md);padding:8px 10px;margin:8px 0 0}
 .periodPill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);white-space:nowrap}
 .periodPill.todo{background:var(--warn2);color:var(--warn-text)}
 .periodPill.done{background:var(--ok2);color:var(--ok)}
@@ -426,7 +430,7 @@ input[type=time].periodTime.changed{border-color:var(--warn);background:var(--wa
 .periodHead{display:flex;align-items:flex-start;gap:10px}
 .periodHeadText{flex:1;min-width:0}
 .periodTitle{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:16px}
-.periodInfo{font-size:13px;color:var(--muted);margin-top:3px}
+.periodInfo{font-size:12px;color:var(--muted);margin-top:3px}
 .periodInfo.ok{color:var(--ok);font-weight:600}
 .periodInfo.ok svg{margin-right:2px}
 .periodActions{display:flex;gap:8px;flex-shrink:0}
@@ -446,8 +450,8 @@ details.periodFold[open]>summary{margin-bottom:6px}
 .periodFoldSub{font-size:12px;font-weight:600;overflow-wrap:anywhere}
 .periodFoldSub.todo{color:var(--warn-text)}
 .periodFoldSub.done{color:var(--ok)}
-.periodHint{margin:0 0 10px;font-size:13px;line-height:1.4;color:var(--muted)}
-button.btn.small.periodMakeBtn{font-size:13px;font-weight:600;min-height:40px;padding:6px 14px}
+.periodHint{margin:0 0 10px;font-size:12px;line-height:1.4;color:var(--muted)}
+button.btn.small.periodMakeBtn{font-size:12px;font-weight:600;min-height:40px;padding:6px 14px}
 .periodWhoGroup+.periodWhoGroup{margin-top:12px}
 .periodWhoHead{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:2px}
 .periodWhoList{list-style:none;margin:0;padding:0}
@@ -463,11 +467,11 @@ button.btn.small.periodMakeBtn{font-size:13px;font-weight:600;min-height:40px;pa
 .periodBackupWhen{font-weight:600;font-size:14px}
 .periodBackupMeta{font-size:12px;color:var(--muted)}
 .periodForm{border-left:3px solid var(--accent);padding-left:12px}
-.periodFormTitle{margin:0;font-size:15px}
-.periodFormGroup{margin:18px 0 0;font-size:13px;font-weight:800}
+.periodFormTitle{margin:0;font-size:16px}
+.periodFormGroup{margin:18px 0 0;font-size:12px;font-weight:800}
 .periodFormActions{display:flex;gap:8px;margin-top:14px}
 .periodChips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
-.periodChip{border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 2px;text-align:center;font-size:11px;white-space:nowrap;background:var(--card)}
+.periodChip{border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 2px;text-align:center;font-size:12px;white-space:nowrap;background:var(--card)}
 .periodChipDay{display:block;font-weight:800;font-size:12px}
 .periodPills{flex-wrap:wrap}
 .periodTimeRow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:14px;border-bottom:1px solid var(--border)}
