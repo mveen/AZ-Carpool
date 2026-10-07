@@ -9,6 +9,7 @@ import { recomputeCanEdit } from './coordinator.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderBeheer } from './ui-beheer.js';
 import { renderNoticeBanner } from './ui-notice.js';
+import { renderMaintenance } from './ui-maintenance.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { refreshPeriodTask } from './ui-period.js';
@@ -82,7 +83,7 @@ export function afterLinksChanged(){
   renderAll();
 }
 
-export function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); adjustMainPadding(); }
+export function renderAll(){ renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); renderMaintenance(); adjustMainPadding(); }
 
 // Switches the visible tab; every switch starts at the top of the new tab.
 export function activateTab(tab){

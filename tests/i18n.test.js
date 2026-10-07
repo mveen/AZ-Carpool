@@ -136,6 +136,10 @@ test('the removed shift map-button texts are gone', () => {
   assert.equal(Object.prototype.hasOwnProperty.call(nl, 'loc.mapLabel'), false);
 });
 
+test('the onderhoudsmodus texts exist', () => {
+  for (const k of ['maint.title', 'maint.show', 'maint.save', 'maint.banner', 'maint.page.title', 'maint.page.default', 'maint.page.auto', 'maint.saved.on', 'maint.saved.off']) assert.ok(nl[k], k);
+});
+
 test('the daughter-picker texts are gone; the coordinator-without-family text exists', () => {
   for (const k of ['profile.welkom_selecteer_je_dochter_om', 'profile.mijn_dochter', 'profile.dit_is_mijn_dochter', 'profile.er_zijn_nog_geen_gezinnen', 'profile.gekoppeld', 'profile.koppelen_mislukt'])
     assert.equal(Object.prototype.hasOwnProperty.call(nl, k), false, k);

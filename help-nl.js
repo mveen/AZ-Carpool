@@ -285,6 +285,20 @@ export default [
     tab: 'beheer',
   },
   {
+    id: 'beheer-onderhoud',
+    title: 'Beheer: de app tijdelijk dichtzetten (onderhoudsmodus)',
+    keywords: 'onderhoud onderhoudsmodus dicht sluiten niet beschikbaar offline storing pagina aan uit zetten',
+    coordinatorOnly: true,
+    body: [
+      'Onder Beheer, bij Onderhoudsmodus, zet je de app tijdelijk dicht. Alle gebruikers zien dan een scherm dat de app even niet beschikbaar is. Jij blijft alles zien en kunnen doen.',
+      '1. Zet Onderhoudsmodus aan.',
+      '2. Typ eventueel een eigen tekst, bijvoorbeeld wanneer de app weer open is (maximaal 150 tekens). Onder Zo zien gebruikers het zie je het resultaat.',
+      '3. Tik op Opslaan. Binnen enkele seconden zien de gebruikers het scherm. Bovenaan zie jij een gele balk als herinnering.',
+      'Weer openzetten doe je door Onderhoudsmodus uit te zetten en op Opslaan te tikken. Het scherm van de gebruikers verdwijnt dan vanzelf, zonder dat zij iets hoeven te doen. In de testweergave als ouder zie je de onderhoudspagina niet.',
+    ],
+    tab: 'beheer',
+  },
+  {
     id: 'beheer-melding',
     title: 'Beheer: een melding voor iedereen aan- en uitzetten',
     keywords: 'melding balk geel mededeling bericht aan uit zetten automatisch uit datum tijd iedereen',

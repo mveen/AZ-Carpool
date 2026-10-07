@@ -49,6 +49,13 @@ test('the article about the periode explains the fields of the Beheer card', () 
   assert.ok(a); const s = allText(a);
   ['Naam', 'Eerste dag', 'Laatste dag', 'Invullen open vanaf', 'Deadline', 'Opslaan', 'Annuleren'].forEach(w => assert.ok(s.includes(w), w));
 });
+test('the onderhoudsmodus article is for the coordinator only and explains the steps', () => {
+  assert.equal(findArticle('beheer-onderhoud', { canEdit: false }), null);
+  const a = findArticle('beheer-onderhoud', { canEdit: true });
+  assert.ok(a); const s = allText(a);
+  ['Onderhoudsmodus', 'Opslaan', 'niet beschikbaar'].forEach(w => assert.ok(s.includes(w), w));
+  assert.ok(searchHelp('onderhoud', { canEdit: true }).some(x => x.id === 'beheer-onderhoud'));
+});
 
 console.log('\n=== search helpers ===');
 test('normalize removes accents and case; words splits on anything else', () => {

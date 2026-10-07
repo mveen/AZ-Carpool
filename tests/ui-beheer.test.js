@@ -437,6 +437,14 @@ test('Beheer shows the notice card, and the WhatsApp intro icon wiring is still 
   assert.match(text(dom.html('tab-beheer')), /Melding voor iedereen/);
 });
 
+test('Beheer shows the onderhoudsmodus card above the notice card', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  assert.match(text(html), /Onderhoudsmodus aan/);
+  assert.ok(html.indexOf('id="maintenanceCard"') > -1 && html.indexOf('id="maintenanceCard"') < html.indexOf('id="noticeCard"'));
+});
+
 test('families and the travel-preference checkboxes are listed A-Z by daughter name', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState({});
   withFakeNow(NOW, () => renderBeheer());

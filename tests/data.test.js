@@ -706,6 +706,14 @@ await testAsync('restoreFamilies writes nothing for a parent, an invalid plan, o
   assert.match(toast(), /permission-denied/);
 });
 
+await testAsync('the maintenance mode is loaded live, shows the page for a parent and is cleared when listeners stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/maintenance': { on: true, text: 'Terug om 8' } }); sampleParentState({ families: {}, groups: {}, maintenance: null });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.maintenance.on, true); assert.equal(S.maintenance.text, 'Terug om 8');
+  assert.equal(dom.el('maintenanceOverlay').style.display, 'flex');
+  stopDataListeners(); assert.equal(S.maintenance, null);
+  assert.equal(dom.el('maintenanceOverlay').style.display, 'none');
+});
 await testAsync('the notice for everyone is loaded live and cleared when listeners stop', async () => {
   useFakeDb({ ...sampleDbSeed(), 'settings/notice': { on: true, text: 'Geen training' } }); sampleParentState({ families: {}, groups: {}, notice: null });
   startDataListeners(); await tick(); await tick();
