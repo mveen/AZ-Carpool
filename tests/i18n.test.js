@@ -136,6 +136,15 @@ test('the period back-up texts exist and fill in their numbers', () => {
   ['made', 'deleted', 'restored', 'make', 'restore', 'delete', 'same', 'sincePeriod', 'err.full', 'err.broken'].forEach(k => assert.ok(hasKey('period.backup.' + k), k));
 });
 
+
+test('the Wijzigen ride card texts exist and the arrival names ATC', () => {
+  assert.equal(t('dir.heenTo', { city: 'Wijdewormer' }), 'Heen · Aalsmeer → Wijdewormer');
+  assert.equal(t('dir.terugFrom', { city: 'Wijdewormer' }), 'Terug · Wijdewormer → Aalsmeer');
+  assert.deepEqual(['wijzig', 'klaar', 'ophalen', 'aankomst', 'kinderen', 'opties', 'verwijder', 'ongedaan'].map(k => hasKey('deviation.' + k)), Array(8).fill(true));
+  assert.equal(t('deviation.naar_auto', { name: 'Kees' }), 'Naar Kees');
+  assert.equal(t('loc.freeOption'), 'Ander adres…');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

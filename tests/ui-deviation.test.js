@@ -26,7 +26,10 @@ const kick = new Date('2026-10-03T10:30:00+02:00').getTime();
 const feeds = [{ calendarId: 'cal1', label: 'AZ O15-1' }];
 const matchCarpools = { ev_cal1__e1: { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', startMs: kick, cars: [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '09:15' }] } };
 const liveMatch = { calendarId: 'cal1', eventId: 'e2', teamLabel: 'AZ O15-1', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst', start: new Date('2026-10-01T18:00:00+02:00') };
-function render(state, patch) { withFakeNow(NOW, () => { state(patch); renderDeviationTab(); }); return dom.html('tab-deviation'); }
+function render(state, patch) { withFakeNow(NOW, () => { state(patch); S.devOpen = {}; S.devKid = null; S.devUndo = null; S.devFree = {}; renderDeviationTab(); }); return dom.html('tab-deviation'); }
+// Same, with every ride card unfolded ("Wijzig"): the form with time, driver, place, arrival and children.
+const ALL_KEYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr'].flatMap(d => ['heen', 'terug'].flatMap(dir => [0, 1, 2, 3].map(i => `${d}|${dir}|${i}`)));
+function renderOpen(state, patch) { withFakeNow(NOW, () => { state(patch); S.devOpen = Object.fromEntries(ALL_KEYS.map(k => [k, true])); S.devKid = null; S.devUndo = null; S.devFree = {}; renderDeviationTab(); }); return dom.html('tab-deviation'); }
 
 console.log('=== day pills (same design as Rooster) ===');
 test('shows the week, one pill per day and the content of one day straight away', () => {
@@ -88,25 +91,25 @@ test('while filling in is open the task card comes before the weekly changes; wi
 
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
-  const s = text(render(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
+  const s = text(renderOpen(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
   assert.match(s, / Dinsdag Wijzigingen hier gelden alleen voor dinsdag deze week en verdwijnen dit weekend vanzelf\. Heen · Aalsmeer/);
   assert.doesNotMatch(s, /Andere dag/);   // no separate day picker screen any more
-  assert.match(s, /Heen · Aalsmeer → Alkmaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
+  assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
   assert.match(s, /Terug naar standaard rooster/);
   assert.match(s, /Terug · Alkmaar → Aalsmeer Geen ritten gepland in het standaard Rooster voor dit moment\./);
   expectSnapshot('ui-deviation', 'parent editing Tuesday', dom.html('tab-deviation'));
 });
 test('a driver without availability gets a warning', () => {
-  assert.match(text(render(sampleParentState, { deviationDay: 'Di' })), /Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven/);
+  assert.match(text(renderOpen(sampleParentState, { deviationDay: 'Di' })), /Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven/);
 });
 test('girls who normally do not ride can still be added to a car', () => {
   const s = text(render(sampleCoordinatorState, { deviationDay: 'Ma' }));
   assert.match(s, /Andere meiden Ook meiden die niet standaard meerijden, kun je hier alsnog aan een auto toevoegen\. Anouk Voeg toe aan auto… Auto: Jan Jansen/);
 });
 test('Monday: the standard cars are the starting point (Eline and Jahaimy with Jan)', () => {
-  const s = text(render(sampleCoordinatorState, { deviationDay: 'Ma' }));
-  assert.match(s, /Heen · Aalsmeer → Alkmaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen/);
-  assert.match(s, /Eline Jahaimy/);
+  const s = text(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }));
+  assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen/);
+  assert.match(s, /Eline[^]*Jahaimy/);
 });
 test('renderDevDirection returns the block for a single direction', () => {
   sampleCoordinatorState({ deviationDay: 'Ma' });
@@ -149,6 +152,8 @@ test('wireWhatsAppButton hooks the click to sending that message', () => {
 
 import { withFakeNowAsync } from './test-support.js';
 import { backupHtml, conclusieCardHtml, flexSignupHtml, oneOnOneHtml } from '../ui-deviation.js';
+import { shiftLabel } from '../locations.js';
+import { locationsCfg } from '../ui-common.js';
 import { sampleFamilies as _sampleFamilies } from './test-support.js';
 
 console.log('\n=== conclusie-appje (US-03) ===');
@@ -270,7 +275,7 @@ test('a Flex girl who is signed up sees "Aangemeld" and a sign-off button instea
 });
 test('a Flex driver is marked in the driver dropdown and gets no availability warning', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f9', girlIds: ['f9'], departureTime: '08:00' }] } };
-  const html = render(flexParent, { deviationDay: 'Ma', deviations: dev });
+  const html = renderOpen(flexParent, { deviationDay: 'Ma', deviations: dev });
   assert.match(html, /<option value="f9" selected>Lotte Flex \(speelster-chauffeur\)<\/option>/);
   assert.doesNotMatch(html, /Deze ouder heeft voor dit moment geen beschikbaarheid/);
 });
@@ -332,12 +337,12 @@ await testAsync('a Flex signup shows up in the conclusie-appje as "Rijdt ook mee
 
 console.log('\n=== one-off pickup / drop-off place per ride (US-15) ===');
 test('every car has a "Plek (eenmalig)" choice with the default first and the three places', () => {
-  const html = render(sampleParentState, { deviationDay: 'Ma' });
-  assert.match(html, /<select class="devLocSel"[^>]*data-day="Ma" data-direction="heen" data-caridx="0"><option value="" selected>Standaard: Busstation<\/option><option value="busstation" >Busstation<\/option><option value="a4-de-hoek" >A4-De Hoek<\/option><option value="de-parel" >De Parel<\/option>/);
+  const html = renderOpen(sampleParentState, { deviationDay: 'Ma' });
+  assert.match(html, /<select class="devLocSel devInput"[^>]*data-day="Ma" data-direction="heen" data-caridx="0"><option value="" selected>Standaard: Busstation<\/option><option value="busstation" >Busstation<\/option><option value="a4-de-hoek" >A4-De Hoek<\/option><option value="de-parel" >De Parel<\/option>/);
 });
 test('the saved choice is preselected; the default of the direction follows Beheer', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30', locationId: 'de-parel' }] } };
-  const html = render(sampleParentState, { deviationDay: 'Ma', deviations: dev, locationsDoc: { defaults: { heen: 'a4-de-hoek', terug: 'busstation' } } });
+  const html = renderOpen(sampleParentState, { deviationDay: 'Ma', deviations: dev, locationsDoc: { defaults: { heen: 'a4-de-hoek', terug: 'busstation' } } });
   assert.match(html, /<option value="" >Standaard: A4-De Hoek<\/option>/); assert.match(html, /<option value="de-parel" selected>De Parel<\/option>/);
 });
 async function pickPlace(value) {
@@ -359,7 +364,7 @@ console.log('\n=== during a period with a temporary rooster ===');
 test('Wijzigen starts from the temporary rooster on a date where it applies: its car, its departure time, the handed-in times', () => {
   const html = withFakeNow(NOW, () => { sampleParentState({ periods: oneP({ name: 'Startweek', firstDay: '2026-09-28', lastDay: '2026-10-02', opensOn: '2026-09-20', deadlineDate: '2026-09-25', deadlineTime: '12:00' }), deviations: {},
     periodCars: { '2026-09-28_2026-09-29_terug': { periodFirstDay: '2026-09-28', date: '2026-09-29', direction: 'terug', madeAt: 1, by: 'x', cars: [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '12:00' }] } },
-    periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-29': { heen: '09:00', terug: '12:00' } } } } }); return renderDevDirection('Di', 'terug'); });
+    periodEntries: { '2026-09-28_f2': { familyId: 'f2', periodFirstDay: '2026-09-28', days: { '2026-09-29': { heen: '09:00', terug: '12:00' } } } } }); S.devOpen = { 'Di|terug|0': true }; return renderDevDirection('Di', 'terug'); });
   assert.match(html, /type="time"[^>]*value="12:00"|value="12:00"[^>]*type="time"/); assert.match(html, /<option value="f3" selected/);
   assert.doesNotMatch(text(html), /Geen ritten gepland in het standaard Rooster/);
 });
@@ -374,6 +379,81 @@ test('the "andere meiden" list is A-Z by daughter name', () => {
   const names = [...h.matchAll(/<span style="flex:1">([^<]+)<\/span>\s*<select class="devAddSel"/g)].map(m => m[1]);
   assert.ok(names.length > 1);
   assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')));
+});
+
+console.log('\n=== compact ride card (Ritkaart): one line closed, "Wijzig" unfolds the form ===');
+// Runs the handlers of the rendered page for one selector with the given fake elements.
+async function fire(selector, el, ev = 'onclick') {
+  const all = dom.doc.querySelectorAll; dom.doc.querySelectorAll = s => s === selector ? [el] : all(s);
+  try { await withFakeNowAsync(NOW, async () => { renderDeviationTab(); await el[ev](); }); } finally { dom.doc.querySelectorAll = all; }
+}
+const dev1 = (cars, dir = 'heen') => ({ Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [] }, ['Ma_' + dir]: { day: 'Ma', direction: dir, weekKey: '2026-W40', expiresAt: 1791500000000, cars } });
+test('closed: one line with time, driver and route, then the passengers; no form fields', () => {
+  const html = render(sampleCoordinatorState, { deviationDay: 'Ma' });
+  assert.match(text(html), /Heen · Aalsmeer → Alkmaar 0\d:\d\d Jan Jansen Busstation → AFC (?:'|&#39;)34 Wijzig E Eline J Jahaimy/);
+  assert.match(html, /class="devRideHead" data-devtoggle="Ma\|heen\|0" aria-expanded="false"/);
+  assert.doesNotMatch(html, /devDriverSel|devLocSel|devDeptimeInp|data-devdest|devKidMore/);
+});
+test('open: the button says Klaar and shows time, driver, pickup, arrival (AFC \'34 / ATC) and the children', () => {
+  const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
+  const s = text(html);
+  assert.match(s, /Jan Jansen Busstation → AFC (?:'|&#39;)34 Klaar/);
+  assert.match(s, /Vertrek Chauffeur .* Ophalen \(alleen deze rit\) .* Aankomst AFC (?:'|&#39;)34 Alkmaar ATC Wijdewormer Kinderen E Eline ··· J Jahaimy ···/);
+  assert.doesNotMatch(s, /AZ Trainingscomplex/);              // the arrival button says ATC
+  assert.match(html, /data-devdest="AFC"[^>]*aria-pressed="true"/); assert.match(html, /data-devdest="ATC"[^>]*aria-pressed="false"/);
+  assert.match(html, /<option value="__free" >Ander adres…<\/option>/);
+  assert.doesNotMatch(html, /devLocText/);                    // the free input only appears after "Ander adres…" (or when it holds a value)
+});
+await testAsync('"Wijzig" opens one ride, "Klaar" closes it again', async () => {
+  render(sampleCoordinatorState, { deviationDay: 'Ma' });
+  await fire('[data-devtoggle]', { dataset: { devtoggle: 'Ma|heen|0' } });
+  assert.equal(S.devOpen['Ma|heen|0'], true);
+  assert.match(text(dom.html('tab-deviation')), /Klaar Vertrek Chauffeur/);
+  await fire('[data-devtoggle]', { dataset: { devtoggle: 'Ma|heen|0' } });
+  assert.ok(!S.devOpen['Ma|heen|0']); assert.doesNotMatch(dom.html('tab-deviation'), /devDriverSel/);
+});
+await testAsync('"Ander adres…" opens the free input without saving anything; a typed address shows on the closed line', async () => {
+  const fake = useFakeDb(sampleDbSeed()); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
+  await fire('.devLocSel', { dataset: { day: 'Ma', direction: 'heen', caridx: '0' }, value: '__free' }, 'onchange');
+  assert.equal(fake.get('deviations/Ma_heen'), undefined);
+  assert.match(dom.html('tab-deviation'), /<input type="text" class="devLocText devInput"/);
+});
+await testAsync('arrival: choosing ATC stores it on that car only; the header and the route follow; AFC \'34 is the standard again', async () => {
+  const fake = useFakeDb(sampleDbSeed()); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
+  await fire('[data-devdest]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', devdest: 'ATC' } });
+  assert.equal(fake.get('deviations/Ma_heen').cars[0].destination, 'ATC');
+  assert.equal(fake.get('deviations/Ma_terug'), undefined, 'the other direction is untouched');
+  S.deviations = Object.fromEntries(fake.collection('deviations'));
+  const s = text(render(sampleCoordinatorState, { deviationDay: 'Ma', deviations: S.deviations }));
+  assert.match(s, /Heen · Aalsmeer → Wijdewormer \d\d:\d\d Jan Jansen Busstation → ATC Wijzig/);
+  assert.match(s, /Terug · Alkmaar → Aalsmeer/);
+  assert.match(withFakeNow(NOW, () => shiftLabel({ departureTime: '08:00', destination: 'ATC' }, 'terug', locationsCfg(), 'Ma')), /^08:00 ATC → Busstation$/);
+  await fire('[data-devdest]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', devdest: 'AFC' } });
+  assert.ok(!('destination' in fake.get('deviations/Ma_heen').cars[0]));
+});
+await testAsync('removing a child shows the result with "Ongedaan" in the card; Ongedaan puts her back', async () => {
+  const fake = useFakeDb(sampleDbSeed()); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
+  await fire('[data-devkid]', { dataset: { devkid: 'Ma|heen|0|f1' } });
+  assert.match(dom.html('tab-deviation'), /data-devremove="1"[^>]*data-girl="f1"|data-girl="f1"[^>]*data-devremove="1"/);
+  const before = fake.get('deviations/Ma_heen');
+  await fire('.devRemoveBtn', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', girl: 'f1' } });
+  assert.ok(!fake.get('deviations/Ma_heen').cars[0].girlIds.includes('f1'));
+  assert.match(text(dom.html('tab-deviation')), /verwijderd uit deze auto\. Ongedaan/);
+  assert.equal(S.devKid, null);
+  await fire('[data-devundo]', { dataset: { devundo: '1' } });
+  assert.ok(fake.get('deviations/Ma_heen').cars[0].girlIds.includes('f1'));
+  assert.equal(S.devUndo, null); assert.doesNotMatch(dom.html('tab-deviation'), /devToast/);
+});
+await testAsync('moving a child offers one button per other car and shows "Ongedaan" in the card she left', async () => {
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }, { driverFamilyId: 'f3', girlIds: ['f6'], departureTime: '07:30' }];
+  const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen }); const d = { ...dev1(cars) };
+  renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: d });
+  await fire('[data-devkid]', { dataset: { devkid: 'Ma|heen|0|f2' } });
+  assert.match(text(dom.html('tab-deviation')), /Naar Kees de Vries Verwijder/);
+  await fire('[data-devmove]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', girl: 'f2', devmove: '1' } });
+  const saved = fake.get('deviations/Ma_heen').cars;
+  assert.ok(!saved[0].girlIds.includes('f2')); assert.ok(saved[1].girlIds.includes('f2'));
+  assert.match(text(dom.html('tab-deviation')), /verplaatst\. Ongedaan/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

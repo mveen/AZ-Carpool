@@ -86,10 +86,25 @@ export function isOverride(car, direction, cfg, day) {
   return !!(car && cfg.places.some(p => p.id === car.locationId) && car.locationId !== shiftDefaultId(cfg, day, direction));
 }
 
+// The arrival place of one ride (Wijzigen, Aankomst): AFC '34 (the destination from Beheer, the default) or ATC. A one-off choice on
+// the car (car.destination = 'ATC'); anything else means AFC. Returns { key:'AFC'|'ATC', name, city }.
+export const ATC_NAME = 'ATC';
+export const CITY_AFC = 'Alkmaar';
+export const CITY_ATC = 'Wijdewormer';
+export function destinationFor(car, cfg) {
+  if (car && car.destination === 'ATC') return { key: 'ATC', name: ATC_NAME, city: CITY_ATC };
+  return { key: 'AFC', name: cfg.destination.name, city: CITY_AFC };
+}
+
+// "Busstation → AFC '34" (heen) / "AFC '34 → Busstation" (terug): the route of one ride.
+export function routeLabel(car, direction, cfg, day) {
+  const place = placeName(car, direction, cfg, day), dest = destinationFor(car, cfg).name;
+  return direction === 'heen' ? `${place} → ${dest}` : `${dest} → ${place}`;
+}
+
 // "07:05 Busstation → AFC '34" (heen) / "17:30 AFC '34 → Busstation" (terug).
 export function shiftLabel(car, direction, cfg, day) {
-  const place = placeName(car, direction, cfg, day), dest = cfg.destination.name;
-  const route = direction === 'heen' ? `${place} → ${dest}` : `${dest} → ${place}`;
+  const route = routeLabel(car, direction, cfg, day);
   return car && car.departureTime ? `${car.departureTime} ${route}` : route;
 }
 

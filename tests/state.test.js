@@ -75,5 +75,10 @@ test('the period back-ups start empty and have no listener', () => {
   assert.deepEqual(S.periodBackups, {}); assert.equal(S.periodBackupsUnsub, null);
 });
 
+
+console.log('\n=== Wijzigen ride card state ===');
+test('the open ride cards, the open child, the free place input and the last undo start empty', () => {
+  assert.deepEqual(S.devOpen, {}); assert.equal(S.devKid, null); assert.deepEqual(S.devFree, {}); assert.equal(S.devUndo, null);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
