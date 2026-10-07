@@ -358,6 +358,46 @@ table.avail th,table.avail td{padding:6px 4px}
 .flexBadge{background:var(--pill2);color:var(--pill);font-weight:700}   /* neutral label, like .capbadge: red is for alerts and 'mine' */
 .devAlert{background:var(--warn2);border:1px solid #fcd34d;border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
 :root[data-theme="dark"] .devAlert{border-color:#78350f}
+/* Wijzigen: compact ride card (one line when closed, "Wijzig" unfolds the form). Amber on purpose: one-off changes. */
+.devRide{border:1px solid #f3c58d;border-left:4px solid #e07b00;border-radius:14px;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;margin:10px 0;background:var(--card);box-shadow:none}
+:root[data-theme="dark"] .devRide{border-color:#78350f;border-left-color:#e07b00}
+.devRideHead{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:56px;width:100%}
+.devRideHead:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.devRideTime{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.devRideMain{display:flex;flex-direction:column;min-width:0}
+.devRideDriver{font-weight:700;font-size:15px}
+.devRideRoute{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devRideToggle{font-size:13px;font-weight:700;color:var(--accent-text);border:1px solid #fecaca;background:var(--accent2);border-radius:var(--radius-full);padding:6px 12px}
+:root[data-theme="dark"] .devRideToggle{border-color:#7f1d1d}
+.devKids{display:flex;gap:6px;flex-wrap:wrap}
+.devKid{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-full);padding:3px 10px 3px 3px;font-size:14px}
+.devKid.mine{font-weight:800;color:var(--danger)}
+.devKidInit{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:var(--accent-text);font-size:12px;font-weight:700;display:grid;place-items:center;flex-shrink:0}
+.devForm{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--border);padding-top:12px}
+.devFormTop{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
+.devField{display:flex;flex-direction:column;gap:4px;margin:0}
+.devField>span{font-size:12px;font-weight:600;color:var(--muted)}
+.devInput{height:44px;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--bg);padding:0 10px;font-size:15px;color:var(--text);box-sizing:border-box;width:100%;margin:0}
+.devRide .timeBig{width:100%!important;min-height:44px!important;padding:0 10px!important;font-size:16px!important}
+.devDestRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.devDest{text-align:left;min-height:52px;border-radius:10px;padding:6px 12px;cursor:pointer;border:1px solid var(--control-border);background:var(--bg);color:var(--text);display:flex;flex-direction:column;justify-content:center;font-family:inherit}
+.devDest.on{background:var(--accent2);border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger);color:var(--accent-text)}
+.devDestName{font-weight:700;font-size:14px}
+.devDestCity{font-size:12px;opacity:.8}
+.devKidList{display:flex;flex-direction:column}
+.devKidRow{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+.devKidLine{display:flex;align-items:center;gap:10px;min-height:48px}
+.devKidLine .devKidInit{width:28px;height:28px;font-size:13px}
+.devKidName{flex:1;font-size:15px}
+.devKidName.mine{font-weight:800;color:var(--danger)}
+.devKidMore{width:44px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:18px;font-weight:800;color:var(--muted);cursor:pointer;line-height:1;font-family:inherit}
+.devKidMore.on{background:var(--accent2);border-color:var(--danger)}
+.devKidActions{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:10px}
+.devKidBtn{flex:1 1 auto;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--card);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;padding:0 14px;font-family:inherit}
+.devKidBtn.danger{flex:0 0 auto;border-color:#fecaca;color:var(--danger);display:inline-flex;align-items:center;justify-content:center;gap:6px}
+:root[data-theme="dark"] .devKidBtn.danger{border-color:#7f1d1d}
+.devToast{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--text);color:var(--card);border-radius:10px;padding:4px 4px 4px 12px;font-size:14px}
+.devToastUndo{min-height:44px;border:0;background:transparent;color:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:0 10px;text-decoration:underline;font-family:inherit}
 .devFocus{border-color:var(--warn);box-shadow:0 0 0 2px var(--warn2)}
 .devIntentList{margin:6px 0 0;padding-left:18px;font-size:13px;color:var(--warn-text)}
 /* Periode met andere tijden: taak-kaart, ingevuld-kaart en formulier in Wijzigen */

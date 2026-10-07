@@ -78,6 +78,10 @@ export const S = {
   hashTabApplied: false,
   defaultTabChosen: false,
   formSelectedDay: {me:'Ma', coord:'Ma'},
+  devOpen: {},             // Wijzigen: which ride cards are unfolded, by 'Ma|heen|0'
+  devKid: null,            // Wijzigen: the child whose options (move / remove) are open: 'Ma|heen|0|<girlId>'
+  devFree: {},             // Wijzigen: ride cards whose free place input was asked for ("Ander adres") before anything is typed
+  devUndo: null,           // Wijzigen: the last change that can be undone { key, text, day, direction, cars }
   deviationDay: null,
   weekschemaBase: null,   // Mijn gezin: Weekschema as saved, while an edit waits for confirmation
   weekschemaEdit: null,   // Mijn gezin: the edited (not yet saved) Weekschema

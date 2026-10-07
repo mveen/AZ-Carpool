@@ -6,7 +6,7 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from '../locations.js';
+import { destinationFor, routeLabel, DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from '../locations.js';
 
 console.log('=== defaults ===');
 test('without stored settings there are the 3 places and AFC \'34 as destination', () => {
@@ -97,5 +97,20 @@ test('AFC and ATC are recognised in a location text, other places are not', () =
   assert.equal(fixedVenue(''), null);
 });
 
+
+console.log('\n=== arrival place of one ride (Wijzigen, Aankomst) ===');
+test('AFC \'34 (the destination from Beheer) is the default; ATC only when the car says so', () => {
+  const cfg = normalizeLocations(null);
+  assert.deepEqual(destinationFor({}, cfg), { key: 'AFC', name: "AFC '34", city: 'Alkmaar' });
+  assert.deepEqual(destinationFor({ destination: 'ATC' }, cfg), { key: 'ATC', name: 'ATC', city: 'Wijdewormer' });
+  assert.equal(destinationFor({ destination: 'rubbish' }, cfg).key, 'AFC');
+  assert.equal(destinationFor({}, normalizeLocations({ destination: { name: 'Stadion' } })).name, 'Stadion');
+});
+test('the route and the shift label follow the arrival place, heen and terug', () => {
+  const cfg = normalizeLocations(null);
+  assert.equal(routeLabel({ destination: 'ATC' }, 'heen', cfg), 'Busstation → ATC');
+  assert.equal(routeLabel({ destination: 'ATC' }, 'terug', cfg), 'ATC → Busstation');
+  assert.equal(shiftLabel({ departureTime: '07:05', destination: 'ATC' }, 'heen', cfg), '07:05 Busstation → ATC');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

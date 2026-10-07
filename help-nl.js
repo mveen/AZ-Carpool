@@ -87,9 +87,9 @@ export default [
     body: [
       'Ga naar Wijzigen. Daar pas je de ritten van alleen deze week aan. Het vaste rooster blijft zoals het was. Aan het weekend zijn alle wijzigingen vanzelf weer weg.',
       '1. Kies de dag bovenaan. Dagen met een wijziging hebben een stip.',
-      '2. Pas de auto aan: kies een andere chauffeur, verplaats een meisje naar een andere auto, of haal haar uit de auto.',
-      '3. Nieuwe auto nodig? Tik op + Auto toevoegen.',
-      '4. Tik op Opslaan.',
+      '2. Elke rit is één regel: tijd, chauffeur en route, met daaronder de meisjes die meerijden. Tik op Wijzig om de rit open te klappen.',
+      '3. Pas aan wat nodig is: vertrektijd, chauffeur, ophaalplek en aankomst (AFC \'34 of ATC). Bij Kinderen tik je op de drie puntjes om een meisje naar een andere auto te verplaatsen of uit de auto te halen. Een wijziging wordt meteen opgeslagen.',
+      '4. Tik op Klaar om de rit weer dicht te klappen. Per ongeluk iets gewijzigd? Tik direct op Ongedaan.',
       'Wil je alles van die dag terugzetten? Tik op Terug naar standaard rooster. Tik twee keer om het zeker te weten.',
       'Stem een wijziging altijd eerst af met de chauffeur. Bij elke chauffeur staat de knop Stem af met chauffeur, met een kant-en-klaar WhatsApp-bericht.',
       'Onder de auto\'s staat Back-up: de chauffeurs die kunnen invallen, in de volgorde waarin je ze kunt vragen. Chauffeurs die die dag al rijden staan er niet bij. Tik op een naam om die chauffeur via WhatsApp te vragen.',
@@ -200,7 +200,7 @@ export default [
     keywords: 'ophaalplek ophalen afzetten plek busstation locatie waar adres',
     body: [
       'Bij elke rit staat de tijd en de plek, bijvoorbeeld "07:05 Busstation → AFC \'34".',
-      'De vaste plekken staan in het Rooster. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of kies Vrije invoer en vul zelf een adres of plek in. Dat wordt niet als vaste plek bewaard en verdwijnt aan het eind van de week.',
+      'De vaste plekken staan in het Rooster. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of kies Ander adres… en vul zelf een adres of plek in. Dat wordt niet als vaste plek bewaard en verdwijnt aan het eind van de week.',
     ],
     tab: 'deviation',
   },
