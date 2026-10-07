@@ -243,13 +243,44 @@ export function periodPhaseText(p, nowMs){
   return t('period.phase.over');
 }
 
-// "Doorgegeven: 9 van 14 gezinnen" (Flex families are not counted): only once filling in has opened and the entries are loaded.
-export function periodStatusHtml(p, nowMs){
-  if(!p || !S.periodEntriesLoaded) return '';
+// Progress of one period: only once filling in has opened and the entries are loaded.
+function periodProgressVisible(p, nowMs){
+  if(!p || !S.periodEntriesLoaded) return false;
   const phase = periodPhase(p, nowMs);
-  if(phase!=='open' && phase!=='closed' && phase!=='over') return '';
+  return phase==='open' || phase==='closed' || phase==='over';
+}
+
+// "Doorgegeven 9 van 14 gezinnen" with a progress bar (Flex families are not counted).
+export function periodStatusHtml(p, nowMs){
+  if(!periodProgressVisible(p, nowMs)) return '';
   const pr = periodProgress(p, S.families, S.periodEntries);
-  return `<div class="rowflex periodStatus" style="margin-top:4px"><span class="muted">${t('period.status.label')}</span><b>${esc(t('period.status.value',{p1:pr.done, p2:pr.total}))}</b></div>`;
+  const pct = pr.total? Math.round(pr.done/pr.total*100) : 0;
+  const value = t('period.status.value',{p1:pr.done, p2:pr.total});
+  return `<div class="periodStatus">
+      <div class="periodStatusText"><span class="muted">${t('period.status.label')}</span><b>${esc(value)}</b></div>
+      <div class="periodBar${pr.total && pr.done===pr.total? ' full' : ''}" role="progressbar" aria-label="${esc(t('period.status.label'))}" aria-valuemin="0" aria-valuemax="${pr.total}" aria-valuenow="${pr.done}" aria-valuetext="${esc(value)}"><span style="width:${pct}%"></span></div>
+    </div>`;
+}
+
+// Who has handed in and who has not (folded). The fold's subtitle already names the first families that are still missing.
+const girlOf = f => (f && (f.girlName || f.parentName)) || '';
+const WHO_NAMES_SHOWN = 3;
+export function periodWhoHtml(p, nowMs){
+  if(!periodProgressVisible(p, nowMs)) return '';
+  const pr = periodProgress(p, S.families, S.periodEntries);
+  if(!pr.total) return '';
+  const todo = pr.rows.filter(r=>!r.done), done = pr.rows.filter(r=>r.done);
+  const row = r => {
+    const girl = girlOf(r.family), parent = r.family.parentName || '';
+    return `<li class="periodWhoRow"><span class="periodWhoMark ${r.done? 'done' : 'todo'}" aria-hidden="true">${r.done? phIcon('check') : ''}</span>
+      <span class="periodWhoName"><strong>${esc(girl)}</strong>${parent && parent!==girl? ` <span class="muted">${esc(parent)}</span>` : ''}</span>
+      <span class="periodWhoState">${esc(t(r.done? 'period.who.stateDone' : 'period.who.stateTodo'))}</span></li>`;
+  };
+  const group = (key, rows) => rows.length? `<div class="periodWhoGroup"><div class="periodWhoHead">${esc(t(key,{p1:rows.length}))}</div><ul class="periodWhoList">${rows.map(row).join('')}</ul></div>` : '';
+  const names = todo.slice(0, WHO_NAMES_SHOWN).map(r=>girlOf(r.family)).join(', ') + (todo.length>WHO_NAMES_SHOWN? ' '+t('period.who.more',{p1:todo.length-WHO_NAMES_SHOWN}) : '');
+  const sub = todo.length? `<span class="periodFoldSub todo">${esc(t('period.who.missing',{p1:names}))}</span>` : `<span class="periodFoldSub done">${esc(t('period.who.allDone'))}</span>`;
+  return foldHtml('periodWho|'+p.firstDay, `<span class="periodFoldTitle"><span>${esc(t('period.who.title'))}</span>${sub}</span>`,
+    group('period.who.todo', todo) + group('period.who.done', done), 'periodFold');
 }
 
 // The label of the delete button when it asks "sure?": says how many families lose what they handed in.
@@ -270,11 +301,11 @@ function periodBackupRowHtml(b, p){
   const c = changesSince(b, S.periodEntries, S.periodCars, p);
   const what = t('period.backup.what',{p1:Object.keys(b.entries).length, p2:Object.keys(b.cars).length});
   const since = (c.families || c.shifts)? t('period.backup.since',{p1:c.families, p2:c.shifts}) : c.period? t('period.backup.sincePeriod') : t('period.backup.same');
-  return `<div class="periodBackupRow" data-pbrow="${esc(b.id)}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
-      <div style="flex:1;min-width:0">
-        <div style="font-weight:600">${esc(fmtStamp(b.createdAt))}${b.auto? ' <span class="muted" style="font-weight:400">· '+esc(t('period.backup.auto'))+'</span>' : ''}</div>
-        <div class="muted" style="font-size:12px">${esc(what)}</div>
-        <div class="muted" style="font-size:12px">${esc(since)}</div>
+  return `<div class="periodBackupRow" data-pbrow="${esc(b.id)}">
+      <div class="periodBackupMain">
+        <div class="periodBackupWhen">${esc(fmtStamp(b.createdAt))}${b.auto? ' <span class="muted">· '+esc(t('period.backup.auto'))+'</span>' : ''}</div>
+        <div class="periodBackupMeta">${esc(what)}</div>
+        <div class="periodBackupMeta">${esc(since)}</div>
       </div>
       <button type="button" class="iconbtn" data-pbrestore="${esc(b.id)}" aria-label="${esc(t('period.backup.restore'))}" title="${esc(t('period.backup.restore'))}">${phIcon('refresh')}</button>
       <button type="button" class="iconbtn danger" data-pbdelete="${esc(b.id)}" aria-label="${esc(t('period.backup.delete'))}" title="${esc(t('period.backup.delete'))}">${phIcon('trash')}</button>
@@ -283,24 +314,33 @@ function periodBackupRowHtml(b, p){
 export function periodBackupsHtml(p){
   const list = periodBackupList(p.firstDay);
   const manual = list.filter(b=>!b.auto).length;
-  const body = `<p class="muted" style="margin:0 0 6px;font-size:12px">${esc(t('period.backup.intro'))}</p>
-    <button type="button" class="btn small secondary" data-pbmake="${p.firstDay}"${manual>=PERIOD_BACKUP_MAX? ' disabled' : ''}>${esc(t('period.backup.make'))}</button>
-    ${list.map(b=>periodBackupRowHtml(b, p)).join('')}`;
-  return `<div style="margin-top:6px">${foldHtml('periodBackups|'+p.firstDay, `<span style="font-size:13px;font-weight:600">${esc(t('period.backup.title',{p1:list.length}))}</span>`, body)}</div>`;
+  const body = `<p class="periodHint">${esc(t('period.backup.intro'))}</p>
+    <button type="button" class="btn small secondary periodMakeBtn" data-pbmake="${p.firstDay}"${manual>=PERIOD_BACKUP_MAX? ' disabled' : ''}>${esc(t('period.backup.make'))}</button>
+    ${list.length? `<div class="periodBackupList">${list.map(b=>periodBackupRowHtml(b, p)).join('')}</div>` : ''}`;
+  return foldHtml('periodBackups|'+p.firstDay, `<span class="periodFoldTitle"><span>${esc(t('period.backup.title',{p1:list.length}))}</span></span>`, body, 'periodFold');
 }
 
+const PHASE_PILL = { waiting:'period.pill.waiting', open:'period.pill.open', closed:'period.pill.closed', over:'period.pill.over' };
 function periodRowHtml(p, nowMs){
   const v = normalizePeriod(p), d = periodHasData(v.firstDay);
-  const info = [periodPhaseText(v, nowMs), d.rooster? t('period.list.roosterMade') : ''].filter(Boolean).join(' · ');
-  return `<div class="periodListRow" data-periodlist="${v.firstDay}">
-      <div style="flex:1;min-width:0">
-        <div><strong>${esc(v.name)}</strong> <span class="muted">${esc(isoRangeLabel(v.firstDay, v.lastDay))}</span></div>
-        <div class="muted" style="font-size:12px">${esc(info)}</div>
-        ${periodStatusHtml(v, nowMs)}
-        ${periodBackupsHtml(v)}
+  if(S.periodDraft && S.periodDraft.editing===v.firstDay) return periodFormCardHtml();   // edit in place: the form takes the row's spot
+  const phase = periodPhase(v, nowMs);
+  const pill = PHASE_PILL[phase]? `<span class="periodPill s-${phase}">${esc(t(PHASE_PILL[phase]))}</span>` : '';
+  return `<div class="periodItem" data-periodlist="${v.firstDay}">
+      <div class="periodHead">
+        <div class="periodHeadText">
+          <div class="periodTitle"><strong>${esc(v.name)}</strong> <span class="muted">${esc(isoRangeLabel(v.firstDay, v.lastDay))}</span> ${pill}</div>
+          <div class="periodInfo">${esc(periodPhaseText(v, nowMs))}</div>
+          ${d.rooster? `<div class="periodInfo ok">${phIcon('check')} ${esc(t('period.list.roosterMade'))}</div>` : ''}
+        </div>
+        <div class="periodActions">
+          <button type="button" class="iconbtn" data-plistedit="${v.firstDay}" aria-label="${esc(t('period.list.edit',{p1:v.name}))}" title="${esc(t('period.list.edit',{p1:v.name}))}">${phIcon('pencil')}</button>
+          <button type="button" class="iconbtn danger" data-plistdelete="${v.firstDay}" aria-label="${esc(t('period.delete'))}: ${esc(v.name)}" title="${esc(t('period.delete'))}: ${esc(v.name)}">${phIcon('trash')}</button>
+        </div>
       </div>
-      <button type="button" class="iconbtn" data-plistedit="${v.firstDay}" aria-label="${esc(t('period.list.edit',{p1:v.name}))}" title="${esc(t('period.list.edit',{p1:v.name}))}">${phIcon('pencil')}</button>
-      <button type="button" class="iconbtn danger" data-plistdelete="${v.firstDay}" aria-label="${esc(t('period.delete'))}: ${esc(v.name)}" title="${esc(t('period.delete'))}: ${esc(v.name)}">${phIcon('trash')}</button>
+      ${periodStatusHtml(v, nowMs)}
+      ${periodWhoHtml(v, nowMs)}
+      ${periodBackupsHtml(v)}
     </div>`;
 }
 
@@ -308,14 +348,15 @@ function periodFormCardHtml(){
   const dr = S.periodDraft, v = normalizePeriod(dr.value);
   const locked = !!dr.editing && (periodHasData(dr.editing).entries>0 || periodHasData(dr.editing).rooster>0);
   const field = (id,labelKey,type,val,extra='') => `<div style="margin-top:10px;flex:1"><label for="${id}" style="margin-top:0">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
-  return `<div class="periodFormCard" id="periodDraftForm">
-      <h3 style="margin:12px 0 0;font-size:15px">${t(dr.editing? 'period.form.editTitle' : 'period.form.addTitle')}</h3>
+  return `<div class="periodItem periodForm" id="periodDraftForm">
+      <h3 class="periodFormTitle">${t(dr.editing? 'period.form.editTitle' : 'period.form.addTitle')}</h3>
       ${field('periodName','period.name','text',v.name,`maxlength="${PERIOD_NAME_MAX}" placeholder="${esc(t('period.namePlaceholder'))}"`)}
       <div class="rowflex" style="gap:8px">
         ${field('periodFirst','period.firstDay','date',v.firstDay, locked? 'disabled' : '')}
         ${field('periodLast','period.lastDay','date',v.lastDay)}
       </div>
       <p class="muted" style="margin-top:3px">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}${locked? ' '+t('period.firstDayLockedHint') : ''}</p>
+      <h4 class="periodFormGroup">${t('period.form.groupFill')}</h4>
       ${field('periodOpens','period.opensOn','date',v.opensOn)}
       <p class="muted" style="margin-top:3px">${t('period.opensHint')}</p>
       <div class="rowflex" style="gap:8px">
@@ -323,7 +364,7 @@ function periodFormCardHtml(){
         ${field('periodDlTime','period.deadlineTime','time',v.deadlineTime)}
       </div>
       <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>
-      <div class="rowflex" style="gap:6px;margin-top:8px">
+      <div class="periodFormActions">
         <button type="button" class="btn small" id="periodDraftSave">${t('period.save')}</button>
         <button type="button" class="btn small secondary" id="periodDraftCancel">${t('period.cancel')}</button>
       </div>
@@ -332,11 +373,12 @@ function periodFormCardHtml(){
 
 export function periodsCardHtml(nowMs){
   const list = periodList(S.periods);
+  const editingListed = !!S.periodDraft && list.some(p => normalizePeriod(p).firstDay===S.periodDraft.editing);
   return `<div class="card" id="periodCard">
       <h2>${t('period.title')}</h2>
       <p class="muted">${t('period.intro')}</p>
       ${list.length? list.map(p => periodRowHtml(p, nowMs)).join('') : (S.periodDraft? '' : `<p class="muted" id="periodPhase">${t('period.phase.none')}</p>`)}
-      ${S.periodDraft? periodFormCardHtml() : `<button type="button" class="btn small secondary" id="periodAdd" data-plistadd style="margin-top:10px">${t('period.add')}</button>`}
+      ${S.periodDraft? (editingListed? '' : periodFormCardHtml()) : `<button type="button" class="btn small secondary" id="periodAdd" data-plistadd style="margin-top:10px">${t('period.add')}</button>`}
     </div>`;
 }
 
