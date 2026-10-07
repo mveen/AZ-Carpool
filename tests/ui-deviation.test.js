@@ -390,7 +390,7 @@ async function fire(selector, el, ev = 'onclick') {
 const dev1 = (cars, dir = 'heen') => ({ Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [] }, ['Ma_' + dir]: { day: 'Ma', direction: dir, weekKey: '2026-W40', expiresAt: 1791500000000, cars } });
 test('closed: one line with time, driver and route, then the passengers; no form fields', () => {
   const html = render(sampleCoordinatorState, { deviationDay: 'Ma' });
-  assert.match(text(html), /Heen · Aalsmeer → Alkmaar 0\d:\d\d Jan Jansen Busstation → AFC (?:'|&#39;)34 Wijzig E Eline J Jahaimy/);
+  assert.match(text(html), /Heen · Aalsmeer → Alkmaar 0\d:\d\d Jan Jansen Busstation → AFC (?:'|&#39;)34 Wijzig Eline Jahaimy/);
   assert.match(html, /class="devRideHead" data-devtoggle="Ma\|heen\|0" aria-expanded="false"/);
   assert.doesNotMatch(html, /devDriverSel|devLocSel|devDeptimeInp|data-devdest|devKidMore/);
 });
@@ -398,7 +398,7 @@ test('open: the button says Klaar and shows time, driver, pickup, arrival (AFC \
   const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
   const s = text(html);
   assert.match(s, /Jan Jansen Busstation → AFC (?:'|&#39;)34 Klaar/);
-  assert.match(s, /Vertrek Chauffeur .* Ophalen \(alleen deze rit\) .* Aankomst AFC (?:'|&#39;)34 Alkmaar ATC Wijdewormer Kinderen E Eline ··· J Jahaimy ···/);
+  assert.match(s, /Vertrek Chauffeur .* Ophalen \(alleen deze rit\) .* Aankomst AFC (?:'|&#39;)34 Alkmaar ATC Wijdewormer Kinderen Eline ··· Jahaimy ···/);
   assert.doesNotMatch(s, /AZ Trainingscomplex/);              // the arrival button says ATC
   assert.match(html, /data-devdest="AFC"[^>]*aria-pressed="true"/); assert.match(html, /data-devdest="ATC"[^>]*aria-pressed="false"/);
   assert.match(html, /<option value="__free" >Ander adres…<\/option>/);
