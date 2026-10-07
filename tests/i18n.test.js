@@ -137,7 +137,7 @@ test('the removed shift map-button texts are gone', () => {
 });
 
 test('the onderhoudsmodus texts exist', () => {
-  for (const k of ['maint.title', 'maint.show', 'maint.save', 'maint.banner', 'maint.page.title', 'maint.page.default', 'maint.page.auto', 'maint.saved.on', 'maint.saved.off']) assert.ok(nl[k], k);
+  for (const k of ['maint.title', 'maint.show', 'maint.autosave', 'maint.banner', 'maint.page.title', 'maint.page.default', 'maint.page.auto', 'maint.saved.on', 'maint.saved.off']) assert.ok(nl[k], k);
 });
 
 test('the daughter-picker texts are gone; the coordinator-without-family text exists', () => {

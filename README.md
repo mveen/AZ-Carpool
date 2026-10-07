@@ -142,7 +142,7 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 
 ## Onderhoudsmodus (app temporarily closed)
 
-- **Where.** Beheer → *Onderhoudsmodus* (above *Melding voor iedereen*). Switch *Onderhoudsmodus aan*, optional own text (max 150 characters, plain text), *Opslaan*.
+- **Where.** Beheer → *Onderhoudsmodus* (above *Melding voor iedereen*). Switch *Onderhoudsmodus aan* and optional own text (max 150 characters, plain text). No save button: the switch saves at once, the text when the field is left (`change`). A failed save puts the switch back to what is stored.
 - **What users see.** A full-screen page (`#maintenanceOverlay`, z-index 80, above Help and sheets): "De app is even niet beschikbaar", the own text or a default line, and "Dit scherm verdwijnt vanzelf". The header, tabs and navigation behind it get `inert`, so keyboard and screen reader cannot reach them. It appears and disappears live (Firestore listener), without a reload.
 - **What the coordinator sees.** The normal app, plus a thin yellow bar (`#maintenanceBanner`) as a reminder. Only the *real* coordinator (`isRealCoordinator`) is never blocked, also in the test view as a parent (so the page itself is not visible there).
 - **Stored.** `settings/maintenance` = `{ on, text, updatedAt }`. Members read, only the coordinator writes (the general `settings/{docId}` rule; no rules change needed). Switching off keeps the text. Only `on === true` counts as on; a missing or broken document means off.

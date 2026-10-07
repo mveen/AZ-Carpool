@@ -564,7 +564,7 @@ export default {
   "maint.preview": "Zo zien gebruikers het",
   "maint.status.on": "Aan, gebruikers zien de onderhoudspagina",
   "maint.status.off": "Uit, de app is gewoon open",
-  "maint.save": "Opslaan",
+  "maint.autosave": "Wijzigingen worden meteen opgeslagen.",
   "maint.saved.on": "Onderhoudsmodus staat aan",
   "maint.saved.off": "Onderhoudsmodus staat uit",
   "maint.err.coordinatorOnly": "Alleen de coördinator kan de onderhoudsmodus wijzigen",

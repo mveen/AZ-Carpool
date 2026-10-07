@@ -53,7 +53,7 @@ test('the onderhoudsmodus article is for the coordinator only and explains the s
   assert.equal(findArticle('beheer-onderhoud', { canEdit: false }), null);
   const a = findArticle('beheer-onderhoud', { canEdit: true });
   assert.ok(a); const s = allText(a);
-  ['Onderhoudsmodus', 'Opslaan', 'niet beschikbaar'].forEach(w => assert.ok(s.includes(w), w));
+  ['Onderhoudsmodus', 'geen Opslaan-knop', 'niet beschikbaar'].forEach(w => assert.ok(s.includes(w), w));
   assert.ok(searchHelp('onderhoud', { canEdit: true }).some(x => x.id === 'beheer-onderhoud'));
 });
 

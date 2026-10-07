@@ -36,16 +36,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "2a3d68bb76d44e4bf869c951cfd1b4ec847180283155a0b8ddb17535d2598d7e",
-    "test": "53cc5c85a882962bc40fa1380c1efd52c6223016b0938d1635cfde981c4be8f5"
+    "module": "92e617d0a6a76f1007f94d2a62a100a9d6eb10e49ca5f265f2af9572af620fd5",
+    "test": "83ea18f7978125e6ae546248f18a071df7d4848a1162b4b1f91c2c3de9677c23"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "53cc5c85a882962bc40fa1380c1efd52c6223016b0938d1635cfde981c4be8f5"
+    "test": "83ea18f7978125e6ae546248f18a071df7d4848a1162b4b1f91c2c3de9677c23"
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "56d758eeb1176a697c8e78238ec2830a3360372843ca02cec8d97522a187e08f"
+    "test": "860f3153544b18a8d1fc10ee9d3ed26f506931a395b5ac007477b58cc0a2640c"
   },
   "impact.js": {
     "module": "b8324f916a3b681c343c58767a9dd0ba80e6a28fcfbc0bf7fc0c0ea9e2758586",
@@ -96,8 +96,8 @@
     "test": "6ecdd784c1a15db449a1ce08790c9c0efe8153fd048ad08b4211978699790422"
   },
   "texts-nl.js": {
-    "module": "5a0078d483c47fa1a4753a78dc093ecc51b70eee3ae8cdbb0ae76c8ecb505c4d",
-    "test": "56d758eeb1176a697c8e78238ec2830a3360372843ca02cec8d97522a187e08f"
+    "module": "c2f2c941d23700aea6f123fdb5fa23293f7b1f2c44078e1925fb22a6403d64a3",
+    "test": "860f3153544b18a8d1fc10ee9d3ed26f506931a395b5ac007477b58cc0a2640c"
   },
   "ui-beheer.js": {
     "module": "929b08b1cbd90c499ebb996f4fd20b760ad24989edd26afbc1f2b5d7fb6e1ef1",
@@ -116,8 +116,8 @@
     "test": "869b0860df6d0433d24c532be7741c46ba5eb56c5433c8031bb5950c0d51e3b7"
   },
   "ui-maintenance.js": {
-    "module": "d7dd07398164764a52f6ba8d0329639cbb757c778a0cf18537e53d5f939fff0a",
-    "test": "581e4926e5865c7a4cfb8893c0937b393ca2aaedbfacda5d57eee2a36012e327"
+    "module": "756bc45cb2abb22a8d73794921de139d31fb716409f6ccfa3506e34d2494929c",
+    "test": "2927babf9b947a7c0ae1f2b3ae2fe279ebde81a065b4227d778982dc558ff23c"
   },
   "ui-matches.js": {
     "module": "53788284c41f07ecbfca9b0e662bb58605f1f26f80ca734581548e6dad6f45a2",

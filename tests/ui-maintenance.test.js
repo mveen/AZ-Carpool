@@ -12,7 +12,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, useFakeDb, sampleDbSeed, sampleCoordinatorState, sampleParentState } from './test-support.js';
 import { S } from '../state.js';
-import { renderMaintenance, maintenanceCardHtml, maintenancePageHtml, saveMaintenance, rememberMaintenanceDraft, readMaintenanceForm } from '../ui-maintenance.js';
+import { renderMaintenance, maintenanceCardHtml, maintenancePageHtml, saveMaintenance, rememberMaintenanceDraft, readMaintenanceForm, wireMaintenanceCard } from '../ui-maintenance.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -104,6 +104,11 @@ test('what is typed survives a redraw (draft), and is escaped in the card', () =
   const h = maintenanceCardHtml();
   assert.match(h, /value="A &quot;quote&quot; &lt;b&gt;"/); assert.match(h, /id="maintenanceOn"[^>]* checked/);
 });
+test('there is no save button: the card says changes are saved at once', () => {
+  sampleCoordinatorState({ maintenance: null });
+  const h = maintenanceCardHtml();
+  assert.ok(!h.includes('maintenanceSave')); assert.ok(!/<button/.test(h)); assert.match(text(h), /meteen opgeslagen/);
+});
 test('the preview is the same page the users see', () => {
   assert.equal(text(maintenancePageHtml('Hoi')), text(maintenancePageHtml('  Hoi ')));
   assert.match(text(maintenancePageHtml('')), /We doen onderhoud aan de app/);
@@ -137,6 +142,35 @@ await testAsync('a parent cannot save it (and nothing is written)', async () => 
   setForm({ on: true, text: 'x' });
   assert.equal(await saveMaintenance(), false);
   assert.equal(fake.get('settings/maintenance'), undefined); assert.match(toast(), /Alleen de coördinator/);
+});
+// wireMaintenanceCard looks the inputs up in the page; the fake page has none, so hand it the two inputs.
+const wired = () => {
+  const inputs = [dom.el('maintenanceOn'), dom.el('maintenanceText')];
+  const before = dom.doc.querySelectorAll; dom.doc.querySelectorAll = sel => sel === '.maintenanceInput' ? inputs : [];
+  try { wireMaintenanceCard(); } finally { dom.doc.querySelectorAll = before; }
+  return { on: dom.el('maintenanceOn'), text: dom.el('maintenanceText') };
+};
+await testAsync('flipping the switch saves at once, without any button', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ maintenance: null, maintenanceDraft: null });
+  const w = wired(); setForm({ on: true, text: '' });
+  await w.on.onchange();
+  assert.equal(fake.get('settings/maintenance').on, true); assert.equal(S.maintenance.on, true); assert.match(toast(), /Onderhoudsmodus staat aan/);
+  setForm({ on: false, text: '' }); await w.on.onchange();
+  assert.equal(fake.get('settings/maintenance').on, false); assert.match(toast(), /Onderhoudsmodus staat uit/);
+});
+await testAsync('typing only updates the preview; leaving the text field saves it', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ maintenance: { on: true, text: '' }, maintenanceDraft: null });
+  const w = wired(); setForm({ on: true, text: 'Terug om 9' });
+  w.text.oninput(); assert.equal(fake.get('settings/maintenance'), undefined); assert.match(text(dom.html('maintenancePreview')), /Terug om 9/);
+  await w.text.onchange(); assert.equal(fake.get('settings/maintenance').text, 'Terug om 9');
+});
+await testAsync('a failed save puts the switch back to what is stored and says so', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ maintenance: { on: false, text: '' }, maintenanceDraft: null });
+  fake.failWrites('settings', 'permission-denied');
+  const w = wired(); setForm({ on: true, text: '' });
+  await w.on.onchange();
+  assert.equal(S.maintenance.on, false); assert.equal(S.maintenanceDraft, null); assert.equal(fake.get('settings/maintenance'), undefined);
+  assert.match(toast(), /permission-denied/);
 });
 test('readMaintenanceForm reads both fields', () => {
   setForm({ on: true, text: 'Hoi' });

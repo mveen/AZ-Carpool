@@ -69,6 +69,7 @@ export function maintenanceCardHtml(){
   return `<div class="card" id="maintenanceCard">
       <h2>${t('maint.title')}</h2>
       <p class="muted">${t('maint.intro')}</p>
+      <p class="muted">${t('maint.autosave')}</p>
       <label class="switchRow" for="maintenanceOn"><span>${t('maint.show')}</span>
         <input type="checkbox" role="switch" class="maintenanceInput switch" id="maintenanceOn"${v.on ? ' checked' : ''}></label>
       <label for="maintenanceText">${t('maint.text')}</label>
@@ -77,7 +78,6 @@ export function maintenanceCardHtml(){
       <label>${t('maint.preview')}</label>
       <div class="noticePreview maintPreview" id="maintenancePreview">${maintenancePageHtml(text)}</div>
       <div class="rowflex" style="gap:8px;margin-top:10px;justify-content:space-between;align-items:center">${status}</div>
-      <button type="button" class="btn" id="maintenanceSave" style="width:100%">${t('maint.save')}</button>
     </div>`;
 }
 
@@ -105,10 +105,17 @@ export async function saveMaintenance(){
     showToast(t(value.on ? 'maint.saved.on' : 'maint.saved.off'));
     renderMaintenance(); renderBeheer();
     return true;
-  }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return false; }
+  }catch(e){
+    // Not saved: drop what was typed, so the switch goes back to what is really stored.
+    S.maintenanceDraft = null; renderBeheer();
+    showToast(t('data.mislukt') + (e && e.message || e)); return false;
+  }
 }
 
+// No save button: the switch saves at once, the text saves when the field is left (change). Typing only updates the preview.
 export function wireMaintenanceCard(){
-  document.querySelectorAll('.maintenanceInput').forEach(el => { el.oninput = rememberMaintenanceDraft; el.onchange = rememberMaintenanceDraft; });
-  const save = document.getElementById('maintenanceSave'); if(save) save.onclick = () => { hapticTap(); return saveMaintenance(); };
+  document.querySelectorAll('.maintenanceInput').forEach(el => {
+    el.oninput = rememberMaintenanceDraft;
+    el.onchange = () => { hapticTap(); rememberMaintenanceDraft(); return saveMaintenance(); };
+  });
 }
