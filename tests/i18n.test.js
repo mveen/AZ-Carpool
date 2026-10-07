@@ -145,6 +145,8 @@ test('the Wijzigen ride card texts exist and the arrival names ATC', () => {
   assert.equal(t('loc.freeOption'), 'Ander adres…');
 });
 
+test('the Selectievolgorde label for a back-up driver exists', () => { assert.equal(t('beheer.pl_back_up'), 'pl., back-up)'); assert.equal(t('beheer.pl'), 'pl.)'); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

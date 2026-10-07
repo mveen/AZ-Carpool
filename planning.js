@@ -29,200 +29,289 @@ export function computeDepartureTime(direction, minutesList, travelLeadMinutes) 
     : minutesToTime(Math.max(...times));
 }
 
-// All k-length combinations of the given array's ELEMENTS (not indices — caller
-// passes whatever it wants combined, e.g. an array of gap-positions).
-function combinations(arr, k) {
-  const result = [];
-  function helper(start, combo) {
-    if (combo.length === k) { result.push(combo.slice()); return; }
-    for (let i = start; i <= arr.length - (k - combo.length); i++) {
-      combo.push(arr[i]);
-      helper(i + 1, combo);
-      combo.pop();
+// ============================================================
+// The planning engine for ONE shift (one weekday + heen or terug)
+// ============================================================
+// Rules, in this order of importance (written out in full in the README, "Planningslogica"):
+//   HARD   every rider in exactly one car; one driver per car, a driver in one car only; riders <= seats of the car;
+//          time spread inside a car <= gapLimitMinutes; only available drivers.
+//   1  Back-up drivers only when the standard drivers cannot do it (too few seats, or the time spread would be too big), as few as possible.
+//   2  Fewest cars.
+//   3  The drivers highest in the Selectievolgorde (lowest sum of rank numbers) that make a valid planning possible.
+//   4  Least total waiting time. (Heen: a girl arrives earlier than she needs to. Terug: a girl waits for the last one.)
+//   5  Wishes, in this order: "samen reizen" rules, then a girl riding with her own parent, then "voorkeur" rules.
+//      A wish may cost waiting time, but only inside its window (see eligible() below).
+//   6  Ties: the driver highest in the Selectievolgorde takes the car that leaves first.
+// There is NO rule about big cars for big groups: seats only decide whether it fits.
+
+const DEFAULT_RANK = 999;
+const PERMS = {};
+function permsOf(k) {
+  if (PERMS[k]) return PERMS[k];
+  const out = [], used = new Array(k).fill(false), cur = [];
+  (function rec() {
+    if (cur.length === k) { out.push(cur.slice()); return; }
+    for (let i = 0; i < k; i++) if (!used[i]) { used[i] = true; cur.push(i); rec(); cur.pop(); used[i] = false; }
+  })();
+  return (PERMS[k] = out);
+}
+
+// How many "samen reizen" rules (a) and "voorkeur" rules (c) a division satisfies. groupIds: arrays of rider ids, one per car.
+function countWishes(groupIds, togetherRules, preferRules) {
+  const carOf = new Map();
+  groupIds.forEach((g, gi) => g.forEach(id => carOf.set(id, gi)));
+  let a = 0, c = 0;
+  for (const r of togetherRules) {
+    const present = (r.ids || []).filter(id => carOf.has(id));
+    if (present.length < 2) continue;
+    if (new Set(present.map(id => carOf.get(id))).size === 1) a++;
+  }
+  for (const r of preferRules) {
+    if (!carOf.has(r.girlId)) continue;
+    const gi = carOf.get(r.girlId);
+    if ((r.withAny || []).some(id => id !== r.girlId && carOf.get(id) === gi)) c++;
+  }
+  return { a, c };
+}
+
+// Is candidate x better than y? More "samen reizen", then more own-parent cars, then more "voorkeur", then less waiting,
+// then the Selectievolgorde order matches the departure order best, then a fixed order (so the result never flips at random).
+function better(x, y) {
+  if (x.a !== y.a) return x.a > y.a;
+  if (x.b !== y.b) return x.b > y.b;
+  if (x.c !== y.c) return x.c > y.c;
+  if (x.total !== y.total) return x.total < y.total;
+  if (x.mismatch !== y.mismatch) return x.mismatch < y.mismatch;
+  return x.key < y.key;
+}
+
+// Search ONE chosen set of drivers (already sorted by rank): every division of the riders over exactly set.length cars,
+// not only divisions that follow the time order, so riders with the same time can swap cars.
+function solveSet(sorted, set, o) {
+  const n = sorted.length, K = set.length;
+  const T = sorted.map(r => r.min), ids = sorted.map(r => r.id);
+  const seats = set.map(d => d.seats), maxSeat = Math.max(...seats);
+  const heen = o.direction !== 'terug';
+  const perms = permsOf(K);
+  const permsFor = sizes => perms.filter(p => p.every((di, g) => sizes[g] <= seats[di]));
+  const groups = [];
+  let nodes = 0, aborted = false;
+
+  // groups are opened in time order, so group g is the g-th car to leave. capOf (optional): the longest wait each rider may get.
+  function run(onLeaf, pruneTotal, capOf) {
+    groups.length = 0; nodes = 0; aborted = false;
+    (function dfs(i, total) {
+      if (aborted) return;
+      if (++nodes > o.maxNodes) { aborted = true; return; }
+      if (pruneTotal(total)) return;
+      if (groups.length + (n - i) < K) return;
+      if (i === n) { if (groups.length === K) onLeaf(total); return; }
+      const t = T[i];
+      for (let g = 0; g <= groups.length && g < K; g++) {
+        if (g < groups.length) {
+          const members = groups[g].members;
+          if (members.length >= maxSeat) continue;
+          if (t - T[members[0]] > o.gap) continue;
+          if (capOf) {
+            if (heen) { if (t - T[members[0]] > capOf[i]) continue; }
+            else { let ok = true; for (const j of members) if (t - T[j] > capOf[j]) { ok = false; break; } if (!ok) continue; }
+          }
+          const add = heen ? t - T[members[0]] : members.length * (t - T[members[members.length - 1]]);
+          members.push(i);
+          dfs(i + 1, total + add);
+          members.pop();
+        } else {
+          groups.push({ members: [i] });
+          dfs(i + 1, total);
+          groups.pop();
+        }
+      }
+    })(0, 0);
+  }
+
+  function evaluate(part) {
+    const gids = part.map(m => m.map(i => ids[i]));
+    const { a, c } = countWishes(gids, o.together, o.prefer);
+    const waits = new Array(n).fill(0);
+    let total = 0;
+    part.forEach(m => {
+      const first = T[m[0]], last = T[m[m.length - 1]];
+      m.forEach(i => { const w = heen ? T[i] - first : last - T[i]; waits[i] = w; total += w; });
+    });
+    const out = [];
+    for (const p of permsFor(part.map(m => m.length))) {
+      let b = 0, mismatch = 0;
+      p.forEach((di, g) => { if (gids[g].includes(set[di].id)) b++; mismatch += Math.abs(di - g); });
+      out.push({ part, gids, perm: p, a, b, c, total, waits, mismatch, key: p.join('') + '|' + part.map(m => m.join(',')).join(';') });
     }
+    return out;
   }
-  helper(0, []);
-  return result;
+
+  // Pass 1: the least total waiting time, and every division that reaches it.
+  let bestTotal = Infinity;
+  const e0 = [];
+  run(total => {
+    if (!permsFor(groups.map(g => g.members.length)).length) return;
+    if (total < bestTotal) { bestTotal = total; e0.length = 0; }
+    if (total === bestTotal && e0.length < 3000) e0.push(groups.map(g => g.members.slice()));
+  }, total => total > bestTotal, null);
+  if (bestTotal === Infinity) return null;
+
+  // The time-optimal division that satisfies the most wishes is the starting point; what everybody waits there is the reference R.
+  let base = null;
+  for (const part of e0) for (const cand of evaluate(part)) if (!base || better(cand, base)) base = cand;
+  const R = base.waits;
+  let best = base;
+
+  // Pass 2: other divisions may cost waiting time, but only to win a wish, and only inside that wish's window:
+  // nobody may wait longer than max(her wait in the starting point, the window of the wish that is won).
+  const prefW = o.prefW, parentW = o.parentW;
+  const cap = R.map(r => Math.max(r, prefW, parentW));
+  const eligible = cand => {
+    if (cand.total <= bestTotal) return true;
+    let need = 0;
+    for (let i = 0; i < n; i++) if (cand.waits[i] > R[i] && cand.waits[i] > need) need = cand.waits[i];
+    return (cand.a > base.a && need <= prefW) || (cand.b > base.b && need <= parentW) || (cand.c > base.c && need <= prefW);
+  };
+  run(() => {
+    for (const cand of evaluate(groups.map(g => g.members.slice()))) if (eligible(cand) && better(cand, best)) best = cand;
+  }, () => false, cap);
+
+  return {
+    cars: best.part.map((m, g) => ({ driverId: set[best.perm[g]].id, girlIds: m.map(i => ids[i]) })),
+    totalWait: best.total,
+  };
 }
 
-// Can every cluster (by SIZE) be matched to a distinct driver seat count?
-// Sort both descending and compare pairwise — this is the standard, provably
-// correct feasibility test for "assign N differently-sized items to N bins of
-// varying capacity, one item per bin, each item's size <= its bin's capacity".
-function seatsFeasible(clusterSizes, driverSeats) {
-  const sizesDesc = [...clusterSizes].sort((a, b) => b - a);
-  const seatsDesc = [...driverSeats].sort((a, b) => b - a);
-  if (sizesDesc.length > seatsDesc.length) return false;
-  for (let i = 0; i < sizesDesc.length; i++) {
-    if (seatsDesc[i] < sizesDesc[i]) return false;
+// Best effort when no valid planning exists at all: standard drivers first, then back-ups, in Selectievolgorde order; riders in time
+// order go to the car where the time spread grows least; whoever fits nowhere is handed back as unplaced.
+function planPartial(sorted, pool, o) {
+  const order = [...pool].sort((a, b) => (b.standard ? 1 : 0) - (a.standard ? 1 : 0) || a.rank - b.rank || String(a.id).localeCompare(String(b.id)));
+  const cars = [], unplaced = [];
+  for (const r of sorted) {
+    let pick = null;
+    for (const c of cars) {
+      if (c.girls.length >= c.driver.seats || r.min - c.girls[0].min > o.gap) continue;
+      const grow = r.min - c.girls[c.girls.length - 1].min;
+      if (!pick || grow < pick.grow) pick = { c, grow };
+    }
+    if (pick) { pick.c.girls.push(r); continue; }
+    const next = order.find(d => !cars.some(c => c.driver.id === d.id));
+    if (next) cars.push({ driver: next, girls: [r] }); else unplaced.push(r.id);
   }
-  return true;
-}
-
-function gapsFeasible(clusters, gapLimitMinutes) {
-  return clusters.every(c => c[c.length - 1].min - c[0].min <= gapLimitMinutes);
-}
-
-// How well a candidate clustering respects "samen reizen" (hard-ish: heavily
-// penalised if broken) and "voorkeur" (soft: small bonus if satisfied) rules.
-// Counts how many togetherRules/preferRules a candidate clustering SATISFIES.
-// Deliberately no penalty for breaking one — "when possible" means these are
-// a bonus to chase, never an obligation to enforce regardless of cost.
-function countSatisfiedPrefs(clusters, togetherRules, preferRules) {
-  let satisfied = 0;
-  (togetherRules || []).forEach(r => {
-    const ids = (r.ids || []).filter(gid => clusters.some(c => c.some(x => x.id === gid)));
-    if (ids.length < 2) return;
-    const clusterIdxs = new Set(ids.map(gid => clusters.findIndex(c => c.some(x => x.id === gid))));
-    if (clusterIdxs.size === 1) satisfied++;
-  });
-  (preferRules || []).forEach(r => {
-    const girlIdx = clusters.findIndex(c => c.some(x => x.id === r.girlId));
-    if (girlIdx < 0) return;
-    const anySame = (r.withAny || []).some(id => clusters[girlIdx].some(x => x.id === id));
-    if (anySame) satisfied++;
-  });
-  return satisfied;
-}
-// Total minutes of "spread" across all clusters combined — the real cost a
-// family experiences (arriving too early for heen, or waiting for the last
-// passenger for terug) when people with different times share a car.
-function totalWaitingMinutes(clusters) {
-  return clusters.reduce((sum, c) => sum + (c[c.length - 1].min - c[0].min), 0);
+  return { cars: cars.map(c => ({ driverId: c.driver.id, girlIds: c.girls.map(g => g.id) })), unplaced };
 }
 
 /**
- * Splits a shift's girls into the FEWEST cars whose sizes can actually be
- * matched to the available drivers' seats, searching every possible way to
- * make that many cuts (not just the single largest time gaps) so a feasible
- * split is never missed just because it wasn't the most "obvious" one.
- *
- * Among the feasible splits for that car count, the one with the LEAST total
- * waiting time normally wins — except a togetherRules/preferRules match adds
- * a bonus worth `prefWindowMinutes` of "extra acceptable waiting" per rule
- * satisfied. This is a genuinely SOFT preference: it can tip a close call,
- * but a rule is never honored at a cost larger than that budget. There is no
- * penalty for breaking a rule — only a bonus for satisfying one.
- *
- * @param {{id:string,min:number}[]} girls
- * @param {number[]} driverSeats - passenger-seat counts of every AVAILABLE driver this shift
- * @param {number} gapLimitMinutes - hard ceiling: no cluster may ever exceed this span
- * @param {{ids:string[]}[]} togetherRules
- * @param {{girlId:string,withAny:string[]}[]} preferRules
- * @param {number} prefWindowMinutes - "Voorkeur-marge": extra waiting minutes one satisfied rule is worth
- * @returns {string[][]} clusters of girl ids, in ascending start-time order
+ * Plans one shift.
+ * @param {{id:string,min:number}[]} riders   who needs a ride, with the time in minutes (heen: arrival needed; terug: ready to be picked up)
+ * @param {{id:string,seats:number,standard?:boolean,rank?:number}[]} drivers   every available driver (standard or back-up), Flex drivers included
+ * @param {'heen'|'terug'} direction
+ * @returns {{cars:{driverId:string,girlIds:string[]}[], unplaced:string[], backupsUsed:number, partial:boolean}}
+ *   cars are in departure order; girlIds are in time order. partial = no complete planning exists, so some riders are unplaced.
  */
-export function planClusters({ girls, driverSeats, gapLimitMinutes, togetherRules = [], preferRules = [], prefWindowMinutes = 30 }) {
-  if (!girls.length) return [];
-  const sorted = [...girls].sort((a, b) => a.min - b.min);
+export function planShift(input) {
+  const o = {
+    direction: input.direction === 'terug' ? 'terug' : 'heen',
+    gap: input.gapLimitMinutes != null ? input.gapLimitMinutes : 180,
+    together: input.togetherRules || [], prefer: input.preferRules || [],
+    prefW: input.prefWindowMinutes != null ? input.prefWindowMinutes : 30,
+    parentW: input.parentPrefWindowMinutes != null ? input.parentPrefWindowMinutes : 60,
+    maxNodes: input.maxNodes || 3000000,
+  };
+  const sorted = [...(input.riders || [])].sort((a, b) => a.min - b.min || String(a.id).localeCompare(String(b.id)));
   const n = sorted.length;
-  const gapPositions = [];
-  for (let i = 1; i < n; i++) gapPositions.push(i);
+  if (!n) return { cars: [], unplaced: [], backupsUsed: 0, partial: false };
+  const seen = new Set();
+  let pool = (input.drivers || []).filter(d => d.seats > 0 && !seen.has(d.id) && seen.add(d.id))
+    .map(d => ({ id: d.id, seats: d.seats, standard: d.standard !== false, rank: d.rank != null ? d.rank : DEFAULT_RANK }))
+    .sort((a, b) => a.rank - b.rank || String(a.id).localeCompare(String(b.id)));
+  if (pool.length > 12) pool = [...pool].sort((a, b) => (b.standard ? 1 : 0) - (a.standard ? 1 : 0) || a.rank - b.rank).slice(0, 12).sort((a, b) => a.rank - b.rank || String(a.id).localeCompare(String(b.id)));
+  const D = pool.length;
 
-  function splitAt(boundaryIdxs) {
-    const sortedB = [...boundaryIdxs].sort((a, b) => a - b);
-    const clusters = []; let start = 0;
-    sortedB.forEach(idx => { clusters.push(sorted.slice(start, idx)); start = idx; });
-    clusters.push(sorted.slice(start));
-    return clusters;
+  // Every set of drivers, best first: fewest back-ups, then fewest cars, then lowest sum of rank numbers.
+  const sets = [];
+  for (let mask = 1; mask < (1 << D); mask++) {
+    const set = []; let seatSum = 0, backups = 0, rankSum = 0;
+    for (let i = 0; i < D; i++) if (mask & (1 << i)) { set.push(pool[i]); seatSum += pool[i].seats; if (!pool[i].standard) backups++; rankSum += pool[i].rank; }
+    if (set.length > n || seatSum < n) continue;
+    sets.push({ set, backups, k: set.length, rankSum, key: set.map(d => d.id).join('|') });
   }
+  sets.sort((x, y) => x.backups - y.backups || x.k - y.k || x.rankSum - y.rankSum || (x.key < y.key ? -1 : 1));
+  for (const s of sets) {
+    const r = solveSet(sorted, s.set, o);
+    if (r) return { cars: r.cars, unplaced: [], backupsUsed: s.backups, partial: false };
+  }
+  const p = planPartial(sorted, pool, o);
+  const byId = new Map(pool.map(d => [d.id, d]));
+  return { cars: p.cars, unplaced: p.unplaced, backupsUsed: p.cars.filter(c => !byId.get(c.driverId).standard).length, partial: true };
+}
 
-  for (let K = 1; K <= n; K++) {
-    const need = K - 1;
-    if (need > gapPositions.length) break;
-    const combos = need === 0 ? [[]] : combinations(gapPositions, need);
-    let best = null, bestScore = -Infinity;
-    for (const combo of combos) {
-      const clusters = splitAt(combo);
-      const sizes = clusters.map(c => c.length);
-      if (!seatsFeasible(sizes, driverSeats)) continue;
-      if (!gapsFeasible(clusters, gapLimitMinutes)) continue;
-      const satisfied = countSatisfiedPrefs(clusters, togetherRules, preferRules);
-      const score = -totalWaitingMinutes(clusters) + satisfied * prefWindowMinutes;
-      if (score > bestScore) { bestScore = score; best = clusters; }
+// Can ANY valid planning be made with these drivers? Written separately from planShift on purpose (plain search over drivers),
+// so checkPlan does not just repeat the planner's own reasoning. Returns true / false, or null when the search was too big.
+function feasible(sorted, drivers, gap) {
+  const n = sorted.length;
+  const used = drivers.map(() => ({ count: 0, first: 0 }));
+  let nodes = 0;
+  function go(i) {
+    if (++nodes > 2000000) return null;
+    if (i === n) return true;
+    const triedEmpty = new Set();
+    for (let d = 0; d < drivers.length; d++) {
+      const u = used[d];
+      if (u.count >= drivers[d].seats) continue;
+      if (u.count === 0) { if (triedEmpty.has(drivers[d].seats)) continue; triedEmpty.add(drivers[d].seats); } // two empty cars with equal seats are the same
+      if (u.count > 0 && sorted[i].min - u.first > gap) continue;
+      const before = { count: u.count, first: u.first };
+      if (u.count === 0) u.first = sorted[i].min;
+      u.count++;
+      const r = go(i + 1);
+      u.count = before.count; u.first = before.first;
+      if (r !== false) return r;
     }
-    if (best) return best.map(c => c.map(x => x.id));
+    return false;
   }
-  // Nothing feasible at any K (not enough total seats however split) — best-effort
-  // fallback so the coordinator still sees SOME clustering to adjust manually:
-  // one car per available driver, split at the largest gaps.
-  const fallbackK = Math.min(n, Math.max(1, driverSeats.length));
-  const need = fallbackK - 1;
-  let boundaries = [];
-  if (need > 0) {
-    const gapsSorted = gapPositions
-      .map(idx => ({ idx, size: sorted[idx].min - sorted[idx - 1].min }))
-      .sort((a, b) => b.size - a.size);
-    boundaries = gapsSorted.slice(0, need).map(g => g.idx);
-  }
-  return splitAt(boundaries).map(c => c.map(x => x.id));
+  return go(0);
 }
 
 /**
- * Assigns each cluster to a driver: largest clusters first (so a driver with
- * barely-enough seats isn't "used up" on a smaller car first), then strictly
- * by shift-priority order (drivers[] must already be sorted the way the
- * caller wants — e.g. availability tier first, then Selectievolgorde rank).
- * Deliberately has NO "own parent" preference here — that belongs at
- * cluster-formation time only, weighed against real cost.
- *
- * @param {string[][]} clusters
- * @param {{id:string,seats:number}[]} priorityDrivers - sorted best-first
- * @returns {{driverId:string,girlIds:string[]}[] | null}
+ * The safety net: checks a finished planning against the hard rules and returns a list of problems (empty = fine).
+ * Run after every proposal. A proposal with problems is never shown as "Aanbevolen".
  */
-export function planPrimaryAssignment(clusters, priorityDrivers) {
-  if (!clusters.length) return null;
-  if (!priorityDrivers.length) return null;
-  const used = new Set();
-  const order = clusters.map((c, i) => i).sort((a, b) => clusters[b].length - clusters[a].length);
-  const byIndex = {};
-  for (const i of order) {
-    const cluster = clusters[i];
-    // Pure shift-priority order — priorityDrivers is expected to already be sorted the way the
-    // caller wants (availability tier first, then Selectievolgorde rank). No "own parent" override
-    // here: that preference belongs at cluster-FORMATION time (weighed against real waiting-time
-    // cost via prefWindowMinutes), never at driver-selection time where it would otherwise let an
-    // own-parent match jump the queue over a strictly higher-priority eligible driver for free.
-    const eligible = priorityDrivers.filter(d => !used.has(d.id) && d.seats >= cluster.length);
-    if (!eligible.length) return null;
-    const driver = eligible[0];
-    used.add(driver.id);
-    byIndex[i] = { driverId: driver.id, girlIds: cluster };
+export function checkPlan(input, plan) {
+  const problems = [];
+  const gap = input.gapLimitMinutes != null ? input.gapLimitMinutes : 180;
+  const minOf = new Map((input.riders || []).map(r => [r.id, r.min]));
+  const driverOf = new Map((input.drivers || []).map(d => [d.id, d]));
+  const placed = new Map();
+  const driving = new Set();
+  for (const car of plan.cars || []) {
+    const d = driverOf.get(car.driverId);
+    if (!d) { problems.push('Chauffeur ' + car.driverId + ' is niet beschikbaar voor deze shift.'); continue; }
+    if (driving.has(car.driverId)) problems.push('Chauffeur ' + car.driverId + ' rijdt twee auto\'s.');
+    driving.add(car.driverId);
+    if (!car.girlIds.length) problems.push('Auto van ' + car.driverId + ' is leeg.');
+    if (car.girlIds.length > d.seats) problems.push('Auto van ' + car.driverId + ' heeft te weinig plaatsen (' + car.girlIds.length + ' > ' + d.seats + ').');
+    const times = car.girlIds.map(id => minOf.get(id)).filter(v => v != null);
+    if (times.length && Math.max(...times) - Math.min(...times) > gap) problems.push('Auto van ' + car.driverId + ' overschrijdt het maximale tijdsverschil.');
+    car.girlIds.forEach(id => placed.set(id, (placed.get(id) || 0) + 1));
   }
-  return clusters.map((c, i) => byIndex[i]);
-}
-
-/**
- * Like planPrimaryAssignment, but never gives up: every cluster that can get a driver gets one (largest first,
- * drivers in the given priority order). A cluster that is too big for every free driver is not thrown away: the free driver
- * with the most seats takes the first passengers (earliest first) and the rest is handed back, as are clusters without any
- * free driver, for the coordinator to solve.
- *
- * @param {string[][]} clusters
- * @param {{id:string,seats:number}[]} priorityDrivers - sorted best-first
- * @returns {{ assigned: {driverId:string,girlIds:string[]}[], unassigned: string[][] }}
- */
-export function planPartialAssignment(clusters, priorityDrivers) {
-  const used = new Set();
-  const order = clusters.map((c, i) => i).sort((a, b) => clusters[b].length - clusters[a].length);
-  const byIndex = {}, unassigned = [];
-  for (const i of order) {
-    const cluster = clusters[i];
-    const free = (priorityDrivers || []).filter(d => !used.has(d.id));
-    let driver = free.find(d => d.seats >= cluster.length);
-    if (!driver) {
-      // too big for everybody: the roomiest free driver takes as many as fit (the first in the cluster), the rest goes back
-      driver = free.filter(d => d.seats > 0).sort((a, b) => b.seats - a.seats)[0];
-      if (!driver) { unassigned.push(cluster); continue; }
-      used.add(driver.id);
-      byIndex[i] = { driverId: driver.id, girlIds: cluster.slice(0, driver.seats) };
-      unassigned.push(cluster.slice(driver.seats));
-      continue;
-    }
-    used.add(driver.id);
-    byIndex[i] = { driverId: driver.id, girlIds: cluster };
+  for (const r of input.riders || []) {
+    const count = placed.get(r.id) || 0;
+    const isUnplaced = (plan.unplaced || []).includes(r.id);
+    if (count > 1) problems.push(r.id + ' zit in meer dan één auto.');
+    if (count === 0 && !isUnplaced) problems.push(r.id + ' zit in geen enkele auto en staat niet als niet ingedeeld.');
+    if (count === 1 && isUnplaced) problems.push(r.id + ' zit in een auto én staat als niet ingedeeld.');
   }
-  return { assigned: clusters.map((c, i) => byIndex[i]).filter(Boolean), unassigned };
+  for (const id of placed.keys()) if (!minOf.has(id)) problems.push(id + ' is geen passagier van deze shift.');
+  // A back-up driver is only allowed when the standard drivers alone cannot cover this shift.
+  const usesBackup = (plan.cars || []).some(c => driverOf.get(c.driverId) && driverOf.get(c.driverId).standard === false);
+  if (usesBackup && !plan.partial) {
+    const sorted = [...(input.riders || [])].sort((a, b) => a.min - b.min);
+    const standard = (input.drivers || []).filter(d => d.standard !== false && d.seats > 0);
+    if (feasible(sorted, standard, gap) === true) problems.push('Er rijdt een back-up-chauffeur terwijl de standaard-chauffeurs de shift aankunnen.');
+  }
+  return problems;
 }
 
 /**

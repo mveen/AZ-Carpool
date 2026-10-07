@@ -3,7 +3,7 @@ import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, PDF_SEED } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
-import { availableDrivers, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
+import { availableDrivers, driverNameHtml, isStandaardDriver, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
@@ -81,7 +81,7 @@ export function renderShiftPriorityRows(shiftKeyVal){
   if(!rows.length){ div.innerHTML=`<p class="muted">${t('beheer.geen_beschikbare_chauffeurs_voor_deze')}</p>`; return; }
   div.innerHTML = rows.map(([id,f],i)=>`
     <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--border)">
-      <span>${i+1}. ${esc(f.parentName||'?')} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} ${t('beheer.pl')}</span></span>
+      <span>${i+1}. ${driverNameHtml(id)} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} ${t(isStandaardDriver(f,day,direction)?'beheer.pl':'beheer.pl_back_up')}</span></span>
       <span style="display:flex;gap:4px">
         <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>${phIcon('arrow-up')}</button>
         <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>${phIcon('arrow-down')}</button>

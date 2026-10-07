@@ -556,5 +556,13 @@ await testAsync('the buttons work: make (one tap), restore and delete (two taps,
 });
 async function db_set(fake, path, data) { const { db } = await import('../data.js'); await db.doc(path).set(data); }
 
+test('Selectievolgorde: a back-up driver is marked "back-up", a standard driver is not', () => {
+  sampleCoordinatorState({ selectedShiftKey: 'Ma_heen' });
+  S.families = { ...S.families, f5: { ...S.families.f5, availability: { ...S.families.f5.availability, Ma: { heen: false, terug: false, backupHeen: true, backupTerug: false } } } };
+  withFakeNow(NOW, () => renderShiftPriorityRows('Ma_heen'));
+  const rows = text(dom.html('shiftPriorityRows'));
+  assert.match(rows, /Sanne Smit \(Lois, 3 pl\., back-up\)/); assert.match(rows, /Jan Jansen \(Eline, 3 pl\.\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

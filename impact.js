@@ -7,40 +7,43 @@
 // Firestore is the on/off switch (settings/features), which is deleted again when the switch goes off.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { planClusters, planPrimaryAssignment, timeToMinutes } from './planning.js';
+import { planShift, timeToMinutes } from './planning.js';
 import { db } from './data.js';
 import { esc, openSheet, phIcon, showToast } from './ui-common.js';
 import { effectiveCars, shiftFamilies } from './rides.js';
 
 // ---------- pure: the analysis ----------
 const seatsOf = f => Math.max(0, ((f && f.capacity) || 0) - 1);
-const isFlexFam = f => !!f && f.familyType === 'flex';
 const availOf = (f, day, dir) => (f && f.availability && f.availability[day]) || {};
 const isStandaard = (f, day, dir) => !!availOf(f, day, dir)[dir];
 const isBackup = (f, day, dir) => !!availOf(f, day, dir)[dir === 'heen' ? 'backupHeen' : 'backupTerug'];
 const withGirls = cars => (cars || []).filter(c => (c.girlIds || []).length);
 
 // Fewest cars the planning engine needs for the girls in these cars, or null when it finds no solution.
-function engineCars({ day, direction, cars, families, settings, prefs }) {
-  const girls = [];
+function engineCars({ day, direction, cars, families, settings, prefs, priority }) {
+  const riders = [];
   withGirls(cars).forEach(c => c.girlIds.forEach(id => {
     const f = families[id];
     const min = timeToMinutes((f && f.schedule && f.schedule[day] && f.schedule[day][direction]) || c.departureTime || '');
-    if (min != null) girls.push({ id, min });
+    if (min != null) riders.push({ id, min });
   }));
-  if (!girls.length) return 0;
+  if (!riders.length) return 0;
+  const rankOf = id => (priority && priority[id] != null ? priority[id] : 999);
   const drivers = new Map();
-  Object.entries(families).forEach(([id, f]) => { if (!isFlexFam(f) && (isStandaard(f, day, direction) || isBackup(f, day, direction))) drivers.set(id, seatsOf(f)); });
-  withGirls(cars).forEach(c => { if (c.driverFamilyId && families[c.driverFamilyId]) drivers.set(c.driverFamilyId, seatsOf(families[c.driverFamilyId])); });
+  Object.entries(families).forEach(([id, f]) => {
+    const std = isStandaard(f, day, direction);
+    if (std || isBackup(f, day, direction)) drivers.set(id, { id, seats: seatsOf(f), standard: std, rank: rankOf(id) });
+  });
+  withGirls(cars).forEach(c => { if (c.driverFamilyId && families[c.driverFamilyId]) drivers.set(c.driverFamilyId, { id: c.driverFamilyId, seats: seatsOf(families[c.driverFamilyId]), standard: true, rank: rankOf(c.driverFamilyId) }); });
   const rules = (prefs && prefs.rules) || [];
-  const clusters = planClusters({
-    girls, driverSeats: [...drivers.values()],
+  const plan = planShift({
+    riders, drivers: [...drivers.values()], direction,
     gapLimitMinutes: ((settings && settings.gapThresholdHours) || 3) * 60,
     togetherRules: rules.filter(r => r.type === 'together'), preferRules: rules.filter(r => r.type === 'prefer'),
     prefWindowMinutes: settings && settings.prefWindowMinutes != null ? settings.prefWindowMinutes : 30,
+    parentPrefWindowMinutes: settings && settings.parentPrefWindowMinutes != null ? settings.parentPrefWindowMinutes : 60,
   });
-  const pool = [...drivers.entries()].map(([id, seats]) => ({ id, seats })).sort((a, b) => b.seats - a.seats);
-  return planPrimaryAssignment(clusters, pool) ? clusters.length : null;
+  return plan.unplaced.length ? null : plan.cars.length;
 }
 
 // ctx: { day, direction, before:[car], after:[car], families:{id:family}, settings, prefs, priority:{id:rank} }
@@ -59,15 +62,15 @@ export function analyzeImpact(ctx) {
     else if (c.girlIds.length > seatsOf(f)) need = Math.max(need, c.girlIds.length - seatsOf(f));
   });
   if (need) {
-    const pool = Object.entries(families).filter(([id, f]) => !isFlexFam(f) && !driving.has(id) && seatsOf(f) >= need).sort((a, b) => rank(a[0]) - rank(b[0]));
+    const pool = Object.entries(families).filter(([id, f]) => !driving.has(id) && seatsOf(f) >= need).sort((a, b) => rank(a[0]) - rank(b[0]));
     const std = pool.find(([, f]) => isStandaard(f, day, direction));
     if (std) return { kind: 'needSeat', driverId: std[0] };
     const bak = pool.find(([, f]) => isBackup(f, day, direction));
     return { kind: 'noSolution', backupId: bak ? bak[0] : null };
   }
 
-  const nb = engineCars({ day, direction, cars: before, families, settings: ctx.settings, prefs: ctx.prefs });
-  const na = engineCars({ day, direction, cars: after, families, settings: ctx.settings, prefs: ctx.prefs });
+  const nb = engineCars({ day, direction, cars: before, families, settings: ctx.settings, prefs: ctx.prefs, priority: ctx.priority });
+  const na = engineCars({ day, direction, cars: after, families, settings: ctx.settings, prefs: ctx.prefs, priority: ctx.priority });
   if ((na != null && nb != null && na < nb) || afterCars.length < withGirls(before).length) return { kind: 'saves' };
   return { kind: 'none' };
 }
