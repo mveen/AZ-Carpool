@@ -71,5 +71,9 @@ test('the last-session map starts empty and has no listener', () => {
   assert.deepEqual(S.lastSeenByFamily, {}); assert.equal(S.sessionsUnsub, null);
 });
 
+test('the period back-ups start empty and have no listener', () => {
+  assert.deepEqual(S.periodBackups, {}); assert.equal(S.periodBackupsUnsub, null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

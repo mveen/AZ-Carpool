@@ -335,6 +335,22 @@ export default [
     tab: 'beheer',
   },
   {
+    id: 'periode-backup',
+    title: 'Beheer: een back-up maken van een periode, om veilig te testen',
+    keywords: 'back-up backup periode testen uitproberen terugzetten herstellen tijden doorgegeven tijdelijk rooster veilig overschrijven',
+    coordinatorOnly: true,
+    body: [
+      'Wil je iets uitproberen in een periode met andere tijden? Maak dan eerst een back-up. Zo overschrijf je niet wat ouders hebben doorgegeven.',
+      'Bij Perioden met andere tijden staat onder elke periode een regel Back-ups. Tik erop en daarna op Back-up maken. De back-up bewaart drie dingen: de periode zelf (naam, dagen, deadline), alles wat gezinnen hebben doorgegeven en het tijdelijke rooster. Je kunt tot 10 back-ups per periode hebben.',
+      'Bij elke back-up staat het moment en hoeveel gezinnen en ritten erin zitten. Eronder staat wat er sindsdien is veranderd.',
+      'Terugzetten: tik op het pijltje-icoon en tik nog een keer. Alles gaat dan terug naar het moment van de back-up. Heeft een ouder sindsdien iets doorgegeven of aangepast, dan gaat dat verloren. De app zegt hoeveel gezinnen dat zijn voordat je bevestigt.',
+      'Vlak voor het terugzetten maakt de app zelf een back-up van de stand van dat moment (Automatisch). Zet je per ongeluk de verkeerde terug, dan zet je die automatische back-up terug. Er is per periode één automatische back-up. Een nieuwe vervangt de vorige.',
+      'Met het prullenbak-icoon verwijder je een back-up. Verwijder je een hele periode, dan gaan de back-ups van die periode ook weg.',
+      'Tip: laat ouders niet invullen terwijl je test, of sluit de deadline eerst. Dan verlies je bij het terugzetten niets.',
+    ],
+    tab: 'beheer',
+  },
+  {
     id: 'periode-rooster',
     title: 'Rooster: het tijdelijke rooster voor een periode maken',
     keywords: 'tijdelijk rooster periode vakantie proefwerkweek auto indeling opnieuw indelen chauffeur verplaatsen niet ingedeeld doorgegeven',

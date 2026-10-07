@@ -19,6 +19,7 @@ import {
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
+  createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -600,6 +601,103 @@ await testAsync('a refused delete is reported and nothing is removed from the st
 test('rebuildPeriods and migrateLegacyPeriod are safe without anything to do', async () => {
   resetState({ periodsColl: {}, legacyPeriod: null }); rebuildPeriods(); assert.deepEqual(S.periods, {});
   assert.equal(migrateLegacyPeriod() instanceof Promise, true);
+});
+
+console.log('\n=== Back-ups of a period (Beheer) ===');
+const T0 = new Date(NOW).getTime(), at = n => new Date(T0 + n).toISOString();
+const E = (fam, heen) => ({ familyId: fam, periodFirstDay: '2026-10-26', days: { '2026-10-26': { heen, terug: '15:00' } }, submittedAt: 1, by: 'Ouder' });
+const SH = (date, dir, driver) => ({ periodFirstDay: '2026-10-26', date, direction: dir, cars: [{ driverFamilyId: driver, girlIds: ['f2'], departureTime: '08:00' }], madeAt: 1, by: 'C' });
+const bkSeed = () => ({ ...sampleDbSeed(), 'periods/2026-10-26': { ...A, deadlineAt: 1 }, 'periods/2026-11-09': { ...B, deadlineAt: 2 }, 'periodEntries/2026-10-26_f2': E('f2', '09:00'), 'periodEntries/2026-11-09_f2': { ...E('f2', '10:00'), periodFirstDay: '2026-11-09' }, 'periodCars/2026-10-26_2026-10-26_heen': SH('2026-10-26', 'heen', 'f1') });
+const bkState = (fake, patch = {}) => twoP({ periodEntries: { '2026-10-26_f2': fake.get('periodEntries/2026-10-26_f2'), '2026-11-09_f2': fake.get('periodEntries/2026-11-09_f2') }, periodCars: { '2026-10-26_2026-10-26_heen': fake.get('periodCars/2026-10-26_2026-10-26_heen') }, ...patch });
+await testAsync('createPeriodBackup stores the period, its entries and its shifts as periodBackups/<firstDay>_<ms>, and nothing of another period', async () => {
+  const fake = useFakeDb(bkSeed()); bkState(fake);
+  assert.equal(await withFakeNowAsync(NOW, () => createPeriodBackup('2026-10-26')), true);
+  const [id, doc] = [...fake.collection('periodBackups')][0];
+  assert.equal(id, '2026-10-26_' + T0); assert.equal(doc.periodFirstDay, '2026-10-26'); assert.equal(doc.auto, false); assert.equal(doc.createdAt, T0);
+  assert.deepEqual(doc.period, A); assert.deepEqual(Object.keys(doc.entries), ['2026-10-26_f2']); assert.deepEqual(Object.keys(doc.cars), ['2026-10-26_2026-10-26_heen']);
+  assert.ok(S.periodBackups[id]); assert.equal(toast(), 'Back-up gemaakt'); assert.equal(periodBackupList('2026-10-26').length, 1);
+});
+await testAsync('createPeriodBackup: only the coordinator, only for a period that exists, at most 10 by hand, and a refused write changes nothing', async () => {
+  let fake = useFakeDb(bkSeed()); bkState(fake, { canEdit: false });
+  assert.equal(await createPeriodBackup('2026-10-26'), false); assert.equal(toast(), 'Alleen de coördinator kan het tijdelijke rooster aanpassen.'); assert.equal([...fake.collection('periodBackups')].length, 0);
+  fake = useFakeDb(bkSeed()); bkState(fake);
+  assert.equal(await createPeriodBackup('nope'), false); assert.equal([...fake.collection('periodBackups')].length, 0);
+  const full = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`2026-10-26_${i + 1}`, { periodFirstDay: '2026-10-26', createdAt: i + 1, by: '', auto: false, period: A, entries: {}, cars: {} }]));
+  bkState(fake, { periodBackups: { ...full, '2026-10-26_auto': { ...full['2026-10-26_1'], auto: true } } });
+  assert.equal(await createPeriodBackup('2026-10-26'), false); assert.equal(toast(), 'Je hebt al 10 back-ups van deze periode. Verwijder er eerst een.');
+  S.periodBackups = {}; fake.failWrites('periodBackups/', 'permission-denied');
+  assert.equal(await createPeriodBackup('2026-10-26'), false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periodBackups, {});
+});
+await testAsync('restorePeriodBackup puts the period back exactly, removes what was added since, and leaves the other period alone', async () => {
+  const fake = useFakeDb(bkSeed()); bkState(fake);
+  await withFakeNowAsync(NOW, () => createPeriodBackup('2026-10-26')); const id = '2026-10-26_' + T0;
+  // "testing": a family changes, a new one hands in, the rooster is re-planned and the period is edited
+  await db.doc('periodEntries/2026-10-26_f2').set(E('f2', '07:00')); await db.doc('periodEntries/2026-10-26_f3').set(E('f3', '08:00'));
+  await db.doc('periodCars/2026-10-26_2026-10-26_heen').set(SH('2026-10-26', 'heen', 'f9')); await db.doc('periodCars/2026-10-26_2026-10-27_heen').set(SH('2026-10-27', 'heen', 'f1'));
+  await db.doc('periods/2026-10-26').set({ ...A, name: 'Getest', deadlineAt: 99 });
+  S.periodEntries = Object.fromEntries(fake.collection('periodEntries')); S.periodCars = Object.fromEntries(fake.collection('periodCars')); S.periodsColl = { ...S.periodsColl, '2026-10-26': { ...A, name: 'Getest' } }; rebuildPeriods();
+  assert.equal(await withFakeNowAsync(at(1000), () => restorePeriodBackup(id)), true);
+  assert.equal(fake.get('periodEntries/2026-10-26_f2').days['2026-10-26'].heen, '09:00'); assert.equal(fake.get('periodEntries/2026-10-26_f3'), undefined);
+  assert.equal(fake.get('periodCars/2026-10-26_2026-10-26_heen').cars[0].driverFamilyId, 'f1'); assert.equal(fake.get('periodCars/2026-10-26_2026-10-27_heen'), undefined);
+  assert.equal(fake.get('periods/2026-10-26').name, 'Herfstvakantie'); assert.equal(fake.get('periods/2026-10-26').deadlineAt, new Date('2026-10-16T12:00:00+02:00').getTime());
+  assert.equal(fake.get('periodEntries/2026-11-09_f2').days['2026-10-26'].heen, '10:00', 'the other period is untouched'); assert.ok(fake.get('periods/2026-11-09'));
+  assert.equal(S.periods['2026-10-26'].name, 'Herfstvakantie'); assert.deepEqual(Object.keys(S.periodEntries).sort(), ['2026-10-26_f2', '2026-11-09_f2']); assert.deepEqual(Object.keys(S.periodCars), ['2026-10-26_2026-10-26_heen']);
+  assert.equal(toast(), 'Back-up teruggezet');
+});
+await testAsync('restore first stores the state of that moment as the automatic back-up, so a restore can be undone', async () => {
+  const fake = useFakeDb(bkSeed()); bkState(fake);
+  await withFakeNowAsync(NOW, () => createPeriodBackup('2026-10-26')); const id = '2026-10-26_' + T0;
+  await db.doc('periodEntries/2026-10-26_f3').set(E('f3', '08:00')); S.periodEntries = Object.fromEntries(fake.collection('periodEntries'));
+  await withFakeNowAsync(at(5000), () => restorePeriodBackup(id));
+  const auto = fake.get('periodBackups/2026-10-26_auto'); assert.ok(auto); assert.equal(auto.auto, true); assert.equal(auto.createdAt, T0 + 5000); assert.ok(auto.entries['2026-10-26_f3']);
+  assert.equal(fake.get('periodEntries/2026-10-26_f3'), undefined);
+  assert.equal(await withFakeNowAsync(at(9000), () => restorePeriodBackup('2026-10-26_auto')), true);
+  assert.ok(fake.get('periodEntries/2026-10-26_f3'), 'the undo brought the new family back');
+  assert.equal(fake.get('periodBackups/2026-10-26_auto').createdAt, T0 + 9000, 'the automatic one is replaced, never piled up');
+  assert.equal(fake.get(`periodBackups/${id}`).createdAt, T0, 'the hand-made back-up stays');
+});
+await testAsync('restore is all or nothing: a refused write changes neither the database nor the screen state', async () => {
+  const fake = useFakeDb(bkSeed()); bkState(fake);
+  await withFakeNowAsync(NOW, () => createPeriodBackup('2026-10-26')); const id = '2026-10-26_' + T0;
+  await db.doc('periodEntries/2026-10-26_f3').set(E('f3', '08:00')); S.periodEntries = Object.fromEntries(fake.collection('periodEntries'));
+  fake.failWrites('periodEntries/', 'permission-denied');
+  assert.equal(await restorePeriodBackup(id), false); assert.match(toast(), /permission-denied/);
+  assert.ok(S.periodEntries['2026-10-26_f3']); assert.ok(fake.get('periodEntries/2026-10-26_f3'));
+});
+await testAsync('restore: only the coordinator, a broken back-up is refused, and dates that now clash with another period are refused by name', async () => {
+  let fake = useFakeDb(bkSeed()); bkState(fake, { canEdit: false, periodBackups: { x: {} } });
+  assert.equal(await restorePeriodBackup('x'), false); assert.equal(toast(), 'Alleen de coördinator kan het tijdelijke rooster aanpassen.');
+  bkState(fake, { periodBackups: { x: { periodFirstDay: '2026-10-26' } } });
+  assert.equal(await restorePeriodBackup('x'), false); assert.equal(toast(), 'Deze back-up is niet compleet en kan niet worden teruggezet.');
+  assert.equal(await restorePeriodBackup('missing'), false);
+  const good = { periodFirstDay: '2026-10-26', createdAt: 1, by: '', auto: false, period: A, entries: {}, cars: {} };
+  const inTheWay = { name: 'Toetsweek', firstDay: '2026-10-29', lastDay: '2026-11-03', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
+  bkState(fake, { periodBackups: { y: good }, periods: { [A.firstDay]: A, [B.firstDay]: B, '2026-10-29': inTheWay } }); const writes = fake.writes.length;
+  assert.equal(await restorePeriodBackup('y'), false); assert.equal(toast(), 'Deze periode overlapt met Toetsweek. Perioden mogen geen dag delen.'); assert.equal(fake.writes.length, writes);
+});
+await testAsync('deletePeriodBackup removes one back-up; a refused write keeps it', async () => {
+  const fake = useFakeDb({ ...bkSeed(), 'periodBackups/2026-10-26_1': { periodFirstDay: '2026-10-26' } }); bkState(fake, { periodBackups: { '2026-10-26_1': { periodFirstDay: '2026-10-26' }, '2026-10-26_2': {} } });
+  fake.failWrites('periodBackups/', 'permission-denied'); assert.equal(await deletePeriodBackup('2026-10-26_1'), false); assert.ok(S.periodBackups['2026-10-26_1']);
+  assert.equal(await deletePeriodBackup('2026-10-26_1'), true); assert.deepEqual(Object.keys(S.periodBackups), ['2026-10-26_2']); assert.equal(fake.get('periodBackups/2026-10-26_1'), undefined); assert.equal(toast(), 'Back-up verwijderd');
+  assert.equal(await deletePeriodBackup('nope'), false);
+  S.canEdit = false; assert.equal(await deletePeriodBackup('2026-10-26_2'), false);
+});
+await testAsync('deleting a period also deletes its back-ups, and only those', async () => {
+  const mk = first => ({ periodFirstDay: first, createdAt: 1, by: '', auto: false, period: first === '2026-10-26' ? A : B, entries: {}, cars: {} });
+  const fake = useFakeDb({ ...bkSeed(), 'periodBackups/2026-10-26_1': mk('2026-10-26'), 'periodBackups/2026-10-26_auto': { ...mk('2026-10-26'), auto: true }, 'periodBackups/2026-11-09_1': mk('2026-11-09') });
+  bkState(fake, { periodBackups: Object.fromEntries(fake.collection('periodBackups')), periodCars: {} });
+  assert.equal(await deletePeriodCompletely('2026-10-26'), true);
+  assert.deepEqual([...fake.collection('periodBackups')].map(([k]) => k), ['2026-11-09_1']); assert.deepEqual(Object.keys(S.periodBackups), ['2026-11-09_1']);
+});
+await testAsync('syncListeners: only the coordinator reads the back-ups; a parent never starts that listener, and it stops when the role goes', async () => {
+  const mk = { periodFirstDay: '2026-10-26', createdAt: 1, by: '', auto: false, period: A, entries: {}, cars: {} };
+  useFakeDb({ ...sampleDbSeed(), 'periodBackups/2026-10-26_1': mk });
+  sampleParentState({ families: {}, groups: {} }); syncListeners(); await tick(); await tick();
+  assert.equal(S.periodBackupsUnsub, null); assert.deepEqual(S.periodBackups, {}); stopDataListeners();
+  sampleCoordinatorState({ links: {}, families: {} }); syncListeners(); await tick(); await tick();
+  assert.deepEqual(Object.keys(S.periodBackups), ['2026-10-26_1']); assert.equal(typeof S.periodBackupsUnsub, 'function');
+  S.canEdit = false; S.coordinatorConfig = null; S.coordinatorExists = true; syncListeners();
+  assert.equal(S.periodBackupsUnsub, null); assert.deepEqual(S.periodBackups, {}); stopDataListeners();
 });
 
 console.log('\n=== Terug met OV (US-06) ===');

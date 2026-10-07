@@ -52,6 +52,8 @@ export const S = {
   periodEntries: {},       // periodEntries/*: the times families handed in for the period, by document id
   periodEntriesLoaded: false,
   periodCars: {},          // periodCars/*: the temporary rooster, one document per shift (see period.js)
+  periodBackups: {},       // periodBackups/*: back-ups of a period (coordinator only), by document id (see period-backup.js)
+  periodBackupsUnsub: null,
   periodDay: null,         // Rooster, temporary view: the open date ('YYYY-MM-DD')
   folds: {},               // open state of the collapsible sections, by key (default = collapsed); see foldHtml in ui-common.js
   periodView: null,        // Wijzigen (coordinator): '<firstDay>|<familyId>' whose handed-in times are unfolded ("Bekijk")

@@ -200,6 +200,20 @@ service cloud.firestore {
       allow delete: if isCoordinator();
     }
 
+    // ---- Perioden met andere tijden: back-ups of one period (doc id = <firstDay>_<ms> or <firstDay>_auto) ----
+    // Coordinator only, also for reading: a back-up holds what families handed in. `period`, `entries` and `cars` are copies of the documents above.
+    match /periodBackups/{backupId} {
+      allow read: if isCoordinator();
+      allow create, update: if isCoordinator()
+        && request.resource.data.keys().hasOnly(['periodFirstDay', 'createdAt', 'by', 'auto', 'period', 'entries', 'cars'])
+        && request.resource.data.periodFirstDay is string
+        && request.resource.data.createdAt is number
+        && request.resource.data.period is map
+        && request.resource.data.entries is map
+        && request.resource.data.cars is map;
+      allow delete: if isCoordinator();
+    }
+
     // ---- Weekend match carpools: any member ----------------------------------------
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();
