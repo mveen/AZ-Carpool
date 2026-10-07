@@ -6,7 +6,7 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { destinationFor, routeLabel, DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from '../locations.js';
+import { carStdId, destinationFor, routeLabel, DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from '../locations.js';
 
 console.log('=== defaults ===');
 test('without stored settings there are the 3 places and AFC \'34 as destination', () => {
@@ -54,6 +54,31 @@ test('the override of one ride does not change another ride', () => {
   const a = { locationId: 'a4-de-hoek' }, b = {};
   assert.equal(placeFor(a, 'heen', cfg).id, 'a4-de-hoek');
   assert.equal(placeFor(b, 'heen', cfg).id, 'busstation');
+});
+
+console.log('\n=== standard place and arrival per car ===');
+test('a car with its own standard place uses it; another car of the same shift does not', () => {
+  const a = { stdLocationId: 'a4-de-hoek' }, b = {};
+  assert.equal(placeFor(a, 'heen', cfg, 'Ma').id, 'a4-de-hoek');
+  assert.equal(placeFor(b, 'heen', cfg, 'Ma').id, 'busstation');
+});
+test('an unknown standard place of a car falls back to the shift / default', () => {
+  assert.equal(carStdId({ stdLocationId: 'gone' }, cfg, 'Ma', 'heen'), 'busstation');
+  assert.equal(carStdId({ stdLocationId: '' }, cfg, 'Ma', 'terug'), 'de-parel');
+});
+test('a one-off choice wins over the car\'s own standard; it is only "changed" when it differs from that standard', () => {
+  const car = { stdLocationId: 'a4-de-hoek', locationId: 'busstation' };
+  assert.equal(placeFor(car, 'heen', cfg, 'Ma').id, 'busstation');
+  assert.equal(isOverride(car, 'heen', cfg, 'Ma'), true);
+  assert.equal(isOverride({ stdLocationId: 'a4-de-hoek', locationId: 'a4-de-hoek' }, 'heen', cfg, 'Ma'), false);
+  assert.equal(isOverride({ stdLocationId: 'a4-de-hoek' }, 'heen', cfg, 'Ma'), false);
+});
+test('arrival: the car\'s own standard (ATC) applies; a one-off choice wins; empty means AFC', () => {
+  assert.equal(destinationFor({ stdDestination: 'ATC' }, cfg).key, 'ATC');
+  assert.equal(destinationFor({ stdDestination: '' }, cfg).key, 'AFC');
+  assert.equal(destinationFor({ stdDestination: 'ATC', destination: 'AFC' }, cfg).key, 'AFC');
+  assert.equal(destinationFor({ destination: 'ATC' }, cfg).key, 'ATC');
+  assert.equal(destinationFor({}, cfg).key, 'AFC');
 });
 
 console.log('\n=== shift label ===');

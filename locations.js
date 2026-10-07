@@ -7,8 +7,10 @@
 // Which place applies to a ride, first match wins:
 //   1. car.locationText  one-off free input from Wijzigen (an address or a point of interest; never becomes a place)
 //   2. car.locationId    one-off choice from Wijzigen
-//   3. shifts[day_dir]   the standard place of that shift, set by clicking the place in the standaardrooster
-//   4. defaults[dir]     the standard place for heen / terug from Beheer
+//   3. car.stdLocationId the standard place of this one car, set by clicking the place in the standaardrooster (every car has its own)
+//   4. shifts[day_dir]   older setting: one standard place for all cars of a shift (only used when a car has no place of its own)
+//   5. defaults[dir]     the standard place for heen / terug from Beheer
+// The arrival works the same way: car.destination (one-off) wins over car.stdDestination (the car's standard), else AFC '34.
 export const MAX_PLACES = 6;
 export const FREE_TEXT_MAX = 120;
 
@@ -69,13 +71,19 @@ export function shiftDefaultId(cfg, day, direction) {
   return cfg.places.some(p => p.id === v) ? v : cfg.defaults[direction];
 }
 
+// The standard place id of one car: its own choice from the standaardrooster, otherwise the standard of its shift.
+export function carStdId(car, cfg, day, direction) {
+  const v = car && car.stdLocationId;
+  return cfg.places.some(p => p.id === v) ? v : shiftDefaultId(cfg, day, direction);
+}
+
 // One-off free input of a ride ('' when there is none).
 export function freeText(car) { return car ? str(car.locationText).slice(0, FREE_TEXT_MAX) : ''; }
 
 // The place that applies to one ride: the one-off choice when it is valid, otherwise the standard of its shift.
 // (A free input has no place: use placeName() for the text to show.)
 export function placeFor(car, direction, cfg, day) {
-  const id = car && cfg.places.some(p => p.id === car.locationId) ? car.locationId : shiftDefaultId(cfg, day, direction);
+  const id = car && cfg.places.some(p => p.id === car.locationId) ? car.locationId : carStdId(car, cfg, day, direction);
   return cfg.places.find(p => p.id === id) || cfg.places[0];
 }
 // The text to show for the place of one ride: the free input when there is one, otherwise the name of the place.
@@ -83,7 +91,7 @@ export function placeName(car, direction, cfg, day) { return freeText(car) || pl
 // True when the ride differs from the standard of its shift (a free input always does).
 export function isOverride(car, direction, cfg, day) {
   if (freeText(car)) return true;
-  return !!(car && cfg.places.some(p => p.id === car.locationId) && car.locationId !== shiftDefaultId(cfg, day, direction));
+  return !!(car && cfg.places.some(p => p.id === car.locationId) && car.locationId !== carStdId(car, cfg, day, direction));
 }
 
 // The arrival place of one ride (Wijzigen, Aankomst): AFC '34 (the destination from Beheer, the default) or ATC. A one-off choice on
@@ -92,7 +100,8 @@ export const ATC_NAME = 'ATC';
 export const CITY_AFC = 'Alkmaar';
 export const CITY_ATC = 'Wijdewormer';
 export function destinationFor(car, cfg) {
-  if (car && car.destination === 'ATC') return { key: 'ATC', name: ATC_NAME, city: CITY_ATC };
+  const key = car && (car.destination === 'ATC' || car.destination === 'AFC') ? car.destination : (car && car.stdDestination === 'ATC' ? 'ATC' : 'AFC');
+  if (key === 'ATC') return { key: 'ATC', name: ATC_NAME, city: CITY_ATC };
   return { key: 'AFC', name: cfg.destination.name, city: CITY_AFC };
 }
 

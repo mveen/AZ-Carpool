@@ -200,7 +200,7 @@ export default [
     keywords: 'ophaalplek ophalen afzetten plek busstation locatie waar adres',
     body: [
       'Bij elke rit staat de tijd en de plek, bijvoorbeeld "07:05 Busstation → AFC \'34".',
-      'De vaste plekken staan in het Rooster. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of kies Ander adres… en vul zelf een adres of plek in. Dat wordt niet als vaste plek bewaard en verdwijnt aan het eind van de week.',
+      'De vaste plek van elke auto staat in het Rooster (Vast rooster): tik op de plek van een auto om het vertrek en de aankomst van alleen die auto te kiezen. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of kies Ander adres… en vul zelf een adres of plek in. Dat wordt niet als vaste plek bewaard en verdwijnt aan het eind van de week.',
     ],
     tab: 'deviation',
   },

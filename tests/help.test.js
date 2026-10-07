@@ -224,5 +224,10 @@ test('the Beheer article explains the planning order: back-ups last, then cars, 
   assert.ok(/back-up/.test(s) && /Selectievolgorde/.test(s) && /Een grotere auto krijgt nooit voorrang op tijd/.test(s));
 });
 
+test('the pickup-place article explains that every car has its own place and arrival in the Vast rooster', () => {
+  const a = articles.find(x => x.id === 'ophaalplek');
+  assert.match(a.body.join(' '), /elke auto[\s\S]*alleen die auto/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
