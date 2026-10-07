@@ -64,13 +64,13 @@ export function locationsCfg(){ return normalizeLocations(S.locationsDoc); }
 export function isAndroidDevice(){ return /Android/i.test((typeof navigator!=='undefined' && navigator.userAgent) || ''); }
 
 // opts.day: the weekday of the ride (the standard place can differ per shift).
-// opts.edit: the coordinator's standaardrooster: the place is a button that opens the list of places for the whole shift.
+// opts.edit + opts.gid: the coordinator's standaardrooster: the place is a button that opens the list of places for that one car (group gid).
 export function shiftLocationHtml(car, direction, opts){
   const o = opts || {};
   const cfg = locationsCfg();
   const changed = isOverride(car, direction, cfg, o.day)? ` <span class="changedTag">${t('loc.changedTag')}</span>` : '';
   const label = esc(shiftLabel(car, direction, cfg, o.day));
-  if(o.edit && o.day) return `<div class="shiftLoc"><button type="button" class="shiftLocBtn" data-shiftloc="${o.day}|${direction}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}"><span class="shiftLocText">${label}</span>${phIcon('pencil')}</button></div>`;
+  if(o.edit && o.gid) return `<div class="shiftLoc"><button type="button" class="shiftLocBtn" data-shiftloc="${esc(o.gid)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}"><span class="shiftLocText">${label}</span>${phIcon('pencil')}</button></div>`;
   return `<div class="shiftLoc"><span class="shiftLocText">${label}${changed}</span></div>`;
 }
 

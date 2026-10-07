@@ -431,6 +431,14 @@ await testAsync('arrival: choosing ATC stores it on that car only; the header an
   await fire('[data-devdest]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', devdest: 'AFC' } });
   assert.ok(!('destination' in fake.get('deviations/Ma_heen').cars[0]));
 });
+await testAsync('arrival: when the standard rooster car has ATC as standard, choosing AFC is stored as the one-off change and ATC is not', async () => {
+  const seed = sampleDbSeed(); seed['groups/Ma_heen_1'] = { ...seed['groups/Ma_heen_1'], stdDestination: 'ATC' };
+  const fake = useFakeDb(seed); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', groups: Object.fromEntries(Object.entries(seed).filter(([k]) => k.startsWith('groups/')).map(([k, v]) => [k.slice(7), v])) });
+  await fire('[data-devdest]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', devdest: 'AFC' } });
+  assert.equal(fake.get('deviations/Ma_heen').cars[0].destination, 'AFC');
+  await fire('[data-devdest]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', devdest: 'ATC' } });
+  assert.ok(!('destination' in fake.get('deviations/Ma_heen').cars[0]) || fake.get('deviations/Ma_heen').cars[0].destination === undefined);
+});
 await testAsync('removing a child shows the result with "Ongedaan" in the card; Ongedaan puts her back', async () => {
   const fake = useFakeDb(sampleDbSeed()); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
   await fire('[data-devkid]', { dataset: { devkid: 'Ma|heen|0|f1' } });

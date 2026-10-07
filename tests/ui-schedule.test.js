@@ -12,9 +12,9 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP } from './test-support.js';
+import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
-import { renderSchedule, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
+import { renderSchedule, saveCarPlace, openShiftLocationSheet, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -198,6 +198,44 @@ test('Rooster has a Weekoverzicht button in "Deze week" and in the standard roos
 test('the first option of a planning is only marked "primary" (Aanbevolen) when it is a checked complete planning', () => {
   const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
   assert.ok(/suggestion primary/.test(html) || !/Aanbevolen/.test(html), 'no Aanbevolen label without the primary styling');
+});
+
+console.log('\n=== own departure and arrival place per car (standaardrooster) ===');
+const twoCars = () => {
+  const g = sampleGroups();
+  g.Ma_heen_2 = { day: 'Ma', direction: 'heen', girlIds: ['f5'], driverFamilyId: 'f3', reserveFamilyIds: [], departureTime: '09:00', stdLocationId: 'de-parel', stdDestination: 'ATC' };
+  return g;
+};
+test('two cars of the same shift show their own place and arrival', () => {
+  const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma', groups: twoCars() }));
+  const s = text(html);
+  assert.match(s, /07:30 Busstation → AFC (&#39;|')34/);
+  assert.match(s, /09:00 De Parel → ATC/);
+  assert.match(html, /data-shiftloc="Ma_heen_1"/); assert.match(html, /data-shiftloc="Ma_heen_2"/);
+});
+test('the place button belongs to one car (its group id), not to the whole shift', () => {
+  const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma', groups: twoCars() }));
+  assert.doesNotMatch(html, /data-shiftloc="Ma\|heen"/);
+});
+await testAsync('changing the place of one car leaves the other car of the shift alone', async () => {
+  const seed = sampleDbSeed(); Object.entries(twoCars()).forEach(([id, g]) => { seed['groups/' + id] = g; });
+  const fake = useFakeDb(seed);
+  render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma', groups: twoCars() }));
+  const ok = await saveCarPlace('Ma_heen_1', { stdLocationId: 'a4-de-hoek', stdDestination: 'ATC' });
+  assert.equal(ok, true);
+  const g1 = fake.get('groups/Ma_heen_1'), g2 = fake.get('groups/Ma_heen_2');
+  assert.equal(g1.stdLocationId, 'a4-de-hoek'); assert.equal(g1.stdDestination, 'ATC');
+  assert.equal(g2.stdLocationId, 'de-parel'); assert.equal(g2.stdDestination, 'ATC');
+});
+test('the sheet opens for one car and lists places plus both arrival options', () => {
+  dom.doc.body.children.length = 0;
+  render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma', groups: twoCars() }));
+  openShiftLocationSheet('Ma_heen_2');
+  const sheet = dom.doc.body.children[0];
+  assert.equal(sheet.id, 'sheetOverlay');
+  assert.match(text(sheet.innerHTML), /Standaardplek van deze auto/);
+  assert.match(text(sheet.innerHTML), /De Parel ✓/); assert.match(text(sheet.innerHTML), /Aankomst: ATC ✓/);
+  dom.doc.body.children.length = 0;
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

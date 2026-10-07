@@ -147,6 +147,11 @@ test('the Wijzigen ride card texts exist and the arrival names ATC', () => {
 
 test('the Selectievolgorde label for a back-up driver exists', () => { assert.equal(t('beheer.pl_back_up'), 'pl., back-up)'); assert.equal(t('beheer.pl'), 'pl.)'); });
 
+test('the place texts of the standaardrooster speak of one car, not of a whole shift', () => {
+  assert.equal(t('loc.shiftTitle'), 'Standaardplek van deze auto'); assert.equal(t('loc.arrivalItem', { name: 'ATC' }), 'Aankomst: ATC');
+  assert.match(t('loc.shiftSub', { p1: 'Heen', p2: 'Maandag' }), /alleen voor deze auto/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

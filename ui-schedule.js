@@ -4,9 +4,11 @@ import { S } from './state.js';
 import { DAYS, WA_ICON_SMALL, todayKey } from './constants.js';
 import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dayUp, weekRangeLabel } from './dates.js';
+import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor } from './locations.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
-import { saveShiftLocation, timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
-import { goToWijzigen } from './ui-myweek.js';
+import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
+import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
+import { renderDeviationTab } from './ui-deviation.js';
 import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
@@ -248,7 +250,7 @@ export function renderDirectionStandard(day,direction){
       ${neededTimesHtml(day,direction,g.girlIds)}
       <div>${pills}</div>
       ${driverHtml}
-      ${shiftLocationHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,{day, edit:S.canEdit})}
+      ${shiftLocationHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,{day, edit:S.canEdit, gid})}
       ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
@@ -365,16 +367,33 @@ export async function moveGirlToGroup(gid, girlId, toGid){
   }catch(e){showToast(t('schedule.verplaatsen_mislukt')+(e&&e.message||e));}
 }
 
-// The list of places for one shift of the standaardrooster. "Standaard" follows the heen/terug default of Beheer.
-export function openShiftLocationSheet(key){
-  const [day,direction]=key.split('|');
+// Standaardrooster: the standard departure and arrival place of ONE car. Every car has its own (never shared with the other cars of the shift).
+// '' = follow the default of Beheer for the departure / AFC '34 for the arrival.
+export async function saveCarPlace(gid, fields){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  try{
+    await db.doc("groups/"+gid).update(fields);
+    recordLastUpdate('Rooster'); showToast(t('loc.shiftSaved'));
+    renderSchedule(); renderMyWeek(); renderDeviationTab();
+    return true;
+  }catch(e){ showToast(t('schedule.aanpassen_mislukt')+(e&&e.message||e)); return false; }
+}
+
+export function openShiftLocationSheet(gid){
+  const g=S.groups[gid]; if(!g) return;
+  const {day,direction}=g;
   const cfg=locationsCfg();
-  const cur=cfg.shifts[day+'_'+direction]||'';
+  const own=cfg.places.some(p=>p.id===g.stdLocationId)? g.stdLocationId : '';
+  const curDest=destinationFor({stdDestination:g.stdDestination},cfg).key;
   const dayName=(DAYS.find(([k])=>k===day)||[day,day])[1];
   const dirName=direction==='heen'?t('dir.heenShort'):t('dir.terugShort');
-  const defName=(cfg.places.find(p=>p.id===cfg.defaults[direction])||cfg.places[0]).name;
-  const items=[{ label:esc(t('loc.useDefault',{name:defName}))+(cur===''?' ✓':''), onClick:()=>saveShiftLocation(day,direction,'') }]
-    .concat(cfg.places.map(p=>({ label:esc(p.name)+(cur===p.id?' ✓':''), sub:esc(p.address||''), onClick:()=>saveShiftLocation(day,direction,p.id) })));
+  const defName=cfg.places.find(p=>p.id===carStdId({},cfg,day,direction)).name;
+  const items=[{ label:esc(t('loc.useDefault',{name:defName}))+(own===''?' ✓':''), onClick:()=>saveCarPlace(gid,{stdLocationId:''}) }]
+    .concat(cfg.places.map(p=>({ label:esc(p.name)+(own===p.id?' ✓':''), sub:esc(p.address||''), onClick:()=>saveCarPlace(gid,{stdLocationId:p.id}) })))
+    .concat([
+      { label:esc(t('loc.arrivalItem',{name:cfg.destination.name}))+(curDest==='AFC'?' ✓':''), sub:esc(CITY_AFC), onClick:()=>saveCarPlace(gid,{stdDestination:''}) },
+      { label:esc(t('loc.arrivalItem',{name:ATC_NAME}))+(curDest==='ATC'?' ✓':''), sub:esc(CITY_ATC), onClick:()=>saveCarPlace(gid,{stdDestination:'ATC'}) },
+    ]);
   openSheet(t('loc.shiftTitle'), t('loc.shiftSub',{p1:dirName,p2:dayName}), items);
 }
 
