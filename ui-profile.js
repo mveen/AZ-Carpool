@@ -69,7 +69,7 @@ export function weekschemaWarningInnerHtml(){
       <button type="button" class="btn small" id="weekschemaConfirm">${t('profile.weekschema_bevestigen')}</button>
       <button type="button" class="btn small secondary" id="weekschemaToWijzigen">${phIcon('lightning')} ${t('profile.weekschema_naar_wijzigen')}</button>
     </div>
-    <p class="devAlertBody" style="font-size:11px">${t('profile.weekschema_eenmalig_uitleg')}</p>`;
+    <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_eenmalig_uitleg')}</p>`;
 }
 
 export function weekschemaWarningHtml(){

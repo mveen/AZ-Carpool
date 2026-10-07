@@ -15,7 +15,7 @@ import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, 
 import { S } from '../state.js';
 import {
   renderImpersonateBanner, startImpersonate, stopImpersonate, familyFormHtml, readFamilyForm, renderClaimCoordinator,
-  renderGateOrApp, renderGate, submitGate, introWaHref, renderProfile, saveProfile, weekschemaWarningHtml, isWeekschemaField,
+  renderGateOrApp, renderGate, submitGate, introWaHref, renderProfile, saveProfile, weekschemaWarningHtml, weekschemaWarningInnerHtml, isWeekschemaField,
 } from '../ui-profile.js';
 
 const dom = installFakeDom();
@@ -342,6 +342,14 @@ test('Beheer shows the last session under the phone numbers (else the link date)
   S.lastSeenByFamily = { f2: t0 + 86400000 };
   assert.match(text(familyFormHtml('coord', f)), /Laatste sessie: 21 sep 2026/);
   assert.doesNotMatch(text(familyFormHtml('me', f)), /Laatste sessie|Gekoppeld op/);
+});
+
+test('weekschema one-off explanation is never smaller than 12px', () => {
+  S.weekschemaBase = null; S.weekschemaEdit = null;
+  const html = weekschemaWarningInnerHtml();
+  const sizes = [...String(html).matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)].map(m => +m[1]);
+  assert.ok(sizes.length >= 2, 'expected the inline sizes to be found');
+  assert.ok(sizes.every(n => n >= 12), 'font sizes found: ' + sizes.join(', '));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
