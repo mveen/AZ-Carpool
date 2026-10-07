@@ -132,6 +132,18 @@ details.group.fold>summary{font-size:15px}
 .noticeBar{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--warn2);color:var(--warn-text);padding:4px 12px;font-size:12px;line-height:1.35;font-weight:600;border-bottom:1px solid var(--border);text-align:center}
 .noticeBar svg{flex-shrink:0}
 .noticeBar span{min-width:0;overflow-wrap:anywhere}
+/* Onderhoudsmodus: volledig scherm voor alle gebruikers behalve de coördinator, boven alles (ook Help en sheets). */
+.maintOverlay{position:fixed;inset:0;z-index:80;background:var(--bg);color:var(--text);align-items:center;justify-content:center;padding:24px;overflow:auto}
+.maintCard{max-width:420px;width:100%;text-align:center}
+.maintLogo{width:150px;margin:0 auto 18px;color:#dc2626}
+.maintLogo svg{display:block;width:100%;height:auto}
+:root[data-theme="dark"] .maintLogo{color:#ef4444}
+.maintTitle{font-size:22px;font-weight:800;margin:0 0 10px;color:var(--text)}
+.maintText{font-size:16px;line-height:1.5;margin:0 0 10px;overflow-wrap:anywhere}
+.maintAuto{font-size:13px;color:var(--muted);margin:0}
+.maintPreview{padding:14px 12px}
+.maintPreview .maintTitle{font-size:17px}
+.maintPreview .maintText{font-size:14px}
 .noticePreview{border:1px dashed var(--control-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg)}
 .noticeCount{text-align:right;font-size:12px;margin-top:3px}
 .switchRow{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font-size:15px;font-weight:700;color:var(--text);margin:4px 0}
@@ -471,6 +483,7 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 <body>
 <div id="topbar">
 <div id="impersonateBanner" style="display:none"></div>
+<div id="maintenanceBanner" class="noticeBar" style="display:none"></div>
 <div id="noticeBanner" class="noticeBar" style="display:none"></div>
 <header style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
   <div>
@@ -483,6 +496,8 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
   </div>
 </header>
 </div>
+
+<div id="maintenanceOverlay" class="maintOverlay" style="display:none"></div>
 
 <main>
   <div id="tab-schedule" style="display:none"></div>

@@ -64,6 +64,7 @@ test('new fields: places, calculated distances and the impact switch start empty
 
 test('collapsible sections start with nothing open', () => { assert.deepEqual(S.folds, {}); });
 
+test('the maintenance state starts empty', () => { assert.equal(S.maintenance, null); assert.equal(S.maintenanceDraft, null); });
 test('the notice state starts empty', () => { assert.equal(S.notice, null); assert.equal(S.noticeDraft, null); });
 
 test('the last-session map starts empty and has no listener', () => {

@@ -157,6 +157,15 @@ test('checkWeekRollover does nothing within the same week', () => {
   assert.equal(S.currentWeekKey, '2026-W40');
 });
 
+test('renderAll shows the maintenance page to a parent, not to the coordinator', () => {
+  sampleParentState({ maintenance: { on: true, text: 'Terug om 8' } });
+  withFakeNow(NOW, () => renderAll());
+  assert.equal(dom.el('maintenanceOverlay').style.display, 'flex'); assert.match(dom.html('maintenanceOverlay'), /Terug om 8/);
+  sampleCoordinatorState({ maintenance: { on: true, text: 'Terug om 8' } });
+  withFakeNow(NOW, () => renderAll());
+  assert.equal(dom.el('maintenanceOverlay').style.display, 'none'); assert.equal(dom.el('maintenanceBanner').style.display, 'flex');
+});
+
 test('renderAll draws the notice bar', () => {
   sampleCoordinatorState({ notice: { on: true, text: 'Test melding', offDate: '', offTime: '' } });
   withFakeNow(NOW, () => renderAll());

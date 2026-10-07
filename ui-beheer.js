@@ -5,6 +5,7 @@ import { DAYS, PDF_SEED } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
+import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { esc, foldCards, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
@@ -524,6 +525,7 @@ export function renderBeheer(){
     </div>
     ${familyBackupCardHtml()}
     ${dayCoordinatorsCardHtml()}
+    ${maintenanceCardHtml()}
     ${noticeCardHtml()}
     ${periodsCardHtml()}
     ${locationsCardHtml()}
@@ -593,6 +595,7 @@ export function renderBeheer(){
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
     wireNoticeCard();
+    wireMaintenanceCard();
     document.querySelectorAll('.periodInput').forEach(el=>el.oninput=rememberPeriodDraft);
     const perSave=document.getElementById('periodDraftSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); return savePeriod(); };
     const perCancel=document.getElementById('periodDraftCancel'); if(perCancel) perCancel.onclick=()=>cancelPeriodEdit();

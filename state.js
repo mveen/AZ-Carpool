@@ -45,6 +45,8 @@ export const S = {
   legacyPeriod: null,      // settings/period: the single period of the first version; the coordinator's app moves it into periods/
   notice: null,            // settings/notice: the notice for everyone { on, text, offDate, offTime } (null = none / not loaded)
   noticeDraft: null,       // Beheer: what is typed in the notice card, kept while other cards redraw (null = nothing typed)
+  maintenance: null,       // settings/maintenance: onderhoudsmodus { on, text } (null = none / not loaded)
+  maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
   periodDraft: null,       // Beheer: the period form { editing: firstDay of the period being edited or '', value } while it is open (null = closed)
   periodSel: null,         // Rooster, temporary view: the chosen period (firstDay)
   periodEntries: {},       // periodEntries/*: the times families handed in for the period, by document id
