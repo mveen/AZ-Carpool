@@ -367,12 +367,10 @@ table.avail th,table.avail td{padding:6px 4px}
 .devRideMain{display:flex;flex-direction:column;min-width:0}
 .devRideDriver{font-weight:700;font-size:15px}
 .devRideRoute{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.devRideToggle{font-size:13px;font-weight:700;color:var(--accent-text);border:1px solid #fecaca;background:var(--accent2);border-radius:var(--radius-full);padding:6px 12px}
-:root[data-theme="dark"] .devRideToggle{border-color:#7f1d1d}
+.devRideToggle{font-size:13px;font-weight:700;color:var(--pill);border:1px solid var(--control-border);background:var(--pill2);border-radius:var(--radius-full);padding:6px 12px}   /* neutral: red is for alerts and 'mine' */
 .devKids{display:flex;gap:6px;flex-wrap:wrap}
-.devKid{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-full);padding:3px 10px 3px 3px;font-size:14px}
-.devKid.mine{font-weight:800;color:var(--danger)}
-.devKidInit{width:22px;height:22px;border-radius:50%;background:var(--accent2);color:var(--accent-text);font-size:12px;font-weight:700;display:grid;place-items:center;flex-shrink:0}
+.devKid{display:inline-block;background:var(--pill2);color:var(--pill);border:1px solid transparent;border-radius:var(--radius-full);padding:5px 11px;font-size:12px;font-weight:600;font-family:var(--font-sans)}   /* same look as .pill */
+.devKid.mine{background:var(--accent2);color:var(--danger);border-color:var(--accent);font-weight:800}
 .devForm{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--border);padding-top:12px}
 .devFormTop{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
 .devField{display:flex;flex-direction:column;gap:4px;margin:0}
@@ -387,7 +385,6 @@ table.avail th,table.avail td{padding:6px 4px}
 .devKidList{display:flex;flex-direction:column}
 .devKidRow{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
 .devKidLine{display:flex;align-items:center;gap:10px;min-height:48px}
-.devKidLine .devKidInit{width:28px;height:28px;font-size:13px}
 .devKidName{flex:1;font-size:15px}
 .devKidName.mine{font-weight:800;color:var(--danger)}
 .devKidMore{width:44px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:18px;font-weight:800;color:var(--muted);cursor:pointer;line-height:1;font-family:inherit}

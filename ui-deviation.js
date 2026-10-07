@@ -195,7 +195,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
     </button>`;
   let body;
   if(!open){
-    body = `<div class="devKids">${girls.map(id=>`<span class="devKid${mine(id)?' mine':''}"><span class="devKidInit">${esc(String(rawGirlName(id)).charAt(0).toUpperCase())}</span>${girlName(id)}</span>`).join('') || `<span class="muted">${t('deviation.geen_passagiers')}</span>`}</div>`;
+    body = `<div class="devKids">${girls.map(id=>`<span class="devKid${mine(id)?' mine':''}">${girlName(id)}</span>`).join('') || `<span class="muted">${t('deviation.geen_passagiers')}</span>`}</div>`;
   } else {
     // One-off pickup/drop-off place (US-15): a place from Beheer, or free input (an address or a point of interest).
     // Empty = the standard place of this shift. Free input lives on this ride only and is never stored as a place.
@@ -216,7 +216,6 @@ function devRideHtml(day,direction,idx,cars,ctx){
       const ctl = `data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}"`;
       return `<div class="devKidRow">
         <div class="devKidLine">
-          <span class="devKidInit">${esc(String(rawGirlName(id)).charAt(0).toUpperCase())}</span>
           <span class="devKidName${mine(id)?' mine':''}">${girlName(id)}</span>
           <button type="button" class="devKidMore${active?' on':''}" data-devkid="${key}|${id}" aria-expanded="${active}" aria-label="${esc(t('deviation.opties'))}">···</button>
         </div>
