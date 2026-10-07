@@ -6,11 +6,12 @@ import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { availableDrivers, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
-import { esc, foldCards, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
+import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
+import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
-import { db, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodHasData, recordLastUpdate, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
+import { createPeriodBackup, db, deletePeriodBackup, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodBackupList, periodHasData, recordLastUpdate, restorePeriodBackup, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
 import { backupFileName, buildBackupCsv, parseBackup, planRestore } from './family-backup.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireIntroWa, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
@@ -253,8 +254,39 @@ export function periodStatusHtml(p, nowMs){
 
 // The label of the delete button when it asks "sure?": says how many families lose what they handed in.
 export function periodDeleteConfirmLabel(p){
-  const n = periodHasData(p.firstDay).entries;
+  const n = periodHasData(p.firstDay).entries, b = periodBackupList(p.firstDay).length;
+  if(n && b) return t('period.delete.confirmDataBackups',{p1:n, p2:b});
+  if(b) return t('period.delete.confirmBackups',{p1:b});
   return n? t('period.delete.confirmData',{p1:n}) : t('beheer.zeker_nogmaals_klikken');
+}
+
+// Back-ups of one period (inside its row, folded): make one, restore one (two taps, with the warning), delete one.
+const fmtStamp = ms => new Date(ms).toLocaleString(locale(),{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+export function periodBackupRestoreLabel(b, p){
+  const c = changesSince(b, S.periodEntries, S.periodCars, p);
+  return c.families? t('period.backup.restoreConfirmLost',{p1:c.families}) : t('period.backup.restoreConfirm');
+}
+function periodBackupRowHtml(b, p){
+  const c = changesSince(b, S.periodEntries, S.periodCars, p);
+  const what = t('period.backup.what',{p1:Object.keys(b.entries).length, p2:Object.keys(b.cars).length});
+  const since = (c.families || c.shifts)? t('period.backup.since',{p1:c.families, p2:c.shifts}) : c.period? t('period.backup.sincePeriod') : t('period.backup.same');
+  return `<div class="periodBackupRow" data-pbrow="${esc(b.id)}" style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-top:1px solid var(--border)">
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600">${esc(fmtStamp(b.createdAt))}${b.auto? ' <span class="muted" style="font-weight:400">· '+esc(t('period.backup.auto'))+'</span>' : ''}</div>
+        <div class="muted" style="font-size:12px">${esc(what)}</div>
+        <div class="muted" style="font-size:12px">${esc(since)}</div>
+      </div>
+      <button type="button" class="iconbtn" data-pbrestore="${esc(b.id)}" aria-label="${esc(t('period.backup.restore'))}" title="${esc(t('period.backup.restore'))}">${phIcon('refresh')}</button>
+      <button type="button" class="iconbtn danger" data-pbdelete="${esc(b.id)}" aria-label="${esc(t('period.backup.delete'))}" title="${esc(t('period.backup.delete'))}">${phIcon('trash')}</button>
+    </div>`;
+}
+export function periodBackupsHtml(p){
+  const list = periodBackupList(p.firstDay);
+  const manual = list.filter(b=>!b.auto).length;
+  const body = `<p class="muted" style="margin:0 0 6px;font-size:12px">${esc(t('period.backup.intro'))}</p>
+    <button type="button" class="btn small secondary" data-pbmake="${p.firstDay}"${manual>=PERIOD_BACKUP_MAX? ' disabled' : ''}>${esc(t('period.backup.make'))}</button>
+    ${list.map(b=>periodBackupRowHtml(b, p)).join('')}`;
+  return `<div style="margin-top:6px">${foldHtml('periodBackups|'+p.firstDay, `<span style="font-size:13px;font-weight:600">${esc(t('period.backup.title',{p1:list.length}))}</span>`, body)}</div>`;
 }
 
 function periodRowHtml(p, nowMs){
@@ -265,6 +297,7 @@ function periodRowHtml(p, nowMs){
         <div><strong>${esc(v.name)}</strong> <span class="muted">${esc(isoRangeLabel(v.firstDay, v.lastDay))}</span></div>
         <div class="muted" style="font-size:12px">${esc(info)}</div>
         ${periodStatusHtml(v, nowMs)}
+        ${periodBackupsHtml(v)}
       </div>
       <button type="button" class="iconbtn" data-plistedit="${v.firstDay}" aria-label="${esc(t('period.list.edit',{p1:v.name}))}" title="${esc(t('period.list.edit',{p1:v.name}))}">${phIcon('pencil')}</button>
       <button type="button" class="iconbtn danger" data-plistdelete="${v.firstDay}" aria-label="${esc(t('period.delete'))}: ${esc(v.name)}" title="${esc(t('period.delete'))}: ${esc(v.name)}">${phIcon('trash')}</button>
@@ -602,6 +635,12 @@ export function renderBeheer(){
     document.querySelectorAll('[data-plistadd]').forEach(b=>b.onclick=()=>{ hapticTap(); startPeriodEdit(); });
     document.querySelectorAll('[data-plistedit]').forEach(b=>b.onclick=()=>{ hapticTap(); startPeriodEdit(b.dataset.plistedit); });
     document.querySelectorAll('[data-plistdelete]').forEach(b=>b.onclick=()=>{ const p=S.periods[b.dataset.plistdelete]; if(p) twoStepConfirm(b, periodDeleteConfirmLabel(p), ()=>deletePeriod(b.dataset.plistdelete)); });
+    document.querySelectorAll('[data-pbmake]').forEach(b=>b.onclick=()=>{ hapticTap(); createPeriodBackup(b.dataset.pbmake); });
+    document.querySelectorAll('[data-pbrestore]').forEach(b=>b.onclick=()=>{
+      const bk = Object.keys(S.periods).flatMap(fd=>periodBackupList(fd)).find(x=>x.id===b.dataset.pbrestore);
+      if(bk) twoStepConfirm(b, periodBackupRestoreLabel(bk, S.periods[bk.periodFirstDay]), ()=>restorePeriodBackup(bk.id));
+    });
+    document.querySelectorAll('[data-pbdelete]').forEach(b=>b.onclick=()=>twoStepConfirm(b, t('beheer.zeker_nogmaals_klikken'), ()=>deletePeriodBackup(b.dataset.pbdelete)));
     document.querySelectorAll('.locInput').forEach(el=>el.onchange=()=>saveLocations());
     const orsSave=document.getElementById('apiKeyOrsSave'); if(orsSave) orsSave.onclick=()=>{ hapticTap(); saveOrsApiKey(); };
     const orsClear=document.getElementById('apiKeyOrsClear'); if(orsClear) orsClear.onclick=()=>twoStepConfirm(orsClear, t('beheer.zeker_nogmaals_klikken'), ()=>saveOrsApiKey(''));

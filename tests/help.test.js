@@ -205,5 +205,12 @@ test('help explains the notice bar to everyone and the switch to the coordinator
   assert.ok(searchHelp('melding aan uit zetten', { canEdit: true }).some(a => a.id === 'beheer-melding'));
 });
 
+test('help explains the period back-up to the coordinator only', () => {
+  assert.ok(searchHelp('back-up periode terugzetten testen', { canEdit: true }).some(a => a.id === 'periode-backup'));
+  assert.ok(!searchHelp('back-up periode terugzetten testen', { canEdit: false }).some(a => a.id === 'periode-backup'));
+  const a = findArticle('periode-backup', { canEdit: true });
+  assert.match(a.body.join(' '), /Back-up maken/); assert.match(a.body.join(' '), /gaat dat verloren/); assert.match(a.body.join(' '), /Automatisch/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

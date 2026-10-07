@@ -129,6 +129,13 @@ test('the notice texts exist and the WhatsApp intro texts are still there', () =
   for (const k of ['notice.title', 'notice.save', 'notice.err.noText', 'profile.wa_intro_text', 'profile.tel_nr_1_wa', 'backup.title']) assert.ok(hasKey(k), k);
 });
 
+test('the period back-up texts exist and fill in their numbers', () => {
+  assert.equal(t('period.backup.title', { p1: 3 }), 'Back-ups (3)');
+  assert.equal(t('period.backup.restoreConfirmLost', { p1: 2 }), 'Zeker? 2 gezinnen verliezen wat ze sindsdien doorgaven');
+  assert.equal(t('period.delete.confirmDataBackups', { p1: 4, p2: 2 }), 'Zeker? 4 gezinnen verliezen hun tijden en 2 back-ups gaan weg');
+  ['made', 'deleted', 'restored', 'make', 'restore', 'delete', 'same', 'sincePeriod', 'err.full', 'err.broken'].forEach(k => assert.ok(hasKey('period.backup.' + k), k));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

@@ -19,6 +19,7 @@ import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, groupsFor, isFlex, planPeriodRooster, planPeriodShift } from './rides.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
+import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
 import { deadlineMs, isValidIsoDate, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
 
 // ============================================================
@@ -255,16 +256,85 @@ export async function deletePeriodCompletely(firstDay){
   if(periodShiftIds(p).length){ showToast(t('period.err.deleteRooster')); return false; }
   const entryIds = Object.entries(S.periodEntries).filter(([,e])=>e && e.periodFirstDay===firstDay).map(([id])=>id);
   const batch = db.batch();
+  const backupIds = backupsFor(S.periodBackups, firstDay).map(b=>b.id);
   batch.delete('periods/'+firstDay);
   entryIds.forEach(id=>batch.delete('periodEntries/'+id));
+  backupIds.forEach(id=>batch.delete('periodBackups/'+id));
   if(S.legacyPeriod && S.legacyPeriod.firstDay===firstDay) batch.delete('settings/period');
   try{
     await batch.commit();
     const coll = {...S.periodsColl}; delete coll[firstDay]; S.periodsColl = coll;
     if(S.legacyPeriod && S.legacyPeriod.firstDay===firstDay) S.legacyPeriod = null;
     const ent = {...S.periodEntries}; entryIds.forEach(id=>delete ent[id]); S.periodEntries = ent;
+    const bk = {...S.periodBackups}; backupIds.forEach(id=>delete bk[id]); S.periodBackups = bk;
     rebuildPeriods();
     showToast(t('period.deleted'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// ---------- Back-ups of a period (Beheer, coordinator) ----------
+// A back-up holds the period, the handed-in times and the temporary rooster of ONE period (periodBackups/<firstDay>_<ms>), so the coordinator
+// can test and try things and then put everything back. Restoring is ONE batch (all or nothing) and first stores the current state as the
+// automatic back-up periodBackups/<firstDay>_auto, so a restore can itself be undone.
+export function periodBackupList(firstDay){ return backupsFor(S.periodBackups, firstDay); }
+
+export async function createPeriodBackup(firstDay){
+  if(!periodRoosterGuard()) return false;
+  const p = S.periods[firstDay];
+  if(!p){ noPeriodToast(); return false; }
+  if(countManual(S.periodBackups, firstDay) >= PERIOD_BACKUP_MAX){ showToast(t('period.backup.err.full',{p1:PERIOD_BACKUP_MAX})); return false; }
+  const now = Date.now(), id = backupId(firstDay, now);
+  const doc = buildPeriodBackup(p, S.periodEntries, S.periodCars, { now, by:myDisplayInfo().name });
+  try{
+    await db.doc("periodBackups/"+id).set(doc);
+    S.periodBackups = {...S.periodBackups, [id]:doc};
+    showToast(t('period.backup.made'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+export async function deletePeriodBackup(id){
+  if(!periodRoosterGuard()) return false;
+  if(!S.periodBackups[id]) return false;
+  try{
+    await db.doc("periodBackups/"+id).delete();
+    const rest = {...S.periodBackups}; delete rest[id]; S.periodBackups = rest;
+    showToast(t('period.backup.deleted'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
+// Puts the period back exactly as the back-up has it. Handed-in times and shifts made since are removed. Nothing is written when anything fails.
+export async function restorePeriodBackup(id){
+  if(!periodRoosterGuard()) return false;
+  const b = validBackup(S.periodBackups[id]);
+  if(!b){ showToast(t('period.backup.err.broken')); return false; }
+  const first = b.periodFirstDay;
+  const others = periodList(S.periods).filter(p => p.firstDay!==first);
+  const plan = planRestore(b, others, S.periodEntries, S.periodCars);
+  if(!plan.ok){ showToast(t(plan.error,{p1:plan.overlap? plan.overlap.name : ''})); return false; }
+  const current = S.periods[first];
+  const safetyId = autoBackupId(first);
+  const safety = current? buildPeriodBackup(current, S.periodEntries, S.periodCars, { now:Date.now(), by:myDisplayInfo().name, auto:true }) : null;
+  const batch = db.batch();
+  if(safety) batch.set('periodBackups/'+safetyId, safety);
+  plan.sets.forEach(([path, data])=>batch.set(path, data));
+  plan.deletes.forEach(path=>batch.delete(path));
+  try{
+    await batch.commit();
+    const pick = all => Object.fromEntries(Object.entries(all).filter(([, d])=>!(d && d.periodFirstDay===first)));
+    const entries = pick(S.periodEntries), cars = pick(S.periodCars);
+    plan.sets.forEach(([path, data])=>{
+      const [coll, docId] = path.split('/');
+      if(coll==='periodEntries') entries[docId] = data;
+      else if(coll==='periodCars') cars[docId] = data;
+    });
+    S.periodEntries = entries; S.periodCars = cars;
+    S.periodsColl = {...S.periodsColl, [first]:b.period};
+    if(safety) S.periodBackups = {...S.periodBackups, [safetyId]:safety};
+    rebuildPeriods();
+    showToast(t('period.backup.restored'));
     return true;
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
@@ -336,7 +406,14 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
+  if(coord && !S.periodBackupsUnsub){
+    S.periodBackupsUnsub = db.collection("periodBackups").onSnapshot(snap=>{
+      S.periodBackups={}; snap.docs.forEach(d=>S.periodBackups[d.id]=d.data());
+      renderBeheer();
+    }, err=>{});
+  }
   if(!coord){
+    if(S.periodBackupsUnsub){ S.periodBackupsUnsub(); S.periodBackupsUnsub=null; S.periodBackups={}; }
     if(S.linksCollUnsub){ S.linksCollUnsub(); S.linksCollUnsub=null; const mine=S.links[S.me]; S.links={}; if(mine) S.links[S.me]=mine; }
     if(S.sessionsUnsub){ S.sessionsUnsub(); S.sessionsUnsub=null; S.lastSeenByFamily={}; }
     if(S.invitesUnsub){ S.invitesUnsub(); S.invitesUnsub=null; S.invitesByCode={}; S.inviteByFamily={}; }

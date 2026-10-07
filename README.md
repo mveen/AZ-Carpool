@@ -26,6 +26,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `distance.js` | Projected distance of away matches: OpenRouteService calls, calculate once, store per match | `distance.test.js` |
 | `impact.js` | Impact preview on a deviation (pilot, removable): analysis, on/off switch, save gate | `impact.test.js` |
 | `period.js` | "Periode met andere tijden" (holiday, exam week): validation of the Beheer form, the phases waiting/open/closed/over, and the times a family hands in (pure functions) | `period.test.js` |
+| `period-backup.js` | Back-ups of one period (settings + handed-in times + temporary rooster): build, check, what changed since, plan the restore (pure functions) | `period-backup.test.js` |
 | `family-backup.js` | Back-up / restore of the families as one CSV file: build, read, check, plan the overwrite (pure functions) | `family-backup.test.js` |
 | `ui-period.js` | Periode, parent side: task card, form and "doorgegeven" card in Wijzigen, badge on the Wijzigen tab | `ui-period.test.js` |
 | `ui-period-rooster.js` | Periode, Rooster tab: overview for the coordinator, the temporary rooster (third view) and its edits | `ui-period-rooster.test.js` |
@@ -131,6 +132,16 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 - **Old data moves over by itself.** Steps 1-3 stored ONE period in `settings/period`. It is still read; the coordinator's app copies it into `periods/<firstDay>` (with `deadlineAt`) and removes the old document, once. Saving or deleting such a period also moves/removes it. Handed-in times and temporary rooster were already keyed by first day, so nothing else moves.
 - **Firestore rules (publish `firebase/firestore.rules` again).** New `periods/{firstDay}`: members read, only the coordinator writes (id = first day, known fields, `deadlineAt` a number). `periodEntries` now checks the deadline of THE period named in the entry (`periods/<firstDay>`, falling back to `settings/period` until moved), so each period has its own deadline. Tested against the Firebase emulator (39 cases in total for the three period collections).
 - **Also fixed:** in step 2 the "Annuleren" button of the Beheer form and the one of the Wijzigen form shared an id (`periodCancel`), which could make one tap the other's button. The Beheer buttons are now `periodDraftSave` / `periodDraftCancel`.
+
+### Back-ups of a period (done)
+- **Why.** The coordinator can try things in a period (make or re-plan the temporary rooster, fill in for a parent, change dates) and put everything back, without losing what parents handed in.
+- **Where.** Beheer → *Perioden met andere tijden* → under each period a folded line *Back-ups (n)*: *Back-up maken*, and per back-up the moment, how many families and shifts it holds, what is different since, a restore button (refresh icon, tap twice) and a trash button. Up to `PERIOD_BACKUP_MAX` (10) hand-made back-ups per period.
+- **Content.** Everything of ONE period: the period document, its `periodEntries` and its `periodCars`. Stored as `periodBackups/<firstDay>_<ms>`: `{ periodFirstDay, createdAt, by, auto, period, entries, cars }` (`entries` and `cars` are copies of the documents by id). Pure logic in `period-backup.js`.
+- **Restore = everything back.** One batch (all or nothing): the period and every entry and shift of the back-up are written, entries and shifts that exist now but not in the back-up are deleted. What families handed in after the back-up is lost; the second tap says how many families (`changesSince`). A back-up whose dates now share a day with another period is refused (periods never share a day). A broken back-up is never restored.
+- **Safety net.** Just before a restore the app stores the current state as `periodBackups/<firstDay>_auto` (one per period; a new one replaces the old one). Restoring that one undoes the restore (and swaps again).
+- **Deleting a period** also deletes its back-ups (the second tap says so).
+- **Firestore rules (publish `firebase/firestore.rules` again).** New `periodBackups/{backupId}`: coordinator only, also for reading (a back-up holds what families handed in); known fields only. Tested against the Firebase emulator (19 cases: coordinator reads, writes, deletes and restores in one batch; parent and stranger refused for everything; extra, missing and wrongly typed fields refused). Without publishing, *Back-up maken* fails with a permission error.
+- **Deploy.** New file `period-backup.js`; changed `data.js`, `state.js`, `ui-beheer.js`, `texts-nl.js`, `help-nl.js`, `service-worker.js` (cache `az-carpool-v31`), `firebase/firestore.rules`.
 
 ## Melding voor iedereen (notice bar)
 

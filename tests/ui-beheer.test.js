@@ -454,5 +454,81 @@ test('families and the travel-preference checkboxes are listed A-Z by daughter n
   sorted([...html.matchAll(/prefTogetherPick" value="[^"]+">([^<]+)</g)].map(m => m[1]));
 });
 
+console.log('\n=== period back-ups (Beheer) ===');
+import { periodBackupsHtml, periodBackupRestoreLabel } from '../ui-beheer.js';
+const T0 = new Date(NOW).getTime();
+const bkE = (fam, heen) => ({ familyId: fam, periodFirstDay: '2026-10-26', days: { '2026-10-26': { heen, terug: '15:00' } }, submittedAt: 1, by: 'Ouder' });
+const bkDoc = (over = {}) => ({ periodFirstDay: '2026-10-26', createdAt: T0, by: 'Michiel', auto: false, period: PERIOD, entries: { '2026-10-26_f2': bkE('f2', '09:00') }, cars: {}, ...over });
+const bkButtons = html => {
+  const reg = {}; ['plistadd', 'plistedit', 'plistdelete', 'pbmake', 'pbrestore', 'pbdelete'].forEach(a => { reg['[data-' + a + ']'] = [...html.matchAll(new RegExp(`<button[^>]*data-${a}(?:="([^"]*)")?`, 'g'))].map(m => ({ dataset: { [a]: m[1] || '' }, onclick: null, textContent: '', innerHTML: '' })); });
+  dom.doc.querySelectorAll = sel => reg[sel] || []; return reg;
+};
+test('every period has a folded Back-ups line with its explanation and a "Back-up maken" button; nothing yet', () => {
+  state({ periodBackups: {} });
+  const html = withFakeNow(OPENNOW, () => periodsCardHtml()); const s = text(html);
+  assert.equal((html.match(/data-pbmake=/g) || []).length, 2); assert.match(html, /data-pbmake="2026-10-26"/); assert.match(html, /data-pbmake="2026-11-09"/);
+  assert.match(s, /Back-ups \(0\) Een back-up bewaart de periode, de doorgegeven tijden en het tijdelijke rooster\. Zo kun je veilig testen en daarna alles terugzetten\. Back-up maken/);
+  assert.match(html, /<details class="fold " data-fold="periodBackups\|2026-10-26">/, 'folded by default: no extra height');
+  assert.doesNotMatch(html, /data-pbrestore|data-pbdelete/);
+});
+test('a back-up row shows when, how much it holds and what is different since; restore and trash buttons have names', () => {
+  state({ periodBackups: { ['2026-10-26_' + T0]: bkDoc({ cars: { '2026-10-26_2026-10-26_heen': { periodFirstDay: '2026-10-26', date: '2026-10-26', direction: 'heen', cars: [] } } }) }, periodEntries: { '2026-10-26_f2': bkE('f2', '09:00') }, periodCars: { '2026-10-26_2026-10-26_heen': { periodFirstDay: '2026-10-26', date: '2026-10-26', direction: 'heen', cars: [] } } });
+  let html = withFakeNow(OPENNOW, () => periodBackupsHtml(PERIOD)); let s = text(html);
+  assert.match(s, /^Back-ups \(1\)/); assert.match(s, /1 gezinnen doorgegeven · 1 ritten in het tijdelijke rooster Sindsdien niets veranderd/);
+  assert.match(html, /data-pbrestore="2026-10-26_\d+"[^>]*aria-label="Zet deze back-up terug"/); assert.match(html, /data-pbdelete="2026-10-26_\d+"[^>]*aria-label="Verwijder back-up"/);
+  state({ periodBackups: { ['2026-10-26_' + T0]: bkDoc() }, periodEntries: { '2026-10-26_f2': bkE('f2', '07:00'), '2026-10-26_f3': bkE('f3', '08:00') } });
+  s = text(withFakeNow(OPENNOW, () => periodBackupsHtml(PERIOD))); assert.match(s, /Sindsdien anders: 2 gezinnen, 0 ritten/);
+  state({ periodBackups: { ['2026-10-26_' + T0]: bkDoc() }, periodEntries: { '2026-10-26_f2': bkE('f2', '09:00') } });
+  s = text(withFakeNow(OPENNOW, () => periodBackupsHtml({ ...PERIOD, name: 'Anders' }))); assert.match(s, /Sindsdien anders: de instellingen van de periode/);
+});
+test('the automatic back-up is marked, newest first, only for its own period, and broken ones are not shown', () => {
+  state({ periodBackups: { '2026-10-26_auto': bkDoc({ auto: true, createdAt: T0 + 60000 }), ['2026-10-26_' + T0]: bkDoc(), '2026-10-26_kapot': { periodFirstDay: '2026-10-26' }, ['2026-11-09_' + T0]: bkDoc({ periodFirstDay: '2026-11-09', period: NEXT, entries: {} }) } });
+  const s = text(withFakeNow(OPENNOW, () => periodBackupsHtml(PERIOD)));
+  assert.match(s, /^Back-ups \(2\)/); assert.match(s, /automatisch, vlak voor terugzetten/); assert.ok(s.indexOf('automatisch') < s.indexOf('Sindsdien', s.indexOf('automatisch') + 1) + 1);
+  assert.equal((withFakeNow(OPENNOW, () => periodBackupsHtml(PERIOD)).match(/data-pbrestore=/g) || []).length, 2);
+  assert.equal((withFakeNow(OPENNOW, () => periodBackupsHtml(NEXT)).match(/data-pbrestore=/g) || []).length, 1);
+});
+test('"Back-up maken" is switched off at 10 hand-made back-ups (the automatic one does not count)', () => {
+  const many = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`2026-10-26_${i + 1}`, bkDoc({ createdAt: i + 1 })]));
+  state({ periodBackups: { ...many, '2026-10-26_auto': bkDoc({ auto: true }) } });
+  assert.match(withFakeNow(OPENNOW, () => periodBackupsHtml(PERIOD)), /data-pbmake="2026-10-26" disabled/);
+  state({ periodBackups: { ...Object.fromEntries(Object.entries(many).slice(0, 9)), '2026-10-26_auto': bkDoc({ auto: true }) } });
+  assert.doesNotMatch(withFakeNow(OPENNOW, () => periodBackupsHtml(PERIOD)), /data-pbmake="2026-10-26" disabled/);
+});
+test('the second tap warns how many families lose what they handed in since; and the delete-period button mentions the back-ups', () => {
+  const b = { id: 'x', ...bkDoc(), entries: { '2026-10-26_f2': bkE('f2', '09:00') }, cars: {} };
+  state({ periodEntries: { '2026-10-26_f2': bkE('f2', '09:00') } });
+  assert.equal(periodBackupRestoreLabel(b, PERIOD), 'Zeker? Alles gaat terug naar deze back-up');
+  state({ periodEntries: { '2026-10-26_f2': bkE('f2', '10:00'), '2026-10-26_f3': bkE('f3', '08:00') } });
+  assert.equal(periodBackupRestoreLabel(b, PERIOD), 'Zeker? 2 gezinnen verliezen wat ze sindsdien doorgaven');
+  state({ periodBackups: { ['2026-10-26_' + T0]: bkDoc(), '2026-10-26_auto': bkDoc({ auto: true }) } });
+  assert.equal(periodDeleteConfirmLabel(PERIOD), 'Zeker? 2 back-ups van deze periode gaan ook weg'); assert.equal(periodDeleteConfirmLabel(NEXT), 'Zeker? Nogmaals klikken');
+  state({ periodBackups: { ['2026-10-26_' + T0]: bkDoc() }, periodEntries: { '2026-10-26_f2': { periodFirstDay: '2026-10-26' } } });
+  assert.equal(periodDeleteConfirmLabel(PERIOD), 'Zeker? 1 gezinnen verliezen hun tijden en 1 back-ups gaan weg');
+});
+await testAsync('the buttons work: make (one tap), restore and delete (two taps, the first only asks)', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'periods/2026-10-26': PERIOD, 'periods/2026-11-09': NEXT, 'periodEntries/2026-10-26_f2': bkE('f2', '09:00') });
+  state({ periodEntries: { '2026-10-26_f2': bkE('f2', '09:00') } });
+  const draw = () => withFakeNow(NOW, () => { renderBeheer(); return dom.html('tab-beheer'); });
+  const settle = async () => { for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r)); };
+  let reg = bkButtons(draw()); draw();
+  await withFakeNowAsync(NOW, async () => { reg['[data-pbmake]'][0].onclick(); await settle(); });
+  const ids = [...fake.collection('periodBackups')].map(([k]) => k); assert.deepEqual(ids, ['2026-10-26_' + T0]);
+  // a test change: the family changes its time and another one is added
+  await db_set(fake, 'periodEntries/2026-10-26_f2', bkE('f2', '07:00')); await db_set(fake, 'periodEntries/2026-10-26_f3', bkE('f3', '08:00'));
+  S.periodEntries = Object.fromEntries(fake.collection('periodEntries')); S.periodBackups = Object.fromEntries(fake.collection('periodBackups'));
+  reg = bkButtons(draw()); draw();
+  const restore = reg['[data-pbrestore]'][0]; restore.dataset.origLabel = ''; restore.onclick();
+  assert.equal(restore.textContent, 'Zeker? 2 gezinnen verliezen wat ze sindsdien doorgaven'); assert.ok(fake.get('periodEntries/2026-10-26_f3'), 'first tap changes nothing');
+  await withFakeNowAsync(NOW, async () => { restore.onclick(); await settle(); });
+  assert.equal(fake.get('periodEntries/2026-10-26_f3'), undefined); assert.equal(fake.get('periodEntries/2026-10-26_f2').days['2026-10-26'].heen, '09:00');
+  reg = bkButtons(draw()); draw();
+  const del = reg['[data-pbdelete]'].find(b => b.dataset.pbdelete === '2026-10-26_' + T0); del.dataset.origLabel = ''; del.onclick();
+  assert.equal(del.textContent, 'Zeker? Nogmaals klikken'); assert.ok(fake.get('periodBackups/2026-10-26_' + T0));
+  await withFakeNowAsync(NOW, async () => { del.onclick(); await settle(); });
+  assert.equal(fake.get('periodBackups/2026-10-26_' + T0), undefined); assert.ok(fake.get('periodBackups/2026-10-26_auto'), 'the automatic one stays');
+});
+async function db_set(fake, path, data) { const { db } = await import('../data.js'); await db.doc(path).set(data); }
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
