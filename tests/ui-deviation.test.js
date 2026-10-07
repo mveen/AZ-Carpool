@@ -449,7 +449,8 @@ await testAsync('moving a child offers one button per other car and shows "Onged
   const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen }); const d = { ...dev1(cars) };
   renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: d });
   await fire('[data-devkid]', { dataset: { devkid: 'Ma|heen|0|f2' } });
-  assert.match(text(dom.html('tab-deviation')), /Naar Kees de Vries Verwijder/);
+  assert.match(text(dom.html('tab-deviation')), /Naar Kees de Vries/);
+  assert.match(dom.html('tab-deviation'), /class="devKidBtn danger devRemoveBtn"[^>]*>\s*<svg[^>]*>[^]*?<\/svg>\s*<\/button>/);   // trash icon only, no text
   await fire('[data-devmove]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', girl: 'f2', devmove: '1' } });
   const saved = fake.get('deviations/Ma_heen').cars;
   assert.ok(!saved[0].girlIds.includes('f2')); assert.ok(saved[1].girlIds.includes('f2'));

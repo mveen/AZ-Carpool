@@ -222,7 +222,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
         </div>
         ${active? `<div class="devKidActions">
           ${otherIdxs.map(i=>`<button type="button" class="devKidBtn" data-devmove="${i}" ${ctl}>${esc(t('deviation.naar_auto',{name: fam(cars[i].driverFamilyId).parentName||'?'}))}</button>`).join('')}
-          <button type="button" class="devKidBtn danger devRemoveBtn" data-devremove="1" ${ctl} title="${t('deviation.verwijder_uit_auto')}" aria-label="${esc(t('deviation.verwijder_uit_auto'))}: ${girlName(id)}">${phIcon('trash')} ${t('deviation.verwijder')}</button>
+          <button type="button" class="devKidBtn danger devRemoveBtn" data-devremove="1" ${ctl} title="${t('deviation.verwijder_uit_auto')}" aria-label="${esc(t('deviation.verwijder_uit_auto'))}: ${girlName(id)}">${phIcon('trash')}</button>
         </div>` : ''}
       </div>`;
     }).join('') || `<p class="muted" style="margin:0">${t('deviation.geen_passagiers')}</p>`;
