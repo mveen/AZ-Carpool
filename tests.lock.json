@@ -36,16 +36,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "08d54118e6215ebfc7a2080b0c62547e5bdcd2d6bcec8fc945c604d43796b9b3",
-    "test": "76c1aa3e3d628ba0f479703c652105646de54b07944dc06b7919265c5b6bb658"
+    "module": "173ec318ef556fa90d65bb475486422ea365463c5839928ff3de5c31b88c24e6",
+    "test": "50da12603df00bec774e84d1acc183e5c0cf7f4cc8345b7e40a56c3ca6f0fc5a"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "76c1aa3e3d628ba0f479703c652105646de54b07944dc06b7919265c5b6bb658"
+    "test": "50da12603df00bec774e84d1acc183e5c0cf7f4cc8345b7e40a56c3ca6f0fc5a"
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "1ff93dac5724eef9657f79c7267e713d798ad206165c755e317c38d206d27ce6"
+    "test": "f2c46d91fcbe1d202f80bde4329ceb30412ca734e90aee02da444dcfb8f3c18a"
   },
   "impact.js": {
     "module": "b8324f916a3b681c343c58767a9dd0ba80e6a28fcfbc0bf7fc0c0ea9e2758586",
@@ -100,12 +100,12 @@
     "test": "06687dcbc53348d82d79de1dab83f694409ab8c6aa9a67ca6e6880e67a3ed110"
   },
   "texts-nl.js": {
-    "module": "fd0440ea37d2d1b480a86e8aae5abab1595cc2b02f93ae2c534ab0a81f0e3735",
-    "test": "1ff93dac5724eef9657f79c7267e713d798ad206165c755e317c38d206d27ce6"
+    "module": "e876a3b043d13c9089abee13fb935c9154f4c9babc47a72158604b79686faf8a",
+    "test": "f2c46d91fcbe1d202f80bde4329ceb30412ca734e90aee02da444dcfb8f3c18a"
   },
   "ui-beheer.js": {
-    "module": "23d9a56b3a6b610a0145bbc85c157bf483f2c97575a5c92ccd4dd0f5ff7f5730",
-    "test": "e8a4810da8dce5a6f884ecb0cc6f485fe9f393721fa055d3d64dbad0d665aa62"
+    "module": "5a54fdc2381a696bcd75825c109c427b0b8b293fc6a2bf169514db087f01db5c",
+    "test": "8e0db1811cc95ff65be632b9053ad86f928178ae300eb90786319c1c36496003"
   },
   "ui-common.js": {
     "module": "3378607b38d5215de6bec1e9d77887fee8ee95f1d57dc679719fd21304db282e",

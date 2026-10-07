@@ -212,5 +212,11 @@ test('help explains the period back-up to the coordinator only', () => {
   assert.match(a.body.join(' '), /Back-up maken/); assert.match(a.body.join(' '), /gaat dat verloren/); assert.match(a.body.join(' '), /Automatisch/);
 });
 
+test('help tells the coordinator about the progress bar and the "Wie heeft ingevuld?" list', () => {
+  const a = articles.find(x => x.body.some(l => l.includes('Wie heeft ingevuld?')));
+  assert.ok(a && a.coordinatorOnly, 'in a coordinator-only article');
+  assert.ok(a.body.some(l => l.includes('voortgangsbalk')));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

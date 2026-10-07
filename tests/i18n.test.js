@@ -172,3 +172,10 @@ test('WhatsApp login intro texts start with "Hi!" and carry the app link', () =>
   assert.match(t('profile.wa_intro_text_nocode', { url: 'U' }), /^Hi! /);
   assert.equal(t('profile.tel_nr_1_wa'), 'Tel.nr. 1 (ontvangt WhatsApp-berichtjes)');
 });
+
+test('the period list texts: phase pills, who has handed in, and the capitalised rooster line', () => {
+  assert.deepEqual(['waiting', 'open', 'closed', 'over'].map(k => t('period.pill.' + k)), ['Gepland', 'Open', 'Deadline voorbij', 'Afgelopen']);
+  assert.equal(t('period.who.missing', { p1: 'Emma, Sanne' }), 'Nog niet: Emma, Sanne'); assert.equal(t('period.who.more', { p1: 3 }), '+3');
+  assert.equal(t('period.who.todo', { p1: 2 }), 'Nog niet doorgegeven (2)'); assert.equal(t('period.who.done', { p1: 6 }), 'Doorgegeven (6)');
+  assert.equal(t('period.list.roosterMade'), 'Tijdelijk rooster gemaakt'); assert.equal(t('period.form.groupFill'), 'Invullen door ouders');
+});
