@@ -158,6 +158,12 @@ test('the Beheer chips, section titles and attention texts', () => {
   assert.equal(t('beheer.attn_dubbel', { p1: 'Sanne', p2: 2 }), 'Dubbel gezin: Sanne (2×)');
 });
 
+test('the Gereden shifts texts exist and fill their numbers', () => {
+  assert.equal(t('ridelog.title'), 'Gereden shifts');
+  assert.equal(t('ridelog.summary', { p1: 12, p2: '2,4', p3: 0, p4: 5 }), '12 shifts gereden · gemiddeld 2,4 per gezin · minst 0, meest 5');
+  assert.equal(t('ridelog.export_year', { p1: 2026 }), 'Export 2026 (CSV)'); assert.equal(t('ridelog.idle', { p1: 3 }), '3 gezinnen nog niet gereden');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

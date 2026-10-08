@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 import { applyStaticTexts, adjustMainPadding, applyTheme, closeSheet, cycleTheme, setStatus, showConnectionError } from './ui-common.js';
 import { effectivePlanningDate, getISOWeekKey, refreshWeekKey } from './dates.js';
 import { S } from './state.js';
-import { db, purgeStaleDeviations, recordSession, syncListeners } from './data.js';
+import { db, logPassedShifts, purgeStaleDeviations, recordSession, syncListeners } from './data.js';
 import { renderImpersonateBanner, renderProfile } from './ui-profile.js';
 import { recomputeCanEdit } from './coordinator.js';
 import { renderSchedule } from './ui-schedule.js';
@@ -28,6 +28,7 @@ S.scheduleDay = todayKey || "Ma";
 // open or resumed from the background, switch to the new week and purge the old one.
 export function checkWeekRollover(){
   if(refreshWeekKey() && S.appReady){ purgeStaleDeviations(); renderAll(); }
+  else if(S.appReady) logPassedShifts();
 }
 
 // Match calendars: once per day the first member who is in the app fetches them from Google (see matches.js).

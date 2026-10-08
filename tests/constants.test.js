@@ -37,7 +37,7 @@ test('every icon the code asks for with phIcon(\'name\') exists in PH_PATHS', ()
 });
 test('WhatsApp icon is an inline svg (no external image to load)', () => { assert.ok(WHATSAPP_SVG.startsWith('<svg')); });
 test('the Beheer section icons exist and draw with currentColor', () => {
-  for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].includes('currentColor'), k);
+  for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','chevron-left','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].includes('currentColor'), k);
 });
 
 test('the info icon exists (used by the notice bar)', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.includes('circle')); });

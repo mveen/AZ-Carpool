@@ -53,6 +53,7 @@ export const PH_PATHS = {
   'chart': `<rect x="40" y="136" width="48" height="80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><rect x="104" y="48" width="48" height="168" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><rect x="168" y="96" width="48" height="120" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
   'wrench': `<circle cx="84" cy="84" r="44" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="116" y1="116" x2="208" y2="208" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
   'clock': `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><path d="M128 72v56l36 24" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'chevron-left': `<path d="M160 48l-80 80 80 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
   'chevron-right': `<path d="M96 48l80 80-80 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
 };
 

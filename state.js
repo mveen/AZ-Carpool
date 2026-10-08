@@ -13,6 +13,7 @@ export const S = {
   groups: {},
   links: {},
   deviations: {},
+  deviationsLoaded: false,
   linksLoaded: false,
   invitesByCode: {},
   inviteByFamily: {},
@@ -54,6 +55,10 @@ export const S = {
   periodCars: {},          // periodCars/*: the temporary rooster, one document per shift (see period.js)
   periodBackups: {},       // periodBackups/*: back-ups of a period (coordinator only), by document id (see period-backup.js)
   periodBackupsUnsub: null,
+  rideLog: {},             // rideLog/*: the rides that were driven, by '<date>_<heen|terug>' (coordinator only, see ride-log.js)
+  rideLogLoaded: false,    // the log has been read, so logPassedShifts can tell what is new
+  rideLogUnsub: null,
+  rideLogView: null,       // Beheer, Gereden shifts: { mode:'month'|'year', year, month } while the coordinator looks at it (null = the current month)
   periodDay: null,         // Rooster, temporary view: the open date ('YYYY-MM-DD')
   folds: {},               // open state of the collapsible sections, by key (default = collapsed); see foldHtml in ui-common.js
   periodView: null,        // Wijzigen (coordinator): '<firstDay>|<familyId>' whose handed-in times are unfolded ("Bekijk")

@@ -6,6 +6,7 @@ import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { availableDrivers, driverNameHtml, isStandaardDriver, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
+import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
 import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { impactCardHtml, wireImpactCard } from './impact.js';
@@ -606,6 +607,7 @@ export function renderBeheer(){
         <div id="coordEditArea"></div>
       </div>`),
       ic('user', dayCoordinatorsCardHtml()),
+      ic('chart', rideLogCardHtml()),
       ic('list', `<div class="card" id="priorityCard">
         <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
         ${renderPriorityCard()}
@@ -707,6 +709,7 @@ export function renderBeheer(){
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
     wireNoticeCard();
+    wireRideLogCard();
     wireMaintenanceCard();
     document.querySelectorAll('.periodInput').forEach(el=>el.oninput=rememberPeriodDraft);
     const perSave=document.getElementById('periodDraftSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); return savePeriod(); };

@@ -28,6 +28,8 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `period.js` | "Periode met andere tijden" (holiday, exam week): validation of the Beheer form, the phases waiting/open/closed/over, and the times a family hands in (pure functions) | `period.test.js` |
 | `period-backup.js` | Back-ups of one period (settings + handed-in times + temporary rooster): build, check, what changed since, plan the restore (pure functions) | `period-backup.test.js` |
 | `family-backup.js` | Back-up / restore of the families as one CSV file: build, read, check, plan the overwrite (pure functions) | `family-backup.test.js` |
+| `ride-log.js` | Gereden shifts: the log of rides that took place (one document per shift), counts per family per month / year, CSV export (pure functions) | `ride-log.test.js` |
+| `ui-ride-log.js` | The Beheer card "Gereden shifts": month / year view, export buttons | `ui-ride-log.test.js` |
 | `ui-period.js` | Periode, parent side: task card, form and "doorgegeven" card in Wijzigen, badge on the Wijzigen tab | `ui-period.test.js` |
 | `ui-period-rooster.js` | Periode, Rooster tab: overview for the coordinator, the temporary rooster (third view) and its edits | `ui-period-rooster.test.js` |
 | `flex.js` | Flex signup: join a car, drive yourself, sign off, departure time (pure functions) | `flex.test.js` |
