@@ -215,6 +215,11 @@ service cloud.firestore {
     }
 
     // ---- Weekend match carpools: any member ----------------------------------------
+    // ---- Gereden shifts (solidarity overview in Beheer): written and read by the coordinator only ----
+    match /rideLog/{docId} {
+      allow read, write: if isCoordinator();
+    }
+
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();
     }

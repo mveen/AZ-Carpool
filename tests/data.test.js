@@ -819,5 +819,17 @@ await testAsync('the notice for everyone is loaded live and cleared when listene
   stopDataListeners(); assert.equal(S.notice, null);
 });
 
+await testAsync('the coordinator reads the ride log and writes what is new; a parent never listens to it', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'rideLog/2026-09-21_heen': { date: '2026-09-21', day: 'Ma', direction: 'heen', cars: [{ familyId: 'f1', name: 'x', girls: 1 }] } });
+  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: false, deviationsLoaded: false });
+  syncListeners(); startDataListeners(); await tick(); await tick(); await tick();
+  assert.ok(S.rideLogUnsub, 'coordinator listens'); assert.equal(S.rideLogLoaded, true); assert.equal(S.deviationsLoaded, true);
+  assert.equal(S.rideLog['2026-09-21_heen'].cars[0].name, 'x', 'the stored one is kept');
+  assert.equal(fake.collection('rideLog').length, 5, 'the 4 other shifts that took place were added');
+  stopDataListeners();
+  sampleParentState({ rideLog: {}, rideLogLoaded: false });
+  syncListeners(); assert.equal(S.rideLogUnsub, null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

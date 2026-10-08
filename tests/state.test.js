@@ -80,5 +80,10 @@ console.log('\n=== Wijzigen ride card state ===');
 test('the open ride cards, the open child, the free place input and the last undo start empty', () => {
   assert.deepEqual(S.devOpen, {}); assert.equal(S.devKid, null); assert.deepEqual(S.devFree, {}); assert.equal(S.devUndo, null);
 });
+test('the ride log starts empty, not loaded, without a listener, and the deviations are not loaded yet', () => {
+  assert.deepEqual(S.rideLog, {}); assert.equal(S.rideLogLoaded, false); assert.equal(S.rideLogUnsub, null); assert.equal(S.rideLogView, null);
+  assert.equal(S.deviationsLoaded, false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

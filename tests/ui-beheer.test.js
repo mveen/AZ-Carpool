@@ -141,7 +141,7 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 15);
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 16);
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
   assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
@@ -586,6 +586,14 @@ test('Selectievolgorde: a back-up driver is marked "back-up", a standard driver 
   withFakeNow(NOW, () => renderShiftPriorityRows('Ma_heen'));
   const rows = text(dom.html('shiftPriorityRows'));
   assert.match(rows, /Sanne Smit \(Lois, 3 pl\., back-up\)/); assert.match(rows, /Jan Jansen \(Eline, 3 pl\.\)/);
+});
+
+test('the Gereden shifts card sits in the Gezinnen section, after the dag-coördinatoren', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  const sec = html.slice(html.indexOf('id="begSec-gezinnen"'), html.indexOf('id="begSec-periodes"'));
+  assert.ok(sec.indexOf('id="rideLogCard"') > 0 && sec.indexOf('id="priorityCard"') > sec.indexOf('id="rideLogCard"'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

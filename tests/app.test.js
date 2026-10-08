@@ -177,5 +177,10 @@ test('opening the app and coming back to the foreground both record the session'
   assert.match(src, /syncListeners\(\);\s*recordSession\(\);/); assert.match(src, /visibilitychange[^\n]*recordSession\(\)/);
 });
 
+test('the minute timer logs shifts that have taken place (logPassedShifts) when the week did not roll over', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /else if\(S\.appReady\) logPassedShifts\(\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
