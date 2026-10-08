@@ -121,7 +121,7 @@ test('applyStaticTexts fills data-i18n elements and aria-labels from the diction
 });
 
 console.log('\n=== shift location (US-15) ===');
-import { shiftLocationHtml, locationsCfg } from '../ui-common.js';
+import { shiftLocationHtml, locationsCfg, foldCards } from '../ui-common.js';
 const flat = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
 test('a ride shows "time place → destination" and a no map button', () => {
   resetState({ locationsDoc: { places: [{ id: 'busstation', address: 'Stationsweg 1, Aalsmeer' }] } });
@@ -155,6 +155,19 @@ test('a section is collapsed by default and open once its key is in S.folds', ()
   const html = foldHtml('k1', 'Titel', '<p>x</p>', 'card', 'myId');
   assert.match(html, /<details class="fold card" id="myId" data-fold="k1" open>/); assert.match(html, /<summary>Titel<\/summary>/);
   S.folds = {};
+});
+
+test('foldCards finds cards inside a .begSec section and shows the card icon in the summary', () => {
+  const mk = (tag, o = {}) => ({ tag, kids: [], dataset: {}, classList: { contains: c => (o.cls || []).includes(c) }, append(...c) { this.kids.push(...c); }, appendChild(c) { this.kids.push(c); return c; }, ...o });
+  const h2 = { innerHTML: 'Titel', textContent: 'Titel', remove() {} };
+  const card = mk('div', { cls: ['card'], id: 'c9', dataset: { icon: 'users' }, querySelector: () => h2, firstChild: null, replaceWith(n) { this.replacedBy = n; } });
+  const section = mk('section', { cls: ['begSec'], children: [card] });
+  const realCreate = document.createElement; document.createElement = tag => mk(tag);
+  S.folds = {};
+  foldCards({ children: [section] });
+  document.createElement = realCreate;
+  const sum = card.replacedBy.kids[0];
+  assert.match(sum.innerHTML, /^<span class="foldTitle"><span class="foldIcon"><svg/); assert.match(sum.innerHTML, /<\/span>Titel<\/span>$/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

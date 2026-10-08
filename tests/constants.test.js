@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import fs from 'node:fs';
-import { PH_PATHS, DAYS, DIR_TEXT, APP_URL, WHATSAPP_SVG, PDF_SEED, todayKey } from '../constants.js';
+import { PH_PATHS, DAYS, DIR_TEXT, APP_URL, WHATSAPP_SVG, todayKey } from '../constants.js';
 
 console.log('=== constants.js ===');
 test('DAYS are Monday to Friday, with the stored key first and the Dutch name second', () => {
@@ -36,15 +36,8 @@ test('every icon the code asks for with phIcon(\'name\') exists in PH_PATHS', ()
   assert.deepEqual([...missing], []);
 });
 test('WhatsApp icon is an inline svg (no external image to load)', () => { assert.ok(WHATSAPP_SVG.startsWith('<svg')); });
-test('PDF_SEED: every entry has a name and only valid HH:MM times', () => {
-  assert.ok(PDF_SEED.length >= 1);
-  PDF_SEED.forEach(g => {
-    assert.ok(g.girlName);
-    Object.entries(g.schedule).forEach(([day, s]) => {
-      assert.ok(DAYS.some(d => d[0] === day), 'unknown day ' + day);
-      ['heen', 'terug'].forEach(dir => assert.match(s[dir], /^(\d\d:\d\d)?$/, g.girlName + ' ' + day + ' ' + dir));
-    });
-  });
+test('the Beheer section icons exist and draw with currentColor', () => {
+  for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].includes('currentColor'), k);
 });
 
 test('the info icon exists (used by the notice bar)', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.includes('circle')); });
