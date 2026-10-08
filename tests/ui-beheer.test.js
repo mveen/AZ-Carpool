@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import { foldCards } from '../ui-common.js';
 import {
   renderBeheer, renderAvailabilityTable, renderPrefsCard, renderPriorityCard, renderShiftPriorityRows, movePriority, renderCoordEditor,
-  seedFromPdf, familyBackupCardHtml, prepareRestore, confirmRestore, cancelRestore, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges,
+  familyBackupCardHtml, prepareRestore, confirmRestore, cancelRestore, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges,
 } from '../ui-beheer.js';
 
 const dom = installFakeDom();
@@ -29,7 +29,7 @@ test('every family is listed with parent, coordinator badge, invite code state a
   sampleCoordinatorState({ links: { p1: { familyId: 'f2' } }, invitesByCode: { CODE1234: 'f3' }, inviteByFamily: { f3: 'CODE1234' } });
   withFakeNow(NOW, () => renderBeheer());
   const html = dom.html('tab-beheer'); const s = text(html);
-  assert.match(s, /^Gezinnen beheren /);
+  assert.match(s, /Gezinnen beheren /);
   assert.match(s, /Eline Jan Jansen COÖRDINATOR Geen code Wijzig/);
   assert.match(s, /Jahaimy Piet Pieters gekoppeld Geen code Wijzig/);
   assert.match(s, /Anouk Kees de Vries Wijzig/);
@@ -134,13 +134,37 @@ test('no toast for parents or when the count did not grow', () => {
   assert.equal(toast(), '');
 });
 
-console.log('\n=== seed from PDF ===');
-await testAsync('seedFromPdf replaces families, invites and groups by the 8 PDF families and validates them', async () => {
-  const fake = useFakeDb({ 'families/old': {}, 'invites/X': {}, 'groups/g': {} });
-  sampleCoordinatorState();
-  await seedFromPdf();
-  assert.equal(fake.collection('families').length, 8); assert.equal(fake.collection('invites').length, 0); assert.equal(fake.collection('groups').length, 0);
-  assert.match(text(dom.html('seedMsg') || dom.el('seedMsg').textContent), /gezinnen aangemaakt/);
+console.log('\n=== Beheer layout: sections, chip bar, attention strip ===');
+test('the cards are grouped in 4 sections, each with a chip, and every card gets an icon', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
+  assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 15);
+  const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
+  assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
+  assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
+});
+test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  assert.doesNotMatch(dom.html('tab-beheer'), /seedPdf|seedMsg|Beheerderstools/);
+});
+test('the attention strip lists families without code or phone, duplicates and failed calendars, and links to their cards', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ matchFetchFailedTeams: [{ label: 'Meiden B2', error: 'x' }] });
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer'); const s = text(html);
+  assert.match(s, /Om te checken \(\d+\)/); assert.match(s, /Zonder code: \d+/); assert.match(s, /Kalender mislukt: Meiden B2/);
+  assert.match(html, /data-goto="familiesCard"/); assert.match(html, /data-goto="feedsCard"/);
+});
+test('the attention strip is absent when everything is in order', () => {
+  const fams = { f1: { parentName: 'A', girlName: 'Eline', parentPhone1: '0611111111', capacity: 4, schedule: {}, availability: {} } };
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ families: fams, inviteByFamily: { f1: 'CODE1234' }, matchFetchFailedTeams: [] });
+  withFakeNow(NOW, () => renderBeheer());
+  assert.doesNotMatch(dom.html('tab-beheer'), /begAttn/);
 });
 
 import { dayCoordinatorsCardHtml, saveDayCoordinator } from '../ui-beheer.js';

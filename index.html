@@ -134,6 +134,18 @@ details.fold>summary::after{content:"";width:8px;height:8px;border-right:2px sol
 details.fold[open]>summary::after{transform:rotate(-135deg)}
 details.fold[open]>summary{margin-bottom:10px}
 details.group.fold>summary{font-size:14px}
+/* Beheer: chip bar, section groups, attention strip, icon in the fold summary, button row under a list */
+.begChips{position:sticky;top:-14px;z-index:5;display:flex;gap:6px;overflow-x:auto;margin:0 -16px 4px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.begChip{flex-shrink:0;white-space:nowrap;min-height:44px;padding:0 14px;border-radius:var(--radius-full);border:1px solid transparent;background:var(--pill2);color:var(--pill);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.begChip.on{background:var(--accent2);color:var(--accent-text);border-color:var(--accent)}
+.begSec{scroll-margin-top:64px}
+.begSecTitle{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:14px 4px 8px}
+.begAttn{background:var(--warn2);border:1px solid var(--warn-line);border-radius:var(--radius-lg);padding:4px 14px;margin-bottom:12px}
+.begAttnHead{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--warn-text);padding:8px 0 4px}
+.begAttnItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;background:none;border:none;border-top:1px solid var(--warn-line);padding:0;font:inherit;font-size:14px;font-weight:600;color:var(--warn-text);text-align:left;cursor:pointer}
+.foldTitle{display:inline-flex;align-items:center;gap:12px;min-width:0}
+.foldIcon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--pill);font-size:18px;flex-shrink:0}
+.cardActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 /* Melding voor iedereen: dunne gele balk bovenaan (alle gebruikers) + kaart in Beheer. Geen knop, dus ruim lager dan de testbalk. */
 .noticeBar{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--warn2);color:var(--warn-text);padding:4px 12px;font-size:12px;line-height:1.35;font-weight:600;border-bottom:1px solid var(--border);text-align:center}
 .noticeBar svg{flex-shrink:0}

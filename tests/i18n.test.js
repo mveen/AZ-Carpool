@@ -152,6 +152,12 @@ test('the place texts of the standaardrooster speak of one car, not of a whole s
   assert.match(t('loc.shiftSub', { p1: 'Heen', p2: 'Maandag' }), /alleen voor deze auto/);
 });
 
+test('the Beheer chips, section titles and attention texts', () => {
+  assert.deepEqual(['gezinnen', 'periodes', 'berichten', 'koppelingen'].map(k => t('beheer.chip_' + k)), ['Gezinnen', 'Periodes', 'Berichten', 'Koppelingen']);
+  assert.equal(t('beheer.sec_koppelingen'), 'Koppelingen en data'); assert.equal(t('beheer.attn_titel', { p1: 3 }), 'Om te checken (3)');
+  assert.equal(t('beheer.attn_dubbel', { p1: 'Sanne', p2: 2 }), 'Dubbel gezin: Sanne (2×)');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

@@ -32,7 +32,12 @@ export function foldHtml(key, titleHtml, bodyHtml, cls, id){
 // Turns every top-level .card in `box` that starts with an <h2> into a collapsible section (used by Beheer).
 export function foldCards(box){
   if(!box) return;
-  [...box.children].forEach(card=>{
+  // Cards may sit directly in `box` or inside a .begSec section (Beheer groups its cards).
+  const cards = [];
+  [...box.children].forEach(c=>{
+    if(c.classList && c.classList.contains('begSec')) cards.push(...c.children); else cards.push(c);
+  });
+  cards.forEach(card=>{
     if(!card.classList || !card.classList.contains('card')) return;
     const h2 = card.querySelector(':scope > h2'); if(!h2) return;
     const key = 'card|'+(card.id||h2.textContent.trim());
@@ -40,7 +45,9 @@ export function foldCards(box){
     det.className = 'fold card'+(card.classList.contains('timeChangeCard')?' timeChangeCard':'');
     det.dataset.fold = key; if(S.folds[key]) det.open = true;
     if(card.id) det.id = card.id;
-    const sum = document.createElement('summary'); sum.innerHTML = h2.innerHTML;
+    const icon = card.dataset && card.dataset.icon ? phIcon(card.dataset.icon) : '';
+    const sum = document.createElement('summary');
+    sum.innerHTML = icon ? `<span class="foldTitle"><span class="foldIcon">${icon}</span>${h2.innerHTML}</span>` : h2.innerHTML;
     const body = document.createElement('div'); body.className = 'foldBody';
     h2.remove();
     while(card.firstChild) body.appendChild(card.firstChild);

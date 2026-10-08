@@ -44,6 +44,16 @@ export const PH_PATHS = {
   soccer: `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><polygon points="128,92 162,117 149,157 107,157 94,117" fill="currentColor"/><path d="M128 92V32M162 117l57-19M149 157l35 49M107 157l-35 49M94 117 37 98" stroke="currentColor" stroke-width="14" stroke-linecap="round"/>`,
   eye: `<path d="M16 128 Q128 32 240 128 Q128 224 16 128 Z" fill="none" stroke="currentColor" stroke-width="16" stroke-linejoin="round"/><circle cx="128" cy="128" r="32" fill="none" stroke="currentColor" stroke-width="16"/>`,
   question: `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16"/><path d="M100 104a28 28 0 1 1 40 26c-9 5-12 11-12 20" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="128" cy="182" r="10" fill="currentColor"/>`,
+  'list': `<line x1="96" y1="64" x2="216" y2="64" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="96" y1="128" x2="216" y2="128" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="96" y1="192" x2="216" y2="192" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="48" cy="64" r="10" fill="currentColor"/><circle cx="48" cy="128" r="10" fill="currentColor"/><circle cx="48" cy="192" r="10" fill="currentColor"/>`,
+  'heart': `<path d="M128 216S28 160 28 92a52 52 0 0 1 100-20 52 52 0 0 1 100 20c0 68-100 124-100 124z" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'map-pin': `<path d="M128 24a72 72 0 0 0-72 72c0 64 72 136 72 136s72-72 72-136a72 72 0 0 0-72-72z" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><circle cx="128" cy="96" r="24" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'bell': `<path d="M56 192c8-12 16-28 16-56v-32a56 56 0 0 1 112 0v32c0 28 8 44 16 56z" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="104" y1="224" x2="152" y2="224" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'key': `<circle cx="88" cy="168" r="48" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="122" y1="134" x2="216" y2="40" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="184" y1="72" x2="216" y2="104" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'download': `<path d="M128 32v128M80 112l48 48 48-48M40 208h176" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'chart': `<rect x="40" y="136" width="48" height="80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><rect x="104" y="48" width="48" height="168" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><rect x="168" y="96" width="48" height="120" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'wrench': `<circle cx="84" cy="84" r="44" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><line x1="116" y1="116" x2="208" y2="208" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'clock': `<circle cx="128" cy="128" r="96" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/><path d="M128 72v56l36 24" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+  'chevron-right': `<path d="M96 48l80 80-80 80" fill="none" stroke="currentColor" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
 };
 
 export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
@@ -63,17 +73,5 @@ export const APP_URL = "https://mveen.github.io/AZ-Carpool/";
 export const KM_COST_EUR = 0.20;
 
 export const WHATSAPP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7zm-2.8 2.6c-.1 0-.3 0-.4.2-.1.2-.6.6-.6 1.4s.6 1.6.7 1.7c.1.1 1.2 1.9 3 2.6 1.5.6 1.8.5 2.1.4.3 0 1-.4 1.1-.8.1-.4.1-.8.1-.9-.1-.1-.2-.1-.4-.2l-1.2-.6c-.2-.1-.3-.1-.4.1l-.5.6c-.1.1-.2.2-.4.1-.2-.1-.8-.3-1.5-.9-.6-.5-1-1.2-1.1-1.4-.1-.2 0-.3.1-.4l.3-.4c.1-.1.1-.2.2-.4 0-.1 0-.3 0-.4l-.5-1.3c-.1-.3-.3-.3-.4-.3h-.3z"/></svg>`;
-
-// ---------- Seed from PDF ----------
-export const PDF_SEED = [
-  {girlName:"Evi",     schedule:{Ma:{heen:"10:15",terug:"18:00"},Di:{heen:"08:30",terug:"17:00"},Wo:{heen:"08:30",terug:"15:30"},Do:{heen:"09:15",terug:"17:30"},Vr:{heen:"08:00",terug:"15:30"}}},
-  {girlName:"Jahaimy", schedule:{Ma:{heen:"08:30",terug:"16:45"},Di:{heen:"09:15",terug:"17:30"},Wo:{heen:"08:30",terug:"14:45"},Do:{heen:"08:30",terug:"17:30"},Vr:{heen:"09:15",terug:"16:45"}}},
-  {girlName:"Anouk",   schedule:{Ma:{heen:"10:15",terug:"17:00"},Di:{heen:"08:15",terug:"13:45"},Wo:{heen:"10:15",terug:"13:00"},Do:{heen:"08:30",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
-  {girlName:"Eline",   schedule:{Ma:{heen:"08:30",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"10:15",terug:"15:30"},Do:{heen:"10:15",terug:"18:00"},Vr:{heen:"08:30",terug:"15:30"}}},
-  {girlName:"Jet",     schedule:{Ma:{heen:"11:00",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"13:00",terug:"15:30"},Do:{heen:"11:00",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
-  {girlName:"Saar",    schedule:{Ma:{heen:"11:00",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"13:00",terug:"15:30"},Do:{heen:"11:00",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
-  {girlName:"Loïs",    schedule:{Ma:{heen:"10:15",terug:"17:00"},Di:{heen:"08:15",terug:"14:45"},Wo:{heen:"10:15",terug:"13:00"},Do:{heen:"08:30",terug:"18:00"},Vr:{heen:"08:30",terug:"13:00"}}},
-  {girlName:"Robbin",  schedule:{Ma:{heen:"13:15",terug:"17:00"},Di:{heen:"08:15",terug:"12:00"},Wo:{heen:"",terug:""},Do:{heen:"13:15",terug:"18:00"},Vr:{heen:"08:30",terug:"10:45"}}}
-];
 
 export const WA_ICON_SMALL = `<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5a6.5 6.5 0 0 0-5.6 9.8L5.5 18.5l3.3-.9A6.5 6.5 0 1 0 12 5.5zm0 1.2a5.3 5.3 0 1 1 0 10.6 5.2 5.2 0 0 1-2.7-.7l-.2-.1-2 .5.5-1.9-.1-.2A5.3 5.3 0 0 1 12 6.7z"/></svg>`;
