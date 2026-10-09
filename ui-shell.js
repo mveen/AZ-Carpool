@@ -10,6 +10,7 @@ import { myFamilyId } from './coordinator.js';
 import { openHelp } from './ui-help.js';
 import { wireWhatsAppButton } from './ui-deviation.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
+import { initContact } from './ui-contact.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
@@ -80,4 +81,5 @@ export function initShell(onNavigate){
   const av = document.getElementById('avatarBtn');
   if(av) av.onclick = () => openSettings(onNavigate);
   wireWhatsAppButton('shareToggle', buildMyWeekWhatsAppMessage);
+  initContact();
 }

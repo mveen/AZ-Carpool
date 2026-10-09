@@ -26,9 +26,9 @@ test('Monday: the existing car with its riders, seats left, and the girls who st
   const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
   const s = text(html);
   assert.match(s, /Het vaste rooster, elke week gelijk\./);
-  assert.match(s, /MA 2 ritten/); assert.match(s, /Maandag 7 niet ingedeeld/);
-  assert.match(s, /Heen · Aalsmeer → Alkmaar 1 Vertrek 2\/3 plekken Aankomst Alkmaar nodig: 08:30 Eline Jahaimy/);
-  assert.match(s, /Reserve: Piet Pieters, Kees de Vries, Tom Visser/);
+  assert.match(s, /ma 28 di 29 vandaag 30 do 1 vr 2/); assert.match(s, /Maandag 7 niet ingedeeld/);
+  assert.match(s, /Heen Busstation → AFC (&#39;|')34 2\/3 .*Eline Jahaimy Aankomst Alkmaar nodig: 08:30/);
+  assert.match(s, /Back-up: Piet Pieters, Kees de Vries, Tom Visser/);
   assert.match(s, /Nog niet ingedeeld \(4\): Anouk, Evi, Lois, Saar\./);
   expectSnapshot('ui-schedule', 'coordinator standard Monday', html);
 });
@@ -49,14 +49,14 @@ test('Tuesday: the deviation replaces the standard rooster and is marked "gewijz
   const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));
   const s = text(html);
   assert.match(s, /Week 40 · 28 sep – 2 okt · met wijzigingen\./);
-  assert.match(s, /Heen · Aalsmeer → Alkmaar gewijzigd 1 Vertrek 09:15 2\/5 plekken/);
-  assert.match(s, /Chauffeur: Kees de Vries/); assert.match(s, /Reserve: Piet Pieters , Mo Bakker/);
+  assert.match(s, /Heen gewijzigd 09:15 Kees de Vries Busstation → AFC (&#39;|')34 2\/5 Eline Evi/);
+  assert.match(s, /Back-up: Piet Pieters , Mo Bakker/);
   assert.match(s, /Heen : Jahaimy, Lois, Saar Regelen/);
   expectSnapshot('ui-schedule', 'coordinator week Tuesday', html);
 });
 test('a day without any cars says so', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' })));
-  assert.match(s, /Terug · Alkmaar → Aalsmeer Geen ritten\./);
+  assert.match(s, /Terug Geen ritten\./);
 });
 
 console.log('\n=== parent view ===');
@@ -87,15 +87,17 @@ test('neededTimesHtml: one time, or the range when times differ', () => {
   assert.match(text(neededTimesHtml('Ma', 'heen', ['f1', 'f2'])), /08:30/);
   assert.match(text(neededTimesHtml('Ma', 'heen', ['f1', 'f3'])), /08:30.10:15/);
 });
-test('pillsHtml: one pill per girl, mine highlighted', () => {
+test('pillsHtml: one chip per girl, mine highlighted, a Flex player dashed', () => {
   sampleParentState();
-  const html = pillsHtml(['f1', 'f2'], 'f2');
-  assert.equal((html.match(/pill/g) || []).length >= 2, true); assert.match(html, /Eline/); assert.match(html, /Jahaimy/);
+  const fams = S.families; fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, schedule: {}, availability: {} };
+  const html = pillsHtml(['f1', 'f2', 'f9'], 'f2');
+  assert.equal((html.match(/class="chip/g) || []).length, 3);
+  assert.match(html, /<span class="chip">Eline<\/span>/); assert.match(html, /<span class="chip chip--mine">Jahaimy<\/span>/); assert.match(html, /<span class="chip chip--flex">Lotte<\/span>/);
 });
 test('driverLineHtml names the driver; tripReserveHtml lists the reserves', () => {
   sampleCoordinatorState();
   assert.match(text(driverLineHtml('f1', 'f9', null)), /Jan Jansen/);
-  assert.match(text(tripReserveHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }], false)), /Reserve: /);
+  assert.match(text(tripReserveHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }], false)), /Back-up: /);
 });
 
 import { dayCoordinatorHtml, dayCoordinatorTarget } from '../ui-schedule.js';
@@ -107,18 +109,19 @@ test('nothing is shown when Beheer has no coordinator for today', () => {
   assert.equal(withFakeNow(NOW, () => dayCoordinatorHtml()), '');
   assert.doesNotMatch(render(() => sampleParentState({ dayCoordinators: {} })), /Dagcoördinator/);
 });
-test('Rooster shows "Dagcoördinator morgen: <naam>" with a WhatsApp button to that person', () => {
+test('Rooster shows "Dagcoördinator morgen: <naam>", the name opens the contact sheet', () => {
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' } }));
   assert.match(text(html), /^Dagcoördinator morgen: Kees de Vries/);
-  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Een%20vraag%20over%20de%20carpool%20van%20morgen%3A%20"/);   // no name in the message text: "Hi! Een vraag over de carpool van morgen: "
-  assert.match(html, /aria-label="Stuur Kees de Vries een WhatsApp-bericht"/);
+  // The name opens the contact sheet; the WhatsApp text there has no name in it: "Hi! Een vraag over de carpool van morgen: "
+  assert.match(html, /<button type="button" class="nameLink" data-contact="f3" data-contact-text="Hi! Een vraag over de carpool van morgen: ">Kees de Vries<\/button>/);
+  assert.doesNotMatch(html, /wa\.me/);
 });
 test('the name comes from the family data, not from the code', () => {
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: { ...sampleParentState().families, f3: { ...sampleParentState().families.f3, parentName: 'Merel Test' } } }));
   assert.match(text(html), /^Dagcoördinator morgen: Merel Test/);
   assert.doesNotMatch(html, /Kees de Vries/);
 });
-test('a coordinator without a phone number gets no WhatsApp button', () => {
+test('a coordinator without a phone number still shows the name (the sheet says there is no number)', () => {
   const fams = sampleParentState().families; fams.f3 = { ...fams.f3, parentPhone1: '', parentPhone2: '' };
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: fams }));
   assert.match(text(html), /^Dagcoördinator morgen: Kees de Vries/); assert.doesNotMatch(html, /wa\.me/);
@@ -161,15 +164,15 @@ test('the coordinator of the day itself is not the one shown', () => {
 console.log('\n=== pickup and drop-off place on the ride (US-15) ===');
 test('Rooster "Deze week" and Standaardrooster show the route as plain text, without a map button', () => {
   const week = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
-  assert.match(text(week), /07:30 Busstation → AFC &#39;34|07:30 Busstation → AFC '34/); assert.match(text(week), /17:30 AFC (&#39;|')34 → Busstation/);
+  assert.match(text(week), /07:30 Jan Jansen Busstation → AFC (&#39;|')34/); assert.match(text(week), /17:30 Jij rijdt AFC (&#39;|')34 → Busstation/);
   assert.doesNotMatch(week, /geoBtn|geo:0,0|Kaart/);   // no map button on a shift
   const std = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
-  assert.match(text(std), /07:30 Busstation → AFC (&#39;|')34/);
+  assert.match(text(std), /Busstation → AFC (&#39;|')34/);
 });
 test('a one-off place chosen in Wijzigen shows on that ride only', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30', locationId: 'de-parel' }] } };
   const s = text(render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma', deviations: dev })));
-  assert.match(s, /07:30 De Parel → AFC (&#39;|')34/); assert.match(s, /17:30 AFC (&#39;|')34 → Busstation/);
+  assert.match(s, /07:30 Jan Jansen De Parel → AFC (&#39;|')34/); assert.match(s, /17:30 Jij rijdt AFC (&#39;|')34 → Busstation/);
 });
 
 test('without a period the switch has two views and a stale "period" mode falls back to "Deze week"', () => {
@@ -209,8 +212,8 @@ const twoCars = () => {
 test('two cars of the same shift show their own place and arrival', () => {
   const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma', groups: twoCars() }));
   const s = text(html);
-  assert.match(s, /07:30 Busstation → AFC (&#39;|')34/);
-  assert.match(s, /09:00 De Parel → ATC/);
+  assert.match(s, /Busstation → AFC (&#39;|')34/);
+  assert.match(s, /De Parel → ATC/);
   assert.match(html, /data-shiftloc="Ma_heen_1"/); assert.match(html, /data-shiftloc="Ma_heen_2"/);
 });
 test('the place button belongs to one car (its group id), not to the whole shift', () => {

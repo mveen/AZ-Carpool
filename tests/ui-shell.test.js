@@ -71,8 +71,9 @@ test('a visitor who is not linked yet is told so', () => {
   resetState({ me: 'x' }); const { ov } = installSheet(); openSettings(() => {});
   assert.match(ov.html, /Nog niet gekoppeld/);
 });
-test('initShell wires the avatar to the sheet', () => {
-  sampleParentState(); const { ov } = installSheet(); initShell(() => {});
+test('initShell wires the avatar to the sheet, the share button and the contact handler', () => {
+  sampleParentState(); const { ov } = installSheet(); let clicks = 0; dom.doc.addEventListener = type => { if (type === 'click') clicks++; };
+  initShell(() => {}); assert.equal(clicks, 1);
   dom.el('avatarBtn').onclick(); assert.equal(ov.mounted, true);
 });
 

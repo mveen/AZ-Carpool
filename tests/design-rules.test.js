@@ -14,7 +14,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => readFileSync(path.join(root, f), 'utf8');
 const html = read('index.html'), tokens = read('tokens.css'), components = read('components.css'), legacy = read('legacy.css');
 const uiFiles = readdirSync(root).filter(f => /^(ui-.*|app)\.js$/.test(f));
-const SCALE = new Set([11, 12, 13, 14, 15, 17, 18, 22, 24]);   // the px values behind the --type-* tokens, plus the 18/22 icon sizes
+const SCALE = new Set([10, 11, 12, 13, 14, 15, 17, 18, 20, 22, 24]);   // the px values behind the --type-* tokens, plus the 18/22 icon sizes
 const sizes = css => [...css.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)].map(m => +m[1]);
 
 console.log('=== the three stylesheets ===');
@@ -40,11 +40,11 @@ console.log('\n=== components.css speaks only in tokens ===');
 test('no colour literals (hex, rgb, hsl) in components.css', () => {
   assert.deepEqual(components.match(/#[0-9a-fA-F]{3,8}\b|\brgba?\(|\bhsla?\(/g) || [], []);
 });
-test('font sizes in components.css stay on the type scale 11 / 12 / 13 / 14 / 15 / 17 / 18 / 22 / 24', () => {
+test('font sizes in components.css stay on the type scale 10 / 11 / 12 / 13 / 14 / 15 / 17 / 18 / 20 / 22 / 24', () => {
   assert.deepEqual(sizes(components).filter(n => !SCALE.has(n)), []);
 });
-test('no radius literals except 50% and 3px/9px handle details in components.css', () => {
-  const bad = [...components.matchAll(/border-radius:\s*([^;}]+)/g)].map(m => m[1].trim()).filter(v => !/^var\(--radius-[a-z]+\)( var\(--radius-[a-z]+\) 0 0)?$/.test(v) && !['50%', '3px', '9px', '9px', '0'].includes(v));
+test('no radius literals in components.css except 50% and the small detail shapes (handle, app icon, switch, icon tile)', () => {
+  const bad = [...components.matchAll(/border-radius:\s*([^;}]+)/g)].map(m => m[1].trim()).filter(v => !/^var\(--radius-[a-z]+\)( var\(--radius-[a-z]+\) 0 0)?$/.test(v) && !['50%', '3px', '9px', '11px', '15px', '0'].includes(v));
   assert.deepEqual(bad, []);
 });
 test('no control removes its focus outline, and one global ring exists', () => {

@@ -6,3 +6,4 @@
 - **Deploy:** bump `CACHE_NAME` in `service-worker.js` on every change to app files (CI checks it). New app files go in `ASSETS` there.
 - **Database:** shared live Firestore. Changes are additive only (new optional fields). Never rename, delete or migrate existing data without asking.
 - **Rollback:** tag `v1-stable` = the app before the v2 redesign. Redesign work happens on `feat/redesign-v2`, one PR per phase; nothing reaches `main` without the owner's approval.
+- **Try a branch locally:** `npm run preview` (opens nothing; go to http://localhost:8777/). Uses the real database.

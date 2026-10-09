@@ -67,6 +67,12 @@ test('static page texts (data-i18n in index.html) all exist', () => {
   assert.deepEqual(keys.filter(k => !hasKey(k)), []);
 });
 
+test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
+  assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
+  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('myweek.daughter_heen', { place: "AFC '34" }), "Op AFC '34 om");
+  assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', place: "AFC '34", time: '17:00' }), "Noor op AFC '34 17:00");
+  assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor klaar 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
+});
 test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijd, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));

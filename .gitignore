@@ -3,3 +3,6 @@ backups/
 node_modules/
 *.before-*
 Claude outputs/
+preview.html
+.preview-tmp.html
+.preview-data.json
