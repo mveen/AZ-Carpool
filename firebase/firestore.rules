@@ -250,7 +250,7 @@ service cloud.firestore {
     match /backupMoments/{momentId} {
       allow read: if isMember();
       allow create, update: if ritbeursOn() && isLinked()
-        && request.resource.data.keys().hasOnly(['familyId', 'date', 'from', 'to', 'place', 'onlyIfFree', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['familyId', 'date', 'from', 'to', 'onlyIfFree', 'createdAt'])
         && request.resource.data.familyId == linkedFamilyId();
       allow delete: if isCoordinator() || (isLinked() && resource.data.familyId == linkedFamilyId());
     }
