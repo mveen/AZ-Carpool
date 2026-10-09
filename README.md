@@ -63,6 +63,20 @@ All `*.test.js` files live in `tests/`; the site does not use that folder. Every
 
 The tests never touch the real Firebase. They run against `fake-db.js`, an in-memory Firestore that the app cannot tell apart from the real one.
 
+## Ritbeurs (ritten aanbieden en overnemen)
+
+Wijzigen heeft bovenaan een segment *Wijzigen | Ritbeurs (n)*. Alleen zichtbaar als de coördinator de Ritbeurs aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat).
+
+- **Aanbieden.** Een chauffeur biedt één rit aan (heen of terug), met een kort bericht (max 60 tekens). Intrekken kan zolang niemand de rit heeft. Overgenomen is van de nieuwe chauffeur; die kan hem zelf opnieuw aanbieden.
+- **Overnemen: eerste ja wint.** Het overnemen is één batch: aanbod `status: taken` + de rit in `deviations/<dag_richting>` (alleen `driverFamilyId` verandert) + meldingen. `firestore.rules` laat de wijziging alleen toe zolang het aanbod `open` is, dus de tweede batch faalt als geheel. Zitplaatsen en tijdsconflict (< 90 min) zijn alleen een waarschuwing.
+- **Ik kan inspringen.** Een back-up meldt een tijdvak (datum, van, tot, "alleen als ik niet al rijd"). Bij een aanbod krijgen alleen back-ups wiens tijdvak de rit dekt een melding; bij een nieuw tijdvak krijgen chauffeurs met een rit in dat tijdvak een melding.
+- **Escalatie.** Open aanbod om 18:00 de dag ervoor: één melding "niet gedekt" aan aanbieder en dagcoördinator (`uncoveredAt`, één keer). Het conclusie-appje van 20:00 in Wijzigen is ongewijzigd.
+- **Meldingen** zijn nu meldingen in de app (`families/<gezin>/notifications/*`, per gezin leesbaar, vaste id's dus nooit dubbel). Ze hebben `deliverAt` (stille uren, standaard 22:00–06:00, per gezin instelbaar in `families/<id>.ritbeursQuiet`) en `expiresAt` (14 dagen), zodat een latere push-verzender dezelfde documenten kan gebruiken. Echte pushmeldingen vragen een server; dat is nog niet gebouwd.
+- **Aan/uit.** `settings/ritbeurs = { on, updatedAt }`. Uit of ontbrekend = uit: schermen en teller verborgen, geen meldingen gemaakt, en `firestore.rules` weigert aanbieden, overnemen, tijdvakken en meldingen. Opruimen (verwijderen) blijft mogelijk.
+- **Opruimen/controle** (`checkRitbeurs`, elke minuut en bij terugkeer naar de app): te late aanbiedingen melden; de coördinator verwijdert aanbiedingen van andere weken en afgelopen tijdvakken; ieder gezin zijn eigen verlopen meldingen. Zonder server draait dit alleen terwijl iemand de app open heeft.
+- **Code:** `ritbeurs.js` (regels, puur), `ritbeurs-data.js` (database), `ui-ritbeurs.js` (schermen + Beheer-kaart). Tests: `ritbeurs.test.js`, `ritbeurs-data.test.js`, `ui-ritbeurs.test.js`; de regels zijn getest met de Firestore-emulator (`firebase/rules-test/ritbeurs-rules.test.mjs`, handmatig: emulator starten en `node` draaien met `@firebase/rules-unit-testing`).
+- **`firestore.rules` is gewijzigd**: plak de nieuwe regels in de Firebase-console → Rules, anders werkt aanbieden/overnemen niet. Service worker cache `az-carpool-v42`.
+
 ## Run the tests
 
     npm test

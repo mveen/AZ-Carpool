@@ -4,7 +4,7 @@
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v41';
+const CACHE_NAME = 'az-carpool-v43';
 const ASSETS = [
   './',
   './index.html',
@@ -38,6 +38,9 @@ const ASSETS = [
   './ui-period.js',
   './notice.js',
   './ui-notice.js',
+  './ritbeurs.js',
+  './ritbeurs-data.js',
+  './ui-ritbeurs.js',
   './maintenance.js',
   './ui-maintenance.js',
   './ui-ride-log.js',

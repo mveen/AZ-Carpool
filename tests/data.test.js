@@ -846,5 +846,21 @@ await testAsync('setRideRemoved marks one car of a logged shift as removed (and 
   assert.equal(await setRideRemoved('2026-09-21_heen', 0, 'f1', true), false, 'a parent');
 });
 
+await testAsync('Ritbeurs: the switch, the offers and the moments are read; the own family inbox is listened to and released again', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/ritbeurs': { on: true }, 'offers/o1': { status: 'open' }, 'backupMoments/m1': { familyId: 'f3' }, 'families/f2/notifications/n1': { kind: 'taken' }, 'families/f1/notifications/n2': { kind: 'taken' } });
+  sampleParentState({ ritbeurs: null, offers: {}, moments: {}, notifications: {}, notificationsFor: null });
+  syncListeners(); startDataListeners(); await tick(); await tick(); await tick();
+  assert.equal(S.ritbeurs.on, true); assert.deepEqual(Object.keys(S.offers), ['o1']); assert.deepEqual(Object.keys(S.moments), ['m1']);
+  assert.equal(S.notificationsFor, 'f2'); assert.deepEqual(Object.keys(S.notifications), ['n1'], 'only the own inbox');
+  stopDataListeners(); assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {});
+  S.links = {}; syncListeners(); assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null); assert.deepEqual(S.notifications, {});
+});
+await testAsync('Ritbeurs: a missing switch document means off', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ ritbeurs: { on: true } });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.ritbeurs, null);
+  stopDataListeners();
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
