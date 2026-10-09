@@ -447,5 +447,17 @@ test('the coordinator overview (Namens een ouder invullen) is collapsed by defau
   S.folds['periodBehalf|2026-10-26'] = true; assert.match(render(OPEN), /data-fold="periodBehalf\|2026-10-26" open>/); S.folds = {};
 });
 
+test('Ritbeurs: the Wijzigen badge also counts open rides of other families, and only while the switch is on', () => {
+  const offer = { weekKey: S.currentWeekKey, day: 'Do', direction: 'heen', date: '2099-01-01', time: '16:15', offeredBy: 'f3', message: '', status: 'open', createdAt: 1 };
+  const badge = () => { withFakeNow(OPEN, () => updatePeriodBadge()); return Number(dom.el('navDeviationBadge').textContent || 0); };
+  parent2(); S.offers = { o1: offer }; offer.weekKey = S.currentWeekKey;
+  const base = badge();                                   // switch not read yet: off
+  S.ritbeurs = { on: true };
+  assert.equal(badge(), base + 1);
+  S.ritbeurs = { on: false };
+  assert.equal(badge(), base);
+  S.offers = {}; S.ritbeurs = null;
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -85,5 +85,11 @@ test('the ride log starts empty, not loaded, without a listener, and the deviati
   assert.equal(S.deviationsLoaded, false);
 });
 
+test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch is read', () => {
+  assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {}); assert.deepEqual(S.notifications, {});
+  assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null);
+  assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbBusy, false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

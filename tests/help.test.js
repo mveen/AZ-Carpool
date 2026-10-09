@@ -229,5 +229,11 @@ test('the pickup-place article explains that every car has its own place and arr
   assert.match(a.body.join(' '), /elke auto[\s\S]*alleen die auto/);
 });
 
+test('the Ritbeurs has a parent article and a coordinator article that explains the switch stops all notifications', () => {
+  const a = articles.find(x => x.id === 'ritbeurs'), b = articles.find(x => x.id === 'beheer-ritbeurs');
+  assert.ok(a && !a.coordinatorOnly); assert.match(a.body.join(' '), /Neem over[\s\S]*eerste bevestigt[\s\S]*18:00/);
+  assert.ok(b && b.coordinatorOnly); assert.match(b.body.join(' '), /direct geen meldingen meer/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

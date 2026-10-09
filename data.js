@@ -2,13 +2,15 @@
 import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { deviationExpiryMs, deviationKey, getISOWeekKey, effectivePlanningDate, refreshWeekKey, weekKeyDayIso } from './dates.js';
-import { isMemberNow, isRealCoordinator, isValidInviteCode, myDisplayInfo, normalizePhone, recomputeCanEdit } from './coordinator.js';
+import { isMemberNow, isRealCoordinator, isValidInviteCode, myDisplayInfo, myLinkedFamilyId, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { notifyCoordinatorOfNewTimeChanges, renderBeheer } from './ui-beheer.js';
 import { renderAll } from './app.js';
 import { renderNoticeBanner } from './ui-notice.js';
 import { normalizeNotice } from './notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
 import { normalizeMaintenance } from './maintenance.js';
+import { normalizeRitbeurs } from './ritbeurs.js';
+import { checkRitbeurs } from './ritbeurs-data.js';
 import { setStatus, showToast, updateStatusLine } from './ui-common.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -405,6 +407,18 @@ export function syncListeners(){
   const member = isMemberNow();
   if(member && !S.dataUnsubs.length) startDataListeners();
   if(!member && S.dataUnsubs.length) stopDataListeners();
+  // Ritbeurs notifications: only the own family's inbox is listened to (families/<id>/notifications).
+  const nf = member? (myLinkedFamilyId() || null) : null;
+  if(S.notificationsFor !== nf){
+    if(S.notificationsUnsub){ S.notificationsUnsub(); S.notificationsUnsub=null; }
+    S.notifications = {}; S.notificationsFor = nf;
+    if(nf){
+      S.notificationsUnsub = db.collection("families/"+nf+"/notifications").onSnapshot(snap=>{
+        S.notifications={}; snap.docs.forEach(d=>S.notifications[d.id]=d.data());
+        renderDeviationTab();
+      }, err=>{});
+    }
+  }
   const coord = isRealCoordinator();
   if(coord && !S.linksCollUnsub){
     S.linksCollUnsub = db.collection("links").onSnapshot(snap=>{
@@ -470,6 +484,13 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/maintenance").onSnapshot(snap=>{ S.maintenance = snap.exists? normalizeMaintenance(snap.data()) : null; renderMaintenance(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
+    db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
+      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); checkRitbeurs(); },
+      err=>{});
+    db.collection("backupMoments").onSnapshot(snap=>{ S.moments={}; snap.docs.forEach(d=>S.moments[d.id]=d.data()); renderDeviationTab(); },
+      err=>{});
     db.collection("periods").onSnapshot(snap=>{
       S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
       rebuildPeriods(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
@@ -538,7 +559,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   renderNoticeBanner();
   renderMaintenance();
@@ -572,7 +593,7 @@ export async function migrateLegacyFamilySecrets(){
 // Strip baseGroupId (an internal marker effectiveCars() adds when falling back to the default
 // schedule — it was never meant to be persisted into a deviation document) and any literal
 // `undefined` field, which Firestore's SDK rejects outright with a thrown error.
-function cleanCars(cars){
+export function cleanCars(cars){
   return cars.map(c=>{
     const {baseGroupId, ...rest} = c;
     Object.keys(rest).forEach(k=>{ if(rest[k]===undefined) delete rest[k]; });
@@ -581,7 +602,7 @@ function cleanCars(cars){
 }
 
 // This week's stored deviation of one shift (null when it belongs to another week).
-function currentDeviationDoc(day,direction){
+export function currentDeviationDoc(day,direction){
   const dev = S.deviations[deviationKey(day,direction)];
   return dev && dev.weekKey===S.currentWeekKey ? dev : null;
 }

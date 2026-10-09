@@ -182,5 +182,11 @@ test('the minute timer logs shifts that have taken place (logPassedShifts) when 
   assert.match(src, /else if\(S\.appReady\) logPassedShifts\(\)/);
 });
 
+test('the minute check and coming back to the app run the Ritbeurs checks (late offers, housekeeping)', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /import \{ checkRitbeurs \} from '\.\/ritbeurs-data\.js'/);
+  assert.equal((src.match(/checkRitbeurs\(\)/g) || []).length, 2);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

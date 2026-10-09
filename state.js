@@ -48,6 +48,17 @@ export const S = {
   noticeDraft: null,       // Beheer: what is typed in the notice card, kept while other cards redraw (null = nothing typed)
   maintenance: null,       // settings/maintenance: onderhoudsmodus { on, text } (null = none / not loaded)
   maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
+  ritbeurs: null,          // settings/ritbeurs: the Ritbeurs feature switch { on } (null = none / not loaded, which means off)
+  offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
+  moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id
+  notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id
+  notificationsFor: null,  // the family whose notifications are being listened to (null = none)
+  notificationsUnsub: null,
+  rbView: 'wijzigen',      // Wijzigen tab: 'wijzigen' (the ride cards) or 'ritbeurs'
+  rbConfirm: null,         // Ritbeurs: id of the offer whose "Neem over" confirmation is open (null = none)
+  rbOffering: null,        // Ritbeurs: the own ride whose "Aanbieden" form is open, 'Do|heen' (null = none)
+  rbMomentDraft: null,     // Ritbeurs: what is typed in the "Nieuw moment" form { date, from, to, place, onlyIfFree } (null = defaults)
+  rbBusy: false,           // Ritbeurs: a background check (late offers, housekeeping) is running
   periodDraft: null,       // Beheer: the period form { editing: firstDay of the period being edited or '', value } while it is open (null = closed)
   periodSel: null,         // Rooster, temporary view: the chosen period (firstDay)
   periodEntries: {},       // periodEntries/*: the times families handed in for the period, by document id

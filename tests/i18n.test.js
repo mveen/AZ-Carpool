@@ -164,6 +164,15 @@ test('the Gereden shifts texts exist and fill their numbers', () => {
   assert.equal(t('ridelog.export_year', { p1: 2026 }), 'Export 2026 (CSV)'); assert.equal(t('ridelog.idle', { p1: 3 }), '3 gezinnen nog niet gereden');
 });
 
+test('the Ritbeurs texts exist and fill their placeholders', () => {
+  assert.equal(t('ritbeurs.seg.ritbeurs'), 'Ritbeurs'); assert.equal(t('ritbeurs.urg.soon'), 'Vóór 18:00 regelen'); assert.equal(t('ritbeurs.urg.late'), 'Deadline voorbij');
+  assert.equal(t('ritbeurs.toast.aangebodenBackups', { n: 2 }), 'Rit aangeboden. 2 back-up(s) gewaarschuwd.');
+  assert.equal(t('ritbeurs.warn.zitplaatsen', { need: 3, have: 2 }), 'Let op: er zitten 3 kinderen in deze auto en jij hebt 2 plaatsen.');
+  assert.match(t('ritbeurs.confirm.regel3'), /Overnemen is definitief/);
+  assert.match(t('ritbeurs.saved.off'), /Alle meldingen zijn gestopt/);
+  assert.doesNotMatch(Object.entries({ a: t('ritbeurs.form.stappen'), b: t('ritbeurs.moment.intro'), c: t('ritbeurs.notif.offerBackupBody') }).map(x => x[1]).join(' '), /alle chauffeurs|in de buurt/i);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
