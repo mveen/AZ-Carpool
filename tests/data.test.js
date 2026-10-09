@@ -831,6 +831,21 @@ await testAsync('the coordinator reads the ride log and writes what is new; a pa
   syncListeners(); assert.equal(S.rideLogUnsub, null);
 });
 
+await testAsync('setRideRemoved marks one car of a logged shift as removed (and back); only the coordinator, only a car that is there', async () => {
+  const { setRideRemoved } = await import('../data.js');
+  const d = { date: '2026-09-21', day: 'Ma', direction: 'heen', cars: [{ familyId: 'f1', name: 'x', girls: 1 }, { familyId: 'f2', name: 'y', girls: 2 }] };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'rideLog/2026-09-21_heen': d });
+  sampleCoordinatorState({ rideLog: { '2026-09-21_heen': d } });
+  assert.equal(await setRideRemoved('2026-09-21_heen', 1, 'f2', true), true);
+  assert.deepEqual(fake.get('rideLog/2026-09-21_heen').cars.map(c => !!c.removed), [false, true]);
+  assert.equal(S.rideLog['2026-09-21_heen'].cars[1].removed, true);
+  assert.equal(await setRideRemoved('2026-09-21_heen', 1, 'f1', true), false, 'another family at that place');
+  assert.equal(await setRideRemoved('2026-09-21_heen', 1, 'f2', false), true);
+  assert.equal(fake.get('rideLog/2026-09-21_heen').cars[1].removed, undefined);
+  sampleParentState({ rideLog: { '2026-09-21_heen': d } });
+  assert.equal(await setRideRemoved('2026-09-21_heen', 0, 'f1', true), false, 'a parent');
+});
+
 await testAsync('Ritbeurs: the switch, the offers and the moments are read; the own family inbox is listened to and released again', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'settings/ritbeurs': { on: true }, 'offers/o1': { status: 'open' }, 'backupMoments/m1': { familyId: 'f3' }, 'families/f2/notifications/n1': { kind: 'taken' }, 'families/f1/notifications/n2': { kind: 'taken' } });
   sampleParentState({ ritbeurs: null, offers: {}, moments: {}, notifications: {}, notificationsFor: null });
