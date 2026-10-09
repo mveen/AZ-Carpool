@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { sampleFamilies } from './test-support.js';
-import { buildRideLogDoc, logYears, newLogDocs, rideLogFileName, rideLogId, ridesCsv, shiftEndMs, sortRows, spread, tally, yearCsv } from '../ride-log.js';
+import { buildRideLogDoc, logYears, newLogDocs, rideLogFileName, rideLogId, ridesCsv, shiftEndMs, shiftList, sortRows, spread, tally, withCarRemoved, yearCsv } from '../ride-log.js';
 
 const fams = sampleFamilies();
 const NOW = new Date('2026-09-30T10:00:00+02:00').getTime();
@@ -110,6 +110,49 @@ test('a name that looks like a formula is made harmless, a name with a semicolon
 test('file names carry the year or the date', () => {
   assert.equal(rideLogFileName('year', 2026), 'gereden-shifts-2026.csv');
   assert.equal(rideLogFileName('all', 2026, new Date('2026-10-08T10:00:00Z')), 'alle-ritten-2026-10-08.csv');
+});
+
+console.log('=== removed rides ===');
+const removedOne = () => { const l = structuredClone(logs); l.c = withCarRemoved(l.c, 1, 'f3', true); return l; };
+test('withCarRemoved marks one car, keeps the others, leaves the original alone; putting it back drops the mark', () => {
+  const d = withCarRemoved(logs.c, 1, 'f3', true);
+  assert.deepEqual(d.cars.map(c => !!c.removed), [false, true]);
+  assert.equal(logs.c.cars[1].removed, undefined, 'the original is not changed');
+  assert.deepEqual(withCarRemoved(d, 1, 'f3', false).cars, logs.c.cars);
+});
+test('withCarRemoved gives null when the car is not there or belongs to another family', () => {
+  assert.equal(withCarRemoved(logs.c, 5, 'f3', true), null);
+  assert.equal(withCarRemoved(logs.c, 1, 'f1', true), null);
+  assert.equal(withCarRemoved(null, 0, 'f1', true), null);
+});
+test('a removed ride is not counted: not in the tally, the spread, the years or the CSV', () => {
+  const l = removedOne();
+  assert.equal(Object.fromEntries(tally(logs, fams, { year: 2026 }).map(r => [r.key, r])).f3.total, 1);
+  const by = Object.fromEntries(tally(l, fams, { year: 2026 }).map(r => [r.key, r]));
+  assert.equal(by.f3.total, 0); assert.equal(by.f1.total, 3);
+  assert.equal(by.f3.months[9], 0, 'the month counts do not include it either');
+  assert.equal(spread(tally(l, fams, { year: 2026, month: 10 })).total, 2);
+  assert.ok(ridesCsv(logs, fams).includes('Anouk')); assert.ok(!ridesCsv(l, fams).includes('Anouk'));
+  const onlyOld = { ...logs, e: withCarRemoved(logs.e, 0, 'f1', true) };
+  assert.deepEqual(logYears(logs, 2026), [2026, 2025]); assert.deepEqual(logYears(onlyOld, 2026), [2026]);
+});
+test('shiftList: newest day first, heen before terug on one day, then by name; only the period asked for', () => {
+  const rows = shiftList(logs, fams, { year: 2026, month: 10 });
+  assert.deepEqual(rows.map(r => [r.date, r.direction, r.name]), [['2026-10-05', 'terug', 'Eline'], ['2026-10-01', 'heen', 'Anouk'], ['2026-10-01', 'heen', 'Eline']]);
+  assert.deepEqual(shiftList({ x: doc('2026-09-28', 'terug', 'f1'), y: doc('2026-09-28', 'heen', 'f2') }, fams, { year: 2026 }).map(r => r.direction), ['heen', 'terug']);
+  assert.equal(shiftList(logs, fams, { year: 2025 }).length, 1); assert.equal(shiftList(logs, fams).length, 6);
+});
+test('shiftList tells where a ride is stored, and removed=true gives only the removed ones', () => {
+  const l = removedOne();
+  const r = shiftList(l, fams, { year: 2026 }, true);
+  assert.equal(r.length, 1);
+  assert.deepEqual([r[0].id, r[0].index, r[0].familyId, r[0].removed, r[0].girls], ['c', 1, 'f3', true, 2]);
+  assert.ok(!shiftList(l, fams, { year: 2026 }).some(x => x.removed));
+  assert.equal(shiftList(l, fams, { year: 2026 }).length, 4);
+});
+test('a family that is no longer in the app still shows with the name stored in the log', () => {
+  const r = shiftList({ z: { date: '2026-09-01', direction: 'heen', cars: [{ familyId: 'gone', name: 'Oud gezin', girls: 1 }] } }, fams, {});
+  assert.deepEqual([r[0].name, r[0].parent], ['Oud gezin', '']);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

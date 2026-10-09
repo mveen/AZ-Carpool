@@ -46,6 +46,8 @@ export function newLogDocs({ weekKeys, carsOf, isoOf, families, logged, nowMs })
 
 // ---------- counting ----------
 const entries = logs => Object.values(logs || {}).filter(d => d && isIso(d.date) && Array.isArray(d.cars));
+// The cars of a log document that count: a car the coordinator removed (`removed: true`) stays in the log, so the shift is not logged again, but is not counted.
+const live = d => d.cars.filter(c => c && !c.removed);
 // period: { year, month } (month 1-12, optional); a ride counts when its date is inside it.
 const inPeriod = (iso, p) => !p || ((!p.year || +iso.slice(0, 4) === p.year) && (!p.month || +iso.slice(5, 7) === p.month));
 
@@ -61,7 +63,7 @@ export function tally(logs, families, p){
     return rows.get(id);
   };
   Object.keys(families || {}).forEach(id => row(id));
-  entries(logs).forEach(d => d.cars.forEach(c => {
+  entries(logs).forEach(d => live(d).forEach(c => {
     if(!c.familyId) return;
     const r = row(c.familyId, c.name);
     if(p && p.year && +d.date.slice(0, 4) === p.year) r.months[+d.date.slice(5, 7) - 1]++;
@@ -83,9 +85,40 @@ export function spread(rows){
 
 // The years that have rides, newest first; always including `thisYear`.
 export function logYears(logs, thisYear){
-  const ys = new Set(entries(logs).map(d => +d.date.slice(0, 4)));
+  const ys = new Set(entries(logs).filter(d => live(d).length).map(d => +d.date.slice(0, 4)));
   ys.add(thisYear);
   return [...ys].sort((a, b) => b - a);
+}
+
+// ---------- the rides behind the counts ----------
+// One row per car (= one shift driven by one family) in the period, newest day first; on one day heen before terug.
+// `removed`: false gives the rides that count, true the ones the coordinator removed.
+// { id: docId, index: place of the car in the doc, date, day, direction, familyId, name, parent, girls, loggedAt, removed }
+export function shiftList(logs, families, p, removed = false){
+  const rows = [];
+  Object.entries(logs || {}).forEach(([id, d]) => {
+    if(!d || !isIso(d.date) || !Array.isArray(d.cars) || !inPeriod(d.date, p)) return;
+    d.cars.forEach((c, index) => {
+      if(!c || !c.familyId || !!c.removed !== removed) return;
+      const f = families && families[c.familyId];
+      rows.push({ id, index, date: d.date, day: d.day || '', direction: d.direction === 'terug' ? 'terug' : 'heen', familyId: c.familyId,
+        name: f ? familyLabel(f) : c.name || '?', parent: f ? f.parentName || '' : '', girls: c.girls || 0, loggedAt: d.loggedAt || 0, removed: !!c.removed });
+    });
+  });
+  return rows.sort((a, b) => b.date.localeCompare(a.date) || (a.direction === b.direction ? 0 : a.direction === 'heen' ? -1 : 1) || a.name.localeCompare(b.name, 'nl'));
+}
+
+// The document with one car removed (or put back): a copy, or null when the car is not there (the log changed meanwhile).
+// `familyId` guards against a log that was shifted under the coordinator's finger.
+export function withCarRemoved(doc, index, familyId, removed){
+  const car = doc && Array.isArray(doc.cars) ? doc.cars[index] : null;
+  if(!car || car.familyId !== familyId) return null;
+  const cars = doc.cars.map((c, i) => {
+    if(i !== index) return c;
+    const { removed: _was, ...rest } = c;
+    return removed ? { ...rest, removed: true } : rest;
+  });
+  return { ...doc, cars };
 }
 
 // ---------- export (CSV, semicolon-separated, UTF-8 with BOM: opens in Excel / LibreOffice like the family back-up) ----------
@@ -111,7 +144,7 @@ export function yearCsv(logs, families, year){
 // Every ride in the log, one row per car, oldest first (all years).
 export function ridesCsv(logs, families){
   const rows = [];
-  entries(logs).sort((a, b) => a.date.localeCompare(b.date) || String(a.direction).localeCompare(String(b.direction))).forEach(d => d.cars.forEach(c => {
+  entries(logs).sort((a, b) => a.date.localeCompare(b.date) || String(a.direction).localeCompare(String(b.direction))).forEach(d => live(d).forEach(c => {
     const f = families && families[c.familyId];
     rows.push([d.date, d.day || '', d.direction, f ? familyLabel(f) : c.name || '', f ? f.parentName || '' : '', c.girls || '']);
   }));

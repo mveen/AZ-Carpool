@@ -19,7 +19,7 @@ import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, groupsFor, isFlex, planPeriodRooster, planPeriodShift } from './rides.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
-import { newLogDocs } from './ride-log.js';
+import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
 import { deadlineMs, isValidIsoDate, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
 
@@ -108,6 +108,18 @@ export async function logPassedShifts(){
   }
   if(n) renderBeheer();
   return n;
+}
+
+// The coordinator removes one ride from the Gereden shifts overview (or puts it back). The ride stays in the log, marked `removed`, so
+// logPassedShifts does not log that shift again; it only stops counting. Returns true when it was stored.
+export async function setRideRemoved(id, index, familyId, removed){
+  if(!db || !isRealCoordinator()) return false;
+  const doc = withCarRemoved(S.rideLog[id], index, familyId, removed);
+  if(!doc) return false;
+  try{ await db.doc("rideLog/"+id).set(doc); }catch(e){ return false; }
+  S.rideLog[id] = doc;
+  renderBeheer();
+  return true;
 }
 
 export async function purgeStaleDeviations(){

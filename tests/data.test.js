@@ -831,5 +831,20 @@ await testAsync('the coordinator reads the ride log and writes what is new; a pa
   syncListeners(); assert.equal(S.rideLogUnsub, null);
 });
 
+await testAsync('setRideRemoved marks one car of a logged shift as removed (and back); only the coordinator, only a car that is there', async () => {
+  const { setRideRemoved } = await import('../data.js');
+  const d = { date: '2026-09-21', day: 'Ma', direction: 'heen', cars: [{ familyId: 'f1', name: 'x', girls: 1 }, { familyId: 'f2', name: 'y', girls: 2 }] };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'rideLog/2026-09-21_heen': d });
+  sampleCoordinatorState({ rideLog: { '2026-09-21_heen': d } });
+  assert.equal(await setRideRemoved('2026-09-21_heen', 1, 'f2', true), true);
+  assert.deepEqual(fake.get('rideLog/2026-09-21_heen').cars.map(c => !!c.removed), [false, true]);
+  assert.equal(S.rideLog['2026-09-21_heen'].cars[1].removed, true);
+  assert.equal(await setRideRemoved('2026-09-21_heen', 1, 'f1', true), false, 'another family at that place');
+  assert.equal(await setRideRemoved('2026-09-21_heen', 1, 'f2', false), true);
+  assert.equal(fake.get('rideLog/2026-09-21_heen').cars[1].removed, undefined);
+  sampleParentState({ rideLog: { '2026-09-21_heen': d } });
+  assert.equal(await setRideRemoved('2026-09-21_heen', 0, 'f1', true), false, 'a parent');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

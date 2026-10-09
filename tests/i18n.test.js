@@ -164,6 +164,12 @@ test('the Gereden shifts texts exist and fill their numbers', () => {
   assert.equal(t('ridelog.export_year', { p1: 2026 }), 'Export 2026 (CSV)'); assert.equal(t('ridelog.idle', { p1: 3 }), '3 gezinnen nog niet gereden');
 });
 
+test('the texts of the Gereden shifts screens', () => {
+  assert.equal(t('ridelog.family_summary', { p1: 5, p2: 2, p3: 3 }), '5 shifts · 2 heen · 3 terug');
+  assert.match(t('ridelog.remove_text', { p1: 'Saar', p2: 5, p3: 4, p4: 'oktober 2026' }), /^Saar gaat daarna van 5 naar 4 shifts in oktober 2026\./);
+  assert.equal(t('ridelog.removed_head', { p1: 1 }), 'Verwijderd (1)'); assert.equal(t('ridelog.girls', { p1: 3 }), '3 meiden');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
