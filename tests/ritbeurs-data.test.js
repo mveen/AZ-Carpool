@@ -61,9 +61,9 @@ await testAsync('warnings: not enough seats and a ride at nearly the same time',
 console.log('=== offering ===');
 await testAsync('an offer is stored, and only back-ups whose moment covers the ride (and who are not busy) are notified', async () => {
   const fake = useFakeDb(seed({
-    'backupMoments/m3': { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 },
-    'backupMoments/m4': { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '10:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 },
-    'backupMoments/m2': { familyId: 'f2', date: '2026-10-01', from: '15:00', to: '18:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 },
+    'backupMoments/m3': { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: true, createdAt: 1 },
+    'backupMoments/m4': { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '10:00', onlyIfFree: true, createdAt: 1 },
+    'backupMoments/m2': { familyId: 'f2', date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: true, createdAt: 1 },
   }));
   parent({ moments: { m3: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: true }, m4: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '10:00', onlyIfFree: true }, m2: { familyId: 'f2', date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: true } } });
   const ok = await run(() => createOffer('Do', 'heen', '  Ik moet naar de tandarts  '));
@@ -153,7 +153,7 @@ await testAsync('with the switch off a ride cannot be taken over', async () => {
 console.log('=== back-up moments ===');
 await testAsync('a moment warns the drivers with a ride inside it (not the back-up themselves)', async () => {
   const fake = useFakeDb(seed()); parent({ me: 'p3', links: { p3: { familyId: 'f3' } } });
-  assert.equal(await run(() => addMoment({ date: '2026-10-01', from: '15:00', to: '18:30', place: 'alkmaar', onlyIfFree: true })), true);
+  assert.equal(await run(() => addMoment({ date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true })), true);
   assert.equal(keys(fake, 'backupMoments/').length, 1);
   assert.equal(keys(fake, 'families/f2/notifications/').length, 1);
   assert.equal(keys(fake, 'families/f3/notifications/').length, 0);

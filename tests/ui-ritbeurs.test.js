@@ -132,12 +132,12 @@ console.log('=== Ik kan inspringen ===');
 test('the form defaults to the first day that is not over, 15:00-18:30, only if free', () => {
   asF3({});
   const d = withFakeNow(NOW, () => momentDraft());
-  assert.deepEqual(d, { date: '2026-09-30', from: '15:00', to: '18:30', place: 'onderweg', onlyIfFree: true });
+  assert.deepEqual(d, { date: '2026-09-30', from: '15:00', to: '18:30', onlyIfFree: true });
 });
 test('own moments are listed with a trash icon; selected options are neutral (no red pill), days that are over are disabled', () => {
-  asF3({ moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', place: 'alkmaar', onlyIfFree: true, createdAt: 1 }, m2: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '09:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 } } });
+  asF3({ moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 1 }, m2: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '09:00', onlyIfFree: true, createdAt: 1 } } });
   const html = view(), s = text(html);
-  assert.match(s, /Donderdag 15:00–18:30 · Alkmaar · alleen als ik niet rijd/);
+  assert.match(s, /Donderdag 15:00–18:30 · alleen als ik niet rijd/);
   assert.match(html, /data-rbmomentdel="m1"/); assert.doesNotMatch(html, /data-rbmomentdel="m2"/);
   assert.match(html, /data-rbmomentdel="m1"[^>]*><svg/);
   assert.match(html, /data-rbmday="2026-09-28" aria-pressed="false" disabled/);
@@ -151,7 +151,7 @@ test('the preview says how many rides of other families the moment touches', () 
 });
 await testAsync('saveMomentDraft stores the moment and resets the draft', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'groups/Do_heen_1': groups().Do_heen_1, 'settings/ritbeurs': { on: true } });
-  asF3({ rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:30', place: 'alkmaar', onlyIfFree: true } });
+  asF3({ rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true } });
   assert.equal(await withFakeNowAsync(NOW, () => saveMomentDraft()), true);
   assert.equal([...fake.store.keys()].filter(k => k.startsWith('backupMoments/')).length, 1);
   assert.equal(S.rbMomentDraft, null);
@@ -199,7 +199,7 @@ test('setRbView switches between the two views and closes open forms', () => {
   assert.equal(S.rbView, 'wijzigen');
 });
 test('snapshot: the Ritbeurs view', () => {
-  asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) }, moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', place: 'alkmaar', onlyIfFree: true, createdAt: 1 } } });
+  asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) }, moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 1 } } });
   expectSnapshot('ui-ritbeurs', 'ritbeurs view', view());
 });
 

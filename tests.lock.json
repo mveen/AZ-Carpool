@@ -45,7 +45,7 @@
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "a80fc4b618c585ce4c8a956d75a133fbbd85cc953992ea4849f05413cc687fe0"
+    "test": "f1a16762fc6470f984c885075169614c525aaa85d06ba6c2029a9f0132f560e2"
   },
   "impact.js": {
     "module": "af124ad7aed80f581c5080bf9e50f348c4c24d1819df9d0cff1af9c0c0881d3c",
@@ -97,11 +97,11 @@
   },
   "ritbeurs-data.js": {
     "module": "e1a6f0580444056cf427a14799234cc570e4219fbd3fb7ce6d4a83550a7d4030",
-    "test": "65b3d709cffc96968dcf222bcf91967131f32e4c3cbae2f7e8f43095f7af94d3"
+    "test": "c6b4e52d9d43beac48c9bffd814146bf04c69a5af16646f335e7de2c6da90666"
   },
   "ritbeurs.js": {
-    "module": "3e4c4c2dd86f57c4189115d3dde062b3a70d4b76a99ab4f895781ba8d907d0e5",
-    "test": "1b43926520fff75c6eea43c9ba93911c64caf1c7731c8e79152b0cda7541df4a"
+    "module": "9b8b7d1aa5690998b8b3bf90a956bc44675590fc947b50b050d9c92eed66a2a1",
+    "test": "5e182dce06e07c4f778014f45631eca05e526db13f425dde37efc221bc83cedc"
   },
   "schedule-changes.js": {
     "module": "0b69458d4a2e942cdc63184f90768ea837d702b72c21ade9b6a3591e6ef6bce1",
@@ -112,8 +112,8 @@
     "test": "bd5988db7c2be5353df460fd5bf822b72cb90aeb37fc25abf20221c21f11858e"
   },
   "texts-nl.js": {
-    "module": "a2361bd26ebbef6bda65fad1a3f170f66d1fc5bd3a6756370a124c408da7edbf",
-    "test": "a80fc4b618c585ce4c8a956d75a133fbbd85cc953992ea4849f05413cc687fe0"
+    "module": "ddeb3c94bf481590e71c4725575eda90a31e07176b6efb76803603e213914c3a",
+    "test": "f1a16762fc6470f984c885075169614c525aaa85d06ba6c2029a9f0132f560e2"
   },
   "ui-beheer.js": {
     "module": "4ad510782783b3507cf537e4c768dd145829cb654f3ba149f2acc9bd173069af",
@@ -168,8 +168,8 @@
     "test": "bad8ddfa5d74069a1f394c9d8c31076edda89dc45d1cc5078c6eaa94f819decb"
   },
   "ui-ritbeurs.js": {
-    "module": "8ced06fa8830c0fa4ea79210e45ab0c2408b761cb8877ee1128e65d9da2eb3f2",
-    "test": "c9852b5836488ae5e84405f6a1609174c048b919d246816d13650201d67cfd1c"
+    "module": "2364ebc5d86d0c1948da252f49b688f8a58a5d738a4f998742d0ec34c9bf9ba5",
+    "test": "1f39ccec90e7f3aafa91309523dd228d1df7c3b4e7928cfa78519eb9edd77a69"
   },
   "ui-schedule.js": {
     "module": "72f091efa02ccb48c25ec086f68e32078af54226ccdc7eaede973c30377b8b82",

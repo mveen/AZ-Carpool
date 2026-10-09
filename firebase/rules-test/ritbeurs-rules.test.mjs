@@ -47,8 +47,8 @@ await check('non-coordinator cannot delete offer', deleteDoc(doc(as('u1'), 'offe
 await check('coordinator deletes offer', deleteDoc(doc(as('coord'), 'offers/o6')));
 
 console.log('--- moments');
-await check('family creates own moment', setDoc(doc(as('u2'), 'backupMoments/m1'), { familyId: 'f2', date: '2026-10-15', from: '15:00', to: '18:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 }));
-await check('moment for another family refused', setDoc(doc(as('u2'), 'backupMoments/m2'), { familyId: 'f1', date: '2026-10-15', from: '15:00', to: '18:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 }), false);
+await check('family creates own moment', setDoc(doc(as('u2'), 'backupMoments/m1'), { familyId: 'f2', date: '2026-10-15', from: '15:00', to: '18:00', onlyIfFree: true, createdAt: 1 }));
+await check('moment for another family refused', setDoc(doc(as('u2'), 'backupMoments/m2'), { familyId: 'f1', date: '2026-10-15', from: '15:00', to: '18:00', onlyIfFree: true, createdAt: 1 }), false);
 await check('others cannot delete my moment', deleteDoc(doc(as('u3'), 'backupMoments/m1')), false);
 await check('owner deletes moment', deleteDoc(doc(as('u2'), 'backupMoments/m1')));
 
@@ -71,7 +71,7 @@ for (const on of [false, null]) {
   await check(`${L}: no take-over`, take('u2', 'f2').catch(e => { throw e; }), false);
   await check(`${L}: no withdraw`, updateDoc(doc(as('u1'), 'offers/o9'), { status: 'withdrawn', withdrawnAt: 1 }), false);
   await check(`${L}: no uncovered mark`, updateDoc(doc(as('u1'), 'offers/o9'), { uncoveredAt: 1 }), false);
-  await check(`${L}: no moment`, setDoc(doc(as('u2'), 'backupMoments/m1'), { familyId: 'f2', date: '2026-10-15', from: '15:00', to: '18:00', place: 'alkmaar', onlyIfFree: true, createdAt: 1 }), false);
+  await check(`${L}: no moment`, setDoc(doc(as('u2'), 'backupMoments/m1'), { familyId: 'f2', date: '2026-10-15', from: '15:00', to: '18:00', onlyIfFree: true, createdAt: 1 }), false);
   await check(`${L}: no notification written`, setDoc(doc(as('u2'), 'families/f1/notifications/n1'), notif('f1')), false);
   await check(`${L}: cleanup delete still works`, deleteDoc(doc(as('u1'), 'families/f1/notifications/n9')));
 }

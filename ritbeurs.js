@@ -9,7 +9,6 @@ export const SOON_HOURS = 24;             // within this many hours of the deadl
 export const CONFLICT_MINUTES = 90;       // another ride of the taker this close to the offered ride is a conflict (a warning, not a block)
 export const NOTIFICATION_DAYS = 14;      // how long a notification is kept
 export const DEFAULT_QUIET = { from: '22:00', to: '06:00' };
-export const MOMENT_PLACES = ['alkmaar', 'aalsmeer', 'onderweg'];
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -129,9 +128,9 @@ export function takeWarnings({ offer, cars, takerSeats, takerRides }){
 
 // ---------- "Ik kan inspringen" ----------
 // A moment on one date between two times at which a driver could take over a ride. Returns null when something is not valid.
-export function buildMoment({ familyId, date, from, to, place, onlyIfFree, nowMs }){
+export function buildMoment({ familyId, date, from, to, onlyIfFree, nowMs }){
   if(!familyId || !isIsoDate(date) || !isTime(from) || !isTime(to) || toMin(from) >= toMin(to)) return null;
-  return { familyId, date, from, to, place: MOMENT_PLACES.includes(place) ? place : 'onderweg', onlyIfFree: onlyIfFree !== false, createdAt: nowMs };
+  return { familyId, date, from, to, onlyIfFree: onlyIfFree !== false, createdAt: nowMs };
 }
 export function momentId({ familyId, date, from, nowMs }){ return `${date}_${from.replace(':', '')}_${familyId}_${nowMs}`; }
 export function momentCovers(moment, dateIso, time){

@@ -12,13 +12,12 @@ import { routeLabel } from './locations.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderBeheer } from './ui-beheer.js';
 import {
-  RITBEURS_MESSAGE_MAX, MOMENT_PLACES, activeMoments, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
+  RITBEURS_MESSAGE_MAX, activeMoments, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
 import {
   addMoment, allRides, createOffer, markNotificationsRead, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
 } from './ritbeurs-data.js';
 
-const PLACE_TEXT = { alkmaar: () => t('ritbeurs.place.alkmaar'), aalsmeer: () => t('ritbeurs.place.aalsmeer'), onderweg: () => t('ritbeurs.place.onderweg') };
 const NOTIF_TEXT = {
   offerBackup: p => ({ title: t('ritbeurs.notif.offerBackup', p), body: t('ritbeurs.notif.offerBackupBody', p) }),
   backupForRide: p => ({ title: t('ritbeurs.notif.backupForRide', p), body: t('ritbeurs.notif.backupForRideBody', p) }),
@@ -117,7 +116,7 @@ export function momentDraft(){
   if(S.rbMomentDraft) return S.rbMomentDraft;
   const nowMs = Date.now();
   const first = DAYS.map(([k]) => weekKeyDayIso(S.currentWeekKey, k)).find(d => d && rideStartMs(d, '23:59') > nowMs) || weekKeyDayIso(S.currentWeekKey, 'Ma');
-  return { date: first, from: '15:00', to: '18:30', place: 'onderweg', onlyIfFree: true };
+  return { date: first, from: '15:00', to: '18:30', onlyIfFree: true };
 }
 const timeOptions = sel => { const o = []; for(let m = 5 * 60; m <= 23 * 60; m += 15){ const v = `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`; o.push(`<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`); } return o.join(''); };
 
@@ -128,7 +127,7 @@ function momentsHtml(nowMs){
     const d = DAYS.find(([k]) => weekKeyDayIso(S.currentWeekKey, k) === m.date);
     const dl = d ? d[1] : m.date;
     return `<div class="rbMoment rowflex" style="justify-content:space-between;gap:8px;align-items:center">
-      <span><b>${esc(dl)}</b> ${esc(m.from)}–${esc(m.to)} · ${esc(PLACE_TEXT[m.place]())}${m.onlyIfFree ? ' · ' + t('ritbeurs.moment.vrij') : ''}</span>
+      <span><b>${esc(dl)}</b> ${esc(m.from)}–${esc(m.to)}${m.onlyIfFree ? ' · ' + t('ritbeurs.moment.vrij') : ''}</span>
       <button type="button" class="btn small secondary iconBtn" data-rbmomentdel="${esc(m.id)}" aria-label="${esc(t('ritbeurs.moment.verwijder'))}">${phIcon('trash')}</button></div>`;
   }).join('') : `<p class="muted">${t('ritbeurs.moment.leeg')}</p>`;
   const d = momentDraft();
@@ -137,7 +136,6 @@ function momentsHtml(nowMs){
     const past = rideStartMs(iso, '23:59') <= nowMs;
     return `<button type="button" class="rbOpt${d.date === iso ? ' active' : ''}" data-rbmday="${iso}" aria-pressed="${d.date === iso}"${past ? ' disabled' : ''}>${esc(label.slice(0, 2))}</button>`;
   }).join('');
-  const places = MOMENT_PLACES.map(p => `<button type="button" class="rbOpt${d.place === p ? ' active' : ''}" data-rbmplace="${p}" aria-pressed="${d.place === p}">${PLACE_TEXT[p]()}</button>`).join('');
   const preview = momentPreview(d);
   return `${list}
     <div class="rbForm"><h4>${t('ritbeurs.moment.nieuw')}</h4>
@@ -145,7 +143,6 @@ function momentsHtml(nowMs){
       <div class="rowflex" style="gap:10px;align-items:center;margin-top:8px">
         <label for="rbmFrom">${t('ritbeurs.moment.van')}</label><select id="rbmFrom" class="rbSel">${timeOptions(d.from)}</select>
         <label for="rbmTo">${t('ritbeurs.moment.tot')}</label><select id="rbmTo" class="rbSel">${timeOptions(d.to)}</select></div>
-      <div class="rbOpts" role="group" aria-label="${esc(t('ritbeurs.moment.plaats'))}" style="margin-top:8px">${places}</div>
       <label class="switchRow" for="rbmFree"><span>${t('ritbeurs.moment.alleenVrij')}</span><input type="checkbox" role="switch" class="switch" id="rbmFree"${d.onlyIfFree ? ' checked' : ''}></label>
       <p class="muted" id="rbmPreview">${esc(preview)}</p>
       <button type="button" class="btn" id="rbmSave">${t('ritbeurs.moment.opslaan')}</button></div>`;
@@ -222,7 +219,6 @@ export function wireRitbeurs(){
   $$('[data-rbofferno]', b => b.onclick = () => { S.rbOffering = null; renderDeviationTab(); });
   $$('[data-rboffergo]', b => b.onclick = () => { hapticTap(); offerRide(b.dataset.rboffergo); });
   $$('[data-rbmday]', b => b.onclick = () => { S.rbMomentDraft = { ...readMomentForm(), date: b.dataset.rbmday }; renderDeviationTab(); });
-  $$('[data-rbmplace]', b => b.onclick = () => { S.rbMomentDraft = { ...readMomentForm(), place: b.dataset.rbmplace }; renderDeviationTab(); });
   ['rbmFrom', 'rbmTo', 'rbmFree'].forEach(id => { const el = document.getElementById(id); if(el) el.onchange = () => { S.rbMomentDraft = readMomentForm(); renderDeviationTab(); }; });
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });

@@ -163,17 +163,17 @@ test('no conflict for a ride on another day or far enough away', () => {
 });
 
 console.log('=== "Ik kan inspringen" ===');
-const mArgs = { familyId: 'fSanne', date: '2026-10-15', from: '15:00', to: '18:30', place: 'alkmaar', nowMs: 2000 };
+const mArgs = { familyId: 'fSanne', date: '2026-10-15', from: '15:00', to: '18:30', nowMs: 2000 };
 test('a moment needs a family, a real date and an earlier start than end', () => {
-  assert.deepEqual(buildMoment(mArgs), { familyId: 'fSanne', date: '2026-10-15', from: '15:00', to: '18:30', place: 'alkmaar', onlyIfFree: true, createdAt: 2000 });
+  assert.deepEqual(buildMoment(mArgs), { familyId: 'fSanne', date: '2026-10-15', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 2000 });
   assert.equal(buildMoment({ ...mArgs, familyId: '' }), null);
   assert.equal(buildMoment({ ...mArgs, date: '2026-02-30' }), null);
   assert.equal(buildMoment({ ...mArgs, from: '18:30', to: '15:00' }), null);
   assert.equal(buildMoment({ ...mArgs, from: '15:00', to: '15:00' }), null);
   assert.equal(buildMoment({ ...mArgs, from: '9:00' }), null);
 });
-test('an unknown place becomes "onderweg"; only an explicit false turns "only if free" off', () => {
-  assert.equal(buildMoment({ ...mArgs, place: 'mars' }).place, 'onderweg');
+test('a moment has no place; only an explicit false turns "only if free" off', () => {
+  assert.equal('place' in buildMoment({ ...mArgs, place: 'mars' }), false);
   assert.equal(buildMoment({ ...mArgs, onlyIfFree: false }).onlyIfFree, false);
   assert.equal(buildMoment({ ...mArgs, onlyIfFree: undefined }).onlyIfFree, true);
 });
