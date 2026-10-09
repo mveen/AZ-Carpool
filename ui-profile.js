@@ -402,7 +402,7 @@ export function renderGateOrApp(){
     gateDiv.style.display='block';
     renderGate();
   } else {
-    if(nav) nav.style.display='flex';
+    if(nav) nav.style.display='';   // back to the stylesheet's own display (a grid since design v2): never force a layout here
     gateDiv.style.display='none';
     const activeBtn=document.querySelector('nav button.active');
     const activeTab=activeBtn? activeBtn.dataset.tab : 'myweek';

@@ -164,8 +164,8 @@
     "test": "ee7c401fd8f6110fab9ca5081597e0046832208404a5e335338682cc9740d77a"
   },
   "ui-profile.js": {
-    "module": "1a85a8a1bfa5ece698c44d9a7dc2f427ace120d743f1002a93176098e2f7a25b",
-    "test": "8e73ed4730fc46e39f2ffe11ec6e84bad34a17e2cc824c0cace1da4195ee82e1"
+    "module": "2ea94c6b29d72c04401295836d3f70c265ea2a74b477197964e0fb5461ddeaed",
+    "test": "b862629791eef4da95cc7ce830ca31462214fb929f4b4412e87ce1f36595d84d"
   },
   "ui-ride-log.js": {
     "module": "9254e7d73e707d3f067eea194f2a4d98605334f23127c9e60df397ab6efc8c1d",

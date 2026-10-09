@@ -57,6 +57,17 @@ test('a linked parent gets the tabs, not the gate', () => {
   assert.equal(dom.el('tab-gate').style.display, 'none');
 });
 
+test('the tab bar is hidden for the gate and comes back WITHOUT a forced layout (the stylesheet decides: a grid)', () => {
+  const nav = { style: {} }; const realQuery = dom.doc.querySelector;
+  dom.doc.querySelector = sel => (sel === 'nav' ? nav : realQuery(sel));
+  try {
+    useFakeDb({}); resetState({ me: 'u1', appReady: true, linksLoaded: true, coordinatorExists: true, canEdit: false, links: {} });
+    renderGateOrApp(); assert.equal(nav.style.display, 'none');
+    sampleParentState({ linksLoaded: true, coordinatorExists: true });
+    renderGateOrApp(); assert.equal(nav.style.display, '');   // never 'flex': that broke the grid of the tab bar
+  } finally { dom.doc.querySelector = realQuery; }
+});
+
 console.log('\n=== submitting the gate ===');
 function fillGate(phone, code) { renderGate(); dom.el('gatePhone').value = phone; dom.el('gateCode').value = code; }
 await testAsync('empty fields are refused with a message', async () => {

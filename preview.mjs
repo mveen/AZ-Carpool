@@ -18,4 +18,9 @@ createServer((req, res) => {
   if(!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile()){ res.writeHead(404); res.end('niet gevonden'); return; }
   res.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
   res.end(readFileSync(file));
-}).listen(port, '127.0.0.1', () => console.log(`Preview: http://localhost:${port}/   (Ctrl+C to stop)`));
+})
+  .on('error', e => {
+    if(e.code === 'EADDRINUSE'){ console.error(`Port ${port} is already in use (an older preview or another server). Stop it, or run:  PORT=8790 npm run preview`); process.exit(1); }
+    throw e;
+  })
+  .listen(port, () => console.log(`Preview: http://localhost:${port}/   (Ctrl+C to stop)`));   // no host given: IPv4 and IPv6, so "localhost" always reaches THIS server
