@@ -214,6 +214,58 @@ service cloud.firestore {
       allow delete: if isCoordinator();
     }
 
+    // ---- Ritbeurs: rides offered for take-over, "Ik kan inspringen" moments and in-app notifications ----
+    // The feature switch settings/ritbeurs ({ on: true }, written by the coordinator in Beheer) gates every CREATE and UPDATE below, so
+    // switching it off stops offers, take-overs and notifications at once, for everyone, whatever app version is open. Deleting stays allowed.
+    function ritbeursOn() {
+      let p = /databases/$(database)/documents/settings/ritbeurs;
+      return exists(p) && get(p).data.on == true;
+    }
+    // An offer: any member reads. A family offers only its OWN ride. While the offer is still 'open' it can change in exactly three ways:
+    // taken over by another family (first yes wins: the second batch finds it no longer 'open' and fails as a whole), withdrawn by the
+    // offerer (or the coordinator), or marked once as 'not covered' (uncoveredAt) by whichever app notices the deadline first.
+    match /offers/{offerId} {
+      allow read: if isMember();
+      allow create: if ritbeursOn() && isLinked()
+        && request.resource.data.keys().hasOnly(['weekKey', 'day', 'direction', 'date', 'time', 'offeredBy', 'message', 'status', 'createdAt'])
+        && request.resource.data.offeredBy == linkedFamilyId()
+        && request.resource.data.status == 'open'
+        && request.resource.data.direction in ['heen', 'terug']
+        && request.resource.data.message is string && request.resource.data.message.size() <= 60;
+      allow update: if ritbeursOn() && isMember() && resource.data.status == 'open' && (
+        (isLinked()
+          && request.resource.data.status == 'taken'
+          && request.resource.data.takenBy == linkedFamilyId()
+          && resource.data.offeredBy != linkedFamilyId()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'takenBy', 'takenAt']))
+        || (request.resource.data.status == 'withdrawn'
+          && (isCoordinator() || (isLinked() && resource.data.offeredBy == linkedFamilyId()))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'withdrawnAt']))
+        || (!('uncoveredAt' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uncoveredAt']))
+      );
+      allow delete: if isCoordinator();
+    }
+    // A back-up moment: members read; a family writes only its own; the owner or the coordinator deletes (also when the switch is off).
+    match /backupMoments/{momentId} {
+      allow read: if isMember();
+      allow create, update: if ritbeursOn() && isLinked()
+        && request.resource.data.keys().hasOnly(['familyId', 'date', 'from', 'to', 'place', 'onlyIfFree', 'createdAt'])
+        && request.resource.data.familyId == linkedFamilyId();
+      allow delete: if isCoordinator() || (isLinked() && resource.data.familyId == linkedFamilyId());
+    }
+    // In-app notifications, one folder per family, so a family can only read its own. Any member may leave one for another family, but only
+    // while the switch is on; the receiver (or the coordinator) reads, marks as read (only `read` may change) and deletes.
+    match /families/{familyId}/notifications/{notificationId} {
+      allow read: if isCoordinator() || (isLinked() && linkedFamilyId() == familyId);
+      allow create: if ritbeursOn() && isMember()
+        && request.resource.data.keys().hasOnly(['kind', 'toFamilyId', 'sourceId', 'fromFamilyId', 'weekKey', 'day', 'direction', 'date', 'time', 'momentFrom', 'momentTo', 'createdAt', 'deliverAt', 'expiresAt', 'read'])
+        && request.resource.data.toFamilyId == familyId;
+      allow update: if isLinked() && linkedFamilyId() == familyId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow delete: if isCoordinator() || (isLinked() && linkedFamilyId() == familyId);
+    }
+
     // ---- Weekend match carpools: any member ----------------------------------------
     // ---- Gereden shifts (solidarity overview in Beheer): written and read by the coordinator only ----
     match /rideLog/{docId} {

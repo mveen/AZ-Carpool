@@ -10,6 +10,7 @@ import { renderSchedule } from './ui-schedule.js';
 import { renderBeheer } from './ui-beheer.js';
 import { renderNoticeBanner } from './ui-notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
+import { checkRitbeurs } from './ritbeurs-data.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { refreshPeriodTask } from './ui-period.js';
@@ -128,9 +129,9 @@ export function bootstrap(){
   let swReg = null;
   const checkForAppUpdate = ()=>{ if(swReg) swReg.update().catch(()=>{}); };
 
-  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); checkForAppUpdate(); recordSession(); } });
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden){ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); checkRitbeurs(); checkForAppUpdate(); recordSession(); } });
 
-  setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); }, 60*1000);
+  setInterval(()=>{ checkWeekRollover(); checkMatchRefresh(); refreshPeriodTask(); renderNoticeBanner(); checkRitbeurs(); }, 60*1000);
 
   if('serviceWorker' in navigator){
     // A phone keeps the app alive in the background, so the browser rarely re-checks for a new version on its own.

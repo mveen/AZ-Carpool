@@ -375,6 +375,32 @@ table.avail th,table.avail td{padding:6px 4px}
 .oneOnOneHint{font-size:12px;color:var(--muted);margin:6px 0 0}
 .flexBadge{background:var(--pill2);color:var(--pill);font-weight:700}   /* neutral label, like .capbadge: red is for alerts and 'mine' */
 .devAlert{background:var(--warn2);border:1px solid var(--warn-line);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
+/* Ritbeurs (Wijzigen > Ritbeurs). Selected options are neutral dark, never a red or tinted pill. */
+.rbOffer{border-left:4px solid var(--warn-bar);padding-left:14px}
+.rbTime{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-weight:800;font-size:16px;color:var(--text)}
+.rbRoute{font-size:14px;font-weight:600;margin:4px 0;color:var(--text)}
+.rbPills{margin:2px 0 4px}
+.rbPill{margin:2px 4px 0 0}
+.rbBy{margin:4px 0 8px}
+.rbChip{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);background:var(--pill2);color:var(--pill);border:1px solid var(--border)}
+.rbChip-late{background:var(--warn2);color:var(--warn-text);border-color:var(--warn-line)}
+.rbConfirm{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+.rbConfirm h4,.rbForm h4{margin:0 0 6px;font-size:16px}
+.rbChecks{list-style:none;margin:0;padding:0;font-size:14px;line-height:1.5}
+.rbChecks li{margin:4px 0}
+.rbWarn{margin:8px 0 0;font-size:14px;font-weight:700;color:var(--warn-text)}
+.rbMine,.rbMoment{padding:8px 0;border-top:1px solid var(--border)}
+.rbMine:first-of-type{border-top:0}
+.rbForm{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.rbOpts{display:flex;flex-wrap:wrap;gap:6px}
+.rbOpt{min-height:44px;min-width:44px;padding:0 14px;border-radius:var(--radius-full);border:1px solid var(--control-border);background:var(--card);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.rbOpt.active{background:var(--text);color:var(--card);border-color:var(--text)}
+.rbOpt:disabled{opacity:.45;cursor:default}
+.rbSel{width:auto;min-width:92px}
+.rbNotif{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.rbNotif span{font-size:14px;color:var(--muted);line-height:1.35}
+.rbNotif.unread b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text);margin-right:6px}
+.rbQuiet{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
 /* Wijzigen: compact ride card (one line when closed, "Wijzig" unfolds the form). Amber on purpose: one-off changes. */
 .devRide{border:1px solid var(--warn-edge);border-left:4px solid var(--warn-bar);border-radius:14px;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;margin:10px 0;background:var(--card);box-shadow:none}
 .devRideHead{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:56px;width:100%}

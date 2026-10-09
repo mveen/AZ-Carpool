@@ -11,6 +11,7 @@ import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey,
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { waNameHtml, waPhone } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
+import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs, wireRitbeursSegment } from './ui-ritbeurs.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
 export function sendWhatsAppUpdate(buildFn){
@@ -55,6 +56,11 @@ export function renderDeviationTab(){
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('deviation.wijzigen')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; markPeriodShown(); return; }
   // Periode met andere tijden: while the form is open it is all Wijzigen shows.
   if(periodFormActive()){ box.innerHTML = periodFormHtml(); wirePeriod(); markPeriodShown(); return; }
+  // Ritbeurs (only while the feature switch is on): a segment "Wijzigen | Ritbeurs" at the top; the Ritbeurs view replaces the rest.
+  const rbOn = ritbeursAvailable();
+  if(!rbOn && S.rbView==='ritbeurs') S.rbView = 'wijzigen';
+  const seg = rbOn? ritbeursSegmentHtml() : '';
+  if(rbOn && S.rbView==='ritbeurs'){ box.innerHTML = seg + ritbeursViewHtml(); wireRitbeurs(); markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
   if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKey || 'Ma';
   const day = S.deviationDay;
@@ -70,7 +76,7 @@ export function renderDeviationTab(){
       ${changed? '<span class="devDayDot" aria-hidden="true"></span>' : ''}
     </button>`;
   }).join('');
-  box.innerHTML = `${periodCardsHtml()}${deviationIntentHtml()}<div class="devAlert">
+  box.innerHTML = `${seg}${periodCardsHtml()}${deviationIntentHtml()}<div class="devAlert">
       <p class="devAlertTitle">${phIcon('lightning')} ${t('deviation.wijzigingen')} ${weekRangeLabel()}</p>
       <p class="devAlertBody">${t('deviation.eenmalige_ritaanpassing_voor_deze_week')}</p>
     </div>
@@ -86,6 +92,7 @@ export function renderDeviationTab(){
   document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; S.devKid=null; S.devUndo=null; hapticTap(); renderDeviationTab(); });
   const ic=document.getElementById('devIntentClose'); if(ic) ic.onclick=()=>{ S.deviationIntent=null; hapticTap(); renderDeviationTab(); };
   wireWhatsAppButton('conclusieBtn', ()=>buildConclusieMessage(day));
+  wireRitbeursSegment();
   attachDeviationHandlers();
   wirePeriod();
   markPeriodShown();

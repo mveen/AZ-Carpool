@@ -465,5 +465,16 @@ await testAsync('moving a child offers one button per other car and shows "Onged
   assert.match(text(dom.html('tab-deviation')), /verplaatst\. Ongedaan/);
 });
 
+test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off leaves the tab exactly as before', () => {
+  const off = render(sampleParentState, { ritbeurs: { on: false } });
+  assert.doesNotMatch(off, /data-rbview|segmented/);
+  const on = render(sampleParentState, { ritbeurs: { on: true } });
+  assert.match(on, /class="segmented"[\s\S]*data-rbview="ritbeurs"/);
+  assert.match(on, /Eenmalige ritaanpassing voor deze week/);
+  S.rbView = 'ritbeurs';
+  const rb = render(sampleParentState, { ritbeurs: { on: true }, rbView: 'ritbeurs' });
+  assert.match(text(rb), /Ritten die nog een chauffeur zoeken/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

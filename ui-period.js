@@ -3,6 +3,7 @@
 // Several periods can run at the same time: every period has its own cards; the badge counts the open tasks.
 // Rules: see period.js (periodEntryState) and README. The standard rooster is never changed; times live in periodEntries/*.
 import { t } from './i18n.js';
+import { ritbeursBadgeCount } from './ui-ritbeurs.js';
 import { S } from './state.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
@@ -181,10 +182,10 @@ export function periodBadgeCount(nowMs){ return periodTasks(nowMs).filter(tk => 
 export function updatePeriodBadge(){
   const el = document.getElementById('navDeviationBadge');
   if(!el) return;
-  const n = periodBadgeCount();
+  const n = periodBadgeCount() + ritbeursBadgeCount();
   el.textContent = n? String(n) : '';
   el.style.display = n ? '' : 'none';
-  if(n) el.setAttribute('aria-label', t('period.badge.aria')); else el.removeAttribute('aria-label');
+  if(n) el.setAttribute('aria-label', ritbeursBadgeCount()? t('ritbeurs.badge.aria', { n }) : t('period.badge.aria')); else el.removeAttribute('aria-label');
 }
 
 const taskKey = () => periodTasks().map(tk => [tk.period && tk.period.firstDay, tk.show, tk.canEdit, tk.badge, tk.phase, tk.period && behalfAllowed(tk.period.firstDay)].join(':')).join('|');
