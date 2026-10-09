@@ -1,6 +1,6 @@
 # AZ Carpool: rules for Claude (and people) working in this repo
 
-- **Design:** read `DESIGN.md` first. All look-and-feel lives in `tokens.css` + `components.css`. New UI uses those classes and `var(--...)` tokens only (no hex colours, no px font sizes, no one-off styles). `tests/design-rules.test.js` enforces it. Never add rules to `legacy.css`.
+- **Design:** read `DESIGN.md` first. All look-and-feel lives in `tokens.css` + `components.css`. New UI uses those classes and `var(--...)` tokens only (no hex colours, no px font sizes, no one-off styles). `tests/design-rules.test.js` enforces it. There is no legacy stylesheet any more; do not add inline `style="..."` (a test counts them).
 - **Texts:** all on-screen Dutch text is in `texts-nl.js` (`t('key')`). Icons via `phIcon()`.
 - **Tests:** `npm test` must be green. A changed module needs a changed test file; after a green run do `npm run lock`.
 - **Deploy:** bump `CACHE_NAME` in `service-worker.js` on every change to app files (CI checks it). New app files go in `ASSETS` there.

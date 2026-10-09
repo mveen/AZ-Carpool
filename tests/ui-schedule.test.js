@@ -241,5 +241,13 @@ test('the sheet opens for one car and lists places plus both arrival options', (
   dom.doc.body.children.length = 0;
 });
 
+test('design v2: ui-schedule.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-schedule.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

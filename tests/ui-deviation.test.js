@@ -465,5 +465,13 @@ test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off 
   assert.match(text(rb), /Ritten die nog een chauffeur zoeken/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
 });
 
+test('design v2: ui-deviation.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-deviation.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

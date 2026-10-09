@@ -9,7 +9,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 |---|---|---|
 | `tokens.css` | Every colour, font, type size, radius, shadow, spacing value, as CSS variables. Light + dark. Self-hosted font faces. | Only when the design changes. |
 | `components.css` | The shared building blocks (header, tab bar, buttons, sheet, toast, segmented control, ...). Built from tokens only. | When a new reusable block is needed. |
-| `legacy.css` | The old CSS of screens that are not rebuilt yet. Shrinks every phase. **Never add rules here.** | Only to delete rules. |
+| `print.css` | The Weekoverzicht (PDF) paper layout. Fixed colours on purpose; nothing else belongs here. | Rarely. |
 | `ui-*.js` | Screens. They compose classes from `components.css`. | Every feature. |
 | `tests/design-rules.test.js` | Fails when these rules are broken. | With the rules. |
 
@@ -64,16 +64,13 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 
 Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
-## Migration (old screens -> v2). Delete a line when done.
+## Migration status
 
 - [x] Phase 1: tokens, fonts (Onest), header, avatar + Instellingen sheet, tab bar, buttons, segmented, sheet, toast.
 - [x] Phase 2: Mijn week, Rooster (Deze week, Vast rooster, tijdelijk rooster).
-- [x] Phase 3: Wijzigen (+ Ritbeurs inside it), Wedstrijden. (Period cards `.period*` and the amber `.devAlert` box still use old rules: phase 4.)
-- [ ] Phase 4: Beheer, Help panel, Mijn gezin, all remaining sheets and banners.
-- [ ] Old `.group`, `.pill`, `.daypill(s)`, `.dirLabel`, `.changedTag`, `.rowflex`, `.badge` still serve Wijzigen, Wedstrijden and Beheer; delete them from `legacy.css` when those move.
-- [ ] End: delete `legacy.css`, the DEPRECATED alias block in `tokens.css`, and the unused `fonts/plus-jakarta-sans-*`.
-
-While a screen still uses `legacy.css`, the old variable names (`--bg`, `--card`, `--accent2`, ...) are aliases of the roles above. New code never uses them.
+- [x] Phase 3: Wijzigen (+ Ritbeurs inside it), Wedstrijden.
+- [x] Phase 4: Beheer, Mijn gezin, Help, banners and forms moved onto tokens; `legacy.css`, the old variable names and the Plus Jakarta fonts are deleted.
+- [ ] Follow-up (nice to have): the first block of `components.css` ("Screens migrated from the old stylesheet") still holds the rules of Beheer, Mijn gezin and the period cards in their old shape. Turn them into proper components screen by screen. The ratchet test in `tests/design-rules.test.js` only lets the number of inline `style="..."` attributes go down.
 
 ## Safety net
 

@@ -19,7 +19,7 @@ export function renderImpersonateBanner(){
   if(!el) return;
   if(S.impersonateFamilyId){
     el.style.display='block';
-    el.style.cssText='display:block;background:var(--warn2);color:var(--warn);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--border)';
+    el.style.cssText='display:block;background:var(--warn-soft);color:var(--warn-icon);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--line)';
     el.innerHTML = `${phIcon('flask')} ${t('profile.testweergave_als')} ${esc(fam(S.impersonateFamilyId).girlName||fam(S.impersonateFamilyId).parentName||S.impersonateFamilyId)} <button type="button" class="btn small secondary" id="stopImpersonateBtn" style="margin-left:8px">${t('profile.stop_testen')}</button>`;
     const btn=document.getElementById('stopImpersonateBtn');
     if(btn) btn.onclick=stopImpersonate;
@@ -473,7 +473,7 @@ export function renderProfile(){
       const effId = myFamilyId();
       overlayWeekschemaEdit(effId);
       const lf = fam(effId);
-      const unlinkCtl = S.impersonateFamilyId? '' : `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
+      const unlinkCtl = S.impersonateFamilyId? '' : `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
       html += `<div class="card">
         <div class="rowflex" style="align-items:flex-start">
           <div><h2 style="margin-bottom:2px">${t('profile.mijn_gezin')}</h2><p class="muted" style="margin:0">${t('profile.contactgegevens_autocapaciteit')}</p></div>

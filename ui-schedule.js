@@ -262,7 +262,7 @@ export function renderDirectionStandard(day,direction){
       ${S.canEdit? `<div class="carCard__edit">${timeHtml}${driverHtml}</div>` : ''}
       <div class="chips">${pills}</div>
       ${neededTimesHtml(day,direction,g.girlIds)}
-      ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
+      ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn-icon)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
           <div class="rowflex" style="margin-top:8px;gap:6px">

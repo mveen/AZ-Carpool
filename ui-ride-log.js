@@ -62,8 +62,8 @@ function shiftRowHtml(r, withFamily){
   const dir = dirText(r.direction);
   const ref = `data-rlid="${esc(r.id)}" data-rlidx="${r.index}" data-rlfid="${esc(r.familyId)}"`;
   const label = esc(t('ridelog.remove_label', { p1: r.name, p2: dayLabel(r.date), p3: dir }));
-  return `<li class="rideLogShift${r.removed? ' rideLogRemoved' : ''}" style="display:flex;align-items:center;gap:10px;min-height:60px;border-bottom:1px solid var(--border)${r.removed? ';opacity:.85' : ''}">
-      <span class="pill" style="box-sizing:border-box;width:56px;flex-shrink:0;text-align:center;margin:0;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;background:${r.direction === 'heen' ? 'var(--info2)' : 'var(--warn2)'};color:${r.direction === 'heen' ? 'var(--text)' : 'var(--warn-text)'}">${esc(dir)}</span>
+  return `<li class="rideLogShift${r.removed? ' rideLogRemoved' : ''}" style="display:flex;align-items:center;gap:10px;min-height:60px;border-bottom:1px solid var(--line)${r.removed? ';opacity:.85' : ''}">
+      <span class="pill" style="box-sizing:border-box;width:56px;flex-shrink:0;text-align:center;margin:0;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;background:${r.direction === 'heen' ? 'var(--info-soft)' : 'var(--warn-soft)'};color:${r.direction === 'heen' ? 'var(--text-1)' : 'var(--warn-ink)'}">${esc(dir)}</span>
       <span style="flex:1;min-width:0"><strong style="display:block;font-size:14px">${main}</strong><span class="muted" style="display:block">${esc(sub)}</span></span>
       ${r.removed
         ? `<button type="button" class="btn small secondary" data-rlrestore ${ref}>${t('ridelog.restore')}</button>`
@@ -76,13 +76,13 @@ function shiftListHtml(rows, withFamily, byDay){
   if(!byDay) return `<ul style="list-style:none;margin:0;padding:0">${rows.map(r => shiftRowHtml(r, withFamily)).join('')}</ul>`;
   const days = [];
   rows.forEach(r => { const last = days[days.length - 1]; if(last && last.date === r.date) last.rows.push(r); else days.push({ date: r.date, rows: [r] }); });
-  return days.map(d => `<div><div class="muted" style="font-weight:800;padding:10px 0 6px;border-bottom:1px solid var(--border)">${esc(dayLabel(d.date))}</div>
+  return days.map(d => `<div><div class="muted" style="font-weight:800;padding:10px 0 6px;border-bottom:1px solid var(--line)">${esc(dayLabel(d.date))}</div>
       <ul style="list-style:none;margin:0;padding:0">${d.rows.map(r => shiftRowHtml(r, true)).join('')}</ul></div>`).join('');
 }
 
 function removedHtml(rows, withFamily){
   if(!rows.length) return '';
-  return `<div style="margin-top:12px;padding:12px;border-radius:var(--radius-md);border:1px dashed var(--control-border)">
+  return `<div style="margin-top:12px;padding:12px;border-radius:var(--radius-control);border:1px dashed var(--control-line)">
       <div class="muted" style="font-weight:700;margin-bottom:4px">${t('ridelog.removed_head', { p1: rows.length })}</div>
       <ul style="list-style:none;margin:0;padding:0">${rows.map(r => shiftRowHtml(r, withFamily)).join('')}</ul>
       <p class="muted" style="margin:6px 0 0">${t('ridelog.removed_note')}</p>
@@ -101,7 +101,7 @@ function familyScreenHtml(v, logs, families){
       ${row && row.parent? `<p class="muted" style="margin-top:0">${esc(row.parent)}</p>` : ''}
       ${periodControlsHtml(v)}
       <p id="rideLogSummary"><strong>${t('ridelog.family_summary', { p1: row ? row.total : 0, p2: row ? row.heen : 0, p3: row ? row.terug : 0 })}</strong></p>
-      <div class="muted" style="font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--border)">${t('ridelog.list_head')}</div>
+      <div class="muted" style="font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--line)">${t('ridelog.list_head')}</div>
       ${shiftListHtml(active, false, false)}
       ${removedHtml(removed, false)}
     </div>`;

@@ -122,12 +122,12 @@ export function flexSignupHtml(day,direction,cars){
     const key = `${day}|${direction}|${id}`;
     const head = `<strong>${esc(f.girlName||f.parentName||id)}</strong> <span class="badge flexBadge">${t('flex.badge')}</span>`;
     if(flexIsSignedUp(cars,id)){
-      return `<div class="rowflex flexRow" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="flex:1">${head} · ${t('flex.signedUp')}</span>
+      return `<div class="rowflex flexRow" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${head} · ${t('flex.signedUp')}</span>
         <button type="button" class="btn small secondary" data-flexoff="${key}">${t('flex.signOff')}</button></div>`;
     }
     const carOptions = `<option value="">${t('flex.chooseCar')}</option>` + freeIdx.map(i=>`<option value="${i}">${t('deviation.auto')} ${driverNameHtml(cars[i].driverFamilyId)}</option>`).join('');
     const canDrive = seats(f)>=1;
-    return `<div class="flexRow" style="padding:6px 0;border-bottom:1px solid var(--border)">
+    return `<div class="flexRow" style="padding:6px 0;border-bottom:1px solid var(--line)">
       <div>${head}</div>
       <label style="margin-top:6px" for="flexTime_${key}">${timeLabel}</label>
       <input type="time" id="flexTime_${key}" class="flexTimeInp">
@@ -243,7 +243,7 @@ export function renderDevDirection(day,direction){
   const addOptions = cars.length? `<option value="">${t('deviation.voeg_toe_aan_auto')}</option>` + cars.map((c,i)=>`<option value="${i}">${t('deviation.auto')} ${esc(fam(c.driverFamilyId).parentName||'?')}</option>`).join('') : '';
   const unassignedHtml = unassigned.length? foldHtml(`others|${day}|${direction}`, t('deviation.andere_meiden'), `<p class="muted" style="margin-top:0">${t('deviation.ook_meiden_die_niet_standaard')}</p>
       ${unassigned.map(([id,f])=>`
-        <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--border)">
+        <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--line)">
           <span style="flex:1">${esc(f.girlName||f.parentName||id)}</span>
           ${cars.length? `<select class="devAddSel" data-day="${day}" data-direction="${direction}" data-girl="${id}" style="width:auto;font-size:12px">${addOptions}</select>` : t('deviation.span_class_muted_nog_geen')}
         </div>`).join('')}`, 'group') : '';
