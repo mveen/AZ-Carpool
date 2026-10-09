@@ -81,7 +81,6 @@ input[type=time],input[type=date]{padding:8px 7px;border:1px solid var(--control
 /* ---------- Mijn gezin: day tabs, capacity stepper, drive-toggle buttons ---------- */
 .dayTabBtn{min-width:0;padding:10px 2px;font-size:14px;font-weight:700;border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:var(--radius-sm);cursor:pointer;min-height:44px}
 .dayTabBtn.active{background:var(--card);color:var(--accent-text);border-color:var(--accent)}
-.dayFormCard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-top:8px}
 .stepperCard{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-top:6px}
 .stepperInfo{display:flex;align-items:center;gap:10px}
 .stepperInfo svg{width:22px;height:22px;color:var(--accent);flex-shrink:0}
@@ -125,10 +124,8 @@ button.btn.danger{background:var(--card);color:var(--danger);border:1px solid va
 .shiftLoc .shiftLocText{flex:1;min-width:0}
 .shiftLocBtn{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:6px 10px;margin-left:-10px;border:1px dashed var(--border);border-radius:var(--radius-full);background:transparent;color:inherit;font:inherit;font-weight:700;text-align:left;cursor:pointer}
 .shiftLocBtn svg{width:14px;height:14px;flex:none}
-.devFree{margin-top:6px}
 .addrHint{margin:4px 0 0;font-size:12px;color:var(--muted)}
 a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
-.matchDist{font-size:12px;color:var(--muted)}
 .changedTag{display:inline-flex;align-items:center;gap:4px;background:var(--warn2);color:var(--warn-text);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
 /* Shared small square badge: weekday in Mijn week and the car number in Rooster */
 /* Segmented control (Rooster: Deze week / Standaardrooster) */
@@ -157,7 +154,6 @@ a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
 /* Mon–Fri pills: 5 equal columns, always fit the screen (period pills keep wrapping) */
 .daypills:not(.periodPills){display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;overflow:visible;padding-right:6px}
 .daypills:not(.periodPills) .daypill{min-width:0;padding:6px 2px}
-.daypills:not(.periodPills) .devDayDot{right:4px}
 .daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px;font-weight:800}
 .group{border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin:10px 0;background:var(--card);box-shadow:var(--shadow-card)}
 /* A coloured left stripe means STATUS only. A plain car (.confirmed) has none, like a Mijn week day card. */
@@ -209,79 +205,11 @@ table.avail th,table.avail td{padding:6px 4px}
 /* You drive: the same green chip everywhere (own car, second car, match ride), and a green border on the ride. */
 /* No driver yet: amber warning chip */
 /* ---------- Dagafwijking (amber "warning" theme) ---------- */
-.conclusieCard.forYou{border:2px solid var(--az-red)}
-.conclusiePreview{white-space:pre-wrap;background:var(--bg,#f6f6f6);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;font-size:14px;margin:8px 0}
-.oneOnOneHint{font-size:12px;color:var(--muted);margin:6px 0 0}
-.flexBadge{background:var(--pill2);color:var(--pill);font-weight:700}   /* neutral label, like .capbadge: red is for alerts and 'mine' */
-.devAlert{background:var(--warn2);border:1px solid var(--warn-line);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
 /* Ritbeurs (Wijzigen > Ritbeurs). Selected options are neutral dark, never a red or tinted pill. */
-.rbOffer{border-left:4px solid var(--warn-bar);padding-left:14px}
-.rbTime{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-weight:800;font-size:16px;color:var(--text)}
-.rbRoute{font-size:14px;font-weight:600;margin:4px 0;color:var(--text)}
-.rbPills{margin:2px 0 4px}
-.rbPill{margin:2px 4px 0 0}
-.rbBy{margin:4px 0 8px}
-.rbChip{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);background:var(--pill2);color:var(--pill);border:1px solid var(--border)}
 .rbChip-late{background:var(--warn2);color:var(--warn-text);border-color:var(--warn-line)}
-.rbConfirm{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
-.rbConfirm h4,.rbForm h4{margin:0 0 6px;font-size:16px}
-.rbChecks{list-style:none;margin:0;padding:0;font-size:14px;line-height:1.5}
-.rbChecks li{margin:4px 0}
-.rbWarn{margin:8px 0 0;font-size:14px;font-weight:700;color:var(--warn-text)}
-.rbMine,.rbMoment{padding:8px 0;border-top:1px solid var(--border)}
-.rbMine:first-of-type{border-top:0}
-.rbForm{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
-.rbOpts{display:flex;flex-wrap:wrap;gap:6px}
-.rbOpt{min-height:44px;min-width:44px;padding:0 14px;border-radius:var(--radius-full);border:1px solid var(--control-border);background:var(--card);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
-.rbOpt.active{background:var(--text);color:var(--card);border-color:var(--text)}
-.rbOpt:disabled{opacity:.45;cursor:default}
-.rbSel{width:auto;min-width:92px}
-.rbNotif{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
-.rbNotif span{font-size:14px;color:var(--muted);line-height:1.35}
-.rbNotif.unread b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text);margin-right:6px}
-.rbQuiet{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
 /* Wijzigen: compact ride card (one line when closed, "Wijzig" unfolds the form). Amber on purpose: one-off changes. */
-.devRide{border:1px solid var(--warn-edge);border-left:4px solid var(--warn-bar);border-radius:14px;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;margin:10px 0;background:var(--card);box-shadow:none}
-.devRideHead{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:56px;width:100%}
-.devRideHead:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
-.devRideTime{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
-.devRideMain{display:flex;flex-direction:column;min-width:0}
-.devRideDriver{font-weight:700;font-size:14px}
-.devRideRoute{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.devRideToggle{font-size:12px;font-weight:700;color:var(--pill);border:1px solid var(--control-border);background:var(--pill2);border-radius:var(--radius-full);padding:6px 12px}   /* neutral: red is for alerts and 'mine' */
-.devKids{display:flex;gap:6px;flex-wrap:wrap}
-.devKid{display:inline-block;background:var(--pill2);color:var(--pill);border:1px solid transparent;border-radius:var(--radius-full);padding:5px 11px;font-size:12px;font-weight:600;font-family:var(--font-sans)}   /* same look as .pill */
-.devKid.mine{background:var(--accent2);color:var(--danger);border-color:var(--accent);font-weight:800}
-.devForm{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--border);padding-top:12px}
-.devFormTop{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
-.devField{display:flex;flex-direction:column;gap:4px;margin:0}
-.devField>span{font-size:12px;font-weight:600;color:var(--muted)}
-.devInput{height:44px;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--bg);padding:0 10px;font-size:14px;color:var(--text);box-sizing:border-box;width:100%;margin:0}
-.devRide .timeBig{width:100%!important;min-height:44px!important;padding:0 10px!important;font-size:16px!important}
-.devDestRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.devDest{text-align:left;min-height:52px;border-radius:10px;padding:6px 12px;cursor:pointer;border:1px solid var(--control-border);background:var(--bg);color:var(--text);display:flex;flex-direction:column;justify-content:center;font-family:inherit}
-.devDest.on{background:var(--accent2);border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger);color:var(--accent-text)}
-.devDestName{font-weight:700;font-size:14px}
-.devDestCity{font-size:12px;opacity:.8}
-.devKidList{display:flex;flex-direction:column}
-.devKidRow{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
-.devKidLine{display:flex;align-items:center;gap:10px;min-height:48px}
-.devKidName{flex:1;font-size:14px}
-.devKidName.mine{font-weight:800;color:var(--danger)}
-.devKidMore{width:44px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:18px;font-weight:800;color:var(--muted);cursor:pointer;line-height:1;font-family:inherit}
-.devKidMore.on{background:var(--accent2);border-color:var(--danger)}
-.devKidActions{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:10px}
-.devKidBtn{flex:1 1 120px;min-width:0;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;padding:0 10px;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.devKidBtn.danger{flex:0 0 44px;width:44px;padding:0;border-color:#fecaca;color:var(--danger);display:inline-flex;align-items:center;justify-content:center}
-.devKidBtn.danger svg{width:20px;height:20px}
-:root[data-theme="dark"] .devKidBtn.danger{border-color:#7f1d1d}
-.devToast{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--text);color:var(--card);border-radius:10px;padding:4px 4px 4px 12px;font-size:14px}
-.devToastUndo{min-height:44px;border:0;background:transparent;color:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:0 10px;text-decoration:underline;font-family:inherit}
-.devFocus{border-color:var(--warn);box-shadow:0 0 0 2px var(--warn2)}
-.devIntentList{margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--warn-text)}
 /* Periode met andere tijden: taak-kaart, ingevuld-kaart en formulier in Wijzigen */
 .periodDone{background:var(--ok2);border:1px solid var(--ok);border-radius:var(--radius-xl);padding:10px 16px;margin-bottom:14px}
-.periodDone .devAlertBody{font-size:12px;color:var(--text);margin:4px 0 0}
 #periodTask button.btn.small,.periodDone button.btn.small{margin-top:12px}
 .periodDone .periodDoneTitle{font-size:14px;font-weight:800;color:var(--ok-ink);margin:0}
 .periodDone .periodDoneName{font-weight:400;color:var(--text)}
@@ -358,26 +286,14 @@ button.btn.small.periodMakeBtn{font-size:12px;font-weight:600;min-height:40px;pa
 .periodRider{display:flex;align-items:center;gap:8px;margin-top:6px}
 .periodRider .periodSel{flex:1;min-width:0}
 .periodSummary{display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:14px}
-.devAlert .devAlertTitle{font-size:14px;font-weight:800;color:var(--warn-text);margin:0}
-.devAlert .devAlertBody{font-size:12px;color:var(--warn-text);margin:4px 0 0}
-.devCard{border-color:var(--warn) !important;border-left-width:4px}
-.devDayDot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block}
-.devDayBtn.changed{border-color:var(--warn)}
 /* ---------- Wedstrijdcarpool (violet "match" theme + football icon) ----------
    Deliberately a different color family than the weekday carpool (red/green) and the
    Dagafwijking (amber), so a match ride is recognisable at a glance everywhere it shows up. */
 .group.matchGroup{border-left:4px solid var(--match)}
-.matchTitle{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}
-.matchTitle .matchBall{color:var(--match);display:inline-flex}
-.matchCarRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px}
-.matchCarRow .matchCarDep{font-family:var(--font-mono);font-weight:700;color:var(--match-text);flex-shrink:0}
-.matchCarRow.mine{background:var(--match2);border-radius:var(--radius-sm);padding:6px 8px;border-top-color:transparent}
-.matchCapWarn{color:var(--warn);font-size:12px;font-weight:700;margin-top:6px}
 .trashBtn{color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
 /* Wedstrijden tab: violet, like every match ride elsewhere */
 .card.matchesCard{border-color:var(--match)}
 .card.matchesCard h2{color:var(--match-text)}
-.matchNote{display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:12px;color:var(--match-text)}
 :root[data-theme="dark"] .daypill .daypillAlert{color:#450a0a}   /* white on the light dark-mode red was only 2.8:1 */
 input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 /* Weekoverzicht (Rooster): the PDF layout on screen; print = one A4 landscape page */

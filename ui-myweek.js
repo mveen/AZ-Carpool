@@ -46,9 +46,9 @@ export function matchInfoHtml(m, opts){
   const dayLabel = m.start.toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'long'});
   const timeLabel = m.start.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
   const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
-  return `<div style="padding:4px 0">
+  return `<div class="matchInfo">
     <div class="matchTitle"><span class="matchBall">${phIcon('soccer',{size:'16px'})}</span><span>${esc(matchLabel(m))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</span></div>
-    <div class="muted" style="font-size:12px">${dayLabel} · ${timeLabel}${m.location? ' · '+(opts&&opts.geo? locationLinkHtml(m.location) : esc(m.location)):''}</div>
+    <div class="noteLine matchWhen">${dayLabel} · ${timeLabel}${m.location? ' · '+(opts&&opts.geo? locationLinkHtml(m.location) : esc(m.location)):''}</div>
     ${matchDistanceHtml(m)}
   </div>`;
 }

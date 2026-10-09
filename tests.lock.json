@@ -128,8 +128,8 @@
     "test": "486a23472d108af0a9638fcf4c6530af7e23cb559c0ff54665215f52fed47747"
   },
   "ui-deviation.js": {
-    "module": "1c5b4f0b20f3743b93791273adf14e9604d46e57ee14632addbd970f21f0581b",
-    "test": "9240308b70190a00880bb20426fd8da624467e600138ddff9645edcc5060dd0f"
+    "module": "584d45722efdceffd65567e388130c160731a4ef18d65ce63a25b7e82ce6bca3",
+    "test": "0060a109094447e64188995359580148e19c47d9113b82e70dd12757213af4b0"
   },
   "ui-help.js": {
     "module": "3074a9dca813def487c715297d91d7c9dcf9a31ff05de1ae697a440678047f2a",
@@ -140,12 +140,12 @@
     "test": "2927babf9b947a7c0ae1f2b3ae2fe279ebde81a065b4227d778982dc558ff23c"
   },
   "ui-matches.js": {
-    "module": "53788284c41f07ecbfca9b0e662bb58605f1f26f80ca734581548e6dad6f45a2",
-    "test": "1a5375254dc556dea0ec12f1af04bbf655c61fd9c92452fd818c2e035080e01a"
+    "module": "464bbfb2a5d63a3c9c6ecf5024922ff4da5d1fad386f189590a73b1e1ea8bd71",
+    "test": "74442c7092d169c3bf410b8efe7d22003cfae9bb0cdd91dfce27304b1f16bb91"
   },
   "ui-myweek.js": {
-    "module": "6be6cd5aeb8a976a4d45de2d951887e7f362521a43345e7cbc170ab577f6ea35",
-    "test": "053ee9df1c61dcb8753964b6d3e561b62d7b9698af689c1d7e8c8c7390cd8780"
+    "module": "7e812f7bfba273c005656724f3ce3ac8df22a3ac3be2f802c6313afbb1b47afa",
+    "test": "f283a5f21548417ae5db043ad4aabf95e630cc68896abb910eb4821da669fcfd"
   },
   "ui-notice.js": {
     "module": "2baa22febd237d86597fe4fc6dcd582f13fbc291d696fc8be2cc6429da91e100",
@@ -161,7 +161,7 @@
   },
   "ui-period.js": {
     "module": "046c89e77ccda723b4fce1e9d5c1f01e6be57046597b95cc21e871796f1ea365",
-    "test": "d8b84c472d7e065c58436298fb04ba762c834d5321859121bbb196a77b61e9f3"
+    "test": "ee7c401fd8f6110fab9ca5081597e0046832208404a5e335338682cc9740d77a"
   },
   "ui-profile.js": {
     "module": "989a0442f2a3f0571e9e26f50a0c29745be06773ce4f3ce10ba9113dae1a0190",
@@ -172,8 +172,8 @@
     "test": "7808269dec5770ad7286096a3e0338df007f45c74eea8c5cf9198efa397305a1"
   },
   "ui-ritbeurs.js": {
-    "module": "2364ebc5d86d0c1948da252f49b688f8a58a5d738a4f998742d0ec34c9bf9ba5",
-    "test": "1f39ccec90e7f3aafa91309523dd228d1df7c3b4e7928cfa78519eb9edd77a69"
+    "module": "a3dde51d320263e3b60ba4a8595c56872a0d329efbc7d1bfabcea970d44cb70b",
+    "test": "4418e8f66f6ab360724967625dc29ca31b59f4acc6918f75e23d0349bcdbe59d"
   },
   "ui-schedule.js": {
     "module": "8baf739a0826a1c315365a462154472ec28d29dd5ca0f8b09b96e5a05a1c85c5",

@@ -35,18 +35,18 @@ console.log('=== day pills (same design as Rooster) ===');
 test('shows the week, one pill per day and the content of one day straight away', () => {
   const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: null });
   const s = text(html);
-  assert.match(s, /^Wijzigingen · Week 40 · 28 sep – 2 okt Eenmalige ritaanpassing voor deze week/);
+  assert.match(s, /^ma 28 di 29 vandaag 30 do 1 vr 2 Eenmalige ritaanpassing voor deze week .* Week 40 · 28 sep – 2 okt\./);
   assert.equal((html.match(/data-devday=/g) || []).length, 5);
-  assert.match(html, /class="daypills"/);
+  assert.match(html, /class="dayPills"/);
   assert.doesNotMatch(html, /devDayBtn|grid5/);            // the old day tiles are gone
   const day = todayKey || 'Ma';
-  assert.match(html, new RegExp(`daypill devDayPill active" data-devday="${day}"`)); // today (or Monday) is open by default
+  assert.match(html, new RegExp(`dayPill devDayPill on[^"]*" data-devday="${day}"`)); // today (or Monday) is open by default
   assert.match(html, /Heen · Aalsmeer → Alkmaar/);          // day content is loaded without an extra tap
   assert.equal(S.deviationDay, day);
 });
 test('day names are lowercase in the middle of a sentence, capitalised as heading', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Do' }));
-  assert.match(s, /Donderdag Wijzigingen hier gelden alleen voor donderdag deze week/);
+  assert.match(s, /Wijzigingen hier gelden alleen voor donderdag deze week .* Donderdag Heen Heen · Aalsmeer → Alkmaar/);
   const yes = text(render(sampleParentState, { deviationDay: 'Do', dayCoordinators: { Do: 'f2' } }));
   assert.match(yes, /Jij bent dagcoördinator op donderdag\./);
 });
@@ -62,7 +62,7 @@ test('tapping a pill loads that day (like Rooster)', () => {
   withFakeNow(NOW, () => { renderDeviationTab(); btn.onclick(); });
   dom.doc.querySelectorAll = all;
   assert.equal(S.deviationDay, 'Vr');
-  assert.match(text(dom.html('tab-deviation')), /Vrijdag Wijzigingen hier gelden alleen voor vrijdag/);
+  assert.match(text(dom.html('tab-deviation')), /Wijzigingen hier gelden alleen voor vrijdag .* Vrijdag Heen/);
   expectSnapshot('ui-deviation', 'parent day pills with a live match', render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
 });
 test('an unknown day falls back to today (or Monday)', () => {
@@ -85,14 +85,14 @@ console.log('\n=== periode met andere tijden: the card sits on top of Wijzigen =
 const periodDoc = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
 test('while filling in is open the task card comes before the weekly changes; without a period Wijzigen is as before', () => {
   const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ periods: oneP(periodDoc), periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
-  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('Wijzigingen ·'));
+  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('class="dayPills"'));
   assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma' }), /periodTask|periodDone/);
 });
 
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
   const s = text(renderOpen(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
-  assert.match(s, / Dinsdag Wijzigingen hier gelden alleen voor dinsdag deze week en verdwijnen dit weekend vanzelf\. Heen · Aalsmeer/);
+  assert.match(s, /Wijzigingen hier gelden alleen voor dinsdag deze week en verdwijnen dit weekend vanzelf\. = deze week gewijzigd Dinsdag Heen Heen · Aalsmeer/);
   assert.doesNotMatch(s, /Andere dag/);   // no separate day picker screen any more
   assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
   assert.match(s, /Terug naar standaard rooster/);
@@ -151,7 +151,7 @@ test('wireWhatsAppButton hooks the click to sending that message', () => {
 });
 
 import { withFakeNowAsync } from './test-support.js';
-import { backupHtml, conclusieCardHtml, flexSignupHtml, oneOnOneHtml } from '../ui-deviation.js';
+import { backupHtml, conclusieCardHtml, flexSignupHtml } from '../ui-deviation.js';
 import { shiftLabel } from '../locations.js';
 import { locationsCfg } from '../ui-common.js';
 import { sampleFamilies as _sampleFamilies } from './test-support.js';
@@ -188,23 +188,11 @@ test('the card follows the open day', () => {
   assert.match(withFakeNow(NOW, () => conclusieCardHtml('Ma')), /Conclusie-appje Maandag/);
 });
 
-console.log('\n=== 1-op-1 afstemmen (US-04) ===');
-test('every driver on the day gets a WhatsApp button, with the label for the day coordinator\'s role', () => {
+console.log('\n=== no 1-op-1 WhatsApp buttons any more (design v2) ===');
+test('Wijzigen has no direct WhatsApp buttons per driver; contact goes through the name (contact sheet)', () => {
   const html = render(sampleParentState, { deviationDay: 'Di' });
-  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Over%20de%20rit%20heen%20van%20dinsdag%2029%20september/);
-  assert.match(text(html), /Stem af met chauffeur Kees de Vries Stem 1-op-1 af, de dagcoördinator deelt het besluit\./);
-  assert.match(html, /aria-label="Stem af met chauffeur Kees de Vries via WhatsApp"/);
-});
-test('no button for yourself, for a car without driver, or for a driver without phone number', () => {
-  sampleParentState({ links: { p1: { familyId: 'f1' } } });      // Jan drives on Monday (heen)
-  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: null, girlIds: ['f5'] }, { driverFamilyId: 'f5', girlIds: ['f6'] }];
-  S.families.f5 = { ...S.families.f5, parentPhone1: '', parentPhone2: '' };
-  assert.equal(oneOnOneHtml('Ma', 'heen', cars), '');
-});
-test('the hint text appears once per direction, not once per driver', () => {
-  sampleParentState({ links: { p1: { familyId: 'f6' } } });
-  const html = withFakeNow(NOW, () => oneOnOneHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: 'f2', girlIds: ['f2'] }]));
-  assert.equal((html.match(/oneOnOneBtn/g) || []).length, 2); assert.equal((html.match(/Stem 1-op-1 af, de dagcoördinator deelt het besluit\./g) || []).length, 1);
+  assert.doesNotMatch(html, /oneOnOne|Stem af met chauffeur|Stem 1-op-1 af/);
+  assert.match(html, /data-contact="f4"/);
 });
 
 console.log('\n=== Back-up (reserves op Wijzigen) ===');
@@ -220,12 +208,13 @@ test('a driver of another car in the same shift is not a Back-up', () => {
   const s = text(withFakeNow(NOW, () => backupHtml('Ma', 'heen', cars))).replace(/ ,/g, ',');
   assert.equal(s, 'Back-up: Kees de Vries, Tom Visser');
 });
-test('each Back-up name asks that reserve by WhatsApp for the time of the ride; your own name is plain text', () => {
+test('each Back-up name opens the contact sheet with the ask for the time of the ride; your own name is plain text', () => {
   sampleParentState({ links: { p1: { familyId: 'f2' } } });   // Piet is a reserve himself
   const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }];
   const html = withFakeNow(NOW, () => backupHtml('Ma', 'heen', cars));
-  assert.match(html, /href="https:\/\/wa\.me\/31633333333\?text=Hi!%20Zou%20jij%20de%20rit%20heen%20van%20maandag%2028%20september%20om%2007%3A30%20kunnen%20doen%3F"/);
-  assert.doesNotMatch(html, /31622222222/);            // no link to yourself
+  assert.match(html, /data-contact="f3" data-contact-text="Hi! Zou jij de rit heen van maandag 28 september om 07:30 kunnen doen\?"/);
+  assert.doesNotMatch(html, /data-contact="f2"/);      // no button for yourself
+  assert.doesNotMatch(html, /wa\.me/);
   assert.match(text(html).replace(/ ,/g, ','), /Back-up: Piet Pieters, Kees de Vries, Tom Visser/);
 });
 test('no Back-up line when nobody is left, or when there is no ride', () => {
@@ -234,9 +223,9 @@ test('no Back-up line when nobody is left, or when there is no ride', () => {
   const all = [{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: 'f2', girlIds: ['f2'] }, { driverFamilyId: 'f3', girlIds: ['f3'] }, { driverFamilyId: 'f6', girlIds: ['f6'] }];
   assert.equal(backupHtml('Ma', 'heen', all), '');
 });
-test('Wijzigen shows the Back-up line for a direction, before the WhatsApp buttons', () => {
+test('Wijzigen shows the Back-up line for a direction', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Di' }));
-  assert.match(s, /Back-up: Piet Pieters, Mo Bakker Stem af met chauffeur/);
+  assert.match(s, /Back-up: Piet Pieters, Mo Bakker/);
 });
 
 console.log('\n=== Flex aanmelden (US-05) ===');

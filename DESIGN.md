@@ -55,13 +55,20 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 - **Contact sheet**: `.sheet__actions` with two `.btn`.
 - Forms: inputs, selects and labels have one look (end of `components.css`).
 
+## Components added in phase 3 (Wijzigen, Ritbeurs, Wedstrijden)
+
+- Wijzigen: a closed car is a `.carCard` (`.devRide`) with a head button (time, driver, route, Wijzig/Klaar) and chips; open it shows the form (`.devForm`: time + driver, destination tiles `.devDest`, kids with `···` actions `.devKid*`). Undo bar `.devToast`. Day message card `.conclusieCard` with one ink button.
+- Ritbeurs offer card = `.card.rbOffer`: mono time, route, chips, one full-width ink button; confirm block `.rbConfirm`. Own rides, moments, notifications are plain cards with `.rbMine` / `.rbMoment` rows.
+- Wedstrijden: one `.card.matchCard` per match (`.matchInfo`, `.matchTitle`, `.matchCarRow`), under an `.infoLine`.
+- Contact: no direct WhatsApp buttons per driver any more; names open the contact sheet. Group sharing stays (Dagbericht, share button).
+
 Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 ## Migration (old screens -> v2). Delete a line when done.
 
 - [x] Phase 1: tokens, fonts (Onest), header, avatar + Instellingen sheet, tab bar, buttons, segmented, sheet, toast.
 - [x] Phase 2: Mijn week, Rooster (Deze week, Vast rooster, tijdelijk rooster).
-- [ ] Phase 3: Wijzigen (+ Ritbeurs inside it), Wedstrijden.
+- [x] Phase 3: Wijzigen (+ Ritbeurs inside it), Wedstrijden. (Period cards `.period*` and the amber `.devAlert` box still use old rules: phase 4.)
 - [ ] Phase 4: Beheer, Help panel, Mijn gezin, all remaining sheets and banners.
 - [ ] Old `.group`, `.pill`, `.daypill(s)`, `.dirLabel`, `.changedTag`, `.rowflex`, `.badge` still serve Wijzigen, Wedstrijden and Beheer; delete them from `legacy.css` when those move.
 - [ ] End: delete `legacy.css`, the DEPRECATED alias block in `tokens.css`, and the unused `fonts/plus-jakarta-sans-*`.

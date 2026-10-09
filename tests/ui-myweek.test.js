@@ -70,6 +70,12 @@ test('matchInfoHtml: an away match', () => {
   assert.match(text(matchInfoHtml({ summary: 'Ajax O15-1-AZ O15-1', teamLabel: 'AZ', start: new Date(kick) })), /\(Uit\) vs Ajax O15-1/);
 });
 
+test('matchInfoHtml uses the shared classes (matchInfo, noteLine), no inline font size', () => {
+  resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ' }] });
+  const html = matchInfoHtml({ calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'Hoorn', start: new Date(kick) });
+  assert.match(html, /class="matchInfo"/); assert.match(html, /class="noteLine matchWhen"/); assert.doesNotMatch(html, /font-size/);
+});
+
 console.log('\n=== navigation ===');
 test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
   sampleParentState(); goToWijzigen('Di'); assert.equal(S.deviationDay, 'Di');

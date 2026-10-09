@@ -55,7 +55,7 @@ test('without an account nothing is shown', () => {
 test('matches of the next 29 days are listed in order; later ones are left out', () => {
   state({ matches: [far, home, tooFar] });
   const s = text(render());
-  assert.match(s, /^Wedstrijden komende 4 weken /);
+  assert.match(s, /^Wedstrijden komende 4 weken\. /);
   assert.ok(s.indexOf('zaterdag 3 oktober') > -1 && s.indexOf('dinsdag 20 oktober') > s.indexOf('zaterdag 3 oktober'));
   assert.doesNotMatch(s, /7 november/);
 });
@@ -193,6 +193,11 @@ await testAsync('the trash button removes that car; removing the last car delete
   S.matchCarpools = { [SLUG]: fake.get('matchCarpools/' + SLUG) };
   render(); await reg()('[data-delmatchcar]')[0].onclick();
   assert.equal(fake.get('matchCarpools/' + SLUG), undefined);
+});
+
+test('every match is its own card (matchCard) under an info line; no nested group cards any more', () => {
+  const html = withFakeNow(NOW, () => { sampleParentState({ matchFeeds: [], matches: [] }); return matchesCardHtml(); });
+  assert.doesNotMatch(html, /matchGroup|matchesCard/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
