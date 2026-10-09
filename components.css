@@ -563,3 +563,49 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .matchCapWarn{color:var(--warn-ink);font:var(--type-caption);font-weight:700;margin-top:var(--space-3)}
 .matchNote{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0 0;font:var(--type-caption);color:var(--match-ink)}
 .dayFormCard{background:var(--surface-inset);border:0;border-radius:var(--radius-panel);padding:var(--space-5)}
+
+/* ============================================================
+   Instellingen sheet and Mijn gezin (the drill-down behind the avatar)
+   ============================================================ */
+.settingsHead{display:flex;align-items:center;gap:var(--space-6);padding:var(--space-3) 0 var(--space-6);border-bottom:1px solid var(--line)}
+.settingsHead h3{margin:0;font:var(--type-section)}
+.settingsAvatar{width:64px;height:64px;border-radius:50%;background:var(--action-bg);color:var(--action-ink);display:inline-flex;align-items:center;justify-content:center;font:800 22px/1 var(--font-sans);flex:none}
+.settingsRow{font-size:22px;display:flex;align-items:center;gap:var(--space-5);width:100%;min-height:56px;padding:0;border:0;border-bottom:1px solid var(--line);background:none;color:var(--text-1);text-align:left;font-family:inherit;cursor:pointer}
+div.settingsRow{cursor:default}
+.settingsRow:last-child{border-bottom:0}
+.settingsRow>svg{fill:currentColor;flex:none}
+.settingsRow__label{flex:1;font:var(--type-card-title);font-size:16px;font-weight:800}
+.settingsRow__hint{font:var(--type-small);font-weight:600;color:var(--text-muted)}
+.settingsRow--info{min-height:52px;color:var(--text-muted)}
+.settingsRow--info .settingsRow__label{font:var(--type-body);font-weight:500;color:var(--text-muted)}
+.segmented--inline{width:auto;margin:0;flex:none}
+.segmented--inline button{flex:none;padding:0 var(--space-6)}
+
+.backRow{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);margin-bottom:var(--space-3)}
+.backBtn{display:inline-flex;align-items:center;gap:var(--space-2);min-height:var(--hit-min);border:0;background:none;padding:0;color:var(--text-1);font:var(--type-button);cursor:pointer}
+.backBtn svg{width:16px;height:16px;fill:currentColor}
+.backRow__note{font:var(--type-caption);color:var(--text-muted)}
+.panel{background:var(--surface-card);border-radius:var(--radius-car);padding:var(--space-5);margin-top:var(--space-4);box-shadow:var(--shadow-card)}
+.panel--row{display:flex;align-items:center;gap:var(--space-5)}
+.panel__head{display:flex;align-items:center;gap:var(--space-5)}
+.panel__head>div{flex:1}
+.panel__title{font:var(--type-card-title);font-weight:800}
+.panel__sub{font:var(--type-caption);color:var(--text-muted)}
+.panel__time{width:120px;flex:none}
+.panel__q{margin:var(--space-5) 0 var(--space-3);font:var(--type-caption);color:var(--text-muted)}
+.familyHead__initial{width:44px;height:44px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);display:inline-flex;align-items:center;justify-content:center;font-weight:800;flex:none}
+.familyHead__name{font:var(--type-card-title);font-weight:800}
+.formHeading{margin:var(--space-8) 0 var(--space-3);font:var(--type-card-title);font-weight:800}
+.dayTabs{margin-bottom:var(--space-2)}
+.dayTabBtn{border-radius:var(--radius-control);background:var(--surface-card)}
+.dayTabBtn.active{background:var(--action-bg);color:var(--action-ink);border-color:var(--action-bg)}
+.stepperInfo svg{width:22px;height:22px;color:var(--text-muted);flex-shrink:0}
+.driveToggleBtn{border:2px solid var(--line);border-radius:var(--radius-control);justify-content:center;font:var(--type-button);font-size:13px;background:var(--surface-card)}
+.driveToggleCheck{border:0;background:none;width:auto;height:auto;display:inline-flex}
+.driveToggleCheck svg{width:18px;height:18px;color:inherit}
+.driveToggleBtn-backup .driveToggleCheck{border:0;border-radius:0}
+.driveToggleInput:checked+.driveToggleBtn-standard{border-color:var(--ok);background:var(--ok-soft);color:var(--ok-ink)}
+.driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck{background:none;border:0}
+.driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck svg,.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck svg{color:inherit}
+.driveToggleInput:checked+.driveToggleBtn-backup{border-color:var(--info);background:var(--info-soft);color:var(--info)}
+.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck{background:none;border:0}

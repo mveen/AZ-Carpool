@@ -110,7 +110,9 @@ test('a parent sees own family form, linked name and an unlink button', () => {
   useFakeDb(sampleDbSeed()); sampleParentState();
   withFakeNow(NOW, () => renderProfile());
   const s = text(dom.html('tab-profile'));
-  assert.match(s, /Mijn gezin/); assert.match(s, /Gekoppeld aan: Jahaimy/);
+  assert.match(s, /^Instellingen Wordt direct opgeslagen J Jahaimy Gekoppeld aan: Piet Pieters/);   // back to Instellingen, the family panel
+  assert.match(dom.html('tab-profile'), /data-opensettings="1"/);
+  assert.match(s, /Plekken in je auto naast jou als chauffeur − 4 \+ Vaste tijden en beschikbaarheid Ma Di Wo Do Vr Heen Aankomst in Alkmaar Kun je zelf rijden\? Beschikbaar Back-up Terug Klaar om opgehaald te worden/);
   assert.match(dom.html('tab-profile'), /id="unlinkBtn"/);
   assert.match(dom.html('tab-profile'), /value="Piet Pieters"/);
   expectSnapshot('ui-profile', 'parent profile', dom.html('tab-profile'));
@@ -168,7 +170,7 @@ test('only Weekschema fields (times, availability, back-up) trigger it — not n
 function openProfileAndGetListener() {
   let listener = null;
   const box = dom.el('tab-profile'); const origQS = box.querySelector;
-  box.querySelector = sel => (sel === '.card' ? { addEventListener: (type, fn) => { if (type === 'change') listener = fn; } } : origQS(sel));
+  box.querySelector = sel => (sel === '.profileForm' ? { addEventListener: (type, fn) => { if (type === 'change') listener = fn; } } : origQS(sel));
   withFakeNow(NOW, () => renderProfile());
   box.querySelector = origQS;
   assert.equal(typeof listener, 'function');
