@@ -46,7 +46,7 @@ export function closeHelp(){
 
 export function openHelp(fromButton){
   closeHelp();
-  opener = fromButton || document.getElementById('helpToggle') || null;
+  opener = fromButton || document.getElementById('avatarBtn') || null;
   const ov = document.createElement('div');
   ov.className = 'helpOverlay'; ov.id = 'helpOverlay';
   ov.innerHTML = `<div class="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
@@ -76,13 +76,4 @@ export function openHelp(fromButton){
     }
   });
   input.focus();
-}
-
-// Called once at start-up (app.js bootstrap): puts the "?" icon on the button and wires it.
-export function initHelpButton(){
-  const btn = document.getElementById('helpToggle');
-  if(!btn) return;
-  btn.innerHTML = phIcon('question');
-  btn.setAttribute('aria-label', t('help.open')); btn.title = t('help.open');
-  btn.onclick = () => openHelp(btn);
 }

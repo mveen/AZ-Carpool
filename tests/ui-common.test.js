@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import {
-  foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, cycleTheme, isStandaloneDisplay,
+  foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
   isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts,
 } from '../ui-common.js';
 
@@ -46,12 +46,16 @@ test('lastUpdateFooter: empty without data, otherwise who and when (name escaped
 console.log('\n=== toast, status line, confirm ===');
 test('showToast shows escaped text, optionally with an icon', () => {
   showToast('Mislukt: <script>');
-  assert.equal(dom.html('toast'), 'Mislukt: &lt;script&gt;'); assert.equal(dom.el('toast').style.display, 'block');
+  assert.equal(dom.html('toast'), 'Mislukt: &lt;script&gt;'); assert.equal(dom.el('toast').style.display, 'flex');
   showToast('Let op', { icon: 'warning' }); assert.match(dom.html('toast'), /^<svg.*<\/svg> Let op$/);
 });
 test('setStatus writes the header line, with a warning icon when asked', () => {
   setStatus('Niet verbonden.', true); assert.match(dom.html('whoami'), /^<svg.*<\/svg> Niet verbonden\.$/);
   setStatus('Jan'); assert.equal(dom.html('whoami'), 'Jan');
+});
+test('only a warning is shown in the visible line under the header; a plain name is not', () => {
+  setStatus('Niet verbonden.', true); assert.equal(dom.el('statusLine').hidden, false); assert.match(dom.html('statusLine'), /Niet verbonden\./);
+  setStatus('Jan'); assert.equal(dom.el('statusLine').hidden, true); assert.equal(dom.html('statusLine'), '');
 });
 test('updateStatusLine: parent name; coordinator suffix; unlinked; nobody', () => {
   sampleParentState(); updateStatusLine(); assert.equal(dom.html('whoami'), 'Piet Pieters');
@@ -69,15 +73,20 @@ test('twoStepConfirm: first tap asks, second tap acts and restores the label (al
 });
 
 console.log('\n=== theme ===');
-test('applyTheme sets data-theme and the toggle button label', () => {
+test('applyTheme sets data-theme and marks the matching button of the Instellingen sheet', () => {
   applyTheme('dark');
-  assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'dark'); assert.equal(dom.el('themeToggle').getAttribute('aria-label'), 'Licht thema aanzetten');
-  applyTheme('anything'); assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'light'); assert.equal(dom.el('themeToggle').getAttribute('aria-label'), 'Donker thema aanzetten');
+  assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'dark');
+  assert.equal(dom.el('themeDark').getAttribute('aria-pressed'), 'true'); assert.equal(dom.el('themeLight').getAttribute('aria-pressed'), 'false');
+  assert.equal(dom.el('themeDark').classList.contains('active'), true); assert.equal(dom.el('themeLight').classList.contains('active'), false);
+  applyTheme('anything');
+  assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'light');
+  assert.equal(dom.el('themeLight').getAttribute('aria-pressed'), 'true'); assert.equal(dom.el('themeDark').getAttribute('aria-pressed'), 'false');
 });
-test('cycleTheme flips between light and dark and remembers the choice', () => {
-  localStorage.removeItem('theme-pref');
-  cycleTheme(); assert.equal(localStorage.getItem('theme-pref'), 'dark');
-  cycleTheme(); assert.equal(localStorage.getItem('theme-pref'), 'light');
+test('setTheme applies the choice and remembers it; currentTheme reads it back (light when nothing is stored)', () => {
+  localStorage.removeItem('theme-pref'); assert.equal(currentTheme(), 'light');
+  setTheme('dark'); assert.equal(localStorage.getItem('theme-pref'), 'dark'); assert.equal(currentTheme(), 'dark'); assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'dark');
+  setTheme('light'); assert.equal(localStorage.getItem('theme-pref'), 'light'); assert.equal(currentTheme(), 'light');
+  setTheme('rubbish'); assert.equal(currentTheme(), 'light');
 });
 
 console.log('\n=== install card ===');

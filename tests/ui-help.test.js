@@ -8,7 +8,7 @@ function test(name, fn) {
 }
 import { installFakeDom, resetState } from './test-support.js';
 import { S } from '../state.js';
-import { helpListHtml, helpArticleHtml, openHelp, closeHelp, initHelpButton } from '../ui-help.js';
+import { helpListHtml, helpArticleHtml, openHelp, closeHelp } from '../ui-help.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -137,12 +137,10 @@ test('closeHelp without an open panel does nothing', () => {
   installOverlay(); closeHelp();
 });
 
-console.log('\n=== the "?" button in the header ===');
-test('initHelpButton puts the icon and the labels on the button and opens the help on tap', () => {
+console.log('\n=== opener ===');
+test('without an opener the help gives focus back to the avatar', () => {
   resetState({ canEdit: false }); const o = installOverlay();
-  const btn = dom.el('helpToggle'); initHelpButton();
-  assert.match(btn.innerHTML, /^<svg/); assert.equal(btn.getAttribute('aria-label'), 'Hulp openen'); assert.equal(btn.title, 'Hulp openen');
-  btn.onclick(); assert.equal(o.ov.mounted, true);
+  openHelp(null); assert.equal(o.ov.mounted, true);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
