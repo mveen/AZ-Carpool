@@ -40,6 +40,9 @@ test('the Beheer section icons exist and draw with currentColor', () => {
   for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','chevron-left','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].includes('currentColor'), k);
 });
 
+test('the Phosphor icons of the design system v2 exist, regular and -fill (tab bar and header)', () => {
+  for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
+});
 test('the info icon exists (used by the notice bar)', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.includes('circle')); });
 test('the car-slash icon ("Rijdt niet mee" button) exists and draws a slash over the car', () => { assert.ok(PH_PATHS['car-slash'] && PH_PATHS['car-slash'].includes('<line')); });
 

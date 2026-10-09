@@ -1,0 +1,493 @@
+/* legacy.css: the pre-redesign rules, moved out of index.html unchanged except for removed shell rules.
+   Each phase of the redesign (see DESIGN.md) deletes rules from here when a screen moves to components.css.
+   Do NOT add new rules here. */
+/* Help panel ("?" in the header) */
+.helpOverlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:70;display:flex;align-items:flex-end;justify-content:center}
+.helpPanel{background:var(--card);color:var(--text);width:100%;max-width:520px;height:88vh;max-height:88dvh;border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:16px 16px calc(16px + var(--sab));box-shadow:0 -6px 24px rgba(0,0,0,.2);display:flex;flex-direction:column}
+.helpTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.helpTop h2{margin:0;font-size:18px;font-weight:800}
+.helpClose{width:44px;height:44px;min-width:44px;display:flex;align-items:center;justify-content:center;padding:0}
+.helpSearchLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.helpSearch{width:100%;box-sizing:border-box;min-height:48px;font-size:16px;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);color:var(--text)}
+.helpBody{flex:1;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
+.helpHead{margin:8px 0 0;font-size:12px;font-weight:700;color:var(--muted)}
+.helpItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);color:var(--text);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
+.helpBack{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 4px;border:0;background:none;color:var(--accent);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+.helpTitle{margin:4px 0 8px;font-size:16px;font-weight:800}
+.helpP{margin:0 0 10px;font-size:14px;line-height:1.5}
+.helpLine{padding-left:6px}
+.helpGo{width:100%;margin-top:6px}
+.helpContact,.helpEmpty{font-size:12px;margin-top:14px}
+/* ---------- Bottom tab bar (flex item, safe-area aware, thumb-reachable) ---------- */
+.card.timeChangeCard{border-color:var(--warn);border-left:4px solid var(--warn)}
+.timeChangeFam{padding:8px 0;border-top:1px solid var(--border)}
+.timeChangeFam:first-of-type{border-top:none}
+.timeChangeLine{font-size:14px;font-family:var(--font-mono);margin-top:2px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:12px;box-shadow:var(--shadow-card)}
+.card h2{margin:0 0 10px;font-size:16px;font-weight:800}
+details.fold>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;font-size:16px;min-height:28px}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(45deg);transition:transform .15s;flex-shrink:0;margin-right:4px}
+details.fold[open]>summary::after{transform:rotate(-135deg)}
+details.fold[open]>summary{margin-bottom:10px}
+details.group.fold>summary{font-size:14px}
+/* Beheer: chip bar, section groups, attention strip, icon in the fold summary, button row under a list */
+.begChips{position:sticky;top:-14px;z-index:5;display:flex;gap:6px;overflow-x:auto;margin:0 -16px 4px;padding:10px 16px;background:var(--bg);border-bottom:1px solid var(--border)}
+.begChip{flex-shrink:0;white-space:nowrap;min-height:44px;padding:0 14px;border-radius:var(--radius-full);border:1px solid transparent;background:var(--pill2);color:var(--pill);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.begChip.on{background:var(--accent2);color:var(--accent-text);border-color:var(--accent)}
+.begSec{scroll-margin-top:64px}
+.begSecTitle{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);padding:14px 4px 8px}
+.begAttn{background:var(--warn2);border:1px solid var(--warn-line);border-radius:var(--radius-lg);padding:4px 14px;margin-bottom:12px}
+.begAttnHead{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:800;color:var(--warn-text);padding:8px 0 4px}
+.begAttnItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:44px;background:none;border:none;border-top:1px solid var(--warn-line);padding:0;font:inherit;font-size:14px;font-weight:600;color:var(--warn-text);text-align:left;cursor:pointer}
+.foldTitle{display:inline-flex;align-items:center;gap:12px;min-width:0}
+.foldIcon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--pill);font-size:18px;flex-shrink:0}
+.cardActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+/* Melding voor iedereen: dunne gele balk bovenaan (alle gebruikers) + kaart in Beheer. Geen knop, dus ruim lager dan de testbalk. */
+.noticeBar{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--warn2);color:var(--warn-text);padding:4px 12px;font-size:12px;line-height:1.35;font-weight:600;border-bottom:1px solid var(--border);text-align:center}
+.noticeBar svg{flex-shrink:0}
+.noticeBar span{min-width:0;overflow-wrap:anywhere}
+/* Onderhoudsmodus: volledig scherm voor alle gebruikers behalve de coördinator, boven alles (ook Help en sheets). */
+.maintOverlay{position:fixed;inset:0;z-index:80;background:var(--bg);color:var(--text);align-items:center;justify-content:center;padding:24px;overflow:auto}
+.maintCard{max-width:420px;width:100%;text-align:center}
+.maintLogo{width:150px;margin:0 auto 18px;color:#dc2626}
+.maintLogo svg{display:block;width:100%;height:auto}
+:root[data-theme="dark"] .maintLogo{color:#ef4444}
+.maintTitle{font-size:22px;font-weight:800;margin:0 0 10px;color:var(--text)}
+.maintText{font-size:16px;line-height:1.5;margin:0 0 10px;overflow-wrap:anywhere}
+.maintAuto{font-size:12px;color:var(--muted);margin:0}
+.maintPreview{padding:14px 12px}
+.maintPreview .maintTitle{font-size:16px}
+.maintPreview .maintText{font-size:14px}
+.noticePreview{border:1px dashed var(--control-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--bg)}
+.noticeCount{text-align:right;font-size:12px;margin-top:3px}
+.switchRow{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:44px;font-size:14px;font-weight:700;color:var(--text);margin:4px 0}
+input.switch{appearance:none;-webkit-appearance:none;width:52px;height:30px;min-height:0;border-radius:15px;background:var(--control-border);border:none;position:relative;cursor:pointer;flex-shrink:0;padding:0;margin:0;transition:background .15s}
+input.switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
+input.switch:checked{background:var(--ok)}
+input.switch:checked::after{left:25px}
+input.switch:focus-visible{outline:2px solid var(--info);outline-offset:2px}
+.noticeChip{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px}
+.noticeChip.ok{background:var(--ok2);color:var(--ok-ink)}
+.noticeChip.off{background:var(--pill2);color:var(--muted);border:1px solid var(--border)}
+label{display:block;font-size:12px;color:var(--muted);margin:8px 0 3px}
+input[type=text],input[type=tel],input[type=number],select{width:100%;padding:9px 8px;border:1px solid var(--control-border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;min-height:44px;font-family:var(--font-sans)}
+input[type=time],input[type=date]{padding:8px 7px;border:1px solid var(--control-border);border-radius:var(--radius-sm);background:var(--bg);color:var(--text);font-size:14px;width:100%;min-height:44px;font-family:var(--font-mono);font-weight:700}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.grid4{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid5>button{min-width:0;padding:8px 4px;font-size:12px;white-space:normal;word-break:break-word;line-height:1.2}
+/* ---------- Mijn gezin: day tabs, capacity stepper, drive-toggle buttons ---------- */
+.dayTabBtn{min-width:0;padding:10px 2px;font-size:14px;font-weight:700;border:1px solid var(--border);background:var(--bg);color:var(--muted);border-radius:var(--radius-sm);cursor:pointer;min-height:44px}
+.dayTabBtn.active{background:var(--card);color:var(--accent-text);border-color:var(--accent)}
+.dayFormCard{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-top:8px}
+.stepperCard{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px;margin-top:6px}
+.stepperInfo{display:flex;align-items:center;gap:10px}
+.stepperInfo svg{width:22px;height:22px;color:var(--accent);flex-shrink:0}
+.stepperTitle{font-size:14px;font-weight:700}
+.stepperSub{font-size:12px;color:var(--muted)}
+.stepperControls{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.stepperBtn{width:44px;height:44px;border-radius:var(--radius-sm);border:1px solid var(--control-border);background:var(--card);color:var(--text);font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1}
+.stepperValue{font-size:16px;font-weight:800;font-family:var(--font-mono);min-width:1.5em;text-align:center}
+.driveToggleInput{position:absolute;opacity:0;width:1px;height:1px;pointer-events:none}
+.driveToggleGroup{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.driveToggleBtn{display:flex;align-items:center;gap:8px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--control-border);background:var(--card);font-size:14px;font-weight:600;cursor:pointer;min-height:44px;color:var(--text)}
+.driveToggleCheck{width:18px;height:18px;border-radius:5px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--bg)}
+.driveToggleCheck svg{width:12px;height:12px;color:transparent}
+/* Back-up keeps its own look (blue, dashed, round box) so it never reads as "Beschikbaar",
+   but shows a real check mark when selected, just like Beschikbaar does. */
+.driveToggleBtn-backup .driveToggleCheck{border-style:dashed;border-radius:50%}
+.driveToggleInput:checked+.driveToggleBtn-standard{border-color:var(--ok-ink);background:var(--ok2);color:var(--ok-ink)}
+.driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck{background:var(--ok);border-color:var(--ok-ink)}
+.driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck svg{color:#fff}
+.driveToggleInput:checked+.driveToggleBtn-backup{border-color:var(--info);background:var(--info2);color:var(--info)}
+.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck{background:var(--info);border-color:var(--info);border-style:solid}
+.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck svg{color:#fff}
+.driveToggleInput:focus-visible+.driveToggleBtn{outline:2px solid var(--accent);outline-offset:2px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;margin-top:6px;color:var(--muted)}
+.chk input{min-height:18px}
+button.btn{background:var(--accent);color:#fff;border:none;padding:10px 14px;border-radius:var(--radius-sm);font-size:14px;font-weight:700;cursor:pointer;margin-top:10px;min-height:44px;font-family:var(--font-sans)}
+button.btn.secondary{background:var(--pill2);color:var(--text);border:1px solid var(--control-border)}
+button.btn.small{padding:8px 14px;font-size:14px;margin:0;min-height:44px;min-width:44px}
+button.btn:disabled{opacity:.35;cursor:default}
+/* Button roles: primary = solid red (.btn) · destructive = red outline + red text (.danger)
+   · everything else = secondary (.btn.secondary). */
+button.btn.danger{background:var(--card);color:var(--danger);border:1px solid var(--danger)}
+.iconbtn.danger{color:var(--danger);border-color:var(--danger);display:inline-flex;align-items:center;justify-content:center;background:var(--card)}
+.linkbtn{background:none;border:none;padding:8px 0;min-height:44px;display:inline-flex;align-items:center;font:inherit;font-size:14px;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.linkbtn.danger{color:var(--danger)}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center}
+.iconbtn:disabled{opacity:.35;cursor:default}
+/* Neutral direction label: "Heen · Aalsmeer → Alkmaar" */
+.dirLabel{display:inline-flex;align-items:center;gap:6px;background:var(--pill2);color:var(--pill);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
+.shiftLoc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:14px;font-weight:700}
+.shiftLoc .shiftLocText{flex:1;min-width:0}
+.shiftLocBtn{display:inline-flex;align-items:center;gap:8px;max-width:100%;padding:6px 10px;margin-left:-10px;border:1px dashed var(--border);border-radius:var(--radius-full);background:transparent;color:inherit;font:inherit;font-weight:700;text-align:left;cursor:pointer}
+.shiftLocBtn svg{width:14px;height:14px;flex:none}
+.devFree{margin-top:6px}
+.addrHint{margin:4px 0 0;font-size:12px;color:var(--muted)}
+a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.matchDist{font-size:12px;color:var(--muted)}
+.subride .subrideHead{gap:8px;align-items:center}
+.subride .subrideHead>span:first-child{min-width:0}
+.subride .subrideEnd{display:inline-flex;align-items:center;gap:6px;flex-shrink:0}
+.ovSwitch{display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:44px;margin:-8px -6px -8px 0;padding:0 6px;border:none;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ovSwitch .ovTrack{display:inline-flex;align-items:center;justify-content:flex-end;width:52px;height:30px;padding:3px;border-radius:15px;background:var(--ok);color:var(--ok-ink);box-sizing:border-box;transition:background .15s}
+.ovSwitch .ovTrack svg{width:24px!important;height:24px!important;padding:4px;border-radius:50%;background:#fff;box-sizing:border-box;transition:transform .15s}
+.ovSwitch.off .ovTrack{background:var(--border);justify-content:flex-start;color:var(--muted)}
+.ovSwitch:focus-visible .ovTrack{outline:2px solid var(--accent);outline-offset:2px}
+.subride.ovOff .subrideHead>span:first-child{color:var(--muted)}
+.subride.ovOff .subrideDep{color:var(--muted)}
+.changedTag{display:inline-flex;align-items:center;gap:4px;background:var(--warn2);color:var(--warn-text);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
+/* Shared small square badge: weekday in Mijn week and the car number in Rooster */
+.dayBadge{width:28px;height:28px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.dayBadge.accent{background:var(--accent);color:#fff}
+/* Segmented control (Rooster: Deze week / Standaardrooster) */
+.segmented{display:flex;width:fit-content;max-width:100%;margin:0 auto 12px;background:var(--pill2);border-radius:var(--radius-full);padding:3px}
+.segmented button{flex:0 1 auto;border:none;background:none;padding:8px 18px;border-radius:var(--radius-full);font:inherit;font-size:14px;font-weight:700;color:var(--muted);cursor:pointer;min-height:44px}
+.segmented button.active{background:var(--card);color:var(--text);box-shadow:var(--shadow-card)}
+/* Alert for rides without a car */
+.unplacedAlert{background:var(--accent2);border:1px solid var(--accent);border-radius:var(--radius-lg);padding:12px 14px;margin-bottom:12px;color:var(--text)}
+.unplacedAlert .ttl{display:flex;align-items:center;gap:6px;font-weight:800;font-size:14px;color:var(--danger)}
+.unplacedAlert .row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid rgba(185,28,28,.2);font-size:14px}
+.unplacedAlert .row:first-of-type{border-top:none}
+/* Bottom sheet (Rooster: tap a passenger to move her) */
+.sheetOverlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:60;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);color:var(--text);width:100%;max-width:520px;border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:16px 16px calc(16px + var(--sab));box-shadow:0 -6px 24px rgba(0,0,0,.2)}
+.sheet h3{margin:0 0 4px;font-size:16px;font-weight:800}
+.sheet .sheetItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg);color:var(--text);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
+.sheet .sheetItem .sub{font-size:12px;color:var(--muted)}
+/* ---------- Day-pill carousel (Rooster) ---------- */
+.daypills{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px;margin-bottom:14px}
+.daypill{flex:0 0 auto;min-width:64px;min-height:48px;border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;padding:6px 10px;position:relative;font-family:var(--font-sans)}
+.daypill .daypillTop{display:block;font-size:12px;font-weight:800}
+.daypill .daypillSub{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.daypill.active{background:var(--accent);border-color:var(--accent)}
+.daypill.active .daypillTop{color:#fff}
+.daypill.active .daypillSub{color:#fff}
+.daypill .daypillToday{position:absolute;top:5px;left:7px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.daypill.active .daypillToday{background:#fff}
+.daypill .daypillAlert{position:absolute;top:-6px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:var(--radius-full);background:var(--danger);color:#fff;font-size:12px;font-weight:800;line-height:16px;text-align:center;border:2px solid var(--bg)}
+.daypills{padding-top:8px;padding-right:8px}
+/* Mon–Fri pills: 5 equal columns, always fit the screen (period pills keep wrapping) */
+.daypills:not(.periodPills){display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;overflow:visible;padding-right:6px}
+.daypills:not(.periodPills) .daypill{min-width:0;padding:6px 2px}
+.daypills:not(.periodPills) .devDayDot{right:4px}
+.daysection>h3{font-size:14px;color:var(--text);border-bottom:2px solid var(--accent);padding-bottom:4px;font-weight:800}
+.group{border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin:10px 0;background:var(--card);box-shadow:var(--shadow-card)}
+/* A coloured left stripe means STATUS only. A plain car (.confirmed) has none, like a Mijn week day card. */
+.group.suggestion{border-left:4px solid var(--ok)}
+.group.suggestion.primary{border-left:4px solid var(--ok);background:var(--ok2)}
+.group.warning{border-left:4px solid var(--warn)}
+.group .dir{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
+.group .time{font-size:18px;font-weight:800;font-family:var(--font-mono)}
+.group .subtime{font-size:12px;color:var(--muted)}
+.pill{display:inline-block;background:var(--pill2);color:var(--pill);border-radius:var(--radius-full);padding:5px 11px;font-size:12px;font-weight:600;margin:2px 3px 0 0;border:1px solid transparent;font-family:var(--font-sans)}
+.pill.mine{background:var(--accent2);color:var(--danger);border-color:var(--accent);font-weight:800}
+button.pill{cursor:pointer;min-height:44px}
+button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.driver{color:var(--text);font-weight:600;font-size:14px;margin-top:6px;display:flex;align-items:center;gap:6px}
+.driver.me{color:var(--ok-ink);font-weight:800}
+.driver select{flex:1;min-height:44px;font-weight:600}
+.cap{font-size:12px;color:var(--muted);font-weight:600}
+.capbadge{display:inline-block;background:var(--pill2);color:var(--pill);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);white-space:nowrap}
+.group.mineDriving{border-left:4px solid var(--ok)}
+.timeBig{font-size:18px!important;font-weight:800;font-family:var(--font-mono);width:auto!important;min-height:44px!important;padding:4px 8px!important}
+.tripReserve{font-size:12px;color:var(--muted);margin:2px 0 10px 2px}
+/* Tap-to-WhatsApp names (Rooster "Deze week": chauffeur + reserve) */
+a.waLink{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;display:inline-flex;align-items:center;gap:3px;min-height:24px}
+a.waLink:hover{text-decoration-style:solid}
+a.waIntro{display:inline-flex;flex-shrink:0;min-width:32px;min-height:32px;align-items:center;justify-content:center}
+a.waIntro[hidden]{display:none}
+a.waIntro svg{width:26px;height:26px}
+a.waLink svg{width:13px;height:13px;flex-shrink:0}
+.reserve{font-size:12px;color:var(--muted);margin-top:4px}
+.girlchk{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:14px}
+.muted{color:var(--muted);font-size:12px}
+.badge{display:inline-flex;align-items:center;background:var(--ok2);color:var(--ok-ink);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
+.badge.rec{background:var(--info2);color:var(--info);font-weight:700}   /* COÖRDINATOR / AANBEVOLEN: not an alert, so not red */
+.rowflex{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fitok{color:var(--ok-ink);font-size:12px;margin-top:4px;font-weight:700}
+.fitbad{color:var(--warn-text);font-size:12px;margin-top:4px;font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:4px;margin:2px 8px 2px 0;font-size:12px}
+table.avail{width:100%;border-collapse:collapse;font-size:12px}
+table.avail th,table.avail td{padding:6px 4px}
+.dayBlock{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px;overflow:hidden}
+.dayBlockHead{padding:10px 12px;font-size:14px;font-weight:600;display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid var(--border);background:var(--card)}
+.dayBlockHead .sumInfo{font-weight:400;color:var(--muted);font-size:12px}
+.dayDetailsBody{padding:10px 12px}
+.iconbtn{background:none;border:1px solid var(--control-border);border-radius:var(--radius-sm);min-width:44px;min-height:44px;font-size:14px;cursor:pointer;color:var(--text)}
+.availStd{display:inline-block;min-width:22px;padding:2px 4px;border-radius:6px;background:var(--ok);color:#fff;font-weight:800}
+:root[data-theme="dark"] .availStd{color:#022c22}
+.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+/* ---------- Mijn week hero card ---------- */
+.heroCard{background:linear-gradient(135deg,var(--az-red),var(--az-red-dark));border-radius:var(--radius-xl);padding:18px;color:#fff;margin-bottom:14px;box-shadow:var(--shadow-card)}
+/* Compact hero: one row — daughter + parent on the left, WhatsApp icon button on the right */
+.heroCard.compact{display:flex;align-items:center;gap:10px;padding:8px 8px 8px 14px;margin-bottom:12px;border-radius:var(--radius-lg)}
+.heroCard.compact .heroText{flex:1;min-width:0;align-self:center;display:flex;align-items:baseline;gap:8px;white-space:nowrap}
+.heroCard.compact .heroName{font-size:16px;font-weight:800;margin:0;flex-shrink:0}
+.heroCard.compact .heroSub{font-size:12px;color:#fff;opacity:.95;margin:0;overflow:hidden;text-overflow:ellipsis}
+.waIconBtn{width:44px;height:44px;border-radius:50%;border:none;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer;padding:0}
+.waIconBtn svg{margin:0!important;width:26px;height:26px}
+.legendLine{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--muted);margin:0 2px 12px}
+.legendLine span{display:inline-flex;align-items:center;gap:4px}
+.heroCard .heroTag{display:inline-block;background:rgba(255,255,255,.2);border-radius:var(--radius-full);padding:4px 10px;font-size:12px;font-weight:800;letter-spacing:.04em}
+.heroCard .heroName{font-size:20px;font-weight:800;margin:10px 0 2px}
+.heroCard .heroSub{font-size:12px;color:var(--az-red-light);margin:0}
+.heroCard .heroLegend{border-top:1px solid rgba(255,255,255,.2);margin-top:14px;padding-top:10px;font-size:12px;font-weight:600;display:flex;flex-wrap:wrap;gap:10px}
+.heroCard #wa-hero{background:#fff;color:var(--az-red-dark);border:none;margin-top:12px}
+.dayCard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-card)}
+.dayCard.today{border:2px solid var(--accent)}
+.dayCard .dayCardHead{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.dayCard .dayBadge{width:28px;height:28px;border-radius:var(--radius-sm);background:var(--pill2);color:var(--text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0}
+.dayCard.today .dayBadge{background:var(--accent);color:#fff}
+.dayCard .dayCardTitle{font-size:14px;font-weight:800;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dayCard .todayTag{display:inline-flex;align-items:center;background:var(--accent2);color:var(--accent-text);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
+.dayCard .dayTimes{font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.subride{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-md);padding:8px 10px;margin-top:6px}
+.subride.driving{border-color:var(--ok-ink);border-width:2px}
+.subride .subrideHead{display:flex;justify-content:space-between;align-items:baseline;font-size:14px;font-weight:700}
+.subride .subrideDep{font-family:var(--font-mono);color:var(--text);font-weight:700}   /* neutral: red is for brand, today and destructive actions */
+.subride .subrideStatus{font-size:12px;color:var(--muted);margin-top:3px}
+/* You drive: the same green chip everywhere (own car, second car, match ride), and a green border on the ride. */
+.subride .subrideStatus.driving{display:flex;width:fit-content;align-items:center;gap:6px;background:var(--ok);color:#fff;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
+:root[data-theme="dark"] .subride .subrideStatus.driving{color:#022c22}
+.subride.matchRide .subrideStatus.driving{color:#fff}
+:root[data-theme="dark"] .subride.matchRide .subrideStatus.driving{color:#022c22}
+/* No driver yet: amber warning chip */
+.statusChip{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:var(--radius-full);font-weight:700}
+.statusChip.warn{background:var(--warn2);color:var(--warn-text);border:1px solid var(--warn)}
+.subride.unplanned{border-color:var(--danger);border-width:2px;background:var(--accent2)}
+.subride .subrideStatus.unplanned{color:var(--danger);font-weight:800;font-size:14px;display:flex;align-items:center;gap:4px}
+.subride .subrideStatus.changed{color:var(--warn-text);font-weight:600}
+/* ---------- Dagafwijking (amber "warning" theme) ---------- */
+.dayCoordBar{display:flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 14px;margin-bottom:12px;font-size:14px}
+.dayCoordBar>span{flex:1;min-width:0}
+.dayCoordBar.you{background:var(--accent2);color:var(--accent-text);font-weight:700}
+.dayCoordWa{display:flex;align-items:center;justify-content:center;width:44px;height:44px;flex-shrink:0}
+.dayCoordWa svg{width:28px;height:28px}
+.conclusieCard.forYou{border:2px solid var(--az-red)}
+.conclusiePreview{white-space:pre-wrap;background:var(--bg,#f6f6f6);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px 12px;font-size:14px;margin:8px 0}
+.oneOnOneHint{font-size:12px;color:var(--muted);margin:6px 0 0}
+.flexBadge{background:var(--pill2);color:var(--pill);font-weight:700}   /* neutral label, like .capbadge: red is for alerts and 'mine' */
+.devAlert{background:var(--warn2);border:1px solid var(--warn-line);border-radius:var(--radius-xl);padding:14px 16px;margin-bottom:14px}
+/* Ritbeurs (Wijzigen > Ritbeurs). Selected options are neutral dark, never a red or tinted pill. */
+.rbOffer{border-left:4px solid var(--warn-bar);padding-left:14px}
+.rbTime{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-weight:800;font-size:16px;color:var(--text)}
+.rbRoute{font-size:14px;font-weight:600;margin:4px 0;color:var(--text)}
+.rbPills{margin:2px 0 4px}
+.rbPill{margin:2px 4px 0 0}
+.rbBy{margin:4px 0 8px}
+.rbChip{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);background:var(--pill2);color:var(--pill);border:1px solid var(--border)}
+.rbChip-late{background:var(--warn2);color:var(--warn-text);border-color:var(--warn-line)}
+.rbConfirm{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+.rbConfirm h4,.rbForm h4{margin:0 0 6px;font-size:16px}
+.rbChecks{list-style:none;margin:0;padding:0;font-size:14px;line-height:1.5}
+.rbChecks li{margin:4px 0}
+.rbWarn{margin:8px 0 0;font-size:14px;font-weight:700;color:var(--warn-text)}
+.rbMine,.rbMoment{padding:8px 0;border-top:1px solid var(--border)}
+.rbMine:first-of-type{border-top:0}
+.rbForm{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.rbOpts{display:flex;flex-wrap:wrap;gap:6px}
+.rbOpt{min-height:44px;min-width:44px;padding:0 14px;border-radius:var(--radius-full);border:1px solid var(--control-border);background:var(--card);color:var(--text);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+.rbOpt.active{background:var(--text);color:var(--card);border-color:var(--text)}
+.rbOpt:disabled{opacity:.45;cursor:default}
+.rbSel{width:auto;min-width:92px}
+.rbNotif{display:flex;flex-direction:column;gap:2px;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.rbNotif span{font-size:14px;color:var(--muted);line-height:1.35}
+.rbNotif.unread b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--text);margin-right:6px}
+.rbQuiet{border-top:1px solid var(--border);margin-top:10px;padding-top:10px}
+/* Wijzigen: compact ride card (one line when closed, "Wijzig" unfolds the form). Amber on purpose: one-off changes. */
+.devRide{border:1px solid var(--warn-edge);border-left:4px solid var(--warn-bar);border-radius:14px;padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;margin:10px 0;background:var(--card);box-shadow:none}
+.devRideHead{all:unset;box-sizing:border-box;cursor:pointer;display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:56px;width:100%}
+.devRideHead:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:8px}
+.devRideTime{font-size:24px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-mono)}
+.devRideMain{display:flex;flex-direction:column;min-width:0}
+.devRideDriver{font-weight:700;font-size:14px}
+.devRideRoute{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devRideToggle{font-size:12px;font-weight:700;color:var(--pill);border:1px solid var(--control-border);background:var(--pill2);border-radius:var(--radius-full);padding:6px 12px}   /* neutral: red is for alerts and 'mine' */
+.devKids{display:flex;gap:6px;flex-wrap:wrap}
+.devKid{display:inline-block;background:var(--pill2);color:var(--pill);border:1px solid transparent;border-radius:var(--radius-full);padding:5px 11px;font-size:12px;font-weight:600;font-family:var(--font-sans)}   /* same look as .pill */
+.devKid.mine{background:var(--accent2);color:var(--danger);border-color:var(--accent);font-weight:800}
+.devForm{display:flex;flex-direction:column;gap:12px;border-top:1px solid var(--border);padding-top:12px}
+.devFormTop{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px}
+.devField{display:flex;flex-direction:column;gap:4px;margin:0}
+.devField>span{font-size:12px;font-weight:600;color:var(--muted)}
+.devInput{height:44px;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--bg);padding:0 10px;font-size:14px;color:var(--text);box-sizing:border-box;width:100%;margin:0}
+.devRide .timeBig{width:100%!important;min-height:44px!important;padding:0 10px!important;font-size:16px!important}
+.devDestRow{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.devDest{text-align:left;min-height:52px;border-radius:10px;padding:6px 12px;cursor:pointer;border:1px solid var(--control-border);background:var(--bg);color:var(--text);display:flex;flex-direction:column;justify-content:center;font-family:inherit}
+.devDest.on{background:var(--accent2);border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger);color:var(--accent-text)}
+.devDestName{font-weight:700;font-size:14px}
+.devDestCity{font-size:12px;opacity:.8}
+.devKidList{display:flex;flex-direction:column}
+.devKidRow{display:flex;flex-direction:column;border-bottom:1px solid var(--border)}
+.devKidLine{display:flex;align-items:center;gap:10px;min-height:48px}
+.devKidName{flex:1;font-size:14px}
+.devKidName.mine{font-weight:800;color:var(--danger)}
+.devKidMore{width:44px;height:40px;border:1px solid var(--border);border-radius:10px;background:var(--bg);font-size:18px;font-weight:800;color:var(--muted);cursor:pointer;line-height:1;font-family:inherit}
+.devKidMore.on{background:var(--accent2);border-color:var(--danger)}
+.devKidActions{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:10px}
+.devKidBtn{flex:1 1 120px;min-width:0;min-height:44px;border:1px solid var(--control-border);border-radius:10px;background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;padding:0 10px;font-family:inherit;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.devKidBtn.danger{flex:0 0 44px;width:44px;padding:0;border-color:#fecaca;color:var(--danger);display:inline-flex;align-items:center;justify-content:center}
+.devKidBtn.danger svg{width:20px;height:20px}
+:root[data-theme="dark"] .devKidBtn.danger{border-color:#7f1d1d}
+.devToast{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--text);color:var(--card);border-radius:10px;padding:4px 4px 4px 12px;font-size:14px}
+.devToastUndo{min-height:44px;border:0;background:transparent;color:inherit;font-weight:700;font-size:14px;cursor:pointer;padding:0 10px;text-decoration:underline;font-family:inherit}
+.devFocus{border-color:var(--warn);box-shadow:0 0 0 2px var(--warn2)}
+.devIntentList{margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--warn-text)}
+/* Periode met andere tijden: taak-kaart, ingevuld-kaart en formulier in Wijzigen */
+.periodDone{background:var(--ok2);border:1px solid var(--ok);border-radius:var(--radius-xl);padding:10px 16px;margin-bottom:14px}
+.periodDone .devAlertBody{font-size:12px;color:var(--text);margin:4px 0 0}
+#periodTask button.btn.small,.periodDone button.btn.small{margin-top:12px}
+.periodDone .periodDoneTitle{font-size:14px;font-weight:800;color:var(--ok-ink);margin:0}
+.periodDone .periodDoneName{font-weight:400;color:var(--text)}
+.periodDone>summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.periodDone>summary::-webkit-details-marker{display:none}
+.periodDone>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--ok);border-bottom:2px solid var(--ok);transform:rotate(45deg);transition:transform .15s;flex-shrink:0;margin-right:4px}
+.periodDone[open]>summary::after{transform:rotate(-135deg)}
+.periodDayHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.periodDay{border:1px solid var(--border);border-radius:var(--radius-md);padding:10px;margin-top:8px;background:var(--card)}
+.periodDay.changed{border-color:var(--warn);background:var(--warn2)}
+.periodRide{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600;margin:0}
+.periodRide input{width:22px;height:22px;margin:0}
+input[type=time].periodTime.changed{border-color:var(--warn);background:var(--warn2)}
+.periodBehalfRow{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border)}
+.periodBehalfName{flex:1;min-width:0}
+.periodBehalfDetail{padding:0 0 10px}
+.periodBehalf{font-size:12px;font-weight:700;color:var(--warn-text);background:var(--warn2);border-radius:var(--radius-md);padding:8px 10px;margin:8px 0 0}
+.periodPill{display:inline-flex;align-items:center;font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full);white-space:nowrap}
+.periodPill.todo{background:var(--warn2);color:var(--warn-text)}
+.periodPill.done{background:var(--ok2);color:var(--ok-ink)}
+/* Beheer: Perioden met andere tijden. One block per period (no box, so the fold arrows line up with the arrow of the card itself). */
+.periodItem{padding:14px 0;border-top:1px solid var(--border);margin-top:6px}
+.periodHead{display:flex;align-items:flex-start;gap:10px}
+.periodHeadText{flex:1;min-width:0}
+.periodTitle{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:16px}
+.periodInfo{font-size:12px;color:var(--muted);margin-top:3px}
+.periodInfo.ok{color:var(--ok-ink);font-weight:600}
+.periodInfo.ok svg{margin-right:2px}
+.periodActions{display:flex;gap:8px;flex-shrink:0}
+.periodActions .iconbtn{flex-shrink:0}
+.periodPill.s-open{background:var(--ok2);color:var(--ok-ink)}
+.periodPill.s-closed{background:var(--warn2);color:var(--warn-text)}
+.periodPill.s-waiting,.periodPill.s-over{background:var(--pill2);color:var(--pill)}
+.periodStatus{margin-top:12px}
+.periodStatusText{display:flex;justify-content:space-between;align-items:baseline;gap:8px;font-size:14px}
+.periodBar{height:8px;border-radius:var(--radius-full);background:var(--pill2);overflow:hidden;margin-top:6px}
+.periodBar>span{display:block;height:100%;border-radius:inherit;background:var(--info);transition:width .3s}
+.periodBar.full>span{background:var(--ok)}
+details.periodFold{margin-top:10px;border-top:1px solid var(--border)}
+details.periodFold>summary{min-height:48px;font-size:14px;font-weight:700}
+details.periodFold[open]>summary{margin-bottom:6px}
+.periodFoldTitle{display:flex;flex-direction:column;gap:1px;min-width:0}
+.periodFoldSub{font-size:12px;font-weight:600;overflow-wrap:anywhere}
+.periodFoldSub.todo{color:var(--warn-text)}
+.periodFoldSub.done{color:var(--ok-ink)}
+.periodHint{margin:0 0 10px;font-size:12px;line-height:1.4;color:var(--muted)}
+button.btn.small.periodMakeBtn{font-size:12px;font-weight:600;min-height:40px;padding:6px 14px}
+.periodWhoGroup+.periodWhoGroup{margin-top:12px}
+.periodWhoHead{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:2px}
+.periodWhoList{list-style:none;margin:0;padding:0}
+.periodWhoRow{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--border);font-size:14px}
+.periodWhoMark{width:20px;height:20px;border-radius:50%;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+.periodWhoMark.done{background:var(--ok2);color:var(--ok-ink)}
+.periodWhoMark.todo{border:2px solid var(--warn)}
+.periodWhoName{flex:1;min-width:0;overflow-wrap:anywhere}
+.periodWhoState{font-size:12px;color:var(--muted);white-space:nowrap}
+.periodBackupList{margin-top:12px}
+.periodBackupRow{display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-top:1px solid var(--border)}
+.periodBackupMain{flex:1;min-width:0}
+.periodBackupWhen{font-weight:600;font-size:14px}
+.periodBackupMeta{font-size:12px;color:var(--muted)}
+.periodForm{border-left:3px solid var(--accent);padding-left:12px}
+.periodFormTitle{margin:0;font-size:16px}
+.periodFormGroup{margin:18px 0 0;font-size:12px;font-weight:800}
+.periodFormActions{display:flex;gap:8px;margin-top:14px}
+.periodChips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:10px}
+.periodChip{border:1px solid var(--border);border-radius:var(--radius-md);padding:6px 2px;text-align:center;font-size:12px;white-space:nowrap;background:var(--card)}
+.periodChipDay{display:block;font-weight:800;font-size:12px}
+.periodPills{flex-wrap:wrap}
+.periodTimeRow{display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:14px;border-bottom:1px solid var(--border)}
+.periodChanged{color:var(--warn-text);font-weight:800}
+.periodLbl{display:block;font-size:12px;color:var(--muted);margin:8px 0 2px}
+.periodSel{width:100%;min-height:44px;font-size:14px}
+.periodRider{display:flex;align-items:center;gap:8px;margin-top:6px}
+.periodRider .periodSel{flex:1;min-width:0}
+.periodSummary{display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:14px}
+.devAlert .devAlertTitle{font-size:14px;font-weight:800;color:var(--warn-text);margin:0}
+.devAlert .devAlertBody{font-size:12px;color:var(--warn-text);margin:4px 0 0}
+.devCard{border-color:var(--warn) !important;border-left-width:4px}
+.devDayDot{position:absolute;top:5px;right:6px;width:8px;height:8px;border-radius:50%;background:var(--warn);display:inline-block}
+.devDayBtn.changed{border-color:var(--warn)}
+/* ---------- Wedstrijdcarpool (violet "match" theme + football icon) ----------
+   Deliberately a different color family than the weekday carpool (red/green) and the
+   Dagafwijking (amber), so a match ride is recognisable at a glance everywhere it shows up. */
+.group.matchGroup{border-left:4px solid var(--match)}
+.matchTitle{display:flex;align-items:center;gap:6px;font-weight:700;font-size:14px}
+.matchTitle .matchBall{color:var(--match);display:inline-flex}
+.matchTag{display:inline-flex;align-items:center;gap:4px;background:var(--match2);color:var(--match-text);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-full)}
+.matchCarRow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--border);font-size:12px}
+.matchCarRow .matchCarDep{font-family:var(--font-mono);font-weight:700;color:var(--match-text);flex-shrink:0}
+.matchCarRow.mine{background:var(--match2);border-radius:var(--radius-sm);padding:6px 8px;border-top-color:transparent}
+.matchCapWarn{color:var(--warn);font-size:12px;font-weight:700;margin-top:6px}
+.subride.matchRide{background:var(--match2);border:2px solid var(--match)}
+.subride.matchRide .subrideHead{color:var(--match-text)}
+.subride.matchRide .subrideDep{color:var(--match-text)}
+.subride.matchRide .subrideStatus{color:var(--match-text)}
+.subride.matchRide .subrideStatus.driving{font-weight:700}
+.dayCard.matchDay{border-color:var(--match)}
+.dayCard.matchOnly .dayBadge{background:var(--match);color:#fff}
+.trashBtn{color:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex-shrink:0}
+/* Wedstrijden tab: violet, like every match ride elsewhere */
+.card.matchesCard{border-color:var(--match)}
+.card.matchesCard h2{color:var(--match-text)}
+.matchNote{display:flex;align-items:center;gap:6px;margin:6px 0 0;font-size:12px;color:var(--match-text)}
+:root[data-theme="dark"] .heroCard{background:linear-gradient(135deg,#7f1d1d,#450a0a)}
+:root[data-theme="dark"] .waIconBtn{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3)}
+:root[data-theme="dark"] .dayCard.today{border-color:var(--accent)}
+:root[data-theme="dark"] .daypill .daypillAlert{color:#450a0a}   /* white on the light dark-mode red was only 2.8:1 */
+input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
+/* Weekoverzicht (Rooster): the PDF layout on screen; print = one A4 landscape page */
+.ovLink{float:right;display:inline-flex;align-items:center;gap:4px;margin:-14px -8px -14px 8px;padding:14px 8px;border:none;background:none;font:inherit;font-size:12px;font-weight:700;line-height:1.3;color:var(--accent-text);cursor:pointer}
+.ovLink svg{width:1.2em;height:1.2em}
+.ovOverlay{position:fixed;inset:0;z-index:70;background:#fff;color:#111;overflow:auto;-webkit-overflow-scrolling:touch}
+.ovBar{position:sticky;top:0;z-index:2;display:flex;gap:8px;padding:10px 16px;background:#fff;border-bottom:1px solid #ccc}
+.ovDoc{padding:12px 16px 32px;max-width:1200px;margin:0 auto;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.ovHead{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-bottom:8px}
+.ovHead h1{font-size:15px;margin:0 0 2px}
+.ovHead p{margin:0 0 2px;font-size:12px;font-weight:700}
+.ovVersion{font-size:12px;font-weight:700}
+.ovTop{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+.ovMain{flex:1 1 640px;min-width:0}
+.ovSide{flex:0 0 auto}
+.ovScroll{overflow-x:auto}
+.ovTable{border-collapse:collapse;font-size:11px;font-variant-numeric:tabular-nums;color:#111;background:#fff}
+.ovMain .ovTable{width:100%}
+.ovTable th,.ovTable td{border:1px dotted #777;padding:2px 6px;text-align:left;white-space:nowrap}
+.ovTable th{border:1px solid #000;font-weight:700}
+.ovTable td.ovWrap{white-space:normal;min-width:110px}
+.ovTable tr.ovDay td{border-top:2px solid #000;font-weight:800;font-style:italic}
+.ovCoord{font-weight:400;color:#8a8a8a}
+.ovNo{color:#b42318;font-style:italic}
+.ovNote{font-size:11px;margin:4px 0 0}
+.ovGirls .ovTable{width:auto}
+.ovGirls th{text-align:center}
+.ovGirls td{text-align:right}
+.ovGirls td:first-child{text-align:left}
+.ovHeen{background:#e3f2dc}
+.ovTerug{background:#dbe8f7}
+.ovTable th,.ovTable td{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+@media print{
+  @page{size:A4 landscape;margin:8mm}
+  html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+  body>*:not(#ovOverlay){display:none!important}
+  .ovOverlay{position:static;overflow:visible}
+  .noPrint{display:none!important}
+  .ovDoc{padding:0;max-width:none}
+  .ovScroll{overflow:visible}
+  .ovTable{font-size:9px}
+  .ovTable th,.ovTable td{padding:1px 4px}
+  .ovTable,.ovHead,.ovTop{page-break-inside:avoid}
+}

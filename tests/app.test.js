@@ -40,6 +40,11 @@ test('activateTab shows only the chosen tab and marks its button current', () =>
   assert.equal(buttons.find(b => b.dataset.tab === 'deviation').getAttribute('aria-current'), 'page');
   assert.equal(buttons.find(b => b.dataset.tab === 'schedule').getAttribute('aria-current'), null);
 });
+test('activateTab puts the screen name in the header and shows the share button on Mijn week only', () => {
+  installNav(); resetState({}); dom.el('tab-gate').style.display = 'none';
+  activateTab('deviation'); assert.equal(dom.el('headerTitle').textContent, 'Wijzigen'); assert.equal(dom.el('shareToggle').hidden, true);
+  activateTab('myweek'); assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); assert.equal(dom.el('shareToggle').hidden, false);
+});
 test('activateTab leaves the tabs alone while the gate is showing', () => {
   installNav(); resetState({});
   dom.el('tab-gate').style.display = 'block'; dom.el('tab-myweek').style.display = 'none';

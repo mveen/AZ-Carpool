@@ -115,20 +115,23 @@ export function lastUpdateFooter(info){
 }
 
 // ---------- Theme: Licht / Donker only. New users start on Licht; their choice is remembered. ----------
-export function applyTheme(pref){
-  document.documentElement.setAttribute('data-theme', pref==='dark'?'dark':'light');
-  const btn=document.getElementById('themeToggle');
-  // Icon only: shows what you switch TO (moon in light mode, sun in dark mode).
-  if(btn){
-    btn.innerHTML = pref==='dark' ? phIcon('sun') : phIcon('moon');
-    const lbl = pref==='dark' ? t('common.licht_thema_aanzetten') : t('common.donker_thema_aanzetten');
-    btn.setAttribute('aria-label', lbl); btn.title = lbl;
-  }
+export function currentTheme(){
+  try{ return localStorage.getItem('theme-pref')==='dark' ? 'dark' : 'light'; }catch(e){ return 'light'; }
 }
 
-export function cycleTheme(){
-  const cur = (()=>{ try{ return localStorage.getItem('theme-pref')||'light'; }catch(e){ return 'light'; } })();
-  const next = cur==='light' ? 'dark' : 'light';
+// Sets the theme on the page and marks the matching button in the Instellingen sheet (when it is open).
+export function applyTheme(pref){
+  const dark = pref==='dark';
+  document.documentElement.setAttribute('data-theme', dark?'dark':'light');
+  [['themeLight', !dark], ['themeDark', dark]].forEach(([id, on])=>{
+    const b=document.getElementById(id);
+    if(b){ if(on) b.classList.add('active'); else b.classList.remove('active'); b.setAttribute('aria-pressed', on?'true':'false'); }
+  });
+}
+
+// A choice in the Instellingen sheet: applies it and remembers it.
+export function setTheme(pref){
+  const next = pref==='dark' ? 'dark' : 'light';
   try{ localStorage.setItem('theme-pref',next); }catch(e){}
   applyTheme(next);
 }
@@ -163,7 +166,12 @@ export function wireInstallCard(){
 }
 
 // `warn` puts the SVG warning icon in front (instead of an emoji).
-export function setStatus(msg, warn){ const el=document.getElementById('whoami'); if(el) el.innerHTML=(warn? phIcon('warning')+' ':'')+esc(msg); adjustMainPadding(); }
+export function setStatus(msg, warn){
+  const el=document.getElementById('whoami'); if(el) el.innerHTML=(warn? phIcon('warning')+' ':'')+esc(msg);
+  // The name itself sits behind the avatar; only problems (no connection) get a visible line under the header.
+  const line=document.getElementById('statusLine'); if(line){ line.hidden=!warn; line.innerHTML=warn? (el?el.innerHTML:''):''; }
+  adjustMainPadding();
+}
 
 // No-op now: header/nav are normal flex children (not position:fixed) in the new flex-shell
 // layout, so `main` never needs JS-computed compensating padding — normal flex flow already
@@ -174,14 +182,13 @@ export function adjustMainPadding(){}
 // opts.icon: name of a phIcon shown before the text (e.g. 'warning'), instead of an emoji.
 export function showToast(msg, opts){
   let t=document.getElementById('toast');
-  if(!t){ t=document.createElement('div'); t.id='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite');
-    t.style.cssText='position:fixed;left:50%;bottom:calc(18px + var(--sab));transform:translateX(-50%);background:var(--text);color:var(--card);padding:10px 16px;border-radius:20px;font-size:14px;max-width:90%;text-align:center;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2)';
+  if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; t.setAttribute('role','status'); t.setAttribute('aria-live','polite');
     document.body.appendChild(t);
   }
   // opts.action = { label, run }: an extra button in the toast (e.g. "Ongedaan maken"). Such a toast stays a little longer.
   const act = opts && opts.action;
-  t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg)+(act? ` <button type="button" id="toastAction" style="background:none;border:none;color:inherit;font:inherit;font-weight:800;text-decoration:underline;min-height:44px;padding:0 8px;cursor:pointer">${esc(act.label)}</button>` : '');
-  t.style.display='block';
+  t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg)+(act? ` <button type="button" id="toastAction" class="toast__action">${esc(act.label)}</button>` : '');
+  t.style.display='flex';
   t.onclick = act? (e)=>{ if(e && e.target && e.target.id==='toastAction'){ t.style.display='none'; clearTimeout(t._h); return act.run(); } } : null;
   clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';}, act? 7000 : 4000);
 }
