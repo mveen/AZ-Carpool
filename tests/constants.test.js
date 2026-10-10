@@ -48,7 +48,7 @@ test('the other Phosphor icons of the ride rows exist (regular or bold, as used)
 });
 test('the icons of the settings sheet and Mijn gezin exist, and the app version looks like a cache name', () => {
   for (const k of ['lifebuoy','user-switch','caret-left','users','moon','question','info']) assert.ok(PH_PATHS[k], k);
-  assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 57);
+  assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 58);
 });
 test('the info icon exists', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.startsWith('<path')); });
 test('design v2: no hand-drawn icon is left (no <line>, <circle>, <rect>, <polyline>) and every icon is drawn in the text colour', () => {

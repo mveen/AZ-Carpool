@@ -4,8 +4,8 @@
     "test": "59ca179c23027d7d1b540c5f46c38dd3318f6603cf451a49d60dbc3243ee305b"
   },
   "constants.js": {
-    "module": "ca34c5f6f09f48b309df321003b64a61efedf8ebf3528a1b82dd80a6c562438f",
-    "test": "038b24c099cb3f6e4b0854ca9efb6e1496e3d30b2961da164a30cc626997973d"
+    "module": "8d99ade1fbdbc173679f8a9e9fe1bef5545901756c9842bb5ca697c8cadd7b27",
+    "test": "4858bae4acbbb849e3239b9f7c1ace19150ccdd18edd5fd8ae0772062eeef6d6"
   },
   "coordinator.js": {
     "module": "d995027466b4c79fe3f530e8ed77ac3f035fd0106d2f6936f0d8b0167f9bef2f",
@@ -45,7 +45,7 @@
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "a7066441da6aedc6418d79290e799589cb33e168cbf6685ebac6eac2efb6f9f9"
+    "test": "8ba195de51c52dca351fd81e6711f2dc2f671b93b5679008355087c3220e2f51"
   },
   "impact.js": {
     "module": "af124ad7aed80f581c5080bf9e50f348c4c24d1819df9d0cff1af9c0c0881d3c",
@@ -112,8 +112,8 @@
     "test": "17b6f8825298f6eb7bfa4e5bea95bbdfb980da8011c34ed7fb9fcc3df1e4a97a"
   },
   "texts-nl.js": {
-    "module": "9dfda4bf2aadfbc62438721575f79fbbafa6e738fe7370783d02507c0162bdc4",
-    "test": "a7066441da6aedc6418d79290e799589cb33e168cbf6685ebac6eac2efb6f9f9"
+    "module": "72925cbf71483246fc019d84523251b0a7676f707cb0fcb807852c7eda2d2dd5",
+    "test": "8ba195de51c52dca351fd81e6711f2dc2f671b93b5679008355087c3220e2f51"
   },
   "ui-beheer.js": {
     "module": "901bad886a0c902247581a0b88456707c9a8dcc4f120090d6ebb2bed7ffd13b4",
@@ -156,8 +156,8 @@
     "test": "260c12b9e222f24af1c42bab5a74293d3edaf1e0052ae124aa2db7d45bfeca49"
   },
   "ui-period-rooster.js": {
-    "module": "731cf442fdad27c30329b377704cb7b09c9ef608e4a6b02cbd0e67181967eccd",
-    "test": "52092f044869d3893ffae795b9b5c29ed2331c4835de59fc5b25f4b63028319b"
+    "module": "a2c82e8cc483a6d3194f867400a18606d9e4c79f35c5c73bc5b95def2f058674",
+    "test": "3c92f7afd97f2d8b85d0bdb9c68c1a94339d5d95b9de3491c80e6e32cc55072b"
   },
   "ui-period.js": {
     "module": "046c89e77ccda723b4fce1e9d5c1f01e6be57046597b95cc21e871796f1ea365",
