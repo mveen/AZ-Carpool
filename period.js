@@ -221,6 +221,23 @@ export function periodMoveGirl(cars, girlId, target, depOf, capOf){
   return { cars: next.filter(c => c.girlIds.length), error: null };
 }
 
+// Swap two riders: `girlId` takes the place of `withId` in the car at `toIndex`, and `withId` takes the place of `girlId`
+// (a rider who is in no car yet leaves `withId` unplaced). Both cars get a new departure time.
+export function periodSwapGirls(cars, girlId, toIndex, withId, depOf){
+  const to = (cars || [])[toIndex];
+  if(!to || !(to.girlIds || []).includes(withId) || (to.girlIds || []).includes(girlId)) return { cars, error: { key:'period.rooster.err.unknown' } };
+  const touched = new Set([toIndex]);
+  (cars || []).forEach((c, i) => { if((c.girlIds || []).includes(girlId)) touched.add(i); });
+  const fromIndex = (cars || []).findIndex(c => (c.girlIds || []).includes(girlId));
+  const next = cars.map((c, i) => {
+    if(i===toIndex) return { ...c, girlIds: c.girlIds.map(id => id===withId? girlId : id) };
+    if(i===fromIndex) return { ...c, girlIds: c.girlIds.map(id => id===girlId? withId : id) };
+    return c;
+  });
+  touched.forEach(i => { if(next[i]) next[i].departureTime = depOf(next[i].girlIds); });
+  return { cars: next, error: null };
+}
+
 export function periodSetDriver(cars, index, driverId, capOf){
   const car = (cars || [])[index];
   if(!car) return { cars, error: { key:'period.rooster.err.unknown' } };

@@ -92,7 +92,7 @@ export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Do
 
 // One wording for the two directions, everywhere in the app.
 // Shown in the Instellingen sheet. Bump together with CACHE_NAME in service-worker.js (a test checks they match).
-export const APP_VERSION = 'v57';
+export const APP_VERSION = 'v59';
 
 export const DIR_TEXT = { heen:t('dir.heen'), terug:t('dir.terug') };
 

@@ -203,6 +203,7 @@ test('the Ritbeurs texts exist and fill their placeholders (no place buttons any
   assert.match(t('ritbeurs.saved.off'), /Alle meldingen zijn gestopt/);
   assert.doesNotMatch(Object.entries({ a: t('ritbeurs.form.stappen'), b: t('ritbeurs.moment.intro'), c: t('ritbeurs.notif.offerBackupBody') }).map(x => x[1]).join(' '), /alle chauffeurs|in de buurt/i);
   assert.equal(t('loc.periodTitle'), 'Plek van deze auto in het tijdelijke rooster');
+  assert.equal(t('period.view.depTime',{p1:2}), 'Vertrektijd auto 2');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
