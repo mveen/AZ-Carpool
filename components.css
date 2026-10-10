@@ -669,3 +669,10 @@ div.settingsRow{cursor:default}
 .famTags{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-2)}
 .famTags:empty{display:none}
 .famMissing{font:var(--type-caption);margin-top:var(--space-1)}
+
+/* Tall content scrolls inside the panel (laptops are short): the help list scrolls in .helpBody, other sheets scroll as a whole. */
+.helpPanel{display:flex;flex-direction:column;max-height:calc(100vh - var(--space-9));max-height:calc(100dvh - var(--space-9));min-height:0}
+.sheet{max-height:calc(100vh - var(--space-9));max-height:calc(100dvh - var(--space-9));overflow-y:auto}
+
+/* The visually hidden checkboxes must be positioned inside their group: otherwise focusing one scrolls the whole page (html is overflow:hidden) and the screen goes blank. */
+.driveToggleGroup{position:relative}

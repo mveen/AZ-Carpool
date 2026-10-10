@@ -97,5 +97,12 @@ test('sheets slide up and the scrim fades in, except for people who asked for le
   assert.match(components, /@keyframes sheetUp/); assert.match(components, /\.sheet,\.helpPanel\{animation:sheetUp/); assert.match(components, /prefers-reduced-motion:reduce\)\{[^}]*animation:none/);
 });
 
+test('panels that can be taller than a laptop screen scroll; the hidden toggle inputs are positioned inside their group', () => {
+  const css = read('components.css');
+  assert.match(css, /\.helpPanel\{display:flex;flex-direction:column;max-height:/);
+  assert.match(css, /\.sheet\{max-height:[^}]*overflow-y:auto/);
+  assert.match(css, /\.driveToggleGroup\{position:relative\}/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -100,6 +100,14 @@ export function openSheet(title, subtitle, items){
 }
 
 export function closeSheet(){ const ov=document.getElementById('sheetOverlay'); if(ov) ov.remove(); }
+// Escape closes the open sheet or the Help panel (laptops have no back gesture).
+export function closeOnEscape(e){
+  if(!e || e.key !== 'Escape') return false;
+  const ov = document.getElementById('sheetOverlay') || document.getElementById('helpOverlay');
+  if(!ov) return false;
+  ov.remove(); return true;
+}
+if(typeof document!=='undefined' && document.addEventListener) document.addEventListener('keydown', closeOnEscape);
 
 // Real vibration feedback via the Web Vibration API — Android Chrome supports this; iOS
 // Safari has no equivalent API at all, so this silently does nothing there (not faked).

@@ -15,7 +15,7 @@ import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState }
 import { S } from '../state.js';
 import {
   foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
-  isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts,
+  isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape,
 } from '../ui-common.js';
 
 const dom = installFakeDom();
@@ -192,6 +192,18 @@ test('a toast stays 3.8 seconds (design v2), also with an action', () => {
   globalThis.setTimeout = (fn, ms) => { seen.push(ms); return 0; };
   try { showToast('Opgeslagen'); showToast('Weg', { action: { label: 'Ongedaan', run() {} } }); } finally { globalThis.setTimeout = real; }
   assert.deepEqual(seen, [3800, 3800]);
+});
+
+console.log('\n=== Escape closes sheets and help ===');
+test('Escape removes the open sheet or help overlay; other keys and no overlay do nothing', () => {
+  let removed = 0; const real = dom.doc.getElementById;
+  dom.doc.getElementById = id => (id === 'sheetOverlay' ? { remove() { removed++; } } : null);
+  assert.equal(closeOnEscape({ key: 'a' }), false); assert.equal(removed, 0);
+  assert.equal(closeOnEscape({ key: 'Escape' }), true); assert.equal(removed, 1);
+  dom.doc.getElementById = id => (id === 'helpOverlay' ? { remove() { removed++; } } : null);
+  assert.equal(closeOnEscape({ key: 'Escape' }), true); assert.equal(removed, 2);
+  dom.doc.getElementById = () => null; assert.equal(closeOnEscape({ key: 'Escape' }), false);
+  dom.doc.getElementById = real;
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
