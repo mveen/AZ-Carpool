@@ -84,7 +84,7 @@ export function renderSchedule(){
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
   });
   document.querySelectorAll('[data-rmode]').forEach(b=>b.onclick=()=>{
-    S.roosterMode=b.dataset.rmode; S.pendingSwapRequest=null; hapticTap(); renderSchedule();
+    S.roosterMode=b.dataset.rmode; S.pendingSwapRequest=null; S.periodSwap=null; hapticTap(); renderSchedule();
   });
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-gosugg]').forEach(b=>b.onclick=()=>{

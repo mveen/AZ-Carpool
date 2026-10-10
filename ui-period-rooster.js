@@ -10,7 +10,7 @@ import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { availableDrivers, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
-import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
+import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodSwapGirls, periodWorkdays } from './period.js';
 import { carRouteHtml, driverLineHtml, flexSuffix, openCarPlaceSheet, renderSchedule } from './ui-schedule.js';
 import { myLinkedFamilyId } from './coordinator.js';
 
@@ -169,6 +169,21 @@ function carHtml(iso, direction, car, idx, cars){
       </div>
       ${edit? `<div class="carCard__note">${driverPart}</div>` : ''}
       <div class="chips">${riders}</div>
+      ${swapCardHtml(iso, direction, car, idx, cap)}
+    </div>`;
+}
+
+// A move into a full car: offer to swap the rider with one of the riders of that car (like in the Vast rooster).
+function swapCardHtml(iso, direction, car, idx, cap){
+  const sw = S.periodSwap;
+  if(!sw || !S.canEdit || sw.iso!==iso || sw.direction!==direction || sw.toIndex!==idx) return '';
+  return `<div class="dayFormCard">
+      <p class="fitbad">${esc(t('schedule.geen_plek_meer_in_deze'))}${(car.girlIds||[]).length}/${cap} ${esc(t('schedule.bezet_wil_je'))} ${girlName(sw.girlId)} ${esc(t('schedule.wisselen_met_een_andere_passagier'))}</p>
+      <select id="periodSwapPick" class="periodSel" aria-label="${esc(t('schedule.wissel_met_welke_passagier'))}">${sortGirlIds(car.girlIds||[]).map(id => `<option value="${esc(id)}">${esc(plainGirlName(id))}</option>`).join('')}</select>
+      <div class="rowflex">
+        <button type="button" class="btn small" data-pswapconfirm="1">${t('schedule.wissel')}</button>
+        <button type="button" class="btn small secondary" data-pswapcancel="1">${t('common.annuleren')}</button>
+      </div>
     </div>`;
 }
 
@@ -241,8 +256,19 @@ async function editShift(iso, direction, edit){
 }
 
 export function movePeriodGirl(iso, direction, girlId, target){
+  const m = /^car:(\d+)$/.exec(String(target)), car = m && (periodCarsFor(iso, direction) || [])[+m[1]];
+  const cap = car && capOf(car.driverFamilyId);
+  if(car && cap!=null && (car.girlIds||[]).length>=cap && !(car.girlIds||[]).includes(girlId)){
+    S.periodSwap = { iso, direction, girlId, toIndex:+m[1] }; renderSchedule(); return Promise.resolve(false);
+  }
   return editShift(iso, direction, cars => periodMoveGirl(cars, girlId, target, ids => periodDeparture(iso, direction, ids), capOf));
 }
+export async function swapPeriodGirls(withId){
+  const sw = S.periodSwap; if(!sw) return false;
+  S.periodSwap = null;
+  return editShift(sw.iso, sw.direction, cars => periodSwapGirls(cars, sw.girlId, sw.toIndex, withId, ids => periodDeparture(sw.iso, sw.direction, ids)));
+}
+
 export function setPeriodDriver(iso, direction, index, driverId){
   const day = dayKeyOf(iso);
   if(driverId && !availableDrivers(day, direction).some(([id]) => id===driverId)) showToast(t('period.view.driverOffList',{p1:plainDriverName(driverId)}));
@@ -275,7 +301,7 @@ function openPeriodCarPlace(iso, direction, index){
 }
 
 export function wirePeriodRooster(){
-  document.querySelectorAll('[data-perday]').forEach(b => b.onclick = () => { S.periodDay = b.dataset.perday; hapticTap(); renderSchedule(); });
+  document.querySelectorAll('[data-perday]').forEach(b => b.onclick = () => { S.periodSwap = null; S.periodDay = b.dataset.perday; hapticTap(); renderSchedule(); });
   document.querySelectorAll('[data-periodpick]').forEach(el => el.onchange = () => { S.periodSel = el.value; S.periodDay = null; renderSchedule(); });
   if(!S.canEdit) return;
   const then = () => renderSchedule();
@@ -290,6 +316,12 @@ export function wirePeriodRooster(){
     const [iso, direction, idx] = b.dataset.pcarplace.split('|');
     hapticTap(); openPeriodCarPlace(iso, direction, +idx);
   });
+  document.querySelectorAll('[data-pswapconfirm]').forEach(b => b.onclick = () => {
+    const sel = document.getElementById('periodSwapPick');
+    if(!sel || !sel.value){ showToast(t('schedule.kies_wie_je_wilt_wisselen')); return; }
+    swapPeriodGirls(sel.value);
+  });
+  document.querySelectorAll('[data-pswapcancel]').forEach(b => b.onclick = () => { S.periodSwap = null; renderSchedule(); });
   document.querySelectorAll('[data-pdep]').forEach(el => el.onchange = () => setPeriodDeparture(el.dataset.iso, el.dataset.dir, +el.dataset.pdep, el.value));
   document.querySelectorAll('[data-pdrv]').forEach(el => el.onchange = () => setPeriodDriver(el.dataset.iso, el.dataset.dir, +el.dataset.pdrv, el.value));
   document.querySelectorAll('.periodMove').forEach(el => el.onchange = () => { if(el.value) movePeriodGirl(el.dataset.iso, el.dataset.dir, el.dataset.pmove, el.value); });

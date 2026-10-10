@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import './test-support.js';
-import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress, periodShiftId, periodMoveGirl, periodSetDriver, periodList, periodForDate, mergePeriods } from '../period.js';
+import { PERIOD_MAX_WORKDAYS, isValidIsoDate, isValidTime, isWorkday, periodWorkdays, normalizePeriod, validatePeriod, storedPeriod, deadlineMs, periodPhase, periodEntryId, periodDayKey, standardDay, defaultEntryDays, validateEntry, describeEntryDay, periodEntryState, periodProgress, periodShiftId, periodMoveGirl, periodSwapGirls, periodSetDriver, periodList, periodForDate, mergePeriods } from '../period.js';
 
 // The design example: Herfstvakantie, ma 26 okt - vr 30 okt 2026, opens wo 14 okt, deadline vr 16 okt 12:00.
 const GOOD = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
@@ -224,6 +224,12 @@ test('periodMoveGirl: to another car; both cars get a new departure time', () =>
 test('periodMoveGirl: a full car is refused and nothing changes', () => {
   const cars = carsBase(), r = periodMoveGirl(cars, 'a', 'car:1', dep, cap);
   assert.deepEqual(r.error, { key: 'period.rooster.err.full', p1: 1, p2: 1 }); assert.equal(r.cars, cars);
+});
+test('periodSwapGirls: two riders trade places; both cars get a new departure time; bad input changes nothing', () => {
+  const r = periodSwapGirls(carsBase(), 'a', 1, 'c', dep);
+  assert.equal(r.error, null); assert.deepEqual(r.cars, [{ driverFamilyId: 'd1', girlIds: ['c', 'b'], departureTime: 'Tcb' }, { driverFamilyId: 'd2', girlIds: ['a'], departureTime: 'Ta' }]);
+  const cars = carsBase(); assert.equal(periodSwapGirls(cars, 'a', 1, 'zz', dep).cars, cars); assert.equal(periodSwapGirls(cars, 'a', 5, 'c', dep).error.key, 'period.rooster.err.unknown');
+  const u = periodSwapGirls(carsBase(), 'x', 1, 'c', dep); assert.deepEqual(u.cars[1], { driverFamilyId: 'd2', girlIds: ['x'], departureTime: 'Tx' }); assert.deepEqual(u.cars[0].girlIds, ['a', 'b'], 'a rider without a car leaves the other rider unplaced');
 });
 test('periodMoveGirl: out of every car ("niet ingedeeld"); an emptied car disappears', () => {
   const r = periodMoveGirl(carsBase(), 'c', 'none', dep, cap);

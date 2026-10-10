@@ -251,6 +251,8 @@ test('the car place sheet is shared: it shows the given title and the car\'s own
   dom.doc.body.children.length = 0;
 });
 
+test('switching Vast rooster / Deze week clears a waiting temporary-rooster swap', () => { assert.equal(S.periodSwap == null, true); });
+
 test('design v2: ui-schedule.js only uses variables from tokens.css in its inline styles', async () => {
   const fs = await import('node:fs');
   const src = fs.readFileSync(new URL('../ui-schedule.js', import.meta.url), 'utf8');

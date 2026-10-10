@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
-import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, setPeriodCarPlace, setPeriodDeparture, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
+import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, setPeriodCarPlace, setPeriodDeparture, swapPeriodGirls, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -223,11 +223,11 @@ await testAsync('the move select and the driver select trigger the edits', async
   const drv = picks.pdrv[1]; drv.value = ''; drv.onchange(); await settle();
   assert.equal(fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[1].driverFamilyId, '');
 }); });
-await testAsync('a full car is refused: nothing is stored, the reason is shown, the page shows what is really saved', async () => {
+await testAsync('a full car: nothing is stored, a swap is offered instead (the full reason shows when the swap itself is not possible)', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f4', 'f1', 'f6'], departureTime: '17:30' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f5'], departureTime: '13:00' }]) });
   const writes = fake.writes.length;
   assert.equal(await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f5', 'car:0')), false);
-  assert.equal(toast(), 'Auto vol: 3 van 3 plekken.'); assert.equal(fake.writes.length, writes);
+  assert.equal(fake.writes.length, writes); assert.equal(S.periodSwap.toIndex, 0); S.periodSwap = null;
 });
 await testAsync('a girl without a car is placed in a car, or in a new car with a free driver', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [XCARS[1]]) });
@@ -259,6 +259,16 @@ await testAsync('a driver who is not available that day can be picked, listed ap
   assert.equal(await withFakeNowAsync(OPEN, () => setPeriodDriver('2026-10-27', 'terug', 0, id)), true);
   assert.equal(fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[0].driverFamilyId, id);
   assert.match(text(html), /niet beschikbaar/);
+});
+await testAsync('a move into a full car offers a swap instead of refusing; confirming swaps the two riders', async () => {
+  const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f5', 'f3'], departureTime: '17:30' }]) });
+  const before = fake.writes.length;
+  assert.equal(await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f1', 'car:1')), false);
+  assert.equal(fake.writes.length, before, 'nothing is written yet'); assert.deepEqual(S.periodSwap, { iso: '2026-10-27', direction: 'terug', girlId: 'f1', toIndex: 1 });
+  assert.match(text(withFakeNow(OPEN, () => { renderSchedule(); return html; })), /Geen plek meer in deze auto/); assert.match(html, /data-pswapconfirm/);
+  assert.equal(await withFakeNowAsync(OPEN, () => swapPeriodGirls('f6')), true);
+  const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
+  assert.ok(cars[1].girlIds.includes('f1') && !cars[1].girlIds.includes('f6')); assert.ok(cars[0].girlIds.includes('f6') && !cars[0].girlIds.includes('f1')); assert.equal(S.periodSwap, null);
 });
 await testAsync('changing the driver of a car', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]) });
