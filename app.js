@@ -19,6 +19,7 @@ import { todayKey } from './constants.js';
 import { refreshMatchesIfStale } from './matches.js';
 import { closeHelp } from './ui-help.js';
 import { initShell, updateHeader } from './ui-shell.js';
+import { initSwipeTabs } from './swipe-tabs.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
 S.currentWeekKey = getISOWeekKey(effectivePlanningDate());
@@ -163,6 +164,8 @@ export function bootstrap(){
   window.addEventListener('appinstalled', ()=>{ S.appIsInstalled=true; S.deferredInstallPrompt=null; renderProfile(); });
 
   document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>activateTab(b.dataset.tab)));
+
+  initSwipeTabs(activateTab);
 
   (function applyInitialHashTab(){
     try{
