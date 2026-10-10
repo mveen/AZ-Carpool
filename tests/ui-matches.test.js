@@ -121,6 +121,10 @@ test('"+ Auto toevoegen" opens the form with driver, riders and a departure time
   assert.match(form, /Jan Jansen \(3 plekken\)/);
   assert.doesNotMatch(html, /matchCarDriver_/, 'the form was closed before');
 });
+test('Opslaan (primary) and Annuleren sit together in one .formActions row', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  assert.match(boxHtml, /<div class="formActions">\s*<button[^>]*class="btn small" data-savematchcar[^>]*>Opslaan<\/button>\s*<button[^>]*class="btn small secondary" data-cancelmatchcar/);
+});
 test('Annuleren closes the form', () => {
   state(); render(); reg()('[data-addmatchcar]')[0].onclick();
   reg()('[data-cancelmatchcar]')[0].onclick();

@@ -54,6 +54,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 - **Match tile** `.matchTile` (violet icon, links to the Wedstrijd tab). **Coordinator line** `.coordLine`. **Name link** `.nameLink` / `[data-contact]`: every driver or coordinator name is a contact button (see `ui-contact.js`), never a direct WhatsApp link.
 - **Day pills** `.dayPills` > `.dayPill` (`.on` ink, `--today` red label, `__dot` amber = someone without a car).
 - **Car card** `.carCard` (+ `--mine`, `--match`) with `__head`, `__time`, `__who`, `__driver`, `__route`, `__note`, `__edit`; **dash box** `.dashBox`; **note line** `.noteLine`.
+- **Form actions** `.formActions`: Opslaan (ink) and Annuleren (outline) side by side, equal width, at the bottom of an inline form (`.dayFormCard`).
 - **Contact sheet**: `.sheet__actions` with two `.btn`.
 - Forms: inputs, selects and labels have one look (end of `components.css`).
 

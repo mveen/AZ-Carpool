@@ -568,6 +568,8 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .matchCarRow.mine{background:var(--match-soft);border-radius:var(--radius-chip);padding:var(--space-3) var(--space-4);border-top-color:transparent}
 .matchCapWarn{color:var(--warn-ink);font:var(--type-caption);font-weight:700;margin-top:var(--space-3)}
 .matchNote{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0 0;font:var(--type-caption);color:var(--match-ink)}
+.formActions{display:flex;gap:var(--space-3);margin-top:var(--space-5)}
+.formActions .btn{flex:1}
 .dayFormCard{background:var(--surface-inset);border:0;border-radius:var(--radius-panel);padding:var(--space-5)}
 
 /* ============================================================

@@ -68,8 +68,10 @@ export function matchesCardHtml(){
         <div id="matchCarCapWarn_${slug}" class="matchCapWarn" role="status" aria-live="polite"></div>
         <label>${t('deviation.vertrektijd')}</label>
         <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
-        <button type="button" class="btn small secondary" data-savematchcar="${slug}">${t('deviation.opslaan')}</button>
-        <button type="button" class="btn small secondary" data-cancelmatchcar="${slug}">${t('common.annuleren')}</button>
+        <div class="formActions">
+          <button type="button" class="btn small" data-savematchcar="${slug}">${t('deviation.opslaan')}</button>
+          <button type="button" class="btn small secondary" data-cancelmatchcar="${slug}">${t('common.annuleren')}</button>
+        </div>
       </div>`;
     } else {
       formHtml = `<button type="button" class="btn small secondary" data-addmatchcar="${slug}" style="margin-top:6px">${t('deviation.auto_toevoegen')}</button>`;
