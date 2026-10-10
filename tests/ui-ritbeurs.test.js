@@ -59,21 +59,20 @@ test('a user without a linked family does not get the Ritbeurs', () => {
 });
 
 console.log('=== open rides ===');
-test('the Ritbeurs view shows the open ride of another family with a Neem over button', () => {
+test('the Ritbeurs view shows the open ride of another family: tag Open, when, time + route, by, note, chips, "Ik neem deze rit over"', () => {
   asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) } });
   const html = view(), s = text(html);
-  assert.match(s, /Donderdag 16:15/);
-  assert.match(s, /Heen · /);
-  assert.match(s, /Aangeboden door Piet Pieters · “Tandarts”/);
-  assert.match(s, /Neem over/);
+  assert.match(s, /Aangeboden ritten Open Donderdag · heen .*16:15 Busstation → AFC (&#39;|')34 Aangeboden door Piet Pieters “Tandarts”/);
+  assert.match(s, /Ik neem deze rit over/);
+  assert.match(html, /<div class="rbNote">“Tandarts”<\/div>/);
   assert.match(html, /data-rbask="o1"/);
   assert.doesNotMatch(html, /Intrekken/);
 });
-test('the deadline chip: "Vóór 18:00 regelen" on the day before, "Deadline voorbij" after 18:00, "Ruime tijd" long before', () => {
+test('the deadline in the "when" line: "Vóór 18:00 regelen" on the day before, "Deadline voorbij" after 18:00, nothing long before', () => {
   asF3({ offers: { o1: offerBy('f2') } });
   assert.match(withFakeNow('2026-09-30T10:00:00+02:00', () => text(ritbeursViewHtml(Date.now()))), /Vóór 18:00 regelen/);
   assert.match(withFakeNow('2026-09-30T20:00:00+02:00', () => text(ritbeursViewHtml(Date.now()))), /Deadline voorbij/);
-  assert.match(withFakeNow('2026-09-28T09:00:00+02:00', () => text(ritbeursViewHtml(Date.now()))), /Ruime tijd/);
+  assert.doesNotMatch(withFakeNow('2026-09-28T09:00:00+02:00', () => text(ritbeursViewHtml(Date.now()))), /Ruime tijd|Deadline voorbij|Vóór 18:00/);
 });
 test('the own offer has Intrekken (trash icon) and no Neem over; rides that started are not listed', () => {
   asF2({ offers: { o1: offerBy('f2'), o2: offerBy('f4', { date: '2026-09-29' }) } });
@@ -81,12 +80,10 @@ test('the own offer has Intrekken (trash icon) and no Neem over; rides that star
   assert.match(html, /data-rbwithdraw="o1"/); assert.match(text(html), /Jouw aanbod/);
   assert.doesNotMatch(html, /data-rbask|o2/);
 });
-test('tapping Neem over opens the confirmation: it is yours, also if you cannot later', () => {
+test('tapping "Ik neem deze rit over" opens the confirmation: "Jij rijdt dan <dag> <richting> om <tijd>", two check lines, Bevestig / Annuleer', () => {
   asF3({ offers: { o1: offerBy('f2') }, rbConfirm: 'o1' });
   const html = view(), s = text(html);
-  assert.match(s, /Rit overnemen\?/);
-  assert.match(s, /Overnemen is definitief: kun je later toch niet, dan bied je hem zelf opnieuw aan/);
-  assert.doesNotMatch(s, /geef je hem terug/i);
+  assert.match(s, /Jij rijdt dan donderdag heen om 16:15 ✓ \d+ kinderen, jij hebt \d+ plekken ✓ Geen andere rit binnen 90 minuten Bevestig Annuleer/);
   assert.match(html, /data-rbtake="o1"/);
 });
 test('a conflict only warns: the button says "Toch overnemen" and the confirmation is still possible', () => {
@@ -194,7 +191,7 @@ test('setRbView switches between the two views and closes open forms', () => {
   asF3({ rbConfirm: 'o1', rbOffering: 'Do|heen' });
   withFakeNow(NOW, () => setRbView('ritbeurs'));
   assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null);
-  assert.match(dom.html('tab-deviation'), /Ritten die nog een chauffeur zoeken/);
+  assert.match(dom.html('tab-deviation'), /Aangeboden ritten/);
   withFakeNow(NOW, () => setRbView('wijzigen'));
   assert.equal(S.rbView, 'wijzigen');
 });
