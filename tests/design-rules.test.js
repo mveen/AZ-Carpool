@@ -103,6 +103,11 @@ test('panels that can be taller than a laptop screen scroll; the hidden toggle i
   assert.match(css, /\.sheet\{max-height:[^}]*overflow-y:auto/);
   assert.match(css, /\.driveToggleGroup\{position:relative\}/);
 });
+test('the avatar picker tiles with an icon get the red tint after the base tile rule (they were black before)', () => {
+  const base = components.indexOf('.avatarTile__disc{'), tint = components.indexOf('.avatarTile__disc.avatar--icon{');
+  assert.ok(base > 0 && tint > base, 'tint rule must come after, with higher specificity');
+  assert.match(components.slice(tint, tint + 120), /--accent-soft[^}]*--accent-ink/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
