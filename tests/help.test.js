@@ -236,5 +236,17 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   assert.match(a.title + b.title, /Ritten ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
 });
 
+test('help explains the avatar choice, Ik rij ook, Gereden shifts and the impact preview', () => {
+  assert.equal(top('avatar kiezen'), 'avatar'); assert.ok(!findArticle('avatar').coordinatorOnly);
+  assert.match(allText(findArticle('wedstrijden')), /Ik rij ook[\s\S]*Mijn auto weghalen/);
+  ['Alle shifts bekijken', 'Verwijder shift', 'Terugzetten', 'Export'].forEach(w => assert.ok(allText(findArticle('beheer-gereden-shifts', { canEdit: true })).includes(w), w));
+  assert.equal(findArticle('beheer-gereden-shifts', { canEdit: false }), null); assert.equal(findArticle('beheer-impact', { canEdit: false }), null);
+  assert.match(allText(findArticle('beheer-impact', { canEdit: true })), /Impact-preview \(pilot\)/);
+  assert.match(allText(findArticle('wat-is')), /Instellingen/);
+});
+test('the avatar article quotes names that exist in the app', () => {
+  ['Initialen', 'Ongedaan', 'Avatar wijzigen'].forEach(q => assert.ok(Object.values(nl).includes(q), q));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

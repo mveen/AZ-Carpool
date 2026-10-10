@@ -240,7 +240,7 @@ export default {
   "deviation.vertrektijd": "Vertrektijd",
   "deviation.opslaan": "Opslaan",
   "deviation.auto_toevoegen": "+ Auto toevoegen",
-  "deviation.zet_een_carpool_op_voor": "Een carpool kun je tot 7 dagen vooruit regelen.",
+  "deviation.zet_een_carpool_op_voor": "Een carpool kun je in de komende 8 dagen regelen.",
   "deviation.kies_een_chauffeur": "Kies een chauffeur.",
   "deviation.kies_minstens_1_dochter": "Kies minstens 1 dochter.",
   "deviation.toch_opslaan": "Toch opslaan",
