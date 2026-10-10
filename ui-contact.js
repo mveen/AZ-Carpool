@@ -6,6 +6,7 @@ import { S } from './state.js';
 import { esc, phIcon, closeSheet } from './ui-common.js';
 import { fam } from './rides.js';
 import { normalizePhone } from './coordinator.js';
+import { avatarOf, avatarInner, avatarClass } from './avatars.js';
 
 // "Sanne de Vries" -> "SV" (same rule as the avatar in the header).
 function initials(name){ const p = String(name||'').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0] + (p.length>1 ? p[p.length-1][0] : '')).toUpperCase() : ''; }
@@ -46,7 +47,7 @@ export function openContactSheet(familyId, askText){
   const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet__handle"></div>
-    <div class="settingsHead contactHead"><span class="settingsAvatar contactAvatar">${esc(initials(f.parentName) || '?')}</span>
+    <div class="settingsHead contactHead"><span class="settingsAvatar contactAvatar${avatarClass(avatarOf(f))}">${avatarInner(avatarOf(f), initials(f.parentName) || '?')}</span>
       <div><h3 id="sheetTitle">${esc(f.parentName || '?')}</h3><p class="sheet__sub">${esc(sub)}</p></div></div>
     ${buttons}
   </div>`;

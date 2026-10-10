@@ -15,7 +15,7 @@ import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY,
 import { createFakeFirestore } from './fake-db.js';
 import { S } from '../state.js';
 import {
-  createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
+  createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
@@ -897,6 +897,19 @@ await testAsync('replanStandardShift plans the shift again; with no solution not
   assert.ok(fake.collection('groups').some(([k]) => k === 'Ma_terug_1'));   // the other direction is untouched
   const fake2 = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ families: {} });
   assert.equal(await replanStandardShift('Ma', 'heen'), null); assert.ok(fake2.get('groups/Ma_heen_1'));
+});
+
+await testAsync('saveAvatar writes only the avatar field (merge), keeps the rest, and updates the local family', async () => {
+  const fake = useFakeDb({ 'families/f2': { parentName: 'Piet', capacity: 4, extraField: 'blijft' } }); sampleParentState();
+  assert.equal(await saveAvatar('f2', 'trophy'), true);
+  const f = fake.get('families/f2'); assert.equal(f.avatar, 'trophy'); assert.equal(f.parentName, 'Piet'); assert.equal(f.extraField, 'blijft'); assert.equal(S.families.f2.avatar, 'trophy');
+  assert.equal(await saveAvatar('f2', ''), true); assert.equal(fake.get('families/f2').avatar, '', 'initials = empty string, field stays');
+  assert.equal(await saveAvatar('', 'car'), false, 'no family, no write');
+});
+await testAsync('saveAvatar says so when the database refuses', async () => {
+  const fake = useFakeDb({ 'families/f2': { parentName: 'Piet' } }); sampleParentState();
+  const real = db.doc; db.doc = () => ({ set: async () => { throw new Error('nope'); } });
+  try { assert.equal(await saveAvatar('f2', 'car'), false); assert.match(toast(), /Opslaan mislukt/); } finally { db.doc = real; }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -676,3 +676,18 @@ div.settingsRow{cursor:default}
 
 /* The visually hidden checkboxes must be positioned inside their group: otherwise focusing one scrolls the whole page (html is overflow:hidden) and the screen goes blank. */
 .driveToggleGroup{position:relative}
+
+/* ---------- Avatar choice (initials by default, or an icon from the library) ---------- */
+.avatar--icon{background:var(--accent-soft);color:var(--accent-ink)}
+.avatarBtn.avatar--icon svg{width:22px;height:22px}
+.settingsAvatar svg{width:34px;height:34px}
+.contactAvatar svg{width:28px;height:28px}
+.settingsAvatar--btn{position:relative;border:0;padding:0;cursor:pointer}
+.settingsAvatar__edit{position:absolute;right:-2px;bottom:-2px;width:var(--space-9);height:var(--space-9);border-radius:50%;background:var(--surface-card);color:var(--text-1);border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+.settingsAvatar__edit svg{width:12px;height:12px}
+.avatarGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:var(--space-6) var(--space-3);padding:var(--space-5) 0 var(--space-3)}
+.avatarTile{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);min-height:var(--hit-min);padding:var(--space-2) 0;border:0;background:none;color:var(--text-1);font-family:inherit;cursor:pointer}
+.avatarTile__disc{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--action-bg);color:var(--action-ink);font:800 16px/1 var(--font-sans)}
+.avatarTile__disc svg{width:28px;height:28px}
+.avatarTile[aria-pressed="true"] .avatarTile__disc{outline:3px solid var(--action-bg);outline-offset:2px}
+.avatarTile__label{font:var(--type-caption);color:var(--text-2);text-align:center}
