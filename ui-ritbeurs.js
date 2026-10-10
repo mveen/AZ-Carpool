@@ -5,7 +5,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS } from './constants.js';
 import { weekKeyDayIso } from './dates.js';
-import { myLinkedFamilyId } from './coordinator.js';
+import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { effectiveCars, fam } from './rides.js';
 import { esc, hapticTap, locationsCfg, phIcon, twoStepConfirm } from './ui-common.js';
 import { routeLabel } from './locations.js';
@@ -60,10 +60,11 @@ export function setRbView(view){ S.rbView = view === 'ritbeurs' ? 'ritbeurs' : '
 // ---------- the view ----------
 function offerCardHtml(o, nowMs){
   const me = myLinkedFamilyId();
+  const me_ = myFamilyId();
   const mine = o.offeredBy === me;
   const car = effectiveCars(o.day, o.direction).find(c => c.driverFamilyId === o.offeredBy && (!o.time || c.departureTime === o.time)) || effectiveCars(o.day, o.direction).find(c => c.driverFamilyId === o.offeredBy);
   const route = car ? routeLabel(car, o.direction, locationsCfg(), o.day) : '';
-  const girls = car ? (car.girlIds || []).map(id => `<span class="pill rbPill">${esc((fam(id).girlName) || id)}</span>`).join('') : '';
+  const girls = car ? (car.girlIds || []).map(id => `<span class="chip${id === me_ ? ' chip--mine' : ''}">${esc((fam(id).girlName) || id)}</span>`).join('') : '';
   const u = urgency(o.date, nowMs);
   const chip = `<span class="rbChip rbChip-${u}">${t(u === 'late' ? 'ritbeurs.urg.late' : u === 'soon' ? 'ritbeurs.urg.soon' : 'ritbeurs.urg.ok')}</span>`;
   const w = mine ? null : warningsFor(o, me);
@@ -83,7 +84,7 @@ function offerCardHtml(o, nowMs){
   return `<div class="card rbOffer${hasWarn ? ' rbHasWarn' : ''}" data-rboffer="${esc(o.id)}">
     <div class="rowflex" style="justify-content:space-between;gap:8px"><span class="rbTime">${esc(dayLabel(o.day))} ${esc(o.time)}</span>${chip}</div>
     <div class="rbRoute">${esc(dirShort(o.direction))}${route ? ' · ' + esc(route) : ''}</div>
-    ${girls ? `<div class="rbPills">${girls}</div>` : ''}
+    ${girls ? `<div class="chips rbPills">${girls}</div>` : ''}
     <p class="muted rbBy">${mine ? t('ritbeurs.open.eigen') : t('ritbeurs.open.door', { name: famName(o.offeredBy) })}${o.message ? ' · “' + esc(o.message) + '”' : ''}</p>
     ${mine ? `<button type="button" class="btn small secondary" data-rbwithdraw="${esc(o.id)}">${phIcon('trash')} ${t('ritbeurs.trekIn')}</button>`
       : (S.rbConfirm === o.id ? '' : `<button type="button" class="btn" data-rbask="${esc(o.id)}">${t(hasWarn ? 'ritbeurs.toch' : 'ritbeurs.neemOver')}</button>`)}
@@ -106,7 +107,7 @@ function ownRidesHtml(nowMs){
         <button type="button" class="btn secondary" data-rbofferno="1">${t('ritbeurs.confirm.nee')}</button></div></div>` : '';
     return `<div class="rbMine"><div class="rowflex" style="justify-content:space-between;gap:8px;align-items:center">
         <span><b class="rbTime">${esc(dayLabel(r.day))} ${esc(r.time)}</b> · ${esc(dirShort(r.direction))}</span>
-        ${offer ? `<span class="noticeChip ok">${t('ritbeurs.eigen.aangeboden')}</span>`
+        ${offer ? `<span class="tag tag--ok">${t('ritbeurs.eigen.aangeboden')}</span>`
           : `<button type="button" class="btn small secondary" data-rboffer-open="${esc(key)}">${t('ritbeurs.eigen.aanbieden')}</button>`}</div>${form}</div>`;
   }).join('');
 }
@@ -177,9 +178,9 @@ export function ritbeursViewHtml(nowMs = Date.now()){
   const me = myLinkedFamilyId();
   const open = openOffers(S.offers, S.currentWeekKey, nowMs);
   const mineFirst = [...open.filter(o => o.offeredBy !== me), ...open.filter(o => o.offeredBy === me)];
-  return `<div class="devAlert"><p class="devAlertTitle">${phIcon('lightning')} ${t('ritbeurs.title')}</p><p class="devAlertBody">${t('ritbeurs.intro')}</p></div>
-    <div class="daysection"><h3>${t('ritbeurs.open.title')}</h3>${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}</div>
-    <div class="card"><h2>${t('ritbeurs.eigen.title')}</h2>${ownRidesHtml(nowMs)}</div>
+  return `<div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
+    <div class="sectionLabel">${t('ritbeurs.open.title')}</div>${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
+    <div class="sectionLabel">${t('ritbeurs.eigen.title')}</div><div class="card rbOwn">${ownRidesHtml(nowMs)}</div>
     <div class="card" id="rbMomentCard"><h2>${t('ritbeurs.moment.title')}</h2><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>
     <div class="card" id="rbNotifCard"><h2>${t('ritbeurs.notif.title')}</h2>${notificationsHtml(nowMs)}</div>`;
 }

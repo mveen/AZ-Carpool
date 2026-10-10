@@ -19,7 +19,7 @@ export function renderImpersonateBanner(){
   if(!el) return;
   if(S.impersonateFamilyId){
     el.style.display='block';
-    el.style.cssText='display:block;background:var(--warn2);color:var(--warn);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--border)';
+    el.style.cssText='display:block;background:var(--warn-soft);color:var(--warn-icon);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--line)';
     el.innerHTML = `${phIcon('flask')} ${t('profile.testweergave_als')} ${esc(fam(S.impersonateFamilyId).girlName||fam(S.impersonateFamilyId).parentName||S.impersonateFamilyId)} <button type="button" class="btn small secondary" id="stopImpersonateBtn" style="margin-left:8px">${t('profile.stop_testen')}</button>`;
     const btn=document.getElementById('stopImpersonateBtn');
     if(btn) btn.onclick=stopImpersonate;
@@ -175,36 +175,25 @@ export function familyFormHtml(prefix,f){
   f = f || {parentName:"",girlName:"",capacity:4,schedule:{},availability:{}};
   const activeDay = S.formSelectedDay[prefix]||'Ma';
   const dayTabs = DAYS.map(([k,label])=>
-    `<button type="button" class="dayTabBtn ${k===activeDay?'active':''}" data-daytab="${prefix}|${k}" aria-label="${label}">${dayUp(k)}</button>`
+    `<button type="button" class="dayTabBtn ${k===activeDay?'active':''}" data-daytab="${prefix}|${k}" aria-label="${label}">${label.slice(0,2)}</button>`
   ).join('');
   const s=(f.schedule&&f.schedule[activeDay])||{};
   const a=(f.availability&&f.availability[activeDay])||{};
   const dayLabel = DAYS.find(([k])=>k===activeDay)[1];
-  const dayDetail = `<div class="dayFormCard">
-      <div class="rowflex" style="align-items:baseline">
-        <h3 style="margin:0;font-size:16px;font-weight:800">${dayLabel}</h3>
-        <span class="muted" style="font-family:var(--font-mono)">${s.heen? t('profile.aankomst')+s.heen : ''}${s.heen&&s.terug? ' · ':''}${s.terug? t('profile.klaar')+s.terug : ''}</span>
-      </div>
-      <div class="grid2" style="margin-top:10px">
-        <div><label style="margin-top:0">${t('profile.heen_aankomst_alkmaar_nodig')}</label><input type="time" id="${prefix}_sch_${activeDay}_heen" value="${s.heen||''}"></div>
-        <div><label style="margin-top:0">${t('profile.terug_klaar_om_op_te')}</label><input type="time" id="${prefix}_sch_${activeDay}_terug" value="${s.terug||''}"></div>
-      </div>
-      <p style="margin:14px 0 6px;font-size:14px;font-weight:700">${t('profile.kan_jij_deze_dag_rijden')}</p>
-      <p class="muted" style="margin:0 0 4px">${DIR_TEXT.heen}</p>
+  // One panel per direction: its time on the right, then "Kun je zelf rijden?" with Beschikbaar / Back-up.
+  const dirPanel = (dir, sub, avId, bkId, bkKey) => `<div class="panel">
+      <div class="panel__head"><div><div class="panel__title">${dir==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div><div class="panel__sub">${sub}</div></div>
+        <input type="time" class="panel__time" id="${prefix}_sch_${activeDay}_${dir}" value="${s[dir]||''}" aria-label="${dir==='heen'? t('profile.heen_aankomst_alkmaar_nodig') : t('profile.terug_klaar_om_op_te')}"></div>
+      <p class="panel__q">${t('profile.kan_jij_deze_dag_rijden')}</p>
       <div class="driveToggleGroup">
-        <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_heen" ${a.heen?'checked':''}>
-        <label for="${prefix}_av_${activeDay}_heen" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>${t('profile.beschikbaar')}</label>
-        <input type="checkbox" class="driveToggleInput" id="${prefix}_bkH_${activeDay}" ${a.backupHeen?'checked':''}>
-        <label for="${prefix}_bkH_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck">${phIcon('check')}</span>${t('profile.back_up')}</label>
-      </div>
-      <p class="muted" style="margin:14px 0 4px">${DIR_TEXT.terug}</p>
-      <div class="driveToggleGroup">
-        <input type="checkbox" class="driveToggleInput" id="${prefix}_av_${activeDay}_terug" ${a.terug?'checked':''}>
-        <label for="${prefix}_av_${activeDay}_terug" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>${t('profile.beschikbaar')}</label>
-        <input type="checkbox" class="driveToggleInput" id="${prefix}_bkT_${activeDay}" ${a.backupTerug?'checked':''}>
-        <label for="${prefix}_bkT_${activeDay}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck">${phIcon('check')}</span>${t('profile.back_up')}</label>
+        <input type="checkbox" class="driveToggleInput" id="${avId}" ${a[dir]?'checked':''}>
+        <label for="${avId}" class="driveToggleBtn driveToggleBtn-standard"><span class="driveToggleCheck">${phIcon('check')}</span>${t('profile.beschikbaar')}</label>
+        <input type="checkbox" class="driveToggleInput" id="${bkId}" ${a[bkKey]?'checked':''}>
+        <label for="${bkId}" class="driveToggleBtn driveToggleBtn-backup"><span class="driveToggleCheck">${phIcon('lifebuoy')}</span>${t('profile.back_up')}</label>
       </div>
     </div>`;
+  const dayDetail = dirPanel('heen', t('profile.sub_heen'), `${prefix}_av_${activeDay}_heen`, `${prefix}_bkH_${activeDay}`, 'backupHeen')
+    + dirPanel('terug', t('profile.sub_terug'), `${prefix}_av_${activeDay}_terug`, `${prefix}_bkT_${activeDay}`, 'backupTerug');
   // A hidden input per OTHER day preserves its own read/write ids so readFamilyForm keeps
   // working unchanged even though only the active day's inputs are visible at once.
   const hiddenOtherDays = DAYS.filter(([k])=>k!==activeDay).map(([k])=>{
@@ -247,24 +236,21 @@ export function familyFormHtml(prefix,f){
       <div><label style="margin-top:8px">${prefix==='me'? t('profile.tel_nr_1_wa') : t('profile.tel_nr_1')}</label>${phoneInput1}</div>
       <div><label style="margin-top:8px">${t('profile.tel_nr_2')}</label>${phoneInput2}</div>
     </div>${lastSeenHtml()}
-    <label>${t('profile.totale_autocapaciteit_incl_bestuurder')}</label>
-    <div class="stepperCard">
+    <div class="panel panel--row stepperCard">
       <div class="stepperInfo">${phIcon('car')}<div>
-        <div class="stepperTitle" id="${prefix}_capacityTitle">${f.capacity||4} ${t('profile.zitplaatsen_totaal')}</div>
-        <div class="stepperSub">${t('profile.plek_voor')} <strong id="${prefix}_capacityHint">${seats}</strong> ${t('profile.passagiers')}</div>
+        <div class="stepperTitle" id="${prefix}_capacityTitle">${t('profile.plekken_in_je_auto')}</div>
+        <div class="stepperSub">${t('profile.naast_jou_als_chauffeur')}</div>
       </div></div>
       <div class="stepperControls">
         <button type="button" class="stepperBtn" data-stepdown="${prefix}" aria-label="${t('profile.minder_zitplaatsen')}">−</button>
-        <span class="stepperValue" id="${prefix}_capacityValue">${f.capacity||4}</span>
+        <span class="stepperValue" id="${prefix}_capacityValue">${seats}</span>
         <button type="button" class="stepperBtn" data-stepup="${prefix}" aria-label="${t('profile.meer_zitplaatsen')}">+</button>
       </div>
     </div>
     <input type="hidden" id="${prefix}_capacity" value="${f.capacity||4}">
-    <div class="rowflex" style="margin-top:16px;align-items:baseline">
-      <p style="margin:0;font-size:14px;font-weight:700">${t('profile.weekschema_beschikbaarheid_per_dag')}</p>
-    </div>
+    <h3 class="formHeading">${t('profile.vaste_tijden_en_beschikbaarheid')}</h3>
     ${prefix==='me'? weekschemaWarningHtml() : ''}
-    <div class="grid5" style="margin-top:8px">${dayTabs}</div>
+    <div class="grid5 dayTabs">${dayTabs}</div>
     ${dayDetail}
     ${hiddenOtherDays}`;
 }
@@ -291,9 +277,7 @@ export function wireFamilyFormExtras(prefix, rerenderFn){
     let v=(parseInt(hidden.value)||4)+delta;
     v=Math.max(1,Math.min(9,v));
     hidden.value=v;
-    if(valueEl) valueEl.textContent=v;
-    if(titleEl) titleEl.textContent=v+t('profile.zitplaatsen_totaal_2');
-    if(hintEl) hintEl.textContent=Math.max(0,v-1);
+    if(valueEl) valueEl.textContent=Math.max(0,v-1);   // the number of seats NEXT TO the driver
     hapticTap();
     hidden.dispatchEvent(new Event('change',{bubbles:true}));
   }
@@ -402,7 +386,7 @@ export function renderGateOrApp(){
     gateDiv.style.display='block';
     renderGate();
   } else {
-    if(nav) nav.style.display='flex';
+    if(nav) nav.style.display='';   // back to the stylesheet's own display (a grid since design v2): never force a layout here
     gateDiv.style.display='none';
     const activeBtn=document.querySelector('nav button.active');
     const activeTab=activeBtn? activeBtn.dataset.tab : 'myweek';
@@ -473,14 +457,12 @@ export function renderProfile(){
       const effId = myFamilyId();
       overlayWeekschemaEdit(effId);
       const lf = fam(effId);
-      const unlinkCtl = S.impersonateFamilyId? '' : `<div style="border-top:1px solid var(--border);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
-      html += `<div class="card">
-        <div class="rowflex" style="align-items:flex-start">
-          <div><h2 style="margin-bottom:2px">${t('profile.mijn_gezin')}</h2><p class="muted" style="margin:0">${t('profile.contactgegevens_autocapaciteit')}</p></div>
-        </div>
-        <p class="muted" style="margin-top:8px">${t('profile.gekoppeld_aan')} <strong>${esc(lf.girlName||lf.parentName||effId)}</strong></p>
+      const unlinkCtl = S.impersonateFamilyId? '' : `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
+      html += `<div class="profileForm" id="profileForm">
+        <div class="backRow"><button type="button" class="backBtn" data-opensettings="1">${phIcon('caret-left')}${t('shell.back')}</button><span class="backRow__note">${t('shell.saved_instantly')}</span></div>
+        <div class="panel panel--row familyHead"><span class="familyHead__initial">${esc((lf.girlName||lf.parentName||'?').trim().charAt(0).toUpperCase())}</span>
+          <div><div class="familyHead__name">${esc(lf.girlName||lf.parentName||effId)}</div><div class="panel__sub">${t('profile.gekoppeld_aan')} ${esc(lf.parentName||'')}</div></div></div>
         ${familyFormHtml('me', fam(effId))}
-        <p class="muted" style="margin-top:8px">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
         ${unlinkCtl}
       </div>`;
     } else {
@@ -496,7 +478,7 @@ export function renderProfile(){
   if(S.me){
     const linked = !!S.impersonateFamilyId || !!(S.links[S.me] && S.links[S.me].familyId);
     if(linked){
-      const card=box.querySelector('.card');
+      const card=box.querySelector('.profileForm');
       if(card) card.addEventListener('change', e=>{
         if(e && e.target && isWeekschemaField(e.target.id)){ onWeekschemaEdited(); return; } // wait for confirmation
         saveProfile();

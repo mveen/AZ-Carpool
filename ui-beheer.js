@@ -28,20 +28,20 @@ export function renderAvailabilityTable(){
   const rows = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
   if(!rows.length) return `<p class="muted">${t('beheer.nog_geen_gezinnen')}</p>`;
   const head = `<tr><th style="text-align:left">${t('beheer.ouder')}</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
-    <tr><th></th>${DAYS.map(()=>`<th style="font-size:12px;color:var(--muted)">H</th><th style="font-size:12px;color:var(--muted)">T</th>`).join('')}</tr>`;
+    <tr><th></th>${DAYS.map(()=>`<th style="font-size:12px;color:var(--text-muted)">H</th><th style="font-size:12px;color:var(--text-muted)">T</th>`).join('')}</tr>`;
   const body = rows.map(([id,f])=>{
     const cells = DAYS.map(([k])=>{
       const a=(f.availability&&f.availability[k])||{};
       // Standaard = solid green cell; back-up = plain grey number.
       const cellFor = (isDefault,isBackup) => isDefault
         ? `<span class="availStd">${seats(f)}</span>`
-        : isBackup ? `<span style="color:var(--backup);font-weight:500">${seats(f)}</span>` : t('beheer.span_class_muted_span');
+        : isBackup ? `<span style="color:var(--text-muted);font-weight:500">${seats(f)}</span>` : t('beheer.span_class_muted_span');
       return `<td style="text-align:center">${cellFor(a.heen,a.backupHeen)}</td><td style="text-align:center">${cellFor(a.terug,a.backupTerug)}</td>`;
     }).join('');
-    return `<tr style="border-top:1px solid var(--border)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
+    return `<tr style="border-top:1px solid var(--line)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
   }).join('');
   return `<div style="overflow-x:auto"><table class="avail">${head}${body}</table></div>
-    <p class="muted" style="margin-top:6px"><span class="availStd">4</span> ${t('beheer.groen_vlak_standaard_beschikbaar')} <span style="color:var(--backup);font-weight:500">4</span> ${t('beheer.grijs_cijfer_back_up_indien')}</p>`;
+    <p class="muted" style="margin-top:6px"><span class="availStd">4</span> ${t('beheer.groen_vlak_standaard_beschikbaar')} <span style="color:var(--text-muted);font-weight:500">4</span> ${t('beheer.grijs_cijfer_back_up_indien')}</p>`;
 }
 
 export function renderPrefsCard(){
@@ -50,13 +50,13 @@ export function renderPrefsCard(){
     const label = r.type==='together'
       ? t('beheer.samen_reizen_2', { p1: (r.ids||[]).map(id=>girlName(id)).join(' &amp; ') })
       : t('beheer.voorkeur_met',{p1:girlName(r.girlId),p2:(r.withAny||[]).map(id=>girlName(id)).join(t('beheer.of'))});
-    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:14px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
+    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="font-size:14px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_voorkeuren')}</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
   const preferChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefWithPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   return `${ruleRows}
-    <hr style="border:none;border-top:1px solid var(--border);margin:12px 0">
+    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
     <p class="muted"><strong>${t('beheer.samen_reizen')}</strong> ${t('beheer.moeten_altijd_samen_in_1')}</p>
     <div>${togetherChecks || t('beheer.span_class_muted_nog_geen')}</div>
     <button type="button" class="btn small secondary" id="addTogetherPref">${t('beheer.toevoegen')}</button>
@@ -82,7 +82,7 @@ export function renderShiftPriorityRows(shiftKeyVal){
   const rows = sortByShiftPriority(day,direction, availableDrivers(day,direction));
   if(!rows.length){ div.innerHTML=`<p class="muted">${t('beheer.geen_beschikbare_chauffeurs_voor_deze')}</p>`; return; }
   div.innerHTML = rows.map(([id,f],i)=>`
-    <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--border)">
+    <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--line)">
       <span>${i+1}. ${driverNameHtml(id)} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} ${t(isStandaardDriver(f,day,direction)?'beheer.pl':'beheer.pl_back_up')}</span></span>
       <span style="display:flex;gap:4px">
         <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>${phIcon('arrow-up')}</button>
@@ -568,7 +568,7 @@ export function renderBeheer(){
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
     const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !S.inviteByFamily[id]? 'code' : ''].filter(Boolean);
     return `
-    <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--border);gap:8px">
+    <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--line);gap:8px">
       <div style="flex:1;min-width:0">
         <div style="font-size:16px;font-weight:800">${esc(fd.girlName||'(naam?)')}</div>
         <div class="muted">${esc(fd.parentName||'(ouder?)')} ${claimed[id]?t('beheer.span_class_badge_gekoppeld_span'):''} ${isCoord?t('beheer.span_class_badge_rec_coordinator'):''}${fd.familyType==='flex'? ` <span class="badge flexBadge">${t('flex.badge')}</span>` : ''}</div>
@@ -810,7 +810,7 @@ export function renderCoordEditor(){
   const isCoordThis = !isNew && S.coordinatorConfig && S.coordinatorConfig.familyId===S.coordEditId;
   const selfLinkedThis = !isNew && !!(S.links[S.me] && S.links[S.me].familyId===S.coordEditId);
   const coordToggleHtml = isNew? '' : `
-    <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg)">
+    <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page)">
       <span style="font-size:14px">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
       <button type="button" class="btn small secondary" id="coordToggleBtn">${isCoordThis? t('beheer.coordinator_intrekken') : (selfLinkedThis? t('beheer.maak_coordinator') : phIcon('warning')+t('beheer.maak_coordinator_2'))}</button>
     </div>`;

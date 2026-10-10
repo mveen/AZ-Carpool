@@ -57,6 +57,17 @@ test('a linked parent gets the tabs, not the gate', () => {
   assert.equal(dom.el('tab-gate').style.display, 'none');
 });
 
+test('the tab bar is hidden for the gate and comes back WITHOUT a forced layout (the stylesheet decides: a grid)', () => {
+  const nav = { style: {} }; const realQuery = dom.doc.querySelector;
+  dom.doc.querySelector = sel => (sel === 'nav' ? nav : realQuery(sel));
+  try {
+    useFakeDb({}); resetState({ me: 'u1', appReady: true, linksLoaded: true, coordinatorExists: true, canEdit: false, links: {} });
+    renderGateOrApp(); assert.equal(nav.style.display, 'none');
+    sampleParentState({ linksLoaded: true, coordinatorExists: true });
+    renderGateOrApp(); assert.equal(nav.style.display, '');   // never 'flex': that broke the grid of the tab bar
+  } finally { dom.doc.querySelector = realQuery; }
+});
+
 console.log('\n=== submitting the gate ===');
 function fillGate(phone, code) { renderGate(); dom.el('gatePhone').value = phone; dom.el('gateCode').value = code; }
 await testAsync('empty fields are refused with a message', async () => {
@@ -99,7 +110,9 @@ test('a parent sees own family form, linked name and an unlink button', () => {
   useFakeDb(sampleDbSeed()); sampleParentState();
   withFakeNow(NOW, () => renderProfile());
   const s = text(dom.html('tab-profile'));
-  assert.match(s, /Mijn gezin/); assert.match(s, /Gekoppeld aan: Jahaimy/);
+  assert.match(s, /^Instellingen Wordt direct opgeslagen J Jahaimy Gekoppeld aan: Piet Pieters/);   // back to Instellingen, the family panel
+  assert.match(dom.html('tab-profile'), /data-opensettings="1"/);
+  assert.match(s, /Plekken in je auto naast jou als chauffeur − 4 \+ Vaste tijden en beschikbaarheid Ma Di Wo Do Vr Heen Aankomst in Alkmaar Kun je zelf rijden\? Beschikbaar Back-up Terug Klaar om opgehaald te worden/);
   assert.match(dom.html('tab-profile'), /id="unlinkBtn"/);
   assert.match(dom.html('tab-profile'), /value="Piet Pieters"/);
   expectSnapshot('ui-profile', 'parent profile', dom.html('tab-profile'));
@@ -157,7 +170,7 @@ test('only Weekschema fields (times, availability, back-up) trigger it — not n
 function openProfileAndGetListener() {
   let listener = null;
   const box = dom.el('tab-profile'); const origQS = box.querySelector;
-  box.querySelector = sel => (sel === '.card' ? { addEventListener: (type, fn) => { if (type === 'change') listener = fn; } } : origQS(sel));
+  box.querySelector = sel => (sel === '.profileForm' ? { addEventListener: (type, fn) => { if (type === 'change') listener = fn; } } : origQS(sel));
   withFakeNow(NOW, () => renderProfile());
   box.querySelector = origQS;
   assert.equal(typeof listener, 'function');
@@ -350,6 +363,14 @@ test('weekschema one-off explanation is never smaller than 12px', () => {
   const sizes = [...String(html).matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)].map(m => +m[1]);
   assert.ok(sizes.length >= 2, 'expected the inline sizes to be found');
   assert.ok(sizes.every(n => n >= 12), 'font sizes found: ' + sizes.join(', '));
+});
+
+test('design v2: ui-profile.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-profile.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

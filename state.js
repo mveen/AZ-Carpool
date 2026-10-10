@@ -9,6 +9,7 @@ export const S = {
   coordinatorConfig: null,
   appReady: false,
   impersonateFamilyId: null,
+  viewAsParent: false,   // a coordinator who also has a family can look at the app as a parent (Instellingen > Bekijk als); view only, rights on the server are unchanged
   families: {},
   groups: {},
   links: {},

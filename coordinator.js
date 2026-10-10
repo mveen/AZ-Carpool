@@ -31,8 +31,13 @@ export function isRealCoordinatorFor(state){
 // Testing as a parent always overrides real coordinator status.
 export function canEditFor(state){
   if(state.impersonateFamilyId) return false;
+  if(state.viewAsParent && hasOwnFamilyFor(state)) return false;   // "Bekijk als: Ouder": the coordinator tools are hidden
   return isRealCoordinatorFor(state);
 }
+// Does this browser have a family of its own (a coordinator who is also a parent)?
+export function hasOwnFamilyFor(state){ return !!(state.links && state.links[state.me] && state.links[state.me].familyId); }
+// May this user switch between "Ouder" and "Coördinator"? Only a real coordinator who has a family.
+export function canSwitchViewFor(state){ return isRealCoordinatorFor(state) && hasOwnFamilyFor(state); }
 // Members may read/write data: the coordinator, or a browser linked to a family through the gate.
 export function isMemberFor(state){ return isRealCoordinatorFor(state) || !!(state.links[state.me] && state.links[state.me].familyId); }
 export function needsGateFor(state){ if(state.impersonateFamilyId) return false; return !!state.me && !state.canEdit && !(state.links[state.me] && state.links[state.me].familyId); }

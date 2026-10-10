@@ -177,5 +177,13 @@ test('readMaintenanceForm reads both fields', () => {
   assert.deepEqual(readMaintenanceForm(), { on: true, text: 'Hoi' });
 });
 
+test('design v2: ui-maintenance.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-maintenance.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

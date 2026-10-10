@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleFamilies } from './test-support.js';
 import { S } from '../state.js';
 import {
-  isRealCoordinatorFor, canEditFor, isMemberFor, needsGateFor, myFamilyIdFor, isValidInviteCode,
+  isRealCoordinatorFor, canEditFor, canSwitchViewFor, hasOwnFamilyFor, isMemberFor, needsGateFor, myFamilyIdFor, isValidInviteCode,
   isRealCoordinator, isMemberNow, recomputeCanEdit, myFamilyId, needsGate, myLinkedFamilyId, myDisplayInfo,
   normalizePhone, genCode, slugify,
 } from '../coordinator.js';
@@ -41,6 +41,15 @@ console.log('\n=== canEditFor: "test as parent" always hides the coordinator rig
 test('coordinator can edit', () => { assert.equal(canEditFor({ coordinatorConfig: cfg, me: 'coord', links: {} }), true); });
 test('coordinator testing as a parent cannot edit (only the view changes)', () => {
   assert.equal(canEditFor({ coordinatorConfig: cfg, me: 'coord', links: {}, impersonateFamilyId: 'f2' }), false);
+});
+test('"Bekijk als: Ouder" hides the coordinator rights, but only for a coordinator who has a family', () => {
+  const own = { coordinatorConfig: cfg, me: 'coord', links: { coord: { familyId: 'f1' } } };
+  assert.equal(canEditFor({ ...own, viewAsParent: false }), true);
+  assert.equal(canEditFor({ ...own, viewAsParent: true }), false);
+  assert.equal(canEditFor({ coordinatorConfig: cfg, me: 'coord', links: {}, viewAsParent: true }), true);   // no family: nothing to look as
+  assert.equal(canSwitchViewFor(own), true); assert.equal(canSwitchViewFor({ coordinatorConfig: cfg, me: 'coord', links: {} }), false);
+  assert.equal(canSwitchViewFor({ coordinatorConfig: cfg, me: 'p1', links: { p1: { familyId: 'f2' } } }), false);
+  assert.equal(hasOwnFamilyFor(own), true); assert.equal(hasOwnFamilyFor({ me: 'x', links: {} }), false);
 });
 test('a parent cannot edit', () => { assert.equal(canEditFor({ coordinatorConfig: cfg, me: 'p1', links: { p1: { familyId: 'f2' } } }), false); });
 

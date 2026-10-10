@@ -4,12 +4,14 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme } from './ui-common.js';
+import { APP_VERSION } from './constants.js';
 import { weekRangeLabel } from './dates.js';
 import { fam } from './rides.js';
-import { myFamilyId } from './coordinator.js';
+import { canSwitchViewFor, myFamilyId, recomputeCanEdit } from './coordinator.js';
 import { openHelp } from './ui-help.js';
 import { wireWhatsAppButton } from './ui-deviation.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
+import { initContact } from './ui-contact.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
@@ -46,38 +48,69 @@ export function updateHeader(tab){
   if(av) av.textContent = initials(parentName()) || (S.canEdit ? t('shell.avatar_coordinator') : '?');
 }
 
-// The Instellingen sheet: who you are, Mijn gezin, theme, help.
-export function openSettings(onNavigate){
+// Views of a coordinator who also has a family: "Ouder" hides the coordinator tools (view only: rights on the server do not change).
+export function setViewAs(mode, onViewChange){
+  S.viewAsParent = mode === 'parent';
+  try{ localStorage.setItem('view-as', S.viewAsParent ? 'parent' : 'coordinator'); }catch(e){}
+  recomputeCanEdit();
+  markSegments();
+  if(onViewChange) onViewChange();
+}
+
+// Marks the active button of the "Bekijk als" switch in the sheet.
+function markSegments(){
+  [['viewParent', S.viewAsParent], ['viewCoord', !S.viewAsParent]].forEach(([id, on]) => {
+    const b = document.getElementById(id);
+    if(b){ if(on) b.classList.add('active'); else b.classList.remove('active'); b.setAttribute('aria-pressed', on ? 'true' : 'false'); }
+  });
+}
+
+// The Instellingen sheet: who you are, then one row per setting (Mijn gezin, Thema, Bekijk als, Help) and the version.
+export function openSettings(onNavigate, onViewChange){
   closeSheet();
   const name = parentName();
-  const role = S.canEdit ? t('coordinator.coordinator') : (name ? t('common.ouder') : t('shell.not_linked'));
+  const girl = fam(myFamilyId()).girlName;
+  const linked = !!name;
+  const role = [linked && girl ? t('shell.parent_of', { name: girl }) : (linked ? t('common.ouder') : t('shell.not_linked')), S.canEdit || (canSwitchViewFor(S)) ? t('coordinator.coordinator') : ''].filter(Boolean).join(' · ');
   const go = onNavigate || (() => {});
+  const row = (id, icon, label, hint) => `<button type="button" class="settingsRow" id="${id}">${phIcon(icon)}<span class="settingsRow__label">${esc(label)}</span>${hint ? `<span class="settingsRow__hint">${esc(hint)}</span>` : ''}${phIcon('caret-right')}</button>`;
+  const viewRow = canSwitchViewFor(S) ? `<div class="settingsRow">${phIcon('user-switch')}<span class="settingsRow__label">${esc(t('shell.view_as'))}</span>
+      <div class="segmented segmented--inline" role="group" aria-label="${esc(t('shell.view_as'))}"><button type="button" id="viewParent">${esc(t('shell.view_parent'))}</button><button type="button" id="viewCoord">${esc(t('shell.view_coord'))}</button></div></div>` : '';
   const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet__handle"></div>
-    <h3 id="sheetTitle">${esc(name || t('shell.settings'))}</h3><p class="sheet__sub">${esc(role)}</p>
-    <button type="button" class="sheetItem" id="setProfile"><span>${esc(t('nav.profile'))}</span>${phIcon('arrow-right')}</button>
-    <p class="sheet__label">${esc(t('shell.theme'))}</p>
-    <div class="segmented" role="group" aria-label="${esc(t('shell.theme'))}">
-      <button type="button" id="themeLight">${esc(t('shell.theme_light'))}</button><button type="button" id="themeDark">${esc(t('shell.theme_dark'))}</button>
-    </div>
-    <button type="button" class="sheetItem" id="setHelp"><span>${esc(t('help.title'))}</span>${phIcon('arrow-right')}</button>
-    <button type="button" class="btn secondary" id="sheetCancel" style="width:100%">${esc(t('shell.close'))}</button>
+    <div class="settingsHead"><span class="settingsAvatar">${esc(initials(name) || (S.canEdit ? t('shell.avatar_coordinator') : '?'))}</span>
+      <div><h3 id="sheetTitle">${esc(name || t('shell.settings'))}</h3><p class="sheet__sub">${esc(role)}</p></div></div>
+    ${row('setProfile', 'users', t('nav.profile'), t('shell.family_hint'))}
+    <div class="settingsRow">${phIcon('moon')}<span class="settingsRow__label">${esc(t('shell.theme'))}</span>
+      <div class="segmented segmented--inline" role="group" aria-label="${esc(t('shell.theme'))}"><button type="button" id="themeLight">${esc(t('shell.theme_light'))}</button><button type="button" id="themeDark">${esc(t('shell.theme_dark'))}</button></div></div>
+    ${viewRow}
+    ${row('setHelp', 'question', t('help.title'))}
+    <div class="settingsRow settingsRow--info">${phIcon('info')}<span class="settingsRow__label">${esc(t('shell.app_name'))}</span><span class="settingsRow__hint">${esc(APP_VERSION)}</span></div>
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
-  ov.querySelector('#sheetCancel').onclick = closeSheet;
   ov.querySelector('#setProfile').onclick = () => { closeSheet(); go('profile'); };
   ov.querySelector('#setHelp').onclick = () => { closeSheet(); openHelp(document.getElementById('avatarBtn')); };
   ov.querySelector('#themeLight').onclick = () => setTheme('light');
   ov.querySelector('#themeDark').onclick = () => setTheme('dark');
+  if(viewRow){
+    ov.querySelector('#viewParent').onclick = () => setViewAs('parent', onViewChange);
+    ov.querySelector('#viewCoord').onclick = () => setViewAs('coordinator', onViewChange);
+    markSegments();
+  }
   applyTheme(currentTheme());   // marks the active theme button
   const first = ov.querySelector('#setProfile'); if(first) first.focus();
 }
 
-// Called once from app.js bootstrap: wires the avatar and the share button.
-export function initShell(onNavigate){
+// Called once from app.js bootstrap: wires the avatar, the share button, the contact names and the "back to Instellingen" links.
+export function initShell(onNavigate, onViewChange){
   const av = document.getElementById('avatarBtn');
-  if(av) av.onclick = () => openSettings(onNavigate);
+  if(av) av.onclick = () => openSettings(onNavigate, onViewChange);
   wireWhatsAppButton('shareToggle', buildMyWeekWhatsAppMessage);
+  initContact();
+  document.addEventListener('click', e => {
+    const b = e.target && e.target.closest ? e.target.closest('[data-opensettings]') : null;
+    if(b) openSettings(onNavigate, onViewChange);
+  });
 }

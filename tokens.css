@@ -112,19 +112,3 @@
   --shadow-card:0 0 0 1px #24262a;
   color-scheme:dark;
 }
-
-/* ---------- DEPRECATED aliases: the old variable names, mapped onto the roles above ----------
-   They keep screens that are not rebuilt yet (legacy.css, inline styles in ui-*.js) working.
-   New code must NOT use them. Delete this block when DESIGN.md "Migration" is empty. */
-:root{
-  --bg:var(--surface-page); --card:var(--surface-card); --text:var(--text-1); --muted:var(--text-muted); --border:var(--line);
-  --control-border:var(--control-line);
-  --accent2:var(--accent-soft); --accent-text:var(--accent-ink);
-  --ok2:var(--ok-soft); --warn:var(--warn-icon); --warn2:var(--warn-soft); --warn-text:var(--warn-ink);
-  --warn-line:var(--warn-edge); --warn-bar:var(--warn-icon);
-  --danger:var(--accent-ink);
-  --backup:var(--text-muted); --info2:var(--info-soft); --pill:var(--text-2); --pill2:var(--surface-soft);
-  --az-red-dark:var(--red-700); --az-red-light:var(--red-50); --az-red-muted:var(--red-700);
-  --match:var(--match-ink); --match2:var(--match-soft); --match-text:var(--match-ink);
-  --radius-sm:var(--radius-chip); --radius-md:var(--radius-control); --radius-lg:var(--radius-car); --radius-xl:var(--radius-sheet); --radius-full:var(--radius-pill);
-}

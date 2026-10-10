@@ -6,6 +6,7 @@
   "description": "AZ Carpool Aalsmeer-Alkmaar: tests",
   "scripts": {
     "test": "node run-tests.js",
-    "lock": "node run-tests.js --lock"
+    "lock": "node run-tests.js --lock",
+    "preview": "node preview.mjs"
   }
 }

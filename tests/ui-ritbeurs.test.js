@@ -227,5 +227,13 @@ await testAsync('the switch saves at once (no Opslaan button) and turns the Ritb
   assert.doesNotMatch(dom.html('tab-beheer').match(/id="ritbeursCard"[\s\S]*?<\/div>\s*<\/div>/)[0], /Opslaan/);
 });
 
+test('the offered ride shows its passengers as chips (your own daughter in red), no old pill markup', () => {
+  asF3({ offers: { o1: offerBy('f2') } });
+  const html = ritbeursViewHtml(); assert.doesNotMatch(html, /class="pill rbPill"/); assert.match(html, /class="chips rbPills"/);
+});
+test('the intro is an info line and the sections are labels, not amber boxes', () => {
+  const html = ritbeursViewHtml(); assert.match(html, /<div class="infoLine">/); assert.match(html, /<div class="sectionLabel">/); assert.doesNotMatch(html, /devAlert/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

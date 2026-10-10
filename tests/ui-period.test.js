@@ -85,7 +85,7 @@ test('the task card names the period, the dates, the daughter and the deadline, 
   parent(); const s = text(render());
   assert.match(s, /^Actie nodig: geef tijden door Herfstvakantie · 26 – 30 okt\. Geef door hoe laat Jahaimy heen en terug moet, of dat ze niet meerijdt\. Deadline: vrijdag 16 okt 12:00 Het vaste rooster blijft staan voor andere weken\. Tijden doorgeven /);
   assert.match(html, /id="periodOpen_2026-10-26"/);
-  assert.match(s, /Wijzigingen · Week 40/, 'the weekly changes stay below the task');
+  assert.match(s, /Tijden doorgeven .*Eenmalige ritaanpassing voor deze week/, 'the weekly changes stay below the task');
 });
 test('after the deadline the coordinator sees that only they can still fill in', () => {
   coordinator(); const s = text(render(CLOSED));

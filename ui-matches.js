@@ -43,7 +43,7 @@ export function matchesCardHtml(){
     if(!plannable){
       // Too far ahead: no carpool yet. A small note says from which day it can be set up.
       const from = plannableFrom(m).toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'long'});
-      return `<div class="group matchGroup">${matchInfoHtml(m,{geo:true})}${carsHtml}<p class="matchNote">${phIcon('calendar')} ${t('matches.nog_niet_te_plannen', { date: from })}</p></div>`;
+      return `<div class="card matchCard">${matchInfoHtml(m,{geo:true})}${carsHtml}<p class="matchNote">${phIcon('calendar')} ${t('matches.nog_niet_te_plannen', { date: from })}</p></div>`;
     }
     S.weekendMatchBySlug[slug] = m;
     const isOpen = S.openMatchCarpoolForm===slug;
@@ -66,11 +66,10 @@ export function matchesCardHtml(){
     } else {
       formHtml = `<button type="button" class="btn small secondary" data-addmatchcar="${slug}" style="margin-top:6px">${t('deviation.auto_toevoegen')}</button>`;
     }
-    return `<div class="group matchGroup">${matchInfoHtml(m,{geo:true})}${carsHtml || t('deviation.p_class_muted_style_font')}${formHtml}</div>`;
+    return `<div class="card matchCard">${matchInfoHtml(m,{geo:true})}${carsHtml || t('deviation.p_class_muted_style_font')}${formHtml}</div>`;
   }).join('');
-  return `<div class="card matchesCard" id="matchCarpoolCard">
-    <h2>${t('matches.titel')}</h2>
-    ${anyPlannable? `<p class="muted">${t('deviation.zet_een_carpool_op_voor')}</p>` : ''}
+  return `<div id="matchCarpoolCard">
+    <div class="infoLine"><span class="infoLine__text">${t('matches.titel')}. ${anyPlannable? t('deviation.zet_een_carpool_op_voor') : ''}</span></div>
     ${matchesHtml}
   </div>`;
 }

@@ -8,7 +8,9 @@ function test(name, fn) {
 }
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
-import { initials, updateHeader, openSettings, initShell, TAB_TITLE_KEY } from '../ui-shell.js';
+import fs from 'node:fs';
+import { APP_VERSION } from '../constants.js';
+import { initials, updateHeader, openSettings, initShell, setViewAs, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -41,7 +43,7 @@ console.log('\n=== Instellingen sheet ===');
 const realGetById = dom.doc.getElementById;
 function installSheet() {
   const els = {};
-  const mk = id => (els[id] = { id, onclick: null, focus() {}, addEventListener() {}, classList: { toggle() {}, add() {}, remove() {} }, setAttribute() {} });
+  const mk = id => (els[id] = { id, onclick: null, focus() {}, addEventListener() {}, classList: { add() {}, remove() {} }, setAttribute() {} });
   const ov = { html: '', mounted: false, removed: false, addEventListener() {}, remove() { ov.removed = true; },
     set innerHTML(v) { ov.html = v; }, get innerHTML() { return ov.html; },
     querySelector: sel => els[sel.slice(1)] || mk(sel.slice(1)) };
@@ -49,10 +51,18 @@ function installSheet() {
   dom.doc.getElementById = id => (id === 'sheetOverlay' ? (ov.mounted && !ov.removed ? ov : null) : realGetById(id));
   return { ov, els };
 }
-test('the sheet shows the name, the role, Mijn gezin, the theme buttons and Help', () => {
+const text = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+test('the sheet shows avatar, name and role, then Mijn gezin (with hint), Thema, Help and the app version', () => {
   sampleParentState(); const { ov } = installSheet(); openSettings(() => {});
+  const s = text(ov.html);
   assert.equal(ov.mounted, true);
-  assert.match(ov.html, /Piet Pieters/); assert.match(ov.html, /Mijn gezin/); assert.match(ov.html, /id="themeLight"/); assert.match(ov.html, /id="themeDark"/); assert.match(ov.html, /id="setHelp"/);
+  assert.match(s, /^PP Piet Pieters Ouder van Jahaimy Mijn gezin tijden, auto, beschikbaar Thema Licht Donker Help AZ Carpool Aalsmeer – Alkmaar v\d+$/);
+  assert.match(ov.html, /id="themeLight"/); assert.match(ov.html, /id="setHelp"/);
+  assert.doesNotMatch(ov.html, /viewParent/, 'a parent has no "Bekijk als"');
+});
+test('the app version in the sheet is the same as the cache name of the service worker', () => {
+  const sw = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
+  assert.equal(APP_VERSION, /CACHE_NAME = 'az-carpool-(v\d+)'/.exec(sw)[1]);
 });
 test('a name with HTML in it is escaped', () => {
   sampleParentState(); S.families.f2.parentName = '<img onerror=x>'; const { ov } = installSheet(); openSettings(() => {});
@@ -71,9 +81,29 @@ test('a visitor who is not linked yet is told so', () => {
   resetState({ me: 'x' }); const { ov } = installSheet(); openSettings(() => {});
   assert.match(ov.html, /Nog niet gekoppeld/);
 });
-test('initShell wires the avatar to the sheet', () => {
-  sampleParentState(); const { ov } = installSheet(); initShell(() => {});
+
+console.log('\n=== Bekijk als: Ouder | Coördinator ===');
+const coordWithFamily = () => sampleCoordinatorState({ links: { coord: { familyId: 'f1' } } });
+test('a coordinator with a family gets the switch, a coordinator without one does not', () => {
+  coordWithFamily(); let { ov } = installSheet(); openSettings(() => {});
+  assert.match(ov.html, /id="viewParent"/); assert.match(ov.html, /id="viewCoord"/); assert.match(text(ov.html), /Bekijk als Ouder Coördinator/);
+  sampleCoordinatorState({ coordinatorConfig: { uid: 'coord' } }); ({ ov } = installSheet()); openSettings(() => {});
+  assert.doesNotMatch(ov.html, /viewParent/);
+});
+test('Ouder hides the coordinator rights and remembers the choice; Coördinator brings them back', () => {
+  coordWithFamily(); const { els } = installSheet(); let changed = 0; openSettings(() => {}, () => { changed++; });
+  assert.equal(S.canEdit, true);
+  els.viewParent.onclick(); assert.equal(S.viewAsParent, true); assert.equal(S.canEdit, false); assert.equal(localStorage.getItem('view-as'), 'parent'); assert.equal(changed, 1);
+  els.viewCoord.onclick(); assert.equal(S.viewAsParent, false); assert.equal(S.canEdit, true); assert.equal(localStorage.getItem('view-as'), 'coordinator'); assert.equal(changed, 2);
+});
+test('setViewAs without a callback does not break', () => { coordWithFamily(); setViewAs('parent'); assert.equal(S.canEdit, false); setViewAs('coordinator'); assert.equal(S.canEdit, true); });
+test('initShell wires the avatar, the share button, the contact handler and the "back to Instellingen" links', () => {
+  sampleParentState(); const { ov } = installSheet(); const handlers = []; dom.doc.addEventListener = (type, fn) => { if (type === 'click') handlers.push(fn); };
+  initShell(() => {});
+  assert.equal(handlers.length, 2);   // contact names + [data-opensettings]
   dom.el('avatarBtn').onclick(); assert.equal(ov.mounted, true);
+  ov.mounted = false; ov.removed = false;
+  handlers[1]({ target: { closest: sel => (sel === '[data-opensettings]' ? {} : null) } }); assert.equal(ov.mounted, true);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

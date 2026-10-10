@@ -2,9 +2,9 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, WA_ICON_SMALL, todayKey } from './constants.js';
-import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
-import { dayUp, weekRangeLabel } from './dates.js';
-import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor } from './locations.js';
+import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
+import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
+import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
 import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
@@ -13,6 +13,7 @@ import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinat
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
 import { openOverview } from './ui-overview.js';
+import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
@@ -34,12 +35,11 @@ export function dayCoordinatorHtml(){
   if(!dc) return '';
   const when = target.when;
   const me = myLinkedFamilyId();
-  if(me && me===dc.familyId) return `<div class="dayCoordBar you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you', { when })}</span></div>`;
+  if(me && me===dc.familyId) return `<div class="coordLine coordLine--you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you', { when })}</span></div>`;
   const name = esc(dc.name||'?');
-  const num = waPhone(dc.phone);
-  const href = num? 'https://wa.me/'+num+'?text='+encodeURIComponent(t('dayCoord.waText', { when })) : '';
-  const btn = href? `<a class="dayCoordWa" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t('dayCoord.waLabel', { name: dc.name||'?' }))}">${WA_ICON_SMALL}</a>` : '';
-  return `<div class="dayCoordBar" id="dayCoordBar">${phIcon('user')} <span>${t('dayCoord.label', { when, name: `<strong>${name}</strong>` })}</span>${btn}</div>`;
+  // The name opens the contact sheet (WhatsApp / Bellen); the WhatsApp message there starts with the question about the change.
+  const who = dc.familyId ? contactButtonHtml(dc.familyId, name, t('dayCoord.waText', { when })) : `<strong>${name}</strong>`;
+  return `<div class="coordLine" id="dayCoordBar">${phIcon('user-circle-gear')} <span>${t('dayCoord.label', { when, name: '' }).replace(/\s*:\s*$/, ':')}</span> ${who}</div>`;
 }
 
 export function renderSchedule(){
@@ -53,11 +53,11 @@ export function renderSchedule(){
     const carCount = carsCountFor(k,mode);
     const unplaced = unplacedFor(k,'heen',mode).length + unplacedFor(k,'terug',mode).length;
     const isActive = k===S.scheduleDay;
-    return `<button type="button" class="daypill ${isActive?'active':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? t('schedule.niet_ingedeeld_2', { p1: unplaced }):''}">
-      <span class="daypillTop">${dayUp(k)}</span>
-      <span class="daypillSub">${carCount} ${t('schedule.rit')}${carCount===1?'':'ten'}</span>
-      ${k===todayKey? t('schedule.span_class_daypilltoday_aria_hidden') : ''}
-      ${unplaced? `<span class="daypillAlert" aria-hidden="true">${unplaced}</span>` : ''}
+    const isToday = k===todayKey;
+    return `<button type="button" class="dayPill${isActive?' on':''}${isToday?' dayPill--today':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? t('schedule.niet_ingedeeld_2', { p1: unplaced }):''}">
+      <span class="dayPill__ab">${isToday? esc(t('myweek.vandaag').toLowerCase()) : dayUp(k).toLowerCase()}</span>
+      <span class="dayPill__n">${dateForWeekday(k).getDate()}</span>
+      ${unplaced? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
     </button>`;
   }).join('');
   const label = DAYS.find(([k])=>k===S.scheduleDay)[1];
@@ -65,10 +65,10 @@ export function renderSchedule(){
       <button type="button" data-rmode="week" class="${mode==='week'?'active':''}" aria-pressed="${mode==='week'}">${t('schedule.deze_week')}</button>
       <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">${t('schedule.standaardrooster')}</button>${periodMode? `<button type="button" data-rmode="period" class="${mode==='period'?'active':''}" aria-pressed="${mode==='period'}">${esc(periodModeLabel())}</button>` : ''}
     </div>
-    <p class="muted" style="margin:-4px 2px 10px">${mode!=='period'? `<button type="button" class="ovLink" id="ovOpen">${phIcon('calendar')}${t('overview.open')}</button>` : ''}${mode==='week'
+    <div class="infoLine"><span class="infoLine__text">${mode==='week'
       ? t('schedule.het_standaardrooster_met_de_wijzigingen', { p1: weekRangeLabel() })
       : mode==='period'? periodModeInfoHtml()
-      : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</p>`;
+      : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span>${mode!=='period'? `<button type="button" class="btn secondary chipBtn pill" id="ovOpen">${phIcon('table')}${t('overview.open')}</button>` : ''}</div>`;
   const footer = mode==='week'
     ? lastUpdateFooter([S.lastUpdateRooster,S.lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])
     : lastUpdateFooter(S.lastUpdateRooster);
@@ -78,7 +78,7 @@ export function renderSchedule(){
     + segHtml
     + (mode==='period'
       ? periodViewHtml()
-      : `<div class="daypills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label))
+      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label))
     + footer;
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
@@ -103,16 +103,16 @@ export function renderDay(day,label){
   const mode = S.roosterMode;
   const un = ['heen','terug'].map(d=>[d, unplacedFor(day,d,mode)]).filter(([,l])=>l.length);
   const total = un.reduce((n,[,l])=>n+l.length,0);
-  const alertHtml = un.length? `<div class="unplacedAlert">
-      <div class="ttl">${phIcon('warning')} ${total} ${t('schedule.niet_ingedeeld')}</div>
+  const alertHtml = un.length? `<div class="alertCard alertCard--stack" role="alert">
+      <div class="alertCard__text"><b><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span> ${total} ${t('schedule.niet_ingedeeld')}</b></div>
       ${un.map(([d,l])=>{
         const action = mode==='week'
           ? `<button type="button" class="btn small" data-gowijzig="${day}">${t('myweek.regelen')}</button>`
           : (S.canEdit? `<button type="button" class="btn small secondary" data-gosugg="${d}">${t('schedule.voorstellen')}</button>` : '');
-        return `<div class="row"><span><strong>${d==='heen'?t('dir.heenShort'):t('dir.terugShort')}</strong>: ${l.map(([id])=>girlName(id)).join(', ')}</span>${action}</div>`;
+        return `<div class="alertCard__row"><span><strong>${d==='heen'?t('dir.heenShort'):t('dir.terugShort')}</strong>: ${l.map(([id])=>girlName(id)).join(', ')}</span>${action}</div>`;
       }).join('')}
     </div>` : '';
-  return `<div class="daysection"><h3>${label}</h3>
+  return `<div class="daysection"><h3 class="srOnly">${label}</h3>
     ${alertHtml}
     ${renderDirection(day,'heen')}
     ${renderDirection(day,'terug')}
@@ -124,14 +124,7 @@ export function renderDirection(day,direction){
 }
 
 // ---------- Tap-to-WhatsApp (Rooster "Deze week") ----------
-// wa.me wants the number in international format, digits only: 06-12345678 -> 31612345678.
-export function waPhone(p){
-  let d = normalizePhone(p);             // Dutch numbers normalised to 06…
-  if(!d) return '';
-  if(d.startsWith('00')) return d.slice(2);  // other international numbers: 0044… -> 44…
-  if(d.startsWith('0')) return '31'+d.slice(1);
-  return d;
-}
+export { waPhone };
 
 // A parent's name as a WhatsApp link to their Tel.nr. 1 with a pre-filled message; plain text
 // when no Tel.nr. 1 is set (nothing to link to).
@@ -144,34 +137,59 @@ export function waNameHtml(familyId, text){
   return `<a class="waLink" href="${esc(href)}" target="_blank" rel="noopener noreferrer" aria-label="WhatsApp ${name}">${name}${WA_ICON_SMALL}</a>`;
 }
 
-// withWhatsApp: names become WhatsApp links asking to take over `askTime`'s ride ("Deze week").
+// withWhatsApp ("Deze week"): the names open the contact sheet, with a WhatsApp message that asks to take over `askTime`'s ride.
 export function tripReserveHtml(day,direction,cars,withWhatsApp,askTime){
   const ids = tripReserveIds(day,direction,cars);
   if(!ids.length) return '';
-  const names = ids.map(id=> withWhatsApp? waNameHtml(id, reserveAskText(day,direction,askTime)) : esc(fam(id).parentName));
-  return `<div class="tripReserve">${t('schedule.reserve')} ${names.join(', ')}</div>`;
+  const names = ids.map(id=> withWhatsApp? contactButtonHtml(id, esc(fam(id).parentName||'?'), reserveAskText(day,direction,askTime)) : esc(fam(id).parentName));
+  return `<div class="noteLine tripReserve">${t('schedule.reserve')} ${names.join(', ')}</div>`;
 }
 
 // timeOf: standard times by default ("Vast rooster"); "Deze week" passes rideTime, so a date with a temporary rooster shows the handed-in times.
 export function neededTimesHtml(day,direction,girlIds,timeOf=famTime){
   const times = girlIds.map(id=>timeOf(id,day,direction)).filter(Boolean).sort();
   const range = `${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`;
-  return `<div class="subtime">${direction==='heen'? t('schedule.aankomst_alkmaar_nodig', { p1: range }) : t('schedule.klaar_om_op_te_halen', { p1: range })}</div>`;
+  return `<div class="carCard__note subtime">${direction==='heen'? t('schedule.aankomst_alkmaar_nodig', { p1: range }) : t('schedule.klaar_om_op_te_halen', { p1: range })}</div>`;
 }
 
-// Small badge after a Flex driver's name (used where the name is already a WhatsApp link).
+// Small badge after a Flex driver's name (used where the name is already a button).
 function flexMark(id){ return isFlex(fam(id))? ` <span class="badge flexBadge">${esc(t('flex.speelsterChauffeur'))}</span>` : ''; }
 
+// The driver of one car: "Geen chauffeur" (amber), "Jij rijdt" (green), or the name as a contact button.
+// wa = {day,time}: "Deze week": the contact sheet starts WhatsApp with the question to take over this ride.
 export function driverLineHtml(driverId,myId,wa){
-  if(!driverId) return `<div class="driver" style="color:var(--danger)">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
-  if(myId && driverId===myId) return `<div class="driver me">${phIcon('car')} ${t('schedule.jij_rijdt')}</div>`;
-  // wa = {day,time}: "Deze week" — the chauffeur's name opens WhatsApp to them.
-  const name = wa? waNameHtml(driverId, driverAskText(wa.day, wa.time)) + flexMark(driverId) : driverNameHtml(driverId);
-  return `<div class="driver">${phIcon('car')} ${t('schedule.chauffeur')} ${name}</div>`;
+  if(!driverId) return `<div class="carCard__driver carCard__driver--none">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
+  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me">${phIcon('steering-wheel-fill')} ${t('schedule.jij_rijdt')}</div>`;
+  const name = wa? contactButtonHtml(driverId, esc(fam(driverId).parentName||'?'), driverAskText(wa.day, wa.time), 'carCard__driver') + flexMark(driverId) : `<span class="carCard__driver">${driverNameHtml(driverId)}</span>`;
+  return `<div>${name}</div>`;
 }
 
+// The passengers of one car as chips: your own daughter in red, a Flex player dashed.
 export function pillsHtml(girlIds,myId){
-  return sortGirlIds(girlIds).map(id=>`<span class="pill${id===myId?' mine':''}">${girlName(id)}</span>`).join('');
+  return sortGirlIds(girlIds).map(id=>`<span class="chip${id===myId?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}</span>`).join('');
+}
+
+// Route of one car under the driver: "Busstation → AFC '34", with an amber tag when it differs from the standard place.
+export function carRouteHtml(car,direction,day,opts){
+  const o = opts || {};
+  const cfg = locationsCfg();
+  const label = esc(routeLabel(car,direction,cfg,day));
+  const changed = isOverride(car,direction,cfg,day)? ` <span class="tag tag--warn">${t('loc.changedTag')}</span>` : '';
+  if(o.edit && o.gid) return `<div class="carCard__route"><button type="button" class="shiftLocBtn" data-shiftloc="${esc(o.gid)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}">${phIcon('map-pin')}<span class="shiftLocText">${label}</span></button>${changed}</div>`;
+  return `<div class="carCard__route">${label}${changed}</div>`;
+}
+
+// The section title of one direction ("Heen" / "Terug"), with your own daughter's time on the right.
+function directionHeadHtml(day,direction,devTagHtml){
+  const myFamId = myLinkedFamilyId();
+  let sub = '';
+  if(myFamId){
+    const f = fam(myFamId), time = rideTime(myFamId,day,direction);
+    if(time) sub = direction==='heen'
+      ? t('schedule.sub_heen', { name: f.girlName||'', place: destinationFor({},locationsCfg()).name, time })
+      : t('schedule.sub_terug', { name: f.girlName||'', time });
+  }
+  return `<div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')} ${devTagHtml||''}</div><div class="sectionHead__sub">${esc(sub)}</div></div>`;
 }
 
 // "Deze week": what actually runs this week — read-only; changes go through Wijzigen.
@@ -182,25 +200,23 @@ export function renderDirectionWeek(day,direction){
   const cardsHtml = cars.map((c,i)=>{
     const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
     const mineDriving = myId && c.driverFamilyId===myId;
-    return `<div class="group confirmed${mineDriving?t('schedule.minedriving'):''}">
-      <div class="rowflex" style="align-items:flex-start;gap:10px">
-        <div class="rowflex" style="gap:10px;align-items:flex-start;flex:1">
-          <span class="dayBadge accent">${i+1}</span>
-          <div><div class="dir">${t('deviation.vertrek')}</div><div class="time">${esc(c.departureTime||'--:--')}</div></div>
-        </div>
-        ${driver? `<span class="capbadge">${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}</span>` : ''}
+    return `<div class="carCard${mineDriving?' carCard--mine':''}">
+      <div class="carCard__head">
+        <span class="carCard__time">${esc(c.departureTime||'--:--')}</span>
+        <div class="carCard__who">${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}${carRouteHtml(c,direction,day)}</div>
+        ${driver? `<span class="tag" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${c.girlIds.length}/${seats(driver)}</span>` : ''}
       </div>
+      <div class="chips">${pillsHtml(c.girlIds,myId)}</div>
       ${neededTimesHtml(day,direction,c.girlIds,rideTime)}
-      <div>${pillsHtml(c.girlIds,myId)}</div>
-      ${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}
-      ${shiftLocationHtml(c,direction,{day})}
     </div>`;
   }).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`;
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
   const askCar = cars.find(c=>myId && c.driverFamilyId===myId) || cars.find(c=>myId && (c.girlIds||[]).includes(myId)) || cars[0];
-  return `<div style="margin-bottom:10px">
-    <div class="rowflex" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${dirLabelHtml(direction)}${dev? `<span class="changedTag">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>`:''}</div>
-    ${cardsHtml}
+  const notRiding = ovGirlsFor(day,undefined,direction);
+  const notRidingHtml = notRiding.length? `<div class="noteLine">${t('schedule.rijdt_niet_mee')} ${sortGirlIds(notRiding).map(id=>girlName(id)).join(', ')}</div>` : '';
+  return `<div>
+    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>`:'')}
+    ${cardsHtml}${notRidingHtml}
     ${tripReserveHtml(day,direction,cars,true,askCar&&askCar.departureTime)}
   </div>`;
 }
@@ -226,32 +242,27 @@ export function renderDirectionStandard(day,direction){
     const driverOptions = `<option value="" disabled ${!g.driverFamilyId?'selected':''}>${t('schedule.kies_chauffeur')}</option>` + eligible.map(([id,f])=>`<option value="${id}" ${id===g.driverFamilyId?'selected':''}>${esc(f.parentName)} (${seats(f)} ${t('beheer.pl')}</option>`).join('');
     const timeHtml = S.canEdit
       ? `<input type="time" class="timeBig" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd auto ${gi+1}">`
-      : `<div class="time">${departure}</div>`;
+      : `<span class="carCard__time">${esc(departure)}</span>`;
     const pills = sortGirlIds(g.girlIds).map(id=>{
-      const cls = `pill${id===myId?' mine':''}`;
+      const cls = `chip${id===myId?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}`;
       return (S.canEdit && otherGroups.length)
         ? `<button type="button" class="${cls}" data-movepill="${gid}|${id}" aria-label="${t('schedule.verplaats',{p1:girlName(id)})}" aria-haspopup="dialog">${girlName(id)}</button>`
         : `<span class="${cls}">${girlName(id)}</span>`;
     }).join('');
     const driverHtml = S.canEdit
-      ? `<div class="driver">${phIcon('car')}<select data-swap="${gid}" aria-label="Chauffeur auto ${gi+1}">${driverOptions}</select></div>`
+      ? `<select class="carCard__select" data-swap="${gid}" aria-label="Chauffeur auto ${gi+1}">${driverOptions}</select>`
       : driverLineHtml(g.driverFamilyId,myId);
-    return `<div class="group confirmed${mineDriving?t('schedule.minedriving'):''}" data-gid="${gid}">
-      <div class="rowflex" style="align-items:flex-start;gap:10px">
-        <div class="rowflex" style="gap:10px;align-items:flex-start;flex:1">
-          <span class="dayBadge accent">${gi+1}</span>
-          <div><div class="dir">${t('deviation.vertrek')}</div>${timeHtml}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px">
-          ${driver? `<span class="capbadge">${g.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}</span>` : ''}
-          ${S.canEdit? `<button type="button" class="iconbtn danger" data-delgroup="${gid}" aria-label="Verwijder auto ${gi+1}" title="${t('schedule.verwijder_auto')}">${phIcon('trash')}</button>` : ''}
-        </div>
+    return `<div class="carCard${mineDriving?' carCard--mine':''}" data-gid="${gid}">
+      <div class="carCard__head">
+        ${S.canEdit? '' : timeHtml}
+        <div class="carCard__who">${S.canEdit? '' : driverHtml}${carRouteHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,day,{edit:S.canEdit, gid})}</div>
+        ${driver? `<span class="tag" aria-label="${g.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${g.girlIds.length}/${seats(driver)}</span>` : ''}
+        ${S.canEdit? `<button type="button" class="iconbtn danger" data-delgroup="${gid}" aria-label="Verwijder auto ${gi+1}" title="${t('schedule.verwijder_auto')}">${phIcon('trash')}</button>` : ''}
       </div>
+      ${S.canEdit? `<div class="carCard__edit">${timeHtml}${driverHtml}</div>` : ''}
+      <div class="chips">${pills}</div>
       ${neededTimesHtml(day,direction,g.girlIds)}
-      <div>${pills}</div>
-      ${driverHtml}
-      ${shiftLocationHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,{day, edit:S.canEdit, gid})}
-      ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn)">
+      ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn-icon)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
           <div class="rowflex" style="margin-top:8px;gap:6px">
@@ -331,8 +342,8 @@ export function renderDirectionStandard(day,direction){
   }
   const dev = activeDeviation(day,direction);
   const cars = grps.map(([,g])=>g);
-  return `<div style="margin-bottom:10px">
-    <div class="rowflex" style="justify-content:flex-start;gap:6px;flex-wrap:wrap">${dirLabelHtml(direction)}${dev? `<span class="changedTag" title="${t('schedule.zie_deze_week')}">${phIcon('lightning')} ${t('schedule.deze_week_gewijzigd')}</span>`:''}</div>
+  return `<div>
+    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${phIcon('lightning')} ${t('schedule.deze_week_gewijzigd')}</span>`:'')}
     ${groupHtml}
     ${tripReserveHtml(day,direction,cars)}
     ${suggestHtml}${pickerHtml}
