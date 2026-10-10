@@ -5,13 +5,13 @@ import { DAYS, WA_ICON_SMALL, todayKeyNow } from './constants.js';
 import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
-import { dirLabelHtml, esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast } from './ui-common.js';
+import { esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
-import { createGroupCustom, db, recordLastUpdate, useOption } from './data.js';
+import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandardShift, useOption } from './data.js';
 import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
@@ -168,6 +168,16 @@ export function carRouteHtml(car,direction,day,opts){
   const changed = isOverride(car,direction,cfg,day)? ` <span class="tag tag--warn">${t('loc.changedTag')}</span>` : '';
   if(o.edit && o.gid) return `<div class="carCard__route"><button type="button" class="shiftLocBtn" data-shiftloc="${esc(o.gid)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}">${phIcon('map-pin')}<span class="shiftLocText">${label}</span></button>${changed}</div>`;
   return `<div class="carCard__route">${label}${changed}</div>`;
+}
+
+// Vast rooster, coordinator (design v2): "Ophalen: <plek>" cycles the pick-up place of the whole shift, "Opnieuw indelen" plans it again (two taps).
+function shiftToolsHtml(day,direction,grps){
+  const cfg = locationsCfg();
+  const place = (cfg.places.find(p=>p.id===carStdId(grps[0][1],cfg,day,direction))||{}).name || '';
+  return `<div class="shiftTools">
+    <button type="button" class="btn secondary pill" data-cycleplace="${day}|${direction}">${phIcon('map-pin')}${t('schedule.ophalen')} ${esc(place)}</button>
+    <button type="button" class="btn secondary pill" data-replan="${day}|${direction}">${phIcon('shuffle')}${t('schedule.opnieuw_indelen')}</button>
+  </div>`;
 }
 
 // "Niet ingedeeld: <names>" as a dashed amber box under the cars of one direction (design v2). Week: Regelen opens Wijzigen; Vast rooster (coordinator): Voorstellen scrolls to the proposals.
@@ -346,6 +356,7 @@ export function renderDirectionStandard(day,direction){
   const cars = grps.map(([,g])=>g);
   return `<div>
     ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${phIcon('lightning')} ${t('schedule.deze_week_gewijzigd')}</span>`:'')}
+    ${S.canEdit && grps.length? shiftToolsHtml(day,direction,grps) : ''}
     ${groupHtml}
     ${unplacedBoxHtml(day,direction)}
     ${tripReserveHtml(day,direction,cars)}
@@ -457,6 +468,8 @@ export function attachScheduleHandlers(){
       await useOption(day,direction,opt.assignment);
     }
   });
+  document.querySelectorAll('[data-cycleplace]').forEach(btn=>btn.onclick=()=>{ const [day,direction]=btn.dataset.cycleplace.split('|'); hapticTap(); cycleShiftPlace(day,direction); });
+  document.querySelectorAll('[data-replan]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,t('schedule.opnieuw_zeker'),async ()=>{ const [day,direction]=btn.dataset.replan.split('|'); await replanStandardShift(day,direction); }));
   document.querySelectorAll('[data-delgroup]').forEach(btn=>btn.onclick=async ()=>{
     try{ await db.doc("groups/"+btn.dataset.delgroup).delete(); recordLastUpdate('Rooster'); }catch(e){showToast(t('beheer.verwijderen_mislukt')+(e&&e.message||e));}
   });

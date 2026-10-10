@@ -18,7 +18,8 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
-import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, groupsFor, isFlex, planPeriodRooster, planPeriodShift } from './rides.js';
+import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
+import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
@@ -748,6 +749,44 @@ export async function createGroupWithDriver(day,direction,girlIds,driverId,extra
 export async function useOption(day,direction,assignment){
   const usedDrivers = assignment.map(a=>a.driverId).filter(Boolean);
   for(const a of assignment){ await createGroupWithDriver(day,direction,a.girlIds,a.driverId, usedDrivers.filter(id=>id!==a.driverId)); }
+}
+
+// Vast rooster, coordinator: plan one shift (one day, one direction) again from scratch with the best option of the planning engine.
+// Nothing is deleted when there is no solution. Returns the number of cars made, or null.
+export async function replanStandardShift(day,direction){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return null; }
+  const old = groupsFor(day,direction);
+  const rest = Object.fromEntries(Object.entries(S.groups).filter(([,g])=>!(g.day===day && g.direction===direction)));
+  const opts = planOptions(day,direction,girlsFor(day,direction), { ...S, groups: rest });
+  if(!opts.length){ showToast(t('schedule.opnieuw_geen_oplossing')); return null; }
+  try{
+    for(const [gid] of old) await db.doc("groups/"+gid).delete();
+    await useOption(day,direction,opts[0].assignment);
+    showToast(t('schedule.opnieuw_ingedeeld', { n: opts[0].assignment.length }));
+    return opts[0].assignment.length;
+  }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return null; }
+}
+
+// Vast rooster, coordinator: the next standard pick-up place for every car of one shift (cycles through the places of Beheer).
+export async function cycleShiftPlace(day,direction){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  const cars = groupsFor(day,direction);
+  if(!cars.length) return false;
+  const cfg = normalizeLocations(S.locationsDoc);
+  const ids = cfg.places.map(p=>p.id);
+  const cur = carStdId(cars[0][1], cfg, day, direction);
+  const next = ids[(Math.max(0, ids.indexOf(cur)) + 1) % ids.length];
+  const prev = cars.map(([gid,g])=>[gid, g.stdLocationId||'']);
+  try{
+    for(const [gid] of cars) await db.doc("groups/"+gid).update({stdLocationId: next});
+    recordLastUpdate('Rooster');
+    const name = (cfg.places.find(p=>p.id===next)||{}).name||'';
+    showToast(t('schedule.vaste_plek', { dir: direction==='heen'? t('dir.heenShort').toLowerCase() : t('dir.terugShort').toLowerCase(), name }), { action: { label: t('deviation.ongedaan'), run: async ()=>{
+      for(const [gid,v] of prev) await db.doc("groups/"+gid).update({stdLocationId: v});
+      recordLastUpdate('Rooster');
+    } } });
+    return true;
+  }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
 }
 
 export async function createGroupCustom(day,direction,ids){
