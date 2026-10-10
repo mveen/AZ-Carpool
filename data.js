@@ -622,6 +622,17 @@ export function currentDeviationDoc(day,direction){
   return dev && dev.weekKey===S.currentWeekKey ? dev : null;
 }
 
+// The coordinator removes the one-off change (Wijzigen) of one shift of this week, so the standard / temporary rooster counts again.
+export async function clearDeviation(day,direction){
+  if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
+  try{
+    await db.doc("deviations/"+deviationKey(day,direction)).delete();
+    const rest = {...S.deviations}; delete rest[deviationKey(day,direction)]; S.deviations = rest;
+    recordLastUpdate('Deviation');
+    return true;
+  }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
+}
+
 async function writeDeviation(day,direction,cars,extra){
   refreshWeekKey();
   await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:cleanCars(cars),...(extra||{})});
