@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
-import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
+import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, setPeriodCarPlace, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -233,6 +233,16 @@ await testAsync('a girl without a car is placed in a car, or in a new car with a
   await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f2', 'new:f2'));
   const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
   assert.deepEqual(cars.map(c => [c.driverFamilyId, c.girlIds]), [['f4', ['f1', 'f4', 'f5']], ['f2', ['f2']]]); assert.equal(cars[1].departureTime, '12:30');
+});
+await testAsync('another departure and arrival place for one car of a date: stored on that car, shown in its route, cleared with an empty value', async () => {
+  const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]) });
+  assert.match(html, /data-pcarplace="2026-10-27\|terug\|0"/);
+  assert.equal(await withFakeNowAsync(OPEN, () => setPeriodCarPlace('2026-10-27', 'terug', 0, { stdLocationId: 'a4-de-hoek', stdDestination: 'ATC' })), true);
+  const car = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[0];
+  assert.equal(car.stdLocationId, 'a4-de-hoek'); assert.equal(car.stdDestination, 'ATC'); assert.match(text(html), /ATC → A4-De Hoek/);
+  assert.equal(await withFakeNowAsync(OPEN, () => setPeriodCarPlace('2026-10-27', 'terug', 0, { stdLocationId: '', stdDestination: '' })), true);
+  const back = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[0];
+  assert.equal('stdLocationId' in back, false); assert.equal('stdDestination' in back, false);
 });
 await testAsync('changing the driver of a car', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]) });

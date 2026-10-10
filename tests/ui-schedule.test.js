@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
-import { renderSchedule, saveCarPlace, openShiftLocationSheet, openMoveSheet, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
+import { renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -239,6 +239,15 @@ test('the sheet opens for one car and lists places plus both arrival options', (
   assert.equal(sheet.id, 'sheetOverlay');
   assert.match(text(sheet.innerHTML), /Standaardplek van deze auto/);
   assert.match(text(sheet.innerHTML), /De Parel ✓/); assert.match(text(sheet.innerHTML), /Aankomst: ATC ✓/);
+  dom.doc.body.children.length = 0;
+});
+
+test('the car place sheet is shared: it shows the given title and the car\'s own choices', () => {
+  dom.doc.body.children.length = 0;
+  render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma', groups: twoCars() }));
+  openCarPlaceSheet({ stdLocationId: 'a4-de-hoek', stdDestination: 'ATC' }, 'Ma', 'heen', 'Eigen titel', 'Eigen tekst', () => {});
+  const h = text(dom.doc.body.children[0].innerHTML);
+  assert.match(h, /Eigen titel/); assert.match(h, /A4-De Hoek ✓/); assert.match(h, /Aankomst: ATC ✓/);
   dom.doc.body.children.length = 0;
 });
 

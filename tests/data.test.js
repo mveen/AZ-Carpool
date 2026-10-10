@@ -430,6 +430,13 @@ await testAsync('savePeriodShift stores one shift with clean cars (no empty cars
   assert.equal(d.periodFirstDay, '2026-10-26'); assert.equal(d.date, '2026-10-27'); assert.equal(d.direction, 'terug'); assert.equal(d.by, 'Coördinator'); assert.equal(d.madeAt, new Date(NOW).getTime());
   assert.deepEqual(S.periodCars['2026-10-26_2026-10-27_terug'], d);
 });
+await testAsync('a temporary car keeps its own departure and arrival place (only valid values)', async () => {
+  const fake = useFakeDb(sampleDbSeed()); coordP();
+  await withFakeNowAsync(NOW, () => savePeriodShift('2026-10-27', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '13:00', stdLocationId: 'a4-de-hoek', stdDestination: 'ATC' }, { driverFamilyId: 'f3', girlIds: ['f6'], stdLocationId: '', stdDestination: 'x' }]));
+  const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
+  assert.equal(cars[0].stdLocationId, 'a4-de-hoek'); assert.equal(cars[0].stdDestination, 'ATC');
+  assert.equal('stdLocationId' in cars[1], false); assert.equal('stdDestination' in cars[1], false);
+});
 await testAsync('a shift with nobody in a car is still stored ("made, nobody rides"): the standard rooster no longer applies there', async () => {
   const fake = useFakeDb(sampleDbSeed()); coordP();
   assert.equal(await savePeriodShift('2026-10-28', 'heen', []), true); assert.deepEqual(fake.get('periodCars/2026-10-26_2026-10-28_heen').cars, []);

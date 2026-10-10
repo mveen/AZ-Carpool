@@ -166,6 +166,7 @@ export function carRouteHtml(car,direction,day,opts){
   const cfg = locationsCfg();
   const label = esc(routeLabel(car,direction,cfg,day));
   const changed = isOverride(car,direction,cfg,day)? ` <span class="tag tag--warn">${t('loc.changedTag')}</span>` : '';
+  if(o.edit && o.pcar) return `<div class="carCard__route"><button type="button" class="shiftLocBtn" data-pcarplace="${esc(o.pcar)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}">${phIcon('map-pin')}<span class="shiftLocText">${label}</span></button>${changed}</div>`;
   if(o.edit && o.gid) return `<div class="carCard__route"><button type="button" class="shiftLocBtn" data-shiftloc="${esc(o.gid)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}">${phIcon('map-pin')}<span class="shiftLocText">${label}</span></button>${changed}</div>`;
   return `<div class="carCard__route">${label}${changed}</div>`;
 }
@@ -404,22 +405,28 @@ export async function saveCarPlace(gid, fields){
   }catch(e){ showToast(t('schedule.aanpassen_mislukt')+(e&&e.message||e)); return false; }
 }
 
+// The sheet to pick the standard departure and arrival place of one car (a car of the Vast rooster, or of a temporary rooster).
+// `car` holds stdLocationId / stdDestination; `save(fields)` stores the chosen field(s) ('' = follow the default).
+export function openCarPlaceSheet(car,day,direction,title,sub,save){
+  const cfg=locationsCfg();
+  const own=cfg.places.some(p=>p.id===car.stdLocationId)? car.stdLocationId : '';
+  const curDest=destinationFor({stdDestination:car.stdDestination},cfg).key;
+  const defName=cfg.places.find(p=>p.id===carStdId({},cfg,day,direction)).name;
+  const items=[{ label:esc(t('loc.useDefault',{name:defName}))+(own===''?' ✓':''), onClick:()=>save({stdLocationId:''}) }]
+    .concat(cfg.places.map(p=>({ label:esc(p.name)+(own===p.id?' ✓':''), sub:esc(p.address||''), onClick:()=>save({stdLocationId:p.id}) })))
+    .concat([
+      { label:esc(t('loc.arrivalItem',{name:cfg.destination.name}))+(curDest==='AFC'?' ✓':''), sub:esc(CITY_AFC), onClick:()=>save({stdDestination:''}) },
+      { label:esc(t('loc.arrivalItem',{name:ATC_NAME}))+(curDest==='ATC'?' ✓':''), sub:esc(CITY_ATC), onClick:()=>save({stdDestination:'ATC'}) },
+    ]);
+  openSheet(title,sub,items);
+}
+
 export function openShiftLocationSheet(gid){
   const g=S.groups[gid]; if(!g) return;
   const {day,direction}=g;
-  const cfg=locationsCfg();
-  const own=cfg.places.some(p=>p.id===g.stdLocationId)? g.stdLocationId : '';
-  const curDest=destinationFor({stdDestination:g.stdDestination},cfg).key;
   const dayName=(DAYS.find(([k])=>k===day)||[day,day])[1];
   const dirName=direction==='heen'?t('dir.heenShort'):t('dir.terugShort');
-  const defName=cfg.places.find(p=>p.id===carStdId({},cfg,day,direction)).name;
-  const items=[{ label:esc(t('loc.useDefault',{name:defName}))+(own===''?' ✓':''), onClick:()=>saveCarPlace(gid,{stdLocationId:''}) }]
-    .concat(cfg.places.map(p=>({ label:esc(p.name)+(own===p.id?' ✓':''), sub:esc(p.address||''), onClick:()=>saveCarPlace(gid,{stdLocationId:p.id}) })))
-    .concat([
-      { label:esc(t('loc.arrivalItem',{name:cfg.destination.name}))+(curDest==='AFC'?' ✓':''), sub:esc(CITY_AFC), onClick:()=>saveCarPlace(gid,{stdDestination:''}) },
-      { label:esc(t('loc.arrivalItem',{name:ATC_NAME}))+(curDest==='ATC'?' ✓':''), sub:esc(CITY_ATC), onClick:()=>saveCarPlace(gid,{stdDestination:'ATC'}) },
-    ]);
-  openSheet(t('loc.shiftTitle'), t('loc.shiftSub',{p1:dirName,p2:dayName}), items);
+  openCarPlaceSheet(g,day,direction,t('loc.shiftTitle'),t('loc.shiftSub',{p1:dirName,p2:dayName}),fields=>saveCarPlace(gid,fields));
 }
 
 export function openMoveSheet(gid, girlId){

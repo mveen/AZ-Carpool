@@ -11,7 +11,7 @@ import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.j
 import { plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
-import { carRouteHtml, driverLineHtml, flexSuffix, renderSchedule } from './ui-schedule.js';
+import { carRouteHtml, driverLineHtml, flexSuffix, openCarPlaceSheet, renderSchedule } from './ui-schedule.js';
 import { myLinkedFamilyId } from './coordinator.js';
 
 const madeShifts = p => Object.values(S.periodCars || {}).filter(d => d && d.periodFirstDay===p.firstDay).length;
@@ -156,7 +156,7 @@ function carHtml(iso, direction, car, idx, cars){
   return `<div class="carCard">
       <div class="carCard__head">
         <span class="carCard__time">${esc(car.departureTime||'--:--')}</span>
-        <div class="carCard__who">${edit? '' : driverPart}${carRouteHtml(car, direction, day)}</div>
+        <div class="carCard__who">${edit? '' : driverPart}${carRouteHtml(car, direction, day, { edit, pcar:iso+'|'+direction+'|'+idx })}</div>
         ${driver? `<span class="tag${cap!=null && (car.girlIds||[]).length>cap? ' tag--warn' : ''}" aria-label="${(car.girlIds||[]).length}/${cap} ${t('schedule.plekken')}">${(car.girlIds||[]).length}/${cap}</span>` : ''}
       </div>
       ${edit? `<div class="carCard__note">${driverPart}</div>` : ''}
@@ -239,6 +239,23 @@ export function setPeriodDriver(iso, direction, index, driverId){
   return editShift(iso, direction, cars => periodSetDriver(cars, index, driverId, capOf));
 }
 
+// Another departure and/or arrival place for one car of the temporary rooster (only this car, only this date). '' = follow the standard.
+export function setPeriodCarPlace(iso, direction, index, fields){
+  return editShift(iso, direction, cars => {
+    if(!cars[index]) return { cars, error: { key:'period.rooster.err.unknown' } };
+    const car = { ...cars[index], ...fields };
+    ['stdLocationId','stdDestination'].forEach(k => { if(!car[k]) delete car[k]; });
+    return { cars: cars.map((c, i) => i===index? car : c), error: null };
+  });
+}
+
+function openPeriodCarPlace(iso, direction, index){
+  const car = (periodCarsFor(iso, direction) || [])[index]; if(!car) return;
+  const day = dayKeyOf(iso);
+  const dirName = direction==='heen'? t('dir.heenShort') : t('dir.terugShort');
+  openCarPlaceSheet(car, day, direction, t('loc.periodTitle'), t('loc.periodSub',{p1:dirName, p2:isoDayLabel(iso,'long')}), fields => setPeriodCarPlace(iso, direction, index, fields));
+}
+
 export function wirePeriodRooster(){
   document.querySelectorAll('[data-perday]').forEach(b => b.onclick = () => { S.periodDay = b.dataset.perday; hapticTap(); renderSchedule(); });
   document.querySelectorAll('[data-periodpick]').forEach(el => el.onchange = () => { S.periodSel = el.value; S.periodDay = null; renderSchedule(); });
@@ -250,6 +267,10 @@ export function wirePeriodRooster(){
   document.querySelectorAll('[data-preplan]').forEach(b => b.onclick = () => {
     const [iso, direction] = b.dataset.preplan.split('|');
     hapticTap(); return replanPeriodShift(iso, direction).then(then);
+  });
+  document.querySelectorAll('[data-pcarplace]').forEach(b => b.onclick = () => {
+    const [iso, direction, idx] = b.dataset.pcarplace.split('|');
+    hapticTap(); openPeriodCarPlace(iso, direction, +idx);
   });
   document.querySelectorAll('[data-pdrv]').forEach(el => el.onchange = () => setPeriodDriver(el.dataset.iso, el.dataset.dir, +el.dataset.pdrv, el.value));
   document.querySelectorAll('.periodMove').forEach(el => el.onchange = () => { if(el.value) movePeriodGirl(el.dataset.iso, el.dataset.dir, el.dataset.pmove, el.value); });

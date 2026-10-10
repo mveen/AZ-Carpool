@@ -171,7 +171,9 @@ export async function savePeriodEntry(familyId, firstDay, rawDays){
 // One document per shift: periodCars/<firstDay>_<date>_<direction>. Where it exists it replaces the standard rooster for that date
 // (rides.js periodShift); one-off changes in Wijzigen still go before it. Only the coordinator writes (firestore.rules).
 const cleanPeriodCars = cars => (cars||[])
-  .map(c=>({ driverFamilyId:c.driverFamilyId||'', girlIds:[...new Set((c.girlIds||[]).filter(id=>typeof id==='string' && id))], departureTime:c.departureTime||'' }))
+  .map(c=>({ driverFamilyId:c.driverFamilyId||'', girlIds:[...new Set((c.girlIds||[]).filter(id=>typeof id==='string' && id))], departureTime:c.departureTime||'',
+    ...(typeof c.stdLocationId==='string' && c.stdLocationId? { stdLocationId:c.stdLocationId } : {}),
+    ...(c.stdDestination==='ATC'? { stdDestination:'ATC' } : {}) }))
   .filter(c=>c.girlIds.length);
 
 function periodShiftDocOf(period, iso, direction, cars){

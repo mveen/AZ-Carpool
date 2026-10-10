@@ -705,6 +705,8 @@ export default {
   "loc.shiftTitle": "Standaardplek van deze auto",
   "loc.shiftSub": "{p1} {p2}: geldt alleen voor deze auto, elke week. Kies het vertrek en de aankomst.",
   "loc.arrivalItem": "Aankomst: {name}",
+  "loc.periodTitle": "Plek van deze auto in het tijdelijke rooster",
+  "loc.periodSub": "{p1} {p2}: geldt alleen voor deze auto, op deze dag. Kies het vertrek en de aankomst.",
   "loc.shiftSaved": "Standaardplek van de auto opgeslagen",
   "loc.freeLabel": "Of vrij invoeren (adres of plek)",
   "loc.freePlaceholder": "Bijv. Hoofdweg 12, Hoofddorp of Tankstation Shell",
