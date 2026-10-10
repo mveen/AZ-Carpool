@@ -60,7 +60,7 @@ test('the megaphone (notice bar) and the eye (test bar) exist', () => { assert.o
 
 test('todayKeyNow follows the clock (a phone that stays open past midnight), todayKey is the value at start-up', () => {
   assert.equal(typeof todayKeyNow, 'function'); assert.ok(['Ma', 'Di', 'Wo', 'Do', 'Vr', null].includes(todayKeyNow())); assert.equal(todayKey, todayKeyNow());
-  assert.ok(PH_PATHS['plus-circle']);
+  assert.ok(PH_PATHS['plus-circle']); assert.ok(PH_PATHS['minus-circle']);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

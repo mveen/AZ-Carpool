@@ -19,7 +19,7 @@ import {
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
-  createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList,
+  createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -860,6 +860,31 @@ await testAsync('Ritbeurs: a missing switch document means off', async () => {
   startDataListeners(); await tick(); await tick();
   assert.equal(S.ritbeurs, null);
   stopDataListeners();
+});
+
+console.log('\n=== Vast rooster: Opnieuw indelen and the cycling pick-up place (design v2) ===');
+await testAsync('cycleShiftPlace sets the next place of Beheer on every car of the shift, and Ongedaan puts it back', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  const { normalizeLocations } = await import('../locations.js');
+  const ids = normalizeLocations(null).places.map(p => p.id);
+  assert.equal(await cycleShiftPlace('Ma', 'heen'), true);
+  assert.equal(fake.get('groups/Ma_heen_1').stdLocationId, ids[1]);
+  assert.match(toast(), /Vaste plek heen: /);
+  assert.equal(await cycleShiftPlace('Ma', 'terug'), true);              // the other direction has its own place
+  assert.equal(fake.get('groups/Ma_terug_1').stdLocationId, ids[1]);
+  assert.equal(await cycleShiftPlace('Wo', 'heen'), false);              // no cars: nothing to do
+});
+await testAsync('replanStandardShift plans the shift again; with no solution nothing is deleted', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  const before = Object.keys(fake.collection('groups').reduce((o, [k]) => ({ ...o, [k]: 1 }), {})).filter(k => k.startsWith('Ma_heen'));
+  assert.deepEqual(before, ['Ma_heen_1']);
+  const n = await replanStandardShift('Ma', 'heen');
+  assert.ok(n >= 1); assert.match(toast(), /Opnieuw ingedeeld: \d+ auto/);
+  const after = fake.collection('groups').map(([k]) => k).filter(k => k.startsWith('Ma_heen'));
+  assert.ok(after.length >= 1 && !after.includes('Ma_heen_1'));          // the old car is gone, new ones exist
+  assert.ok(fake.collection('groups').some(([k]) => k === 'Ma_terug_1'));   // the other direction is untouched
+  const fake2 = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ families: {} });
+  assert.equal(await replanStandardShift('Ma', 'heen'), null); assert.ok(fake2.get('groups/Ma_heen_1'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

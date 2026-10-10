@@ -26,8 +26,9 @@ test('Monday: the existing car with its riders, seats left, and the girls who st
   const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
   const s = text(html);
   assert.match(s, /Het vaste rooster, elke week gelijk\./);
-  assert.match(s, /ma 28 di 29 vandaag 30 do 1 vr 2/); assert.match(s, /Maandag Heen Busstation/); assert.match(s, /Niet ingedeeld: Anouk, Evi, Lois, Saar Voorstellen/);
-  assert.match(s, /Heen Busstation → AFC (&#39;|')34 2\/3 .*Eline Jahaimy Aankomst Alkmaar nodig: 08:30/);
+  assert.match(s, /ma 28 di 29 vandaag 30 do 1 vr 2/); assert.match(s, /Maandag Heen Ophalen: Busstation Opnieuw indelen Busstation → AFC/); // the coordinator's shift tools (design v2)
+  assert.match(s, /Niet ingedeeld: Anouk, Evi, Lois, Saar Voorstellen/);
+  assert.match(s, /Opnieuw indelen Busstation → AFC (&#39;|')34 2\/3 .*Eline Jahaimy Aankomst Alkmaar nodig: 08:30/);
   assert.match(s, /Back-up: Piet Pieters, Kees de Vries, Tom Visser/);
   assert.match(s, /Nog niet ingedeeld \(4\): Anouk, Evi, Lois, Saar\./);
   expectSnapshot('ui-schedule', 'coordinator standard Monday', html);
@@ -255,6 +256,13 @@ test('design v2: the move sheet has a car icon per row, dims a full car and has 
   dom.doc.createElement = () => ({ set innerHTML(v) { html = v; }, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] }); dom.doc.body.appendChild = () => {};
   openMoveSheet('Ma_heen_1', 'f1');
   assert.match(html, /<svg[^>]*>.*<\/svg><span class="sheetItem__label">Auto 2/s); assert.doesNotMatch(html, /Annuleren/);
+});
+
+test('design v2: the shift tools (Ophalen: <plek>, Opnieuw indelen) are only for the coordinator, in the Vast rooster', () => {
+  const coord = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
+  assert.match(coord, /data-cycleplace="Ma\|heen"/); assert.match(coord, /data-replan="Ma\|terug"/);
+  const parent = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
+  assert.doesNotMatch(parent, /data-cycleplace|data-replan/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

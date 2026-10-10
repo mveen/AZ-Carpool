@@ -30,8 +30,8 @@ test('every family is listed with parent, coordinator badge, invite code state a
   withFakeNow(NOW, () => renderBeheer());
   const html = dom.html('tab-beheer'); const s = text(html);
   assert.match(s, /Gezinnen beheren /);
-  assert.match(s, /Eline Jan Jansen COÖRDINATOR Geen code Wijzig/);
-  assert.match(s, /Jahaimy Piet Pieters gekoppeld Geen code Wijzig/);
+  assert.match(s, /Eline Jan Jansen Coördinator Geen code Wijzig/);
+  assert.match(s, /Jahaimy Piet Pieters Gekoppeld Geen code Wijzig/);
   assert.match(s, /Anouk Kees de Vries Wijzig/);
   assert.match(s, /\+ Nieuw gezin toevoegen/);
   expectSnapshot('ui-beheer', 'coordinator overview', html);
@@ -202,7 +202,7 @@ test('a Flex family is marked in the family list', () => {
   const fams = sampleCoordinatorState().families; fams.f5 = { ...fams.f5, familyType: 'flex' };
   withFakeNow(NOW, () => { sampleCoordinatorState({ families: fams }); renderBeheer(); });
   const html = dom.html('tab-beheer');
-  assert.equal((html.match(/badge flexBadge">Flex</g) || []).length, 1);
+  assert.equal((html.match(/tag tag--flex">Flex</g) || []).length, 1);
   assert.match(text(html), /Sanne Smit Flex/);
 });
 

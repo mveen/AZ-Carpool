@@ -9,7 +9,7 @@ import { weekRangeLabel } from './dates.js';
 import { fam } from './rides.js';
 import { canSwitchViewFor, myFamilyId, recomputeCanEdit } from './coordinator.js';
 import { openHelp } from './ui-help.js';
-import { wireWhatsAppButton } from './ui-deviation.js';
+import { sendWhatsAppUpdate } from './ui-deviation.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { initContact } from './ui-contact.js';
 
@@ -59,6 +59,32 @@ export function updateHeader(tab){
   if(av) av.textContent = initials(parentName()) || (S.canEdit ? t('shell.avatar_coordinator') : '?');
 }
 
+// "Mijn week delen": a sheet with the text and one Delen button. The phone's own share menu opens when the browser has one (any app);
+// otherwise WhatsApp opens with the text filled in. Nothing is sent by the app itself.
+export async function shareWeek(text){
+  if(typeof navigator !== 'undefined' && navigator.share){
+    try{ await navigator.share({ text }); return true; }
+    catch(e){ if(e && e.name === 'AbortError') return false; /* any other error: use the fallback below */ }
+  }
+  sendWhatsAppUpdate(() => text);
+  return true;
+}
+
+export function openShare(){
+  closeSheet();
+  const text = buildMyWeekWhatsAppMessage();
+  const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${esc(t('shell.share_title'))}</h3><p class="sheet__sub">${esc(t('shell.share_sub'))}</p>
+    <div class="sharePreview">${esc(text)}</div>
+    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-fat')}${esc(t('shell.share_button'))}</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
+  ov.querySelector('#doShare').onclick = async () => { closeSheet(); await shareWeek(text); };
+}
+
 // Views of a coordinator who also has a family: "Ouder" hides the coordinator tools (view only: rights on the server do not change).
 export function setViewAs(mode, onViewChange){
   S.viewAsParent = mode === 'parent';
@@ -82,7 +108,10 @@ export function openSettings(onNavigate, onViewChange){
   const name = parentName();
   const girl = fam(myFamilyId()).girlName;
   const linked = !!name;
-  const role = [linked && girl ? t('shell.parent_of', { name: girl }) : (linked ? t('common.ouder') : t('shell.not_linked')), S.canEdit || (canSwitchViewFor(S)) ? t('coordinator.coordinator') : ''].filter(Boolean).join(' · ');
+  // The team (e.g. O15-1) when the app has exactly one match calendar: the only place the app knows a team name.
+  const feeds = S.matchFeeds || [];
+  const team = feeds.length === 1 && feeds[0].label ? String(feeds[0].label).replace(/^AZ\s+/i, '') : '';
+  const role = [linked && girl ? t('shell.parent_of', { name: girl }) : (linked ? t('common.ouder') : t('shell.not_linked')), linked ? team : '', S.canEdit || (canSwitchViewFor(S)) ? t('coordinator.coordinator') : ''].filter(Boolean).join(' · ');
   const go = onNavigate || (() => {});
   const row = (id, icon, label, hint) => `<button type="button" class="settingsRow" id="${id}">${phIcon(icon)}<span class="settingsRow__label">${esc(label)}</span>${hint ? `<span class="settingsRow__hint">${esc(hint)}</span>` : ''}${phIcon('caret-right')}</button>`;
   const viewRow = canSwitchViewFor(S) ? `<div class="settingsRow">${phIcon('user-switch')}<span class="settingsRow__label">${esc(t('shell.view_as'))}</span>
@@ -118,10 +147,17 @@ export function openSettings(onNavigate, onViewChange){
 export function initShell(onNavigate, onViewChange){
   const av = document.getElementById('avatarBtn');
   if(av) av.onclick = () => openSettings(onNavigate, onViewChange);
-  wireWhatsAppButton('shareToggle', buildMyWeekWhatsAppMessage);
+  const sh = document.getElementById('shareToggle'); if(sh) sh.onclick = openShare;
   initContact();
   document.addEventListener('click', e => {
     const b = e.target && e.target.closest ? e.target.closest('[data-opensettings]') : null;
     if(b) openSettings(onNavigate, onViewChange);
+    // Vast | Flex switch in the family form: drives the (hidden) select that the save code reads.
+    const ft = e.target && e.target.closest ? e.target.closest('[data-famtype]') : null;
+    if(ft){
+      const sel = document.getElementById(ft.dataset.famtypefor);
+      if(sel) sel.value = ft.dataset.famtype;
+      document.querySelectorAll('[data-famtypefor="' + ft.dataset.famtypefor + '"]').forEach(x => x.classList.toggle('active', x === ft));
+    }
   });
 }

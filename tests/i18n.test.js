@@ -84,6 +84,11 @@ test('the texts of the design-v2 audit exist: Dagbericht, passenger flow, toasts
   assert.equal(t('deviation.toast_vertrektijd'), 'Vertrektijd opgeslagen'); assert.equal(t('schedule.niet_ingedeeld_box'), 'Niet ingedeeld:'); assert.equal(t('flex.chip'), 'flex');
   assert.equal(t('profile.stop_testen'), 'Stoppen'); assert.equal(t('maint.banner'), 'Onderhoudsmodus staat aan. Ouders zien de app nu niet.');
 });
+test('the texts of the group-2 audit exist: share sheet, shift tools', () => {
+  assert.equal(t('shell.share_title'), 'Mijn week delen'); assert.equal(t('shell.share_button'), 'Delen');
+  assert.equal(t('schedule.opnieuw_indelen'), 'Opnieuw indelen'); assert.equal(t('schedule.ophalen'), 'Ophalen:');
+  assert.equal(t('schedule.vaste_plek', { dir: 'heen', name: 'De Parel' }), 'Vaste plek heen: De Parel'); assert.equal(t('schedule.opnieuw_ingedeeld', { n: 2 }), "Opnieuw ingedeeld: 2 auto('s)");
+});
 test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijden, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));
@@ -232,4 +237,9 @@ test('the period list texts: phase pills, who has handed in, and the capitalised
   assert.equal(t('period.who.missing', { p1: 'Emma, Sanne' }), 'Nog niet: Emma, Sanne'); assert.equal(t('period.who.more', { p1: 3 }), '+3');
   assert.equal(t('period.who.todo', { p1: 2 }), 'Nog niet doorgegeven (2)'); assert.equal(t('period.who.done', { p1: 6 }), 'Doorgegeven (6)');
   assert.equal(t('period.list.roosterMade'), 'Tijdelijk rooster gemaakt'); assert.equal(t('period.form.groupFill'), 'Invullen door ouders');
+});
+test('Wedstrijden intro and quick-car texts follow the design', () => {
+  assert.equal(t('matches.titel'), 'Wedstrijden van de komende 4 weken.');
+  assert.equal(t('deviation.zet_een_carpool_op_voor'), 'Een carpool kun je tot 7 dagen vooruit regelen.');
+  assert.equal(t('matches.ik_rij_ook'), 'Ik rij ook'); assert.equal(t('matches.auto_weghalen'), 'Mijn auto weghalen');
 });

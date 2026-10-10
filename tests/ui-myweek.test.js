@@ -68,7 +68,7 @@ test('a Saturday match carpool appears under its own day with the ride details',
 test('matchInfoHtml: team, home/away, opponent, date, time and location (HTML-escaped)', () => {
   resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ <O15>' }] });
   const html = matchInfoHtml({ calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'A&B', start: new Date(kick) });
-  assert.match(text(html), /AZ &lt;O15&gt; \(Thuis\) vs Hoorn O15-2 zaterdag 3 oktober · 10:30 · A&amp;B/);
+  assert.match(text(html), /za 3 okt.*aftrap 10:30.*AZ &lt;O15&gt; \(Thuis\) vs Hoorn O15-2.*A&amp;B/);
 });
 test('matchInfoHtml: an away match', () => {
   resetState({});
@@ -78,7 +78,7 @@ test('matchInfoHtml: an away match', () => {
 test('matchInfoHtml uses the shared classes (matchInfo, noteLine), no inline font size', () => {
   resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ' }] });
   const html = matchInfoHtml({ calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'Hoorn', start: new Date(kick) });
-  assert.match(html, /class="matchInfo"/); assert.match(html, /class="noteLine matchWhen"/); assert.doesNotMatch(html, /font-size/);
+  assert.match(html, /class="matchInfo"/); assert.match(html, /class="tag tag--match"/); assert.match(html, /class="matchKick"/); assert.doesNotMatch(html, /font-size/);
 });
 
 console.log('\n=== navigation ===');

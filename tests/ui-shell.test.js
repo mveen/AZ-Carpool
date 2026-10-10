@@ -10,7 +10,7 @@ import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState }
 import { S } from '../state.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
-import { initials, updateHeader, openSettings, initShell, setViewAs, TAB_TITLE_KEY } from '../ui-shell.js';
+import { initials, updateHeader, openSettings, initShell, setViewAs, shareWeek, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -104,10 +104,40 @@ test('setViewAs without a callback does not break', () => { coordWithFamily(); s
 test('initShell wires the avatar, the share button, the contact handler and the "back to Instellingen" links', () => {
   sampleParentState(); const { ov } = installSheet(); const handlers = []; dom.doc.addEventListener = (type, fn) => { if (type === 'click') handlers.push(fn); };
   initShell(() => {});
-  assert.equal(handlers.length, 2);   // contact names + [data-opensettings]
+  assert.equal(handlers.length, 2);   // contact names + [data-opensettings] and the Vast|Flex switch
   dom.el('avatarBtn').onclick(); assert.equal(ov.mounted, true);
   ov.mounted = false; ov.removed = false;
   handlers[1]({ target: { closest: sel => (sel === '[data-opensettings]' ? {} : null) } }); assert.equal(ov.mounted, true);
+  // Vast | Flex switch: sets the hidden select and moves the active mark.
+  const sel = { value: 'vast' }; const flexBtn = { dataset: { famtype: 'flex', famtypefor: 'coord_familyType' }, classList: { toggle() {} } };
+  dom.el('coord_familyType'); dom.doc.getElementById = id => (id === 'coord_familyType' ? sel : dom.el(id)); dom.doc.querySelectorAll = () => [flexBtn];
+  handlers[1]({ target: { closest: s => (s === '[data-famtype]' ? flexBtn : null) } }); assert.equal(sel.value, 'flex');
+});
+
+console.log('\n=== Mijn week delen (share sheet) ===');
+const hadNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+const setNav = v => Object.defineProperty(globalThis, 'navigator', { value: v, configurable: true, writable: true });
+const restoreNav = () => { if (hadNav) Object.defineProperty(globalThis, 'navigator', hadNav); else delete globalThis.navigator; };
+test('the share button opens a sheet with the text and a Delen button; Delen uses the phone share menu when there is one', async () => {
+  sampleParentState(); const { ov, els } = installSheet(); initShell(() => {});
+  assert.equal(typeof dom.el('shareToggle').onclick, 'function'); dom.el('shareToggle').onclick();
+  assert.equal(ov.mounted, true); assert.match(text(ov.html), /^Mijn week delen Je kiest zelf met wie, in WhatsApp of een andere app\. .+ Delen$/); assert.match(ov.html, /class="sharePreview"/);
+  const shared = []; setNav({ share: async d => { shared.push(d); } });
+  await els.doShare.onclick(); assert.equal(shared.length, 1); assert.ok(shared[0].text.length > 10); assert.equal(ov.removed, true); restoreNav();
+});
+test('without a share menu (or when it fails) WhatsApp opens with the text; cancelling the menu does nothing', async () => {
+  sampleParentState(); dom.opened.length = 0;
+  setNav({}); assert.equal(await shareWeek('Hallo'), true); assert.match(dom.opened[0][0], /^https:\/\/wa\.me\/\?text=Hallo/);
+  setNav({ share: async () => { throw new Error('boom'); } }); dom.opened.length = 0; await shareWeek('Hoi'); assert.match(dom.opened[0][0], /text=Hoi/);
+  setNav({ share: async () => { const e = new Error('x'); e.name = 'AbortError'; throw e; } }); dom.opened.length = 0;
+  assert.equal(await shareWeek('Nee'), false); assert.equal(dom.opened.length, 0);
+  restoreNav();
+});
+test('the sheet names the team when the app has exactly one match calendar', () => {
+  sampleParentState({ matchFeeds: [{ calendarId: 'c', label: 'AZ O15-1' }] }); const { ov } = installSheet(); openSettings(() => {});
+  assert.match(text(ov.html), /Ouder van Jahaimy · O15-1/);
+  sampleParentState({ matchFeeds: [{ calendarId: 'a', label: 'A' }, { calendarId: 'b', label: 'B' }] }); const o2 = installSheet(); openSettings(() => {});
+  assert.doesNotMatch(text(o2.ov.html), /· A|· B/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -555,11 +555,15 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 
 .matchCard{border-radius:var(--radius-hero);padding:var(--space-7)}
 .matchInfo{padding:var(--space-1) 0}
-.matchTitle{display:flex;align-items:center;gap:var(--space-3);font:var(--type-section)}
-.matchTitle .matchBall{color:var(--match-ink);display:inline-flex}
-.matchWhen{margin:var(--space-1) 0 0}
+.matchHead{display:flex;align-items:center;gap:var(--space-3)}
+.matchKick{font:var(--type-caption);color:var(--text-muted)}
+.matchTitle{margin-top:var(--space-3);font:800 17px/1.25 var(--font-sans)}
+.matchLoc{margin-top:2px;font:var(--type-small);color:var(--text-2);text-decoration:underline;text-underline-offset:3px}
+.matchLoc a{color:inherit}
 .matchDist{font:var(--type-caption);color:var(--text-muted)}
 .matchCarRow{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);font:var(--type-caption)}
+.matchActions{display:flex;gap:var(--space-3);margin-top:var(--space-3)}
+.matchActions:empty{display:none}
 .matchCarRow .matchCarDep{font:var(--type-time-sm);color:var(--match-ink);flex-shrink:0}
 .matchCarRow.mine{background:var(--match-soft);border-radius:var(--radius-chip);padding:var(--space-3) var(--space-4);border-top-color:transparent}
 .matchCapWarn{color:var(--warn-ink);font:var(--type-caption);font-weight:700;margin-top:var(--space-3)}
@@ -648,3 +652,20 @@ div.settingsRow{cursor:default}
 .sheetItem>svg{flex:none;fill:currentColor}
 .sheetItem__label{flex:1;font:var(--type-card-title);font-weight:600}
 .sheetItem--muted{opacity:.45}
+
+.shiftTools{display:flex;gap:var(--space-3);margin:var(--space-3) 0 0}
+.shiftTools .btn{flex:1;height:38px;min-height:38px;margin:0;font-size:12px;gap:var(--space-2)}
+
+/* Sheets slide up from the bottom, the scrim fades in (design v2); not for people who asked for less motion */
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+.sheet,.helpPanel{animation:sheetUp .22s ease-out}
+.sheetOverlay,.helpOverlay{animation:scrimIn .22s ease-out}
+@media (prefers-reduced-motion:reduce){.sheet,.helpPanel,.sheetOverlay,.helpOverlay{animation:none}}
+.sharePreview{white-space:pre-wrap;background:var(--surface-inset);border-radius:var(--radius-panel);padding:var(--space-5);margin:var(--space-5) 0;font:var(--type-small);color:var(--text-2);max-height:40vh;overflow:auto}
+.contactAvatar{width:52px;height:52px;font-size:18px;background:var(--surface-soft);color:var(--text-1)}
+
+.famName{font:var(--type-card-title)}
+.famTags{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-2)}
+.famTags:empty{display:none}
+.famMissing{font:var(--type-caption);margin-top:var(--space-1)}
