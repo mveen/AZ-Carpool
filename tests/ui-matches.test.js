@@ -63,9 +63,9 @@ test('a match within 8 days can get a carpool; the "set up a carpool" sentence s
   state({ matches: [home] });
   const s = text(render());
   assert.match(s, /za 3 okt.*aftrap 10:30.*AZ O15-1 \(Thuis\) vs Hoorn O15-2.*Sportpark Hoorn/);
-  assert.match(s, /Een carpool kun je tot 7 dagen vooruit regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rij ook \+ Auto toevoegen/);
+  assert.match(s, /Een carpool kun je in de komende 8 dagen regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rij ook \+ Auto toevoegen/);
   state({ matches: [far] });
-  assert.doesNotMatch(text(render()), /tot 7 dagen vooruit/);
+  assert.doesNotMatch(text(render()), /in de komende 8 dagen regelen/);
   assert.doesNotMatch(render(), /data-iride/);
 });
 test('a later match gets a note with the first day a carpool can be set up, and no add button', () => {
