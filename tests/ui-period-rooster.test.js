@@ -14,6 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
+import { clearDeviation } from '../data.js';
 import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, setPeriodCarPlace, setPeriodDeparture, swapPeriodGirls, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
 
 const dom = installFakeDom();
@@ -270,6 +271,14 @@ await testAsync('a move into a full car offers a swap instead of refusing; confi
   const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
   assert.ok(cars[1].girlIds.includes('f1') && !cars[1].girlIds.includes('f6')); assert.ok(cars[0].girlIds.includes('f6') && !cars[0].girlIds.includes('f1')); assert.equal(S.periodSwap, null);
 });
+await testAsync('a one-off change of this week that overrules the temporary rooster is flagged, and can be removed', async () => { await inOpen(async () => {
+  const dev = { day: 'Di', direction: 'terug', weekKey: '2026-W44', cars: [{ driverFamilyId: 'f4', girlIds: ['f1'], departureTime: '09:15' }] };
+  useFakeDb({ ...sampleDbSeed(), 'deviations/Di_terug': dev });
+  coord({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27', deviations: { Di_terug: dev } });
+  render(); assert.match(html, /data-pdevclear="2026-10-27\|terug"/); assert.match(text(html), /eenmalige wijziging/i);
+  assert.equal(await clearDeviation('Di', 'terug'), true); assert.equal(S.deviations.Di_terug, undefined);
+  render(); assert.doesNotMatch(html, /data-pdevclear/);
+}); });
 await testAsync('changing the driver of a car', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]) });
   assert.equal(await withFakeNowAsync(OPEN, () => setPeriodDriver('2026-10-27', 'terug', 0, 'f2')), true);

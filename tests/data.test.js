@@ -18,7 +18,7 @@ import {
   createFirestoreDb, initDb, db, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
-  savePeriodShift, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
+  savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
   createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
 } from '../data.js';
 
@@ -436,6 +436,11 @@ await testAsync('a temporary car keeps its own departure and arrival place (only
   const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
   assert.equal(cars[0].stdLocationId, 'a4-de-hoek'); assert.equal(cars[0].stdDestination, 'ATC');
   assert.equal('stdLocationId' in cars[1], false); assert.equal('stdDestination' in cars[1], false);
+});
+await testAsync('clearDeviation removes the one-off change of a shift from the database and from the state', async () => {
+  const dev = { day: 'Di', direction: 'terug', weekKey: '2026-W44', cars: [] };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Di_terug': dev }); coordP({ deviations: { Di_terug: dev } });
+  assert.equal(await clearDeviation('Di', 'terug'), true); assert.equal(fake.get('deviations/Di_terug'), undefined); assert.equal(S.deviations.Di_terug, undefined);
 });
 await testAsync('a shift with nobody in a car is still stored ("made, nobody rides"): the standard rooster no longer applies there', async () => {
   const fake = useFakeDb(sampleDbSeed()); coordP();

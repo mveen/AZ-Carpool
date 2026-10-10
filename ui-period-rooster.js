@@ -6,10 +6,10 @@
 // The data rules live in period.js and rides.js; storage in data.js (periodCars/*).
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
+import { dayUp, isoDayLabel, isoRangeLabel, weekKeyDayIso } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
-import { availableDrivers, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
-import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
+import { activeDeviation, availableDrivers, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
+import { clearDeviation, deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodSwapGirls, periodWorkdays } from './period.js';
 import { carRouteHtml, driverLineHtml, flexSuffix, openCarPlaceSheet, renderSchedule } from './ui-schedule.js';
 import { myLinkedFamilyId } from './coordinator.js';
@@ -209,11 +209,17 @@ export function periodDirectionHtml(iso, direction){
   const body = made
     ? ((cars.length? cars.map((c, i) => carHtml(iso, direction, c, i, cars)).join('') : `<p class="muted">${t('period.view.noCars')}</p>`) + unplacedHtml(iso, direction, cars))
     : `<p class="muted">${t('period.view.notMade')}</p>`;
+  // A one-off change from Wijzigen for this date goes before the temporary rooster: say so, and let the coordinator remove it.
+  const day = dayKeyOf(iso);
+  const overruled = S.canEdit && made && day && weekKeyDayIso(S.currentWeekKey, day)===iso && activeDeviation(day, direction);
+  const overruleHtml = overruled
+    ? `<div class="alertCard alertCard--stack" role="alert"><div class="alertCard__text"><b><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span> ${esc(t('period.view.overruled'))}</b></div>
+        <div class="alertCard__row"><button type="button" class="btn small secondary" data-pdevclear="${iso}|${direction}">${t('period.view.overruledClear')}</button></div></div>` : '';
   const replan = S.canEdit? `<button type="button" class="btn small secondary" data-preplan="${iso}|${direction}">${t('period.view.replan')}</button>` : '';
   return `<div class="periodDir" data-perdir="${iso}|${direction}" style="margin-bottom:12px">
       <div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div>${replan}</div>
       <div class="periodTimes"><div class="muted" style="font-size:12px;margin:6px 0 2px">${t('period.view.times')}</div>${periodTimesHtml(iso, direction)}</div>
-      ${body}
+      ${overruleHtml}${body}
     </div>`;
 }
 
@@ -308,6 +314,11 @@ export function wirePeriodRooster(){
   document.querySelectorAll('[data-periodmake]').forEach(b => b.onclick = () => { hapticTap(); return makePeriodRooster(b.dataset.periodmake).then(then); });
   document.querySelectorAll('[data-periodremake]').forEach(b => b.onclick = () => twoStepConfirm(b, t('beheer.zeker_nogmaals_klikken'), () => makePeriodRooster(b.dataset.periodremake).then(then)));
   document.querySelectorAll('[data-periodremove]').forEach(b => b.onclick = () => twoStepConfirm(b, t('beheer.zeker_nogmaals_klikken'), () => deletePeriodRooster(b.dataset.periodremove).then(then)));
+  document.querySelectorAll('[data-pdevclear]').forEach(b => b.onclick = () => twoStepConfirm(b, t('beheer.zeker_nogmaals_klikken'), async () => {
+    const [iso, direction] = b.dataset.pdevclear.split('|');
+    if(await clearDeviation(dayKeyOf(iso), direction)) showToast(t('period.view.overruledCleared'));
+    renderSchedule();
+  }));
   document.querySelectorAll('[data-preplan]').forEach(b => b.onclick = () => {
     const [iso, direction] = b.dataset.preplan.split('|');
     hapticTap(); return replanPeriodShift(iso, direction).then(then);
