@@ -203,5 +203,11 @@ test('the minute check and coming back to the app run the Ritbeurs checks (late 
   assert.equal((src.match(/checkRitbeurs\(\)/g) || []).length, 2);
 });
 
+console.log('\n=== swipe between tabs ===');
+test('bootstrap wires swipe-between-tabs to activateTab', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /initSwipeTabs\(activateTab\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

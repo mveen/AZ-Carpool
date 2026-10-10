@@ -1,15 +1,15 @@
 {
   "app.js": {
-    "module": "bdce9dfeab2bf8bf810e6afd46921aa98a6e07d603a120e9b0d703f9be3fe7c0",
-    "test": "59ca179c23027d7d1b540c5f46c38dd3318f6603cf451a49d60dbc3243ee305b"
+    "module": "f98cbfc07ff44db8d420a6643162931f1b86d32c327ab3e8df2d260399e82538",
+    "test": "96538d048bb193b1a4614916717e4db5d3de58733b5aeb809b74348419a31c2b"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
     "test": "5057ab8b981cf306304022fe9c3584dc833e1f04ea0f974b54b57afbaa5926be"
   },
   "constants.js": {
-    "module": "b33c8f056d951d0db7384eae0d16f04e991e4128a2345d14d5dac11c48e1d8d4",
-    "test": "69ed83174a4d15b097b98010901b307439675d3ef85f7f34b37cbcc7bfe2c3ec"
+    "module": "e79bbf09e11bdb69bffe6d70146d247d3741b25513f921db428a12840c21016b",
+    "test": "0791f5849f4957e740be65d497a5181bfa5a95c4d5c21d812539ca85ff536eb1"
   },
   "coordinator.js": {
     "module": "d995027466b4c79fe3f530e8ed77ac3f035fd0106d2f6936f0d8b0167f9bef2f",
@@ -114,6 +114,10 @@
   "state.js": {
     "module": "149188891116da45aab58589e3a70ff2260105ec5fd3197f72616b3c1b1caad2",
     "test": "4578b380503d3c302343a59c9832f2394fa33a9aa742220cfe4333ea3b021360"
+  },
+  "swipe-tabs.js": {
+    "module": "0cd7e7ab88193d845bd2b9a8948bd86d3bc9cc48c57d5df39fe6ef1d60dfe1bb",
+    "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
     "module": "99758becececf448d3c9f7fa5ee719821ce68da666867dee15ca2469c078e53a",
