@@ -196,7 +196,7 @@ test('the texts of the Gereden shifts screens', () => {
 
 test('the Ritbeurs texts exist and fill their placeholders (no place buttons any more)', () => {
   assert.equal(hasKey('ritbeurs.place.alkmaar'), false); assert.equal(hasKey('ritbeurs.moment.plaats'), false);
-  assert.equal(t('ritbeurs.seg.ritbeurs'), 'Ritbeurs'); assert.equal(t('ritbeurs.urg.soon'), 'Vóór 18:00 regelen'); assert.equal(t('ritbeurs.urg.late'), 'Deadline voorbij');
+  assert.equal(t('ritbeurs.seg.ritbeurs'), 'Ritten ruilen'); assert.equal(t('ritbeurs.title'), 'Ritten ruilen'); assert.equal(t('ritbeurs.urg.soon'), 'Vóór 18:00 regelen'); assert.equal(t('ritbeurs.urg.late'), 'Deadline voorbij');
   assert.equal(t('ritbeurs.toast.aangebodenBackups', { n: 2 }), 'Rit aangeboden. 2 back-up(s) gewaarschuwd.');
   assert.equal(t('ritbeurs.warn.zitplaatsen', { need: 3, have: 2 }), 'Let op: er zitten 3 kinderen in deze auto en jij hebt 2 plaatsen.');
   assert.match(t('ritbeurs.confirm.regel3'), /Overnemen is definitief/);
