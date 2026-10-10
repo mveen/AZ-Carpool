@@ -41,6 +41,7 @@ export const S = {
   matchCarpools: {},
   weekendMatchBySlug: {},
   openMatchCarpoolForm: null,
+  editMatchCarIdx: null,   // index of the car being edited in the open match form (null = adding a new car)
   currentWeekKey: null,
   dayCoordinators: {},
   periods: {},             // the periods with other times (holiday, exam week), { firstDay: period }; several can exist at once
