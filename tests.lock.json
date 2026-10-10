@@ -49,7 +49,7 @@
   },
   "i18n.js": {
     "module": "ec76fc171e8052c78899cdf36cfd082ae6dbdb87524bf927b950de44a78a0cde",
-    "test": "1993fe8d3097d27e8917adc8bc3fa1f86ce1c31970a5d5963f01d45042e1beea"
+    "test": "ba2c05de0f71d4043a4d32cfae21abbc6e49c5525b1ed716323b78016bfa0a1f"
   },
   "impact.js": {
     "module": "af124ad7aed80f581c5080bf9e50f348c4c24d1819df9d0cff1af9c0c0881d3c",
@@ -116,8 +116,8 @@
     "test": "6995068eca6a6ae5b7813251c711bff2ffc5b51ad47fba423a3ef0fd01b08847"
   },
   "texts-nl.js": {
-    "module": "95bc4fe5d7a24c72edd20c8cee3cd9247ac794aa364e2712d0cff4276a24d4ba",
-    "test": "1993fe8d3097d27e8917adc8bc3fa1f86ce1c31970a5d5963f01d45042e1beea"
+    "module": "2f241255f8e9660c43d3189460404e186c50aecbf3dbc907ceb2095303aa568e",
+    "test": "ba2c05de0f71d4043a4d32cfae21abbc6e49c5525b1ed716323b78016bfa0a1f"
   },
   "ui-beheer.js": {
     "module": "901bad886a0c902247581a0b88456707c9a8dcc4f120090d6ebb2bed7ffd13b4",
