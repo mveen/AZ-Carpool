@@ -93,5 +93,9 @@ test('ui-shell.js (new code) has no colour literal and no inline font size: it u
   assert.doesNotMatch(src, /font-size:/);
 });
 
+test('sheets slide up and the scrim fades in, except for people who asked for less motion', () => {
+  assert.match(components, /@keyframes sheetUp/); assert.match(components, /\.sheet,\.helpPanel\{animation:sheetUp/); assert.match(components, /prefers-reduced-motion:reduce\)\{[^}]*animation:none/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

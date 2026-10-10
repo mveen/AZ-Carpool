@@ -67,5 +67,10 @@ test('initContact opens the sheet for a [data-contact] button and ignores other 
   handler({ target: { closest: () => ({ dataset: { contact: 'nope' } }) } }); assert.equal(ov.mounted, false);
 });
 
+test('design v2: the contact sheet starts with an avatar circle (initials) next to the name', () => {
+  sampleParentState(); const ov = installSheet(); openContactSheet('f2');
+  assert.match(ov.html, /<span class="settingsAvatar contactAvatar">PP<\/span>/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

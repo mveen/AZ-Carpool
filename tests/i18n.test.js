@@ -84,6 +84,11 @@ test('the texts of the design-v2 audit exist: Dagbericht, passenger flow, toasts
   assert.equal(t('deviation.toast_vertrektijd'), 'Vertrektijd opgeslagen'); assert.equal(t('schedule.niet_ingedeeld_box'), 'Niet ingedeeld:'); assert.equal(t('flex.chip'), 'flex');
   assert.equal(t('profile.stop_testen'), 'Stoppen'); assert.equal(t('maint.banner'), 'Onderhoudsmodus staat aan. Ouders zien de app nu niet.');
 });
+test('the texts of the group-2 audit exist: share sheet, shift tools', () => {
+  assert.equal(t('shell.share_title'), 'Mijn week delen'); assert.equal(t('shell.share_button'), 'Delen');
+  assert.equal(t('schedule.opnieuw_indelen'), 'Opnieuw indelen'); assert.equal(t('schedule.ophalen'), 'Ophalen:');
+  assert.equal(t('schedule.vaste_plek', { dir: 'heen', name: 'De Parel' }), 'Vaste plek heen: De Parel'); assert.equal(t('schedule.opnieuw_ingedeeld', { n: 2 }), "Opnieuw ingedeeld: 2 auto('s)");
+});
 test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijden, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));

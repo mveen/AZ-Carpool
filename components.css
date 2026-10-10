@@ -651,3 +651,12 @@ div.settingsRow{cursor:default}
 
 .shiftTools{display:flex;gap:var(--space-3);margin:var(--space-3) 0 0}
 .shiftTools .btn{flex:1;height:38px;min-height:38px;margin:0;font-size:12px;gap:var(--space-2)}
+
+/* Sheets slide up from the bottom, the scrim fades in (design v2); not for people who asked for less motion */
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+@keyframes scrimIn{from{opacity:0}to{opacity:1}}
+.sheet,.helpPanel{animation:sheetUp .22s ease-out}
+.sheetOverlay,.helpOverlay{animation:scrimIn .22s ease-out}
+@media (prefers-reduced-motion:reduce){.sheet,.helpPanel,.sheetOverlay,.helpOverlay{animation:none}}
+.sharePreview{white-space:pre-wrap;background:var(--surface-inset);border-radius:var(--radius-panel);padding:var(--space-5);margin:var(--space-5) 0;font:var(--type-small);color:var(--text-2);max-height:40vh;overflow:auto}
+.contactAvatar{width:52px;height:52px;font-size:18px;background:var(--surface-soft);color:var(--text-1)}
