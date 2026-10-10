@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import fs from 'node:fs';
-import { APP_VERSION, PH_PATHS, DAYS, DIR_TEXT, APP_URL, WA_ICON_SMALL, WHATSAPP_SVG, todayKey } from '../constants.js';
+import { APP_VERSION, PH_PATHS, DAYS, DIR_TEXT, APP_URL, WA_ICON_SMALL, WHATSAPP_SVG, todayKey, todayKeyNow } from '../constants.js';
 
 console.log('=== constants.js ===');
 test('DAYS are Monday to Friday, with the stored key first and the Dutch name second', () => {
@@ -57,6 +57,11 @@ test('design v2: no hand-drawn icon is left (no <line>, <circle>, <rect>, <polyl
   assert.match(WHATSAPP_SVG, /fill="currentColor"/); assert.match(WA_ICON_SMALL, /fill="currentColor"/);
 });
 test('the megaphone (notice bar) and the eye (test bar) exist', () => { assert.ok(PH_PATHS['megaphone-fill'] && PH_PATHS.eye); });
+
+test('todayKeyNow follows the clock (a phone that stays open past midnight), todayKey is the value at start-up', () => {
+  assert.equal(typeof todayKeyNow, 'function'); assert.ok(['Ma', 'Di', 'Wo', 'Do', 'Vr', null].includes(todayKeyNow())); assert.equal(todayKey, todayKeyNow());
+  assert.ok(PH_PATHS['plus-circle']);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

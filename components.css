@@ -428,7 +428,7 @@ button.chip{cursor:pointer;font-family:inherit}
 
 /* ---------- Car card (Rooster): time, driver, route, seats, passenger chips ---------- */
 .carCard{background:var(--surface-card);border-radius:var(--radius-car);padding:var(--space-5) var(--space-6);margin-top:var(--space-3);box-shadow:var(--shadow-card);border:2px solid transparent}
-.carCard--mine{border-color:var(--warn-edge)}
+.carCard--changed{border-color:var(--warn-edge)}
 .carCard--match{border-color:var(--match-ink)}
 .carCard__head{display:flex;align-items:center;gap:var(--space-5)}
 .carCard__time{font:800 20px/1 var(--font-mono);letter-spacing:var(--track-time)}
@@ -461,10 +461,9 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 /* ---------- Old "group" cards (suggestions, pickers, Wijzigen, matches): same card look until their screens are rebuilt ---------- */
 .group{border:0;border-radius:var(--radius-car);box-shadow:var(--shadow-card);padding:var(--space-6);margin:var(--space-4) 0;background:var(--surface-card)}
 .group.suggestion,.group.warning,.group.mineDriving,.group.matchGroup{border-left:0}
-.group.suggestion{box-shadow:var(--shadow-card),inset 4px 0 0 var(--ok)}
+.group.suggestion{box-shadow:var(--shadow-card)}
 .group.suggestion.primary{background:var(--ok-soft)}
-.group.warning{box-shadow:var(--shadow-card),inset 4px 0 0 var(--warn-icon)}
-.group.matchGroup{box-shadow:var(--shadow-card),inset 4px 0 0 var(--match-ink)}
+.group.warning{border:2px solid var(--warn-edge)}
 .pill{display:inline-block;padding:var(--space-2) var(--space-4);margin:2px 3px 0 0;font:var(--type-caption);font-weight:600;border-radius:var(--radius-pill);background:var(--surface-soft);color:var(--text-2);border:1px solid transparent}
 .pill.mine{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
 
@@ -618,3 +617,20 @@ div.settingsRow{cursor:default}
 .testBar{flex:none;display:flex;align-items:center;gap:var(--space-3);background:var(--toast-bg);color:var(--toast-ink);padding:var(--space-2) var(--space-3) var(--space-2) var(--space-7);font:var(--type-caption);font-weight:600}
 .testBar__text{flex:1}
 .testBar__stop{height:32px;padding:0 var(--space-5);border-radius:var(--radius-pill);border:0;background:var(--on-accent);color:var(--ink-900);font:700 12px/1 var(--font-sans);cursor:pointer}
+
+.dashBox__actions{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4)}
+.carCard__head input.timeBig{width:104px;flex:none}
+.carCard__edit select{width:100%}
+
+.dayPills--1{grid-template-columns:minmax(0,1fr)}
+.dayPills--2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dayPills--3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.dayPills--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tag--flex{background:transparent;border:1px dashed var(--text-muted);color:var(--text-2)}
+.dashBox__hint{color:var(--text-2)}
+.devPickToggle{height:var(--hit-min);border-radius:var(--radius-control);border:1px dashed var(--text-muted);background:var(--surface-inset);color:var(--text-1);font:var(--type-button);cursor:pointer}
+.devPickList{display:flex;flex-direction:column;gap:var(--space-2)}
+.devPickRow{display:flex;align-items:center;gap:var(--space-4);min-height:48px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-card);color:var(--text-1);padding:0 var(--space-5);cursor:pointer;text-align:left;font-family:inherit;font-size:20px}
+.devPickRow__name{flex:1;font:var(--type-card-title);font-weight:600}
+.devPickRow__sub{font:var(--type-caption);color:var(--text-muted)}
+.conclusieCard .btn{width:100%;height:48px;border-radius:var(--radius-panel);font-size:14px}

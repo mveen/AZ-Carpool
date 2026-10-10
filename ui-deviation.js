@@ -2,14 +2,15 @@
 import { t } from './i18n.js';
 import { esc, foldHtml, hapticTap, lastUpdateFooter, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, FREE_TEXT_MAX, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
-import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, girlName, isAvailable, isFlex, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds } from './rides.js';
+import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, buildWhatsAppMessage, reserveAskText } from './message-texts.js';
-import { DAYS, WHATSAPP_SVG, todayKey } from './constants.js';
+import { DAYS, WHATSAPP_SVG, todayKeyNow } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey, weekRangeLabel } from './dates.js';
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { contactButtonHtml } from './ui-contact.js';
+import { flexSuffix } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
 import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs, wireRitbeursSegment } from './ui-ritbeurs.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
@@ -62,14 +63,17 @@ export function renderDeviationTab(){
   const seg = rbOn? ritbeursSegmentHtml() : '';
   if(rbOn && S.rbView==='ritbeurs'){ box.innerHTML = seg + ritbeursViewHtml(); wireRitbeurs(); markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
-  if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKey || 'Ma';
+  if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKeyNow() || 'Ma';
   const day = S.deviationDay;
   const dayLabel = DAYS.find(([k])=>k===day)[1];
   const changedDays = DAYS.filter(([k])=>activeDeviation(k,'heen')||activeDeviation(k,'terug')).map(([k])=>k);
-  const pillsHtml = DAYS.map(([k,label])=>{
+  // Today and the days after it (design v2). The open day always stays visible, e.g. when Mijn week sent you to an earlier one.
+  const todayIdx = DAYS.findIndex(([k])=>k===todayKeyNow());
+  const pillDays = DAYS.filter(([k],i)=> todayIdx<0 || i>=todayIdx || k===day);
+  const pillsHtml = pillDays.map(([k,label])=>{
     const changed = changedDays.includes(k);
     const isActive = k===day;
-    const isToday = k===todayKey;
+    const isToday = k===todayKeyNow();
     return `<button type="button" class="dayPill devDayPill${isActive?' on':''}${isToday?' dayPill--today':''}${changed?' changed':''}" data-devday="${k}" aria-pressed="${isActive}" aria-label="${label} ${dateForWeekday(k).getDate()}${changed?t('deviation.gewijzigd'):''}">
       <span class="dayPill__ab">${isToday? esc(t('myweek.vandaag').toLowerCase()) : dayUp(k).toLowerCase()}</span>
       <span class="dayPill__n">${dateForWeekday(k).getDate()}</span>
@@ -77,7 +81,7 @@ export function renderDeviationTab(){
     </button>`;
   }).join('');
   box.innerHTML = `${seg}${periodCardsHtml()}${deviationIntentHtml()}
-    <div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>
+    <div class="dayPills dayPills--${pillDays.length}" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>
     <div class="infoLine"><span class="infoLine__text">${t('deviation.eenmalige_ritaanpassing_voor_deze_week')} ${weekRangeLabel()}. ${t('deviation.wijzigingen_hier_gelden_alleen_voor')} ${dayLabel.toLowerCase()} ${t('deviation.deze_week_en_verdwijnen_dit')}</span></div>
     ${changedDays.length? `<p class="noteLine"><span class="dayPill__dot dayPill__dot--inline" aria-hidden="true"></span> ${t('deviation.deze_week_gewijzigd')}</p>` : ''}
     <div class="daysection"><h3 class="srOnly">${dayLabel}</h3>
@@ -165,6 +169,19 @@ function devDirHeader(direction,cars){
 
 const rawGirlName = id => fam(id).girlName||fam(id).parentName||id;
 
+// "+ Passagier toevoegen": pick someone who is not in any car of this shift (design v2). A full car says "Auto is vol".
+function addPassengerHtml(key, car, girls, unassigned, day, direction){
+  if(!unassigned.length) return '';
+  const cap = car.driverFamilyId? seats(fam(car.driverFamilyId)) : null;
+  if(cap!=null && girls.length>=cap) return `<p class="noteLine">${t('deviation.auto_is_vol')}</p>`;
+  const open = !!S.devPick[key];
+  const list = open? `<div class="devPickList">${unassigned.map(([id,f])=>{
+    const time = famTime(id,day,direction);
+    return `<button type="button" class="devPickRow" data-devaddpick="${esc(key)}|${esc(id)}">${phIcon('plus-circle')}<span class="devPickRow__name">${esc(f.girlName||f.parentName||id)}${flexSuffix(id)}</span><span class="devPickRow__sub">${time? esc(time) : esc(t('deviation.rijdt_normaal_niet'))}</span></button>`;
+  }).join('')}</div>` : '';
+  return `<button type="button" class="devPickToggle" data-devpicktoggle="${esc(key)}" aria-expanded="${open}">${esc(open? t('common.annuleren') : t('deviation.passagier_toevoegen'))}</button>${list}`;
+}
+
 // One ride as a compact card. Closed: one line (time, driver, route) and the passengers. "Wijzig" unfolds the form.
 function devRideHtml(day,direction,idx,cars,ctx){
   const c = cars[idx], key = `${day}|${direction}|${idx}`;
@@ -182,7 +199,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
     </button>`;
   let body;
   if(!open){
-    body = `<div class="chips">${girls.map(id=>`<span class="chip${mine(id)?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}</span>`).join('') || `<span class="muted">${t('deviation.geen_passagiers')}</span>`}</div>`;
+    body = `<div class="chips">${girls.map(id=>`<span class="chip${mine(id)?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}${flexSuffix(id)}</span>`).join('') || `<span class="muted">${t('deviation.geen_passagiers')}</span>`}</div>`;
   } else {
     // One-off pickup/drop-off place (US-15): a place from Beheer, or free input (an address or a point of interest).
     // Empty = the standard place of this shift. Free input lives on this ride only and is never stored as a place.
@@ -203,7 +220,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
       const ctl = `data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}"`;
       return `<div class="devKidRow">
         <div class="devKidLine">
-          <span class="devKidName${mine(id)?' mine':''}">${girlName(id)}</span>
+          <span class="devKidName${mine(id)?' mine':''}">${girlName(id)}</span>${isFlex(fam(id))? `<span class="tag tag--flex">${t('flex.chip')}</span>` : ''}
           <button type="button" class="devKidMore${active?' on':''}" data-devkid="${key}|${id}" aria-expanded="${active}" aria-label="${esc(t('deviation.opties'))}">···</button>
         </div>
         ${active? `<div class="devKidActions">
@@ -224,10 +241,11 @@ function devRideHtml(day,direction,idx,cars,ctx){
         <div class="devDestRow">${destBtn('AFC', locCfg.destination.name, CITY_AFC)}${destBtn('ATC', ATC_NAME, CITY_ATC)}</div>
       </div>
       <div class="devField"><span>${t('deviation.kinderen')}</span><div class="devKidList">${kidRows}</div></div>
+      ${addPassengerHtml(key, c, girls, ctx.unassigned, day, direction)}
     </div>`;
   }
   const toast = undo? `<div class="devToast" role="status"><span>${esc(undo.text)}</span><button type="button" class="devToastUndo" data-devundo="1">${t('deviation.ongedaan')}</button></div>` : '';
-  return `<div class="devRide carCard devCard${open?' open':''}" data-devcar="${key}">${head}${body}${toast}</div>`;
+  return `<div class="devRide carCard devCard${open?' open':''}${activeDeviation(day,direction)?' carCard--changed':''}" data-devcar="${key}">${head}${body}${toast}</div>`;
 }
 
 export function renderDevDirection(day,direction){
@@ -237,59 +255,69 @@ export function renderDevDirection(day,direction){
   const assignedIds = new Set(cars.flatMap(c=>c.girlIds));
   const unassigned = sortFamEntriesByGirl(allFamilies.filter(([id])=>!assignedIds.has(id)));
 
-  const ctx = { allFamilies, myIdDev: myFamilyId(), locCfg: locationsCfg() };
+  const ctx = { allFamilies, myIdDev: myFamilyId(), locCfg: locationsCfg(), unassigned };
   const cardsHtml = cars.map((c,idx)=>devRideHtml(day,direction,idx,cars,ctx)).join('') || `<p class="muted">${t('deviation.geen_ritten_gepland_in_het')}</p>`;
 
-  const addOptions = cars.length? `<option value="">${t('deviation.voeg_toe_aan_auto')}</option>` + cars.map((c,i)=>`<option value="${i}">${t('deviation.auto')} ${esc(fam(c.driverFamilyId).parentName||'?')}</option>`).join('') : '';
-  const unassignedHtml = unassigned.length? foldHtml(`others|${day}|${direction}`, t('deviation.andere_meiden'), `<p class="muted" style="margin-top:0">${t('deviation.ook_meiden_die_niet_standaard')}</p>
-      ${unassigned.map(([id,f])=>`
-        <div class="rowflex" style="padding:4px 0;border-bottom:1px solid var(--line)">
-          <span style="flex:1">${esc(f.girlName||f.parentName||id)}</span>
-          ${cars.length? `<select class="devAddSel" data-day="${day}" data-direction="${direction}" data-girl="${id}" style="width:auto;font-size:12px">${addOptions}</select>` : t('deviation.span_class_muted_nog_geen')}
-        </div>`).join('')}`, 'group') : '';
+  // Who still has no car on this shift, and who has been marked as not riding along (design v2).
+  const unplaced = unplacedFor(day,direction,'week');
+  const unplacedHtml = unplaced.length? `<div class="dashBox"><b>${t('schedule.niet_ingedeeld_box')}</b> ${unplaced.map(([id])=>girlName(id)).join(', ')}<br><span class="dashBox__hint">${t('deviation.niet_ingedeeld_hint')}</span></div>` : '';
+  const notRiding = ovGirlsFor(day,undefined,direction);
+  const notRidingHtml = notRiding.length? `<div class="noteLine">${t('schedule.rijdt_niet_mee')} ${sortGirlIds(notRiding).map(id=>girlName(id)).join(', ')}</div>` : '';
 
   const focus = !!(S.deviationIntent && S.deviationIntent.some(c=>c.day===day && c.direction===direction));
   return `<div class="devDir${focus?' devFocus':''}">
     ${devDirHeader(direction,cars)}
     ${cardsHtml}
     ${backupHtml(day,direction,cars)}
+    ${unplacedHtml}${notRidingHtml}
     ${flexSignupHtml(day,direction,cars)}
-    ${unassignedHtml}
     ${dev? `<button type="button" class="linkbtn" data-devreset="${day}|${direction}">${t('deviation.terug_naar_standaard_rooster')}</button>` : ''}
   </div>`;
+}
+
+// One-off edits save at once and confirm with a toast that has "Ongedaan" (design v2): the cars as they were are put back.
+const snapshotCars = (day,direction)=>effectiveCars(day,direction).map(c=>({...c, girlIds:[...(c.girlIds||[])]}));
+export async function saveWithUndo(day,direction,prev,cars,text){
+  const ok = await saveDeviationCars(day,direction,cars);
+  if(ok) showToast(text, { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) showToast(t('deviation.hersteld')); } } });
+  return ok;
 }
 
 export function attachDeviationHandlers(){
  try{
   document.querySelectorAll('.devDriverSel').forEach(sel=>sel.onchange=async ()=>{
     const {day,direction,caridx}=sel.dataset; const idx=+caridx;
+    const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     cars[idx]={...cars[idx], driverFamilyId: sel.value||null};
-    await saveDeviationCars(day,direction,cars);
+    await saveWithUndo(day,direction,prev,cars,t('deviation.toast_chauffeur'));
   });
   document.querySelectorAll('.devLocSel').forEach(sel=>sel.onchange=async ()=>{
     const {day,direction,caridx}=sel.dataset; const idx=+caridx; const key=`${day}|${direction}|${idx}`;
     // "Ander adres…" only opens the free input; nothing is saved until something is typed.
     if(sel.value==='__free'){ S.devFree[key]=true; renderDeviationTab(); return; }
+    const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     // A place (or "Standaard") replaces any free input. undefined = back to the standard; saveDeviationCars leaves it out.
     cars[idx]={...cars[idx], locationId: sel.value||undefined, locationText: undefined};
     S.devFree[key]=false;
-    await saveDeviationCars(day,direction,cars);
+    await saveWithUndo(day,direction,prev,cars,t('deviation.toast_plek'));
   });
   document.querySelectorAll('.devLocText').forEach(inp=>inp.onchange=async ()=>{
     const {day,direction,caridx}=inp.dataset; const idx=+caridx;
+    const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     const text=inp.value.trim().slice(0,FREE_TEXT_MAX);
     // Free input is stored on this ride only (the deviation expires with the week); it never becomes a place in Beheer.
     cars[idx]= text? {...cars[idx], locationText:text, locationId:undefined} : {...cars[idx], locationText:undefined};
-    await saveDeviationCars(day,direction,cars);
+    await saveWithUndo(day,direction,prev,cars,t('deviation.toast_plek'));
   });
   document.querySelectorAll('.devDeptimeInp').forEach(inp=>inp.onchange=async ()=>{
     const {day,direction,caridx}=inp.dataset; const idx=+caridx;
+    const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     cars[idx]={...cars[idx], departureTime: inp.value};
-    await saveDeviationCars(day,direction,cars);
+    await saveWithUndo(day,direction,prev,cars,t('deviation.toast_vertrektijd'));
   });
   // Remove / move a child: the card shows what happened with "Ongedaan" (devUndo) instead of a toast at the bottom of the screen.
   const afterChange = (day,direction,idx,prev,text)=>{
@@ -309,10 +337,11 @@ export function attachDeviationHandlers(){
   });
   document.querySelectorAll('[data-devdest]').forEach(btn=>btn.onclick=async ()=>{
     const {day,direction,caridx,devdest}=btn.dataset; const idx=+caridx;
+    const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     // Only a choice that differs from the car's own standard arrival is stored as a one-off change.
     cars[idx]={...cars[idx], destination: devdest===(cars[idx].stdDestination==='ATC'? 'ATC' : 'AFC')? undefined : devdest};
-    await saveDeviationCars(day,direction,cars);
+    await saveWithUndo(day,direction,prev,cars,t('deviation.toast_aankomst'));
   });
   document.querySelectorAll('.devRemoveBtn').forEach(btn=>btn.onclick=async ()=>{
     const {day,direction,caridx,girl}=btn.dataset; const idx=+caridx;
@@ -344,19 +373,19 @@ export function attachDeviationHandlers(){
     const ok = await saveDeviationCars(u.day,u.direction,u.cars);
     if(ok){ S.devUndo=null; renderDeviationTab(); }
   });
-  document.querySelectorAll('.devAddSel').forEach(sel=>sel.onchange=async ()=>{
-    if(!sel.value) return;
-    const {day,direction,girl}=sel.dataset; const toIdx=+sel.value;
+  document.querySelectorAll('[data-devpicktoggle]').forEach(btn=>btn.onclick=()=>{ const k=btn.dataset.devpicktoggle; S.devPick[k]=!S.devPick[k]; hapticTap(); renderDeviationTab(); });
+  document.querySelectorAll('[data-devaddpick]').forEach(btn=>btn.onclick=async ()=>{
+    const [day,direction,idxStr,girl]=btn.dataset.devaddpick.split('|'); const toIdx=+idxStr;
+    const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     const newTo=[...cars[toIdx].girlIds, girl];
     const toSeatsAvail = cars[toIdx].driverFamilyId? seats(fam(cars[toIdx].driverFamilyId)) : null;
     const overfull = toSeatsAvail!=null && newTo.length>toSeatsAvail;
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeRideDeparture(day,direction,newTo)};
-    const ok = await saveDeviationCars(day,direction,cars);
-    if(ok){
-      if(overfull) showToast(t('deviation.deze_auto_zit_nu_vol_2', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
-      else showToast(girlName(girl)+t('deviation.toegevoegd'));
-    }
+    S.devPick[`${day}|${direction}|${toIdx}`]=false;
+    const ok = await saveWithUndo(day,direction,prev,cars,girlName(girl)+t('deviation.toegevoegd'));
+    if(ok && overfull) showToast(t('deviation.deze_auto_zit_nu_vol_2', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
+    renderDeviationTab();
   });
   function flexCtx(btn, attr){
     const [day,direction,id]=btn.dataset[attr].split('|');
@@ -385,10 +414,13 @@ export function attachDeviationHandlers(){
   });
   document.querySelectorAll('[data-devreset]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,t('deviation.zeker_terug_naar_standaard_rooster'),async ()=>{
     const [day,direction]=btn.dataset.devreset.split('|');
+    const prev=snapshotCars(day,direction);
     // Written as an empty deviation instead of a delete: activeDeviation() ignores empty `cars`,
     // and deletes of a current-week deviation are refused by firestore.rules until it expires.
-    try{ refreshWeekKey(); await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:[]}); S.lastDeviationEditDay = day; recordLastUpdate('Deviation'); showToast(t('deviation.teruggezet_naar_standaard')); }
+    try{ refreshWeekKey(); await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:[]}); S.lastDeviationEditDay = day; recordLastUpdate('Deviation');
+      showToast(t('deviation.teruggezet_naar_standaard'), { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) showToast(t('deviation.hersteld')); } } }); }
     catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
   }));
+
  }catch(e){ showToast(t('beheer.fout_bij_koppelen_knoppen')+(e&&e.message||e)); }
 }

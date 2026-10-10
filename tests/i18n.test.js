@@ -78,6 +78,12 @@ test('the texts of the settings sheet and the Mijn gezin drill-down exist', () =
   assert.equal(t('shell.parent_of', { name: 'Noor' }), 'Ouder van Noor'); assert.equal(t('shell.saved_instantly'), 'Wordt direct opgeslagen');
   assert.equal(t('profile.plekken_in_je_auto'), 'Plekken in je auto'); assert.equal(t('profile.kan_jij_deze_dag_rijden'), 'Kun je zelf rijden?');
 });
+test('the texts of the design-v2 audit exist: Dagbericht, passenger flow, toasts, Niet ingedeeld', () => {
+  assert.equal(t('conclusie.title', { dayLabel: 'Woensdag' }), 'Dagbericht Woensdag'); assert.equal(t('conclusie.button'), 'Deel in de groep');
+  assert.equal(t('deviation.passagier_toevoegen'), '+ Passagier toevoegen'); assert.equal(t('deviation.auto_is_vol'), 'Auto is vol');
+  assert.equal(t('deviation.toast_vertrektijd'), 'Vertrektijd opgeslagen'); assert.equal(t('schedule.niet_ingedeeld_box'), 'Niet ingedeeld:'); assert.equal(t('flex.chip'), 'flex');
+  assert.equal(t('profile.stop_testen'), 'Stoppen'); assert.equal(t('maint.banner'), 'Onderhoudsmodus staat aan. Ouders zien de app nu niet.');
+});
 test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijden, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));
