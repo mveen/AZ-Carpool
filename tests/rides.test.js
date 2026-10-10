@@ -412,12 +412,16 @@ test('a Thursday when nobody rides plans no cars and nobody unplaced, and an out
   assert.deepEqual(r, { cars: [], unplaced: [] });
 });
 
-import { sortGirlIds, sortFamEntriesByGirl } from '../rides.js';
+import { sortGirlIds, sortFamEntriesByGirl, sortFamEntriesFlexLast } from '../rides.js';
 test('sortGirlIds lists passengers A-Z by daughter name and leaves the input untouched', () => {
   const ids = Object.keys(state().families).reverse(), copy = [...ids];
   const names = sortGirlIds(ids, state()).map(id => plainGirlName(id, state()));
   assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')));
   assert.deepEqual(ids, copy);
+});
+test('sortFamEntriesFlexLast lists regular players A-Z, then Flex players A-Z', () => {
+  const e = [['a', { girlName: 'Esme', familyType: 'flex' }], ['b', { girlName: 'Zoë' }], ['c', { girlName: 'Angel', familyType: 'flex' }], ['d', { girlName: 'Mila' }]];
+  assert.deepEqual(sortFamEntriesFlexLast(e).map(x => x[0]), ['d', 'b', 'c', 'a']);
 });
 test('sortFamEntriesByGirl sorts [id, family] entries A-Z by daughter name', () => {
   const out = sortFamEntriesByGirl(Object.entries(state().families)).map(([, f]) => f.girlName);

@@ -88,6 +88,12 @@ export function sortFamEntriesByGirl(entries){
   return [...entries].sort((a,b)=>byNameNl(a[1].girlName||a[1].parentName||a[0], b[1].girlName||b[1].parentName||b[0]));
 }
 
+// Passenger pick lists: regular players A-Z first, then the Flex players A-Z.
+export function sortFamEntriesFlexLast(entries){
+  const sorted = sortFamEntriesByGirl(entries);
+  return [...sorted.filter(([,f])=>!isFlex(f)), ...sorted.filter(([,f])=>isFlex(f))];
+}
+
 function shiftKeyOf(day,direction){ return day+'_'+direction; }
 
 function shiftPriorityOf(day,direction,id, st=S){
