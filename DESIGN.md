@@ -57,10 +57,10 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 - **Contact sheet**: `.sheet__actions` with two `.btn`.
 - Forms: inputs, selects and labels have one look (end of `components.css`).
 
-## Components added in phase 3 (Wijzigen, Ritbeurs, Wedstrijden)
+## Components added in phase 3 (Wijzigen, Ritten ruilen, Wedstrijden)
 
 - Wijzigen: a closed car is a `.carCard` (`.devRide`) with a head button (time, driver, route, Wijzig/Klaar) and chips; open it shows the form (`.devForm`: time + driver, destination tiles `.devDest`, kids with `···` actions `.devKid*`). Undo bar `.devToast`. Day message card `.conclusieCard` with one ink button.
-- Ritbeurs offer card = `.card.rbOffer`: mono time, route, chips, one full-width ink button; confirm block `.rbConfirm`. Own rides, moments, notifications are plain cards with `.rbMine` / `.rbMoment` rows.
+- Ritten ruilen offer card = `.card.rbOffer`: mono time, route, chips, one full-width ink button; confirm block `.rbConfirm`. Own rides, moments, notifications are plain cards with `.rbMine` / `.rbMoment` rows.
 - Wedstrijden: one `.card.matchCard` per match (`.matchInfo`, `.matchTitle`, `.matchCarRow`), under an `.infoLine`.
 - Contact: no direct WhatsApp buttons per driver any more; names open the contact sheet. Group sharing stays (Dagbericht, share button).
 
@@ -70,7 +70,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - [x] Phase 1: tokens, fonts (Onest), header, avatar + Instellingen sheet, tab bar, buttons, segmented, sheet, toast.
 - [x] Phase 2: Mijn week, Rooster (Deze week, Vast rooster, tijdelijk rooster).
-- [x] Phase 3: Wijzigen (+ Ritbeurs inside it), Wedstrijden.
+- [x] Phase 3: Wijzigen (+ Ritten ruilen inside it), Wedstrijden.
 - [x] Phase 4: Beheer, Mijn gezin, Help, banners and forms moved onto tokens; `legacy.css`, the old variable names and the Plus Jakarta fonts are deleted.
 - [ ] Follow-up (nice to have): the first block of `components.css` ("Screens migrated from the old stylesheet") still holds the rules of Beheer, Mijn gezin and the period cards in their old shape. Turn them into proper components screen by screen. The ratchet test in `tests/design-rules.test.js` only lets the number of inline `style="..."` attributes go down.
 

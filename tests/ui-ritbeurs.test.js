@@ -39,7 +39,7 @@ test('off or missing: no segment, no badge, the Wijzigen tab is the normal one',
     S.rbView = 'ritbeurs';
     withFakeNow(NOW, () => renderDeviationTab());
     const html = dom.html('tab-deviation');
-    assert.doesNotMatch(html, /data-rbview|Ritbeurs/);
+    assert.doesNotMatch(html, /data-rbview|Ritbeurs|Ritten ruilen/);
     assert.match(html, /Eenmalige ritaanpassing/);
     assert.equal(S.rbView, 'wijzigen');
   }
@@ -49,7 +49,7 @@ test('on: the Wijzigen tab starts with the segment "Wijzigen | Ritbeurs (n)"', (
   withFakeNow(NOW, () => renderDeviationTab());
   const html = dom.html('tab-deviation');
   assert.match(html, /class="segmented"/);
-  assert.match(text(html), /^Wijzigen Ritbeurs \(1\)/);
+  assert.match(text(html), /^Wijzigen Ritten ruilen \(1\)/);
   assert.match(html, /data-rbview="wijzigen" aria-pressed="true"/);
   assert.match(text(html), /Eenmalige ritaanpassing/);
 });
@@ -205,7 +205,7 @@ test('the card is in Beheer for the coordinator, with a switch and a status chip
   sampleCoordinatorState({ ritbeurs: { on: false } });
   const html = ritbeursCardHtml();
   assert.match(html, /id="ritbeursOn"/); assert.doesNotMatch(html, /id="ritbeursOn" checked/);
-  assert.match(text(html), /Uit: de Ritbeurs is verborgen en er worden geen meldingen gemaakt/);
+  assert.match(text(html), /Uit: Ritten ruilen is verborgen en er worden geen meldingen gemaakt/);
   assert.match(text(html), /stopt direct alle meldingen/);
   withFakeNow(NOW, () => renderBeheer());
   assert.match(dom.html('tab-beheer'), /id="ritbeursCard"/);

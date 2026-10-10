@@ -63,9 +63,9 @@ All `*.test.js` files live in `tests/`; the site does not use that folder. Every
 
 The tests never touch the real Firebase. They run against `fake-db.js`, an in-memory Firestore that the app cannot tell apart from the real one.
 
-## Ritbeurs (ritten aanbieden en overnemen)
+## Ritten ruilen (ritten aanbieden en overnemen; vroeger "Ritbeurs")
 
-Wijzigen heeft bovenaan een segment *Wijzigen | Ritbeurs (n)*. Alleen zichtbaar als de coördinator de Ritbeurs aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat).
+Wijzigen heeft bovenaan een segment *Wijzigen | Ritten ruilen (n)*. Alleen zichtbaar als de coördinator Ritten ruilen aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat).
 
 - **Aanbieden.** Een chauffeur biedt één rit aan (heen of terug), met een kort bericht (max 60 tekens). Intrekken kan zolang niemand de rit heeft. Overgenomen is van de nieuwe chauffeur; die kan hem zelf opnieuw aanbieden.
 - **Overnemen: eerste ja wint.** Het overnemen is één batch: aanbod `status: taken` + de rit in `deviations/<dag_richting>` (alleen `driverFamilyId` verandert) + meldingen. `firestore.rules` laat de wijziging alleen toe zolang het aanbod `open` is, dus de tweede batch faalt als geheel. Zitplaatsen en tijdsconflict (< 90 min) zijn alleen een waarschuwing.

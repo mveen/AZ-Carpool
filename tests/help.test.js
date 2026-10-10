@@ -233,6 +233,7 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   const a = articles.find(x => x.id === 'ritbeurs'), b = articles.find(x => x.id === 'beheer-ritbeurs');
   assert.ok(a && !a.coordinatorOnly); assert.match(a.body.join(' '), /Ik neem deze rit over[\s\S]*eerste bevestigt[\s\S]*18:00/);
   assert.ok(b && b.coordinatorOnly); assert.match(b.body.join(' '), /direct geen meldingen meer/);
+  assert.match(a.title + b.title, /Ritten ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
