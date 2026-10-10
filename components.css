@@ -8,19 +8,20 @@
    Screens migrated from the old stylesheet (phase 4): Beheer, Mijn gezin, Help, period cards, banners, forms.
    Same rules as before, now on tokens. Keep this block shrinking: when a screen gets a proper component, move its rules up.
    ============================================================ */
-.helpTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-.helpTop h2{margin:0;font-size:18px;font-weight:800}
-.helpClose{width:44px;height:44px;min-width:44px;display:flex;align-items:center;justify-content:center;padding:0}
+.helpTop{display:flex;align-items:center;margin:var(--space-2) 0 var(--space-3)}
+.helpTop h2{margin:0;font:800 20px/1.2 var(--font-sans)}
 .helpSearchLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.helpSearch{width:100%;box-sizing:border-box;min-height:48px;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page);color:var(--text-1)}
+.helpSearch{width:100%;box-sizing:border-box;min-height:48px;padding:0 var(--space-7);border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface-page);color:var(--text-1);font:500 15px/1.2 var(--font-sans)}
 .helpBody{flex:1;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
 .helpHead{margin:8px 0 0;font-size:12px;font-weight:700;color:var(--text-muted)}
-.helpItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page);color:var(--text-1);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
-.helpBack{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 4px;border:0;background:none;color:var(--accent);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
-.helpTitle{margin:4px 0 8px;font-size:16px;font-weight:800}
-.helpP{margin:0 0 10px;font-size:14px;line-height:1.5}
+.helpItem{font-size:18px;display:flex;align-items:center;gap:var(--space-4);width:100%;text-align:left;padding:0;min-height:52px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:var(--text-1);font-family:inherit;cursor:pointer}
+.helpItem span{flex:1;font:600 15px/1.3 var(--font-sans)}
+.helpItem svg{color:var(--text-muted);fill:currentColor}
+.helpBack{display:inline-flex;align-items:center;gap:var(--space-2);min-height:var(--hit-min);padding:0;border:0;background:none;color:var(--text-1);font:var(--type-button);cursor:pointer}
+.helpTitle{margin:var(--space-3) 0 0;font:800 20px/1.25 var(--font-sans);text-wrap:pretty}
+.helpP{margin:var(--space-5) 0 0;font:500 15px/1.55 var(--font-sans);color:var(--text-2);text-wrap:pretty}
 .helpLine{padding-left:6px}
-.helpGo{width:100%;margin-top:6px}
+.helpGo{width:100%;height:50px;margin-top:var(--space-8);border-radius:var(--radius-sheet);font-size:15px}
 .helpContact,.helpEmpty{font-size:12px;margin-top:14px}
 /* ---------- Bottom tab bar (flex item, safe-area aware, thumb-reachable) ---------- */
 .card.timeChangeCard{border-color:var(--warn-icon);border-left:4px solid var(--warn-icon)}
@@ -112,8 +113,6 @@ input.switch:focus-visible{outline:2px solid var(--info);outline-offset:2px}
 .addrHint{margin:4px 0 0;font-size:12px;color:var(--text-muted)}
 a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .changedTag{display:inline-flex;align-items:center;gap:4px;background:var(--warn-soft);color:var(--warn-ink);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-pill)}
-.sheet .sheetItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page);color:var(--text-1);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
-.sheet .sheetItem .sub{font-size:12px;color:var(--text-muted)}
 .daypill.active{background:var(--accent);border-color:var(--accent)}
 .daypill.active .daypillTop{color:var(--on-accent)}
 .daypill.active .daypillSub{color:var(--on-accent)}
@@ -315,7 +314,7 @@ button.btn:disabled,.btn:disabled{opacity:.35;cursor:default}
 .sheet__label{margin:var(--space-6) 0 var(--space-3);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
 .sheet__actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-top:var(--space-5)}
 .sheet__actions .btn{margin:0;text-decoration:none}
-.sheetItem{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);width:100%;text-align:left;padding:var(--space-5) var(--space-6);margin-top:var(--space-3);
+.sheetItem{font-size:20px;display:flex;align-items:center;justify-content:flex-start;gap:var(--space-4);width:100%;text-align:left;padding:var(--space-5) var(--space-6);margin-top:var(--space-3);
   border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface-inset);color:var(--text-1);font:var(--type-body);cursor:pointer;min-height:48px}
 .sheetItem .sub{font:var(--type-caption);color:var(--text-muted)}
 
@@ -645,3 +644,7 @@ div.settingsRow{cursor:default}
 .rbRide__when{font:var(--type-card-title);font-weight:700}
 .rbRide__sub{font:var(--type-caption);color:var(--text-muted)}
 .rbRide .btn.pill.small{height:40px;padding:0 var(--space-6);font-size:13px}
+
+.sheetItem>svg{flex:none;fill:currentColor}
+.sheetItem__label{flex:1;font:var(--type-card-title);font-weight:600}
+.sheetItem--muted{opacity:.45}

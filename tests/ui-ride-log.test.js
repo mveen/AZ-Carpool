@@ -196,7 +196,7 @@ test('asking to remove opens a sheet with the ride and what changes; an unknown 
   askRemoveRide('a', 0, 'f1', NOW);
   const html = dom.doc.body.children.at(-1).innerHTML, s = text(html);
   assert.match(html, /role="dialog"/); assert.match(s, /Deze shift verwijderen\?/); assert.match(s, /ma 28 sep · heen · Eline/);
-  assert.match(s, /van 1 naar 0 shifts in september 2026/); assert.match(s, /Verwijder shift/); assert.match(s, /Annuleren/);
+  assert.match(s, /van 1 naar 0 shifts in september 2026/); assert.match(s, /Verwijder shift/); assert.doesNotMatch(s, /Annuleren/);   // design v2: sheets close by tapping outside
   dom.doc.body.children.length = 0;
   askRemoveRide('nope', 0, 'f1', NOW); askRemoveRide('a', 0, 'f2', NOW);
   assert.equal(dom.doc.body.children.length, 0);

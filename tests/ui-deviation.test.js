@@ -473,7 +473,7 @@ test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off 
   assert.match(on, /Eenmalige ritaanpassing voor deze week/);
   S.rbView = 'ritbeurs';
   const rb = render(sampleParentState, { ritbeurs: { on: true }, rbView: 'ritbeurs' });
-  assert.match(text(rb), /Ritten die nog een chauffeur zoeken/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
+  assert.match(text(rb), /Aangeboden ritten/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
 });
 
 test('design v2: ui-deviation.js only uses variables from tokens.css in its inline styles', async () => {

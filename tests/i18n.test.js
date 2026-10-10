@@ -172,8 +172,8 @@ test('the place texts of the standaardrooster speak of one car, not of a whole s
 });
 
 test('the Beheer chips, section titles and attention texts', () => {
-  assert.deepEqual(['gezinnen', 'periodes', 'berichten', 'koppelingen'].map(k => t('beheer.chip_' + k)), ['Gezinnen', 'Periodes', 'Berichten', 'Koppelingen']);
-  assert.equal(t('beheer.sec_koppelingen'), 'Koppelingen en data'); assert.equal(t('beheer.attn_titel', { p1: 3 }), 'Om te checken (3)');
+  assert.deepEqual(['gezinnen', 'periodes', 'berichten', 'koppelingen'].map(k => t('beheer.chip_' + k)), ['Gezinnen', 'Planning', 'Berichten', 'Koppelingen']);
+  assert.equal(t('beheer.sec_koppelingen'), 'Koppelingen'); assert.equal(t('beheer.sec_periodes'), 'Planning'); assert.equal(t('beheer.sec_gezinnen'), 'Gezinnen');   // design v2 names assert.equal(t('beheer.attn_titel', { p1: 3 }), 'Om te checken (3)');
   assert.equal(t('beheer.attn_dubbel', { p1: 'Sanne', p2: 2 }), 'Dubbel gezin: Sanne (2×)');
 });
 

@@ -87,16 +87,16 @@ export function dirLabelHtml(direction, extra){ return `<span class="dirLabel">$
 export function openSheet(title, subtitle, items){
   closeSheet();
   const ov=document.createElement('div'); ov.className='sheetOverlay'; ov.id='sheetOverlay';
+  // Design v2: a handle, a title, one row per choice with its own icon (no arrow, no Annuleren: tap outside or press Escape). `muted` rows (e.g. a full car) stay tappable but dim.
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <h3 id="sheetTitle">${title}</h3>${subtitle? `<p class="muted" style="margin:0">${subtitle}</p>`:''}
-    ${items.map((it,i)=>`<button type="button" class="sheetItem" data-sheetidx="${i}"><span>${it.label}${it.sub? `<br><span class="sub">${it.sub}</span>`:''}</span>${phIcon('arrow-right')}</button>`).join('')}
-    <button type="button" class="btn secondary" id="sheetCancel" style="width:100%;margin-top:12px">${t('common.annuleren')}</button>
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${title}</h3>${subtitle? `<p class="sheet__sub">${subtitle}</p>`:''}
+    ${items.map((it,i)=>`<button type="button" class="sheetItem${it.muted? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${it.icon? phIcon(it.icon) : ''}<span class="sheetItem__label">${it.label}</span>${it.sub? `<span class="sub">${it.sub}</span>`:''}</button>`).join('')}
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e=>{ if(e.target===ov) closeSheet(); });
-  ov.querySelector('#sheetCancel').onclick=closeSheet;
   ov.querySelectorAll('[data-sheetidx]').forEach(b=>b.onclick=()=>{ const it=items[+b.dataset.sheetidx]; closeSheet(); it.onClick(); });
-  const first=ov.querySelector('.sheetItem')||ov.querySelector('#sheetCancel'); if(first) first.focus();
+  const first=ov.querySelector('.sheetItem'); if(first) first.focus();
 }
 
 export function closeSheet(){ const ov=document.getElementById('sheetOverlay'); if(ov) ov.remove(); }

@@ -106,10 +106,11 @@ console.log('\n=== bottom sheet ===');
 test('openSheet builds a dialog with one button per item, and closeSheet removes it', () => {
   let removed = false;
   dom.doc.getElementById('sheetOverlay').remove = () => { removed = true; };
-  openSheet('Verplaats Eline', 'Heen · Maandag', [{ label: 'Auto 1', sub: '3 plekken', onClick() {} }, { label: 'Auto 2', onClick() {} }]);
+  openSheet('Verplaats Eline', 'Heen · Maandag', [{ label: 'Auto 1', sub: '3 plekken', icon: 'car', onClick() {} }, { label: 'Auto 2', muted: true, onClick() {} }]);
   const html = dom.doc.body.children.at(-1).innerHTML;
   assert.match(html, /role="dialog"/); assert.match(html, /Verplaats Eline/); assert.match(html, /Heen · Maandag/);
-  assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.match(html, /Annuleren/);
+  assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.doesNotMatch(html, /Annuleren|sheetCancel/);   // design v2: tap outside or Escape closes it
+  assert.match(html, /class="sheet__handle"/); assert.match(html, /sheetItem sheetItem--muted/); assert.match(html, /<svg[^>]*>.*<\/svg><span class="sheetItem__label">Auto 1/s);
   closeSheet(); assert.equal(removed, true);
 });
 test('hapticTap never throws, with or without vibration support', () => { hapticTap(); });

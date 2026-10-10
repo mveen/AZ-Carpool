@@ -421,6 +421,7 @@ export function openMoveSheet(gid, girlId){
     return {
       label: t('schedule.auto_label',{p1:i+1,p2:drv? esc(drv.parentName) : t('schedule.geen_chauffeur_2')}),
       sub: t('schedule.vertrek', { p1: esc(og.departureTime||'--:--'), p2: cap!=null? t('schedule.plekken_2', { p1: og.girlIds.length, p2: cap }):'', p3: full? t('schedule.vol_je_kunt_wisselen'):'' }),
+      icon: 'car', muted: full,
       onClick: ()=>moveGirlToGroup(gid, girlId, oid)
     };
   });
