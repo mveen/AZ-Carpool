@@ -8,6 +8,7 @@ import { fam, girlName, seats, sortFamEntriesByGirl, sortGirlIds } from './rides
 import { S } from './state.js';
 import { db } from './data.js';
 import { matchInfoHtml } from './ui-myweek.js';
+import { myLinkedFamilyId } from './coordinator.js';
 
 // One car of a match carpool. `editable` adds the delete button (Wedstrijden tab only); `highlightId`
 // tints the row when that family drives it or has its daughter in it.
@@ -19,10 +20,11 @@ export function matchCarRowHtml(c, opts){
   const over = cap!=null && girlIds.length>cap;
   const mine = !!opts.highlightId && (c.driverFamilyId===opts.highlightId || girlIds.includes(opts.highlightId));
   const overHtml = over? ` <span class="fitbad" style="white-space:nowrap" title="${t('deviation.meer_passagiers_dan_plekken')}">${phIcon('warning')} ${girlIds.length}/${cap}</span>` : '';
+  const seatHtml = cap!=null && !over? ` <span class="tag">${girlIds.length}/${cap}</span>` : '';
   const delHtml = opts.editable? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="${t('deviation.verwijder_carpool')}">${phIcon('trash')}</button>` : '';
   return `<div class="matchCarRow${mine?' mine':''}">
     <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
-    <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}</span>
+    <span style="flex:1;min-width:0">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}</span>
     ${delHtml}
   </div>`;
 }
@@ -43,10 +45,15 @@ export function matchesCardHtml(){
     if(!plannable){
       // Too far ahead: no carpool yet. A small note says from which day it can be set up.
       const from = plannableFrom(m).toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'long'});
-      return `<div class="group matchGroup">${matchInfoHtml(m,{geo:true})}${carsHtml}<p class="matchNote">${phIcon('calendar')} ${t('matches.nog_niet_te_plannen', { date: from })}</p></div>`;
+      return `<div class="card matchCard">${matchInfoHtml(m,{geo:true})}${carsHtml}<p class="matchNote">${phIcon('calendar')} ${t('matches.nog_niet_te_plannen', { date: from })}</p></div>`;
     }
     S.weekendMatchBySlug[slug] = m;
     const isOpen = S.openMatchCarpoolForm===slug;
+    const own = myLinkedFamilyId();
+    const ownIdx = own? cars.findIndex(c=>c.driverFamilyId===own) : -1;
+    const quickHtml = !own? '' : ownIdx>=0
+      ? `<button type="button" class="btn small secondary" data-iremove="${cp.id}|${ownIdx}">${phIcon('minus-circle')}${t('matches.auto_weghalen')}</button>`
+      : `<button type="button" class="btn small" data-iride="${slug}">${phIcon('plus-circle')}${t('matches.ik_rij_ook')}</button>`;
     let formHtml;
     if(isOpen){
       const suggestedDep = suggestedMatchDeparture(m.start);
@@ -66,11 +73,10 @@ export function matchesCardHtml(){
     } else {
       formHtml = `<button type="button" class="btn small secondary" data-addmatchcar="${slug}" style="margin-top:6px">${t('deviation.auto_toevoegen')}</button>`;
     }
-    return `<div class="group matchGroup">${matchInfoHtml(m,{geo:true})}${carsHtml || t('deviation.p_class_muted_style_font')}${formHtml}</div>`;
+    return `<div class="card matchCard">${matchInfoHtml(m,{geo:true})}${carsHtml || t('deviation.p_class_muted_style_font')}<div class="matchActions">${quickHtml}</div>${formHtml}</div>`;
   }).join('');
-  return `<div class="card matchesCard" id="matchCarpoolCard">
-    <h2>${t('matches.titel')}</h2>
-    ${anyPlannable? `<p class="muted">${t('deviation.zet_een_carpool_op_voor')}</p>` : ''}
+  return `<div id="matchCarpoolCard">
+    <div class="infoLine"><span class="infoLine__text">${t('matches.titel')} ${anyPlannable? t('deviation.zet_een_carpool_op_voor') : ''}</span></div>
     ${matchesHtml}
   </div>`;
 }
@@ -94,6 +100,15 @@ export function updateMatchCarCapacityWarning(slug){
   // Any change to the selection cancels a pending "toch opslaan" confirmation.
   const saveBtn=document.querySelector(`[data-savematchcar="${slug}"]`);
   if(saveBtn && saveBtn.dataset.confirmOver==='1'){ saveBtn.dataset.confirmOver=''; saveBtn.textContent=t('deviation.opslaan'); }
+}
+
+// Writes the cars of one match carpool (shared by the full form and the quick "Ik rij ook" button).
+// An old name-keyed document is moved over to the ID-keyed one.
+async function writeMatchCars(m, cp, slug, cars){
+  if(cars.length){
+    await db.doc("matchCarpools/"+slug).set({matchSlug:slug, calendarId:m.calendarId||'', eventId:m.eventId||'', teamLabel:matchLabel(m), summary:m.summary, location:m.location||'', startMs:m.start.getTime(), cars});
+  } else if(cp.doc){ await db.doc("matchCarpools/"+cp.id).delete(); }
+  if(cars.length && cp.doc && cp.id!==slug){ try{ await db.doc("matchCarpools/"+cp.id).delete(); }catch(e){} }
 }
 
 export function wireMatchCarpool(){
@@ -131,6 +146,26 @@ export function wireMatchCarpool(){
       S.openMatchCarpoolForm=null;
       showToast(t('deviation.carpool_toegevoegd'));
     }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
+  });
+  // Quick "Ik rij ook": own car with the own daughter, unless she already sits in another car of this match.
+  document.querySelectorAll('[data-iride]').forEach(b=>b.onclick=async ()=>{
+    const slug=b.dataset.iride; const m=S.weekendMatchBySlug[slug]; const own=myLinkedFamilyId();
+    if(!m || !own || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
+    const cp=carpoolFor(m); const cars=(cp.doc&&cp.doc.cars)||[];
+    const taken=cars.some(c=>(c.girlIds||[]).includes(own));
+    const newCar={driverFamilyId:own, girlIds:taken?[]:[own], departureTime:suggestedMatchDeparture(m.start)};
+    try{ await writeMatchCars(m,cp,slug,[...cars,newCar]); showToast(t('matches.ik_rij_toegevoegd')); }
+    catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
+  });
+  document.querySelectorAll('[data-iremove]').forEach(b=>b.onclick=async ()=>{
+    const [id,idxStr]=b.dataset.iremove.split('|'); const idx=+idxStr;
+    const existing=S.matchCarpools[id]; if(!existing) return;
+    const before=existing.cars;
+    const cars=before.filter((_,i)=>i!==idx);
+    try{
+      if(cars.length) await db.doc("matchCarpools/"+id).set({...existing, cars}); else await db.doc("matchCarpools/"+id).delete();
+      showToast(t('matches.auto_weggehaald'), {action:{label:t('deviation.ongedaan'), run:()=>db.doc("matchCarpools/"+id).set({...existing, cars:before})}});
+    }catch(e){ showToast(t('beheer.verwijderen_mislukt')+(e&&e.message||e)); }
   });
   document.querySelectorAll('[data-delmatchcar]').forEach(b=>b.onclick=async ()=>{
     const [slug,idxStr]=b.dataset.delmatchcar.split('|'); const idx=+idxStr;

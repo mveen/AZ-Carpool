@@ -1,6 +1,7 @@
 // Run with: node ui-notice.test.js
 // The notice bar (everyone) and the Beheer card (coordinator): what is shown, what is saved, what is refused.
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -112,6 +113,11 @@ await testAsync('date without time, or an end in the past: refused with its own 
 test('readNoticeForm reads all four fields', () => {
   setForm({ on: true, text: 'Hoi', offDate: '2026-10-03', offTime: '09:00' });
   assert.deepEqual(readNoticeForm(), { on: true, text: 'Hoi', offDate: '2026-10-03', offTime: '09:00' });
+});
+
+test('design v2: the notice bar preview uses the megaphone, not the info icon', () => {
+  const src = fs.readFileSync(new URL('../ui-notice.js', import.meta.url), 'utf8');
+  assert.match(src, /phIcon\('megaphone-fill'/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

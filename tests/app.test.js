@@ -13,7 +13,8 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
-import { bootstrap, init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
+import { recomputeCanEdit } from '../coordinator.js';
+import { syncCoordinatorNav, bootstrap, init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
 
 const dom = installFakeDom();
 const status = () => dom.doc.getElementById('whoami').innerHTML;
@@ -39,6 +40,20 @@ test('activateTab shows only the chosen tab and marks its button current', () =>
   assert.equal(dom.el('tab-schedule').style.display, 'none');
   assert.equal(buttons.find(b => b.dataset.tab === 'deviation').getAttribute('aria-current'), 'page');
   assert.equal(buttons.find(b => b.dataset.tab === 'schedule').getAttribute('aria-current'), null);
+});
+test('activateTab puts the screen name in the header and shows the share button on Mijn week only', () => {
+  installNav(); resetState({}); dom.el('tab-gate').style.display = 'none';
+  activateTab('deviation'); assert.equal(dom.el('headerTitle').textContent, 'Wijzigen'); assert.equal(dom.el('shareToggle').hidden, true);
+  activateTab('myweek'); assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); assert.equal(dom.el('shareToggle').hidden, false);
+});
+test('the Beheer tab follows the coordinator view: shown for the coordinator, hidden for "Bekijk als: Ouder" and for parents', () => {
+  sampleCoordinatorState({ links: { coord: { familyId: 'f1' } } }); syncCoordinatorNav(); assert.equal(dom.el('navBeheer').style.display, '');
+  S.viewAsParent = true; recomputeCanEdit(); syncCoordinatorNav(); assert.equal(dom.el('navBeheer').style.display, 'none');
+  sampleParentState(); syncCoordinatorNav(); assert.equal(dom.el('navBeheer').style.display, 'none');
+});
+test('the Wedstrijden tab label is short ("Wedstrijd") only when the coordinator has five tabs', () => {
+  sampleParentState(); syncCoordinatorNav(); assert.equal(dom.el('navMatchesLabel').textContent, 'Wedstrijden');
+  sampleCoordinatorState(); syncCoordinatorNav(); assert.equal(dom.el('navMatchesLabel').textContent, 'Wedstrijd');
 });
 test('activateTab leaves the tabs alone while the gate is showing', () => {
   installNav(); resetState({});

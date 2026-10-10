@@ -196,7 +196,7 @@ test('asking to remove opens a sheet with the ride and what changes; an unknown 
   askRemoveRide('a', 0, 'f1', NOW);
   const html = dom.doc.body.children.at(-1).innerHTML, s = text(html);
   assert.match(html, /role="dialog"/); assert.match(s, /Deze shift verwijderen\?/); assert.match(s, /ma 28 sep · heen · Eline/);
-  assert.match(s, /van 1 naar 0 shifts in september 2026/); assert.match(s, /Verwijder shift/); assert.match(s, /Annuleren/);
+  assert.match(s, /van 1 naar 0 shifts in september 2026/); assert.match(s, /Verwijder shift/); assert.doesNotMatch(s, /Annuleren/);   // design v2: sheets close by tapping outside
   dom.doc.body.children.length = 0;
   askRemoveRide('nope', 0, 'f1', NOW); askRemoveRide('a', 0, 'f2', NOW);
   assert.equal(dom.doc.body.children.length, 0);
@@ -235,6 +235,14 @@ await testAsync('a parent cannot remove a ride', async () => {
   sampleParentState({ rideLog: { '2026-09-28_heen': doc('2026-09-28', 'heen', 'f1') } });
   assert.equal(await setRideRemoved('2026-09-28_heen', 0, 'f1', true), false);
   assert.equal(fake.get('rideLog/2026-09-28_heen').cars[0].removed, undefined);
+});
+
+test('design v2: ui-ride-log.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-ride-log.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -37,10 +37,10 @@ test('on: a parent sees the page with the default text, and the app behind it is
   assert.equal(dom.el('topbar').getAttribute('inert'), ''); assert.equal(dom.el('bottomnav').getAttribute('inert'), '');
   assert.equal(dom.el('maintenanceBanner').style.display, 'none');
 });
-test('the page shows only the car of the logo (one colour, no red button, no image file, no warning icon)', () => {
+test('the page shows the app icon (the only brand mark): no hand-drawn logo, no warning icon', () => {
   sampleParentState({ maintenance: { on: true } }); renderMaintenance();
   const h = dom.html('maintenanceOverlay');
-  assert.match(h, /<div class="maintLogo"><svg viewBox="14 192 430 176"/); assert.ok(!h.includes('<img')); assert.ok(!h.includes('#fff'));
+  assert.match(h, /<div class="maintLogo"><img src=".\/icon\.svg" alt="" width="96" height="96"><\/div>/); assert.ok(!h.includes('<svg')); assert.ok(!h.includes('#fff'));
   assert.ok(!h.includes('M236 208H20'), 'the warning triangle is gone');
 });
 test('on with own text: the coordinator\'s text replaces the default line', () => {
@@ -175,6 +175,14 @@ await testAsync('a failed save puts the switch back to what is stored and says s
 test('readMaintenanceForm reads both fields', () => {
   setForm({ on: true, text: 'Hoi' });
   assert.deepEqual(readMaintenanceForm(), { on: true, text: 'Hoi' });
+});
+
+test('design v2: ui-maintenance.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-maintenance.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

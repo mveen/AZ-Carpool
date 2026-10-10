@@ -30,8 +30,8 @@ test('every family is listed with parent, coordinator badge, invite code state a
   withFakeNow(NOW, () => renderBeheer());
   const html = dom.html('tab-beheer'); const s = text(html);
   assert.match(s, /Gezinnen beheren /);
-  assert.match(s, /Eline Jan Jansen COÖRDINATOR Geen code Wijzig/);
-  assert.match(s, /Jahaimy Piet Pieters gekoppeld Geen code Wijzig/);
+  assert.match(s, /Eline Jan Jansen Coördinator Geen code Wijzig/);
+  assert.match(s, /Jahaimy Piet Pieters Gekoppeld Geen code Wijzig/);
   assert.match(s, /Anouk Kees de Vries Wijzig/);
   assert.match(s, /\+ Nieuw gezin toevoegen/);
   expectSnapshot('ui-beheer', 'coordinator overview', html);
@@ -202,7 +202,7 @@ test('a Flex family is marked in the family list', () => {
   const fams = sampleCoordinatorState().families; fams.f5 = { ...fams.f5, familyType: 'flex' };
   withFakeNow(NOW, () => { sampleCoordinatorState({ families: fams }); renderBeheer(); });
   const html = dom.html('tab-beheer');
-  assert.equal((html.match(/badge flexBadge">Flex</g) || []).length, 1);
+  assert.equal((html.match(/tag tag--flex">Flex</g) || []).length, 1);
   assert.match(text(html), /Sanne Smit Flex/);
 });
 
@@ -594,6 +594,14 @@ test('the Gereden shifts card sits in the Gezinnen section, after the dag-coörd
   const html = dom.html('tab-beheer');
   const sec = html.slice(html.indexOf('id="begSec-gezinnen"'), html.indexOf('id="begSec-periodes"'));
   assert.ok(sec.indexOf('id="rideLogCard"') > 0 && sec.indexOf('id="priorityCard"') > sec.indexOf('id="rideLogCard"'));
+});
+
+test('design v2: ui-beheer.js only uses variables from tokens.css in its inline styles', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
+  assert.deepEqual(unknown, []);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

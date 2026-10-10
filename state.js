@@ -9,6 +9,7 @@ export const S = {
   coordinatorConfig: null,
   appReady: false,
   impersonateFamilyId: null,
+  viewAsParent: false,   // a coordinator who also has a family can look at the app as a parent (Instellingen > Bekijk als); view only, rights on the server are unchanged
   families: {},
   groups: {},
   links: {},
@@ -96,6 +97,7 @@ export const S = {
   formSelectedDay: {me:'Ma', coord:'Ma'},
   devOpen: {},             // Wijzigen: which ride cards are unfolded, by 'Ma|heen|0'
   devKid: null,            // Wijzigen: the child whose options (move / remove) are open: 'Ma|heen|0|<girlId>'
+  devPick: {},             // Wijzigen: ride cards whose "+ Passagier toevoegen" list is open, by 'Ma|heen|0'
   devFree: {},             // Wijzigen: ride cards whose free place input was asked for ("Ander adres") before anything is typed
   devUndo: null,           // Wijzigen: the last change that can be undone { key, text, day, direction, cars }
   deviationDay: null,

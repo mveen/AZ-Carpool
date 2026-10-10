@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
-import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
+import { periodModeAvailable, periodModeLabel, periodModeInfoHtml, periodViewDay, periodDayChanges, periodOverviewHtml, periodTimesHtml, periodDirectionHtml, periodViewHtml, movePeriodGirl, setPeriodDriver, setPeriodCarPlace, availablePeriods, selectedPeriod } from '../ui-period-rooster.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/\s+/g, ' ').trim();
@@ -121,16 +121,17 @@ console.log('\n=== the temporary rooster, day by day (A6) ===');
 test('the pills show the dates of the period with the number of cars and an alert for riders without a car', () => {
   coord({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render();
   assert.equal((h.match(/data-perday=/g) || []).length, 5);
-  assert.match(text(h), /MA 26 0 ritten DI 27 2 ritten WO 28 0 ritten DO 29 0 ritten VR 30 0 ritten/);
-  assert.match(h, /data-perday="2026-10-27" aria-pressed="true"/);
+  assert.match(text(h), /ma 26 di 27 wo 28 do 29 vr 30/);
+  assert.match(h, /data-perday="2026-10-27" aria-pressed="true" aria-label="dinsdag 27 okt, 2 ritten"/);
+  assert.match(h, /class="dayPill on" data-perday="2026-10-27"/);
   coord({ periodCars: { '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [XCARS[1]]) }, roosterMode: 'period', periodDay: '2026-10-27' });
-  assert.match(render(), /class="daypillAlert" aria-hidden="true">3</);
+  assert.match(render(), /class="dayPill__dot" aria-hidden="true"><\/span>/);
 });
 test('a day: the handed-in times next to the standard ones (struck through where they differ), then the cars', () => {
   coord({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render(); const s = text(h);
   assert.match(s, /dinsdag 27 okt/);
   assert.match(h, /<s class="muted">17:30<\/s> <strong class="periodChanged">12:30<\/strong>/); assert.match(h, /<s class="muted">17:30<\/s> <strong class="periodChanged">13:00<\/strong>/);
-  assert.match(s, /Vertrek 13:00 .*Jahaimy.*Lois.*Saar/); assert.match(s, /Vertrek 17:30 .*Eline.*Evi/);
+  assert.match(s, /13:00 .*Jahaimy.*Lois.*Saar/); assert.match(s, /17:30 .*Eline.*Evi/);
   assert.equal(picks.pdrv.length, 2, 'the coordinator edits the drivers with selects');
 });
 test('a girl who does not ride that day shows "rijdt niet mee" with her standard time struck through', () => {
@@ -141,11 +142,11 @@ test('a shift that is not made says the standard rooster applies', () => {
   coord({ periodCars: {}, roosterMode: 'period', periodDay: '2026-10-28' });
   assert.match(text(render()), /Voor deze dag is nog geen tijdelijk rooster: het vaste rooster geldt\./);
 });
-test('a parent sees the same, read only: no selects, no buttons; their own car is marked', () => {
+test('a parent sees the same, read only: no selects, no buttons; their own car has no amber border', () => {
   parent({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render();
-  assert.doesNotMatch(h, /data-pdrv|data-pmove|data-preplan|periodOverview_2026-10-26/); assert.match(text(h), /Vertrek 13:00/);
-  assert.match(text(h), /Jij rijdt/); assert.match(text(h), /Chauffeur: Mo Bakker/); assert.match(h, /class="driver me"/);
-  assert.match(h, /class="pill mine">Jahaimy</); assert.match(h, /class="group confirmed minedriving"/);
+  assert.doesNotMatch(h, /data-pdrv|data-pmove|data-preplan|periodOverview_2026-10-26/); assert.match(text(h), /13:00/);
+  assert.match(text(h), /Jij rijdt/); assert.match(text(h), /Mo Bakker/); assert.match(h, /class="carCard__driver carCard__driver--me"/);
+  assert.match(h, /class="chip chip--mine">Jahaimy</); assert.doesNotMatch(h, /carCard--mine/);   /* design v2: the car you drive has no amber border (amber = a changed car) */
 });
 test('the coordinator sees a driver select per car, a move select per rider and "Opnieuw indelen" per direction', () => {
   coord({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render();
@@ -210,7 +211,7 @@ await testAsync('moving a girl to another car stores both cars with new departur
   assert.equal(await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f5', 'car:1')), true);
   const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
   assert.deepEqual(cars.map(c => c.girlIds), [['f2', 'f6'], ['f1', 'f4', 'f5']]); assert.deepEqual(cars.map(c => c.departureTime), ['12:30', '17:30']);
-  assert.equal(toast(), 'Opgeslagen ✓'); assert.match(text(html), /Vertrek 12:30/);
+  assert.equal(toast(), 'Opgeslagen ✓'); assert.match(text(html), /12:30/);
 });
 await testAsync('the move select and the driver select trigger the edits', async () => { await inOpen(async () => {
   const fake = await prep(); const sel = findMove('f6'); sel.value = 'none';
@@ -232,6 +233,16 @@ await testAsync('a girl without a car is placed in a car, or in a new car with a
   await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f2', 'new:f2'));
   const cars = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars;
   assert.deepEqual(cars.map(c => [c.driverFamilyId, c.girlIds]), [['f4', ['f1', 'f4', 'f5']], ['f2', ['f2']]]); assert.equal(cars[1].departureTime, '12:30');
+});
+await testAsync('another departure and arrival place for one car of a date: stored on that car, shown in its route, cleared with an empty value', async () => {
+  const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]) });
+  assert.match(html, /data-pcarplace="2026-10-27\|terug\|0"/);
+  assert.equal(await withFakeNowAsync(OPEN, () => setPeriodCarPlace('2026-10-27', 'terug', 0, { stdLocationId: 'a4-de-hoek', stdDestination: 'ATC' })), true);
+  const car = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[0];
+  assert.equal(car.stdLocationId, 'a4-de-hoek'); assert.equal(car.stdDestination, 'ATC'); assert.match(text(html), /ATC → A4-De Hoek/);
+  assert.equal(await withFakeNowAsync(OPEN, () => setPeriodCarPlace('2026-10-27', 'terug', 0, { stdLocationId: '', stdDestination: '' })), true);
+  const back = fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[0];
+  assert.equal('stdLocationId' in back, false); assert.equal('stdDestination' in back, false);
 });
 await testAsync('changing the driver of a car', async () => {
   const fake = await prep({ '2026-10-26_2026-10-27_terug': shiftDoc('2026-10-27', 'terug', [{ driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]) });

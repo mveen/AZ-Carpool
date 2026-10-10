@@ -14,8 +14,8 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import {
-  foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, cycleTheme, isStandaloneDisplay,
-  isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts,
+  foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
+  isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape,
 } from '../ui-common.js';
 
 const dom = installFakeDom();
@@ -46,12 +46,16 @@ test('lastUpdateFooter: empty without data, otherwise who and when (name escaped
 console.log('\n=== toast, status line, confirm ===');
 test('showToast shows escaped text, optionally with an icon', () => {
   showToast('Mislukt: <script>');
-  assert.equal(dom.html('toast'), 'Mislukt: &lt;script&gt;'); assert.equal(dom.el('toast').style.display, 'block');
+  assert.equal(dom.html('toast'), 'Mislukt: &lt;script&gt;'); assert.equal(dom.el('toast').style.display, 'flex');
   showToast('Let op', { icon: 'warning' }); assert.match(dom.html('toast'), /^<svg.*<\/svg> Let op$/);
 });
 test('setStatus writes the header line, with a warning icon when asked', () => {
   setStatus('Niet verbonden.', true); assert.match(dom.html('whoami'), /^<svg.*<\/svg> Niet verbonden\.$/);
   setStatus('Jan'); assert.equal(dom.html('whoami'), 'Jan');
+});
+test('only a warning is shown in the visible line under the header; a plain name is not', () => {
+  setStatus('Niet verbonden.', true); assert.equal(dom.el('statusLine').hidden, false); assert.match(dom.html('statusLine'), /Niet verbonden\./);
+  setStatus('Jan'); assert.equal(dom.el('statusLine').hidden, true); assert.equal(dom.html('statusLine'), '');
 });
 test('updateStatusLine: parent name; coordinator suffix; unlinked; nobody', () => {
   sampleParentState(); updateStatusLine(); assert.equal(dom.html('whoami'), 'Piet Pieters');
@@ -69,15 +73,20 @@ test('twoStepConfirm: first tap asks, second tap acts and restores the label (al
 });
 
 console.log('\n=== theme ===');
-test('applyTheme sets data-theme and the toggle button label', () => {
+test('applyTheme sets data-theme and marks the matching button of the Instellingen sheet', () => {
   applyTheme('dark');
-  assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'dark'); assert.equal(dom.el('themeToggle').getAttribute('aria-label'), 'Licht thema aanzetten');
-  applyTheme('anything'); assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'light'); assert.equal(dom.el('themeToggle').getAttribute('aria-label'), 'Donker thema aanzetten');
+  assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'dark');
+  assert.equal(dom.el('themeDark').getAttribute('aria-pressed'), 'true'); assert.equal(dom.el('themeLight').getAttribute('aria-pressed'), 'false');
+  assert.equal(dom.el('themeDark').classList.contains('active'), true); assert.equal(dom.el('themeLight').classList.contains('active'), false);
+  applyTheme('anything');
+  assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'light');
+  assert.equal(dom.el('themeLight').getAttribute('aria-pressed'), 'true'); assert.equal(dom.el('themeDark').getAttribute('aria-pressed'), 'false');
 });
-test('cycleTheme flips between light and dark and remembers the choice', () => {
-  localStorage.removeItem('theme-pref');
-  cycleTheme(); assert.equal(localStorage.getItem('theme-pref'), 'dark');
-  cycleTheme(); assert.equal(localStorage.getItem('theme-pref'), 'light');
+test('setTheme applies the choice and remembers it; currentTheme reads it back (light when nothing is stored)', () => {
+  localStorage.removeItem('theme-pref'); assert.equal(currentTheme(), 'light');
+  setTheme('dark'); assert.equal(localStorage.getItem('theme-pref'), 'dark'); assert.equal(currentTheme(), 'dark'); assert.equal(dom.doc.documentElement.getAttribute('data-theme'), 'dark');
+  setTheme('light'); assert.equal(localStorage.getItem('theme-pref'), 'light'); assert.equal(currentTheme(), 'light');
+  setTheme('rubbish'); assert.equal(currentTheme(), 'light');
 });
 
 console.log('\n=== install card ===');
@@ -97,10 +106,11 @@ console.log('\n=== bottom sheet ===');
 test('openSheet builds a dialog with one button per item, and closeSheet removes it', () => {
   let removed = false;
   dom.doc.getElementById('sheetOverlay').remove = () => { removed = true; };
-  openSheet('Verplaats Eline', 'Heen · Maandag', [{ label: 'Auto 1', sub: '3 plekken', onClick() {} }, { label: 'Auto 2', onClick() {} }]);
+  openSheet('Verplaats Eline', 'Heen · Maandag', [{ label: 'Auto 1', sub: '3 plekken', icon: 'car', onClick() {} }, { label: 'Auto 2', muted: true, onClick() {} }]);
   const html = dom.doc.body.children.at(-1).innerHTML;
   assert.match(html, /role="dialog"/); assert.match(html, /Verplaats Eline/); assert.match(html, /Heen · Maandag/);
-  assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.match(html, /Annuleren/);
+  assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.doesNotMatch(html, /Annuleren|sheetCancel/);   // design v2: tap outside or Escape closes it
+  assert.match(html, /class="sheet__handle"/); assert.match(html, /sheetItem sheetItem--muted/); assert.match(html, /<svg[^>]*>.*<\/svg><span class="sheetItem__label">Auto 1/s);
   closeSheet(); assert.equal(removed, true);
 });
 test('hapticTap never throws, with or without vibration support', () => { hapticTap(); });
@@ -168,6 +178,32 @@ test('foldCards finds cards inside a .begSec section and shows the card icon in 
   document.createElement = realCreate;
   const sum = card.replacedBy.kids[0];
   assert.match(sum.innerHTML, /^<span class="foldTitle"><span class="foldIcon"><svg/); assert.match(sum.innerHTML, /<\/span>Titel<\/span>$/);
+});
+
+test('twoStepConfirm: the second-tap state is red (class confirming) and is cleared again', () => {
+  const classes = new Set(); const btn = { dataset: {}, innerHTML: 'Verwijder', textContent: '', classList: { add: c => classes.add(c), remove: c => classes.delete(c) } };
+  let done = 0; twoStepConfirm(btn, 'Zeker? Tik nogmaals', () => { done++; });
+  assert.equal(classes.has('confirming'), true); assert.equal(btn.textContent, 'Zeker? Tik nogmaals'); assert.equal(done, 0);
+  twoStepConfirm(btn, 'Zeker? Tik nogmaals', () => { done++; });
+  assert.equal(classes.has('confirming'), false); assert.equal(done, 1);
+});
+test('a toast stays 3.8 seconds (design v2), also with an action', () => {
+  const real = globalThis.setTimeout; const seen = [];
+  globalThis.setTimeout = (fn, ms) => { seen.push(ms); return 0; };
+  try { showToast('Opgeslagen'); showToast('Weg', { action: { label: 'Ongedaan', run() {} } }); } finally { globalThis.setTimeout = real; }
+  assert.deepEqual(seen, [3800, 3800]);
+});
+
+console.log('\n=== Escape closes sheets and help ===');
+test('Escape removes the open sheet or help overlay; other keys and no overlay do nothing', () => {
+  let removed = 0; const real = dom.doc.getElementById;
+  dom.doc.getElementById = id => (id === 'sheetOverlay' ? { remove() { removed++; } } : null);
+  assert.equal(closeOnEscape({ key: 'a' }), false); assert.equal(removed, 0);
+  assert.equal(closeOnEscape({ key: 'Escape' }), true); assert.equal(removed, 1);
+  dom.doc.getElementById = id => (id === 'helpOverlay' ? { remove() { removed++; } } : null);
+  assert.equal(closeOnEscape({ key: 'Escape' }), true); assert.equal(removed, 2);
+  dom.doc.getElementById = () => null; assert.equal(closeOnEscape({ key: 'Escape' }), false);
+  dom.doc.getElementById = real;
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -18,7 +18,7 @@ export function helpListHtml(query){
   const q = String(query || '').trim();
   const list = searchHelp(q, { canEdit: !!S.canEdit });
   if(!list.length) return `<p class="muted helpEmpty">${esc(t('help.no_results'))}</p>`;
-  const item = a => `<button type="button" class="helpItem" data-helpid="${esc(a.id)}"><span>${esc(a.title)}</span>${phIcon('arrow-right')}</button>`;
+  const item = a => `<button type="button" class="helpItem" data-helpid="${esc(a.id)}"><span>${esc(a.title)}</span>${phIcon('caret-right')}</button>`;
   if(q) return `<h3 class="helpHead">${esc(t('help.results'))}</h3>` + list.map(item).join('');
   // No search: the topics, then "Over deze app" as its own group at the bottom.
   const topics = list.filter(a => a.group !== 'over'), about = list.filter(a => a.group === 'over');
@@ -32,7 +32,7 @@ export function helpArticleHtml(id){
   const navBtn = document.querySelector('nav button[data-tab="' + a.tab + '"]');
   const go = (a.tab && NAV_KEY[a.tab] && navBtn && navBtn.style.display !== 'none')
     ? `<button type="button" class="btn helpGo" data-helpgo="${esc(a.tab)}">${esc(t('help.goto', { tab: t(NAV_KEY[a.tab]) }))}</button>` : '';
-  return `<button type="button" class="helpBack" id="helpBack">${phIcon('arrow-left')} ${esc(t('help.back'))}</button>
+  return `<button type="button" class="helpBack" id="helpBack">${phIcon('caret-left')}${esc(t('help.back'))}</button>
     <h3 class="helpTitle">${esc(a.title)}</h3>${a.body.map(paragraphHtml).join('')}${go}
     <p class="muted helpContact">${esc(t('help.contact'))}</p>`;
 }
@@ -46,11 +46,11 @@ export function closeHelp(){
 
 export function openHelp(fromButton){
   closeHelp();
-  opener = fromButton || document.getElementById('helpToggle') || null;
+  opener = fromButton || document.getElementById('avatarBtn') || null;
   const ov = document.createElement('div');
   ov.className = 'helpOverlay'; ov.id = 'helpOverlay';
   ov.innerHTML = `<div class="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
-    <div class="helpTop"><h2 id="helpTitle">${esc(t('help.title'))}</h2><button type="button" class="iconbtn helpClose" id="helpClose" aria-label="${esc(t('help.close'))}" title="${esc(t('help.close'))}">${phIcon('x')}</button></div>
+    <div class="helpTop"><h2 id="helpTitle">${esc(t('help.title'))}</h2></div>
     <label class="helpSearchLabel" for="helpSearch">${esc(t('help.search_label'))}</label>
     <input type="search" id="helpSearch" class="helpSearch" autocomplete="off" placeholder="${esc(t('help.search_placeholder'))}" enterkeyhint="search">
     <div id="helpBody" class="helpBody" aria-live="polite"></div>
@@ -62,7 +62,6 @@ export function openHelp(fromButton){
   const showArticle = id => { body.innerHTML = helpArticleHtml(id); body.scrollTop = 0; };
   showList();
   ov.addEventListener('click', e => { if(e.target === ov) closeHelp(); });
-  ov.querySelector('#helpClose').onclick = closeHelp;
   input.addEventListener('input', showList);
   body.addEventListener('click', e => {
     const item = e.target.closest && e.target.closest('[data-helpid]');
@@ -76,13 +75,4 @@ export function openHelp(fromButton){
     }
   });
   input.focus();
-}
-
-// Called once at start-up (app.js bootstrap): puts the "?" icon on the button and wires it.
-export function initHelpButton(){
-  const btn = document.getElementById('helpToggle');
-  if(!btn) return;
-  btn.innerHTML = phIcon('question');
-  btn.setAttribute('aria-label', t('help.open')); btn.title = t('help.open');
-  btn.onclick = () => openHelp(btn);
 }

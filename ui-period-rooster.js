@@ -7,11 +7,11 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
-import { dirLabelHtml, esc, hapticTap, phIcon, shiftLocationHtml, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
-import { driverLineHtml, renderSchedule } from './ui-schedule.js';
+import { carRouteHtml, driverLineHtml, flexSuffix, openCarPlaceSheet, renderSchedule } from './ui-schedule.js';
 import { myLinkedFamilyId } from './coordinator.js';
 
 const madeShifts = p => Object.values(S.periodCars || {}).filter(d => d && d.periodFirstDay===p.firstDay).length;
@@ -146,24 +146,21 @@ function carHtml(iso, direction, car, idx, cars){
     : driverLineHtml(car.driverFamilyId, myId);
   const targets = cars.map((c, i) => ({ value:'car:'+i, label:t('period.view.moveTo',{p1:i+1, p2:plainDriverName(c.driverFamilyId)}) })).filter((x, i) => i!==idx);
   const riders = sortGirlIds(car.girlIds||[]).map(id => edit
-    ? `<div class="periodRider"><span class="pill${id===myId? ' mine' : ''}">${girlName(id)}</span>
+    ? `<div class="periodRider"><span class="chip${id===myId? ' chip--mine' : ''}${isFlex(fam(id))? ' chip--flex' : ''}">${girlName(id)}${flexSuffix(id)}</span>
         <select class="periodSel periodMove" data-pmove="${esc(id)}" data-iso="${iso}" data-dir="${direction}" aria-label="${esc(t('period.view.move'))} ${esc(plainGirlName(id))}">
           <option value="">${t('period.view.move')}</option>
           ${targets.map(x => `<option value="${x.value}">${esc(x.label)}</option>`).join('')}
           <option value="none">${t('period.view.notPlaced')}</option>
         </select></div>`
-    : `<span class="pill${id===myId? ' mine' : ''}">${girlName(id)}</span>`).join('');
-  return `<div class="group confirmed${myId && car.driverFamilyId===myId? ' minedriving' : ''}">
-      <div class="rowflex" style="align-items:flex-start;gap:10px">
-        <div class="rowflex" style="gap:10px;align-items:flex-start;flex:1">
-          <span class="dayBadge accent">${idx+1}</span>
-          <div><div class="dir">${t('deviation.vertrek')}</div><div class="time">${esc(car.departureTime||'--:--')}</div></div>
-        </div>
-        ${driver? `<span class="capbadge${cap!=null && (car.girlIds||[]).length>cap? ' fitbad' : ''}">${(car.girlIds||[]).length}/${cap} ${t('schedule.plekken')}</span>` : ''}
+    : `<span class="chip${id===myId? ' chip--mine' : ''}">${girlName(id)}</span>`).join('');
+  return `<div class="carCard">
+      <div class="carCard__head">
+        <span class="carCard__time">${esc(car.departureTime||'--:--')}</span>
+        <div class="carCard__who">${edit? '' : driverPart}${carRouteHtml(car, direction, day, { edit, pcar:iso+'|'+direction+'|'+idx })}</div>
+        ${driver? `<span class="tag${cap!=null && (car.girlIds||[]).length>cap? ' tag--warn' : ''}" aria-label="${(car.girlIds||[]).length}/${cap} ${t('schedule.plekken')}">${(car.girlIds||[]).length}/${cap}</span>` : ''}
       </div>
-      <div>${riders}</div>
-      ${driverPart}
-      ${shiftLocationHtml(car, direction, {day})}
+      ${edit? `<div class="carCard__note">${driverPart}</div>` : ''}
+      <div class="chips">${riders}</div>
     </div>`;
 }
 
@@ -172,14 +169,14 @@ function unplacedHtml(iso, direction, cars){
   if(!un.length) return '';
   const free = periodEligibleDrivers(iso, direction, 1).filter(([id]) => !cars.some(c => c.driverFamilyId===id));
   const rows = sortGirlIds(un.map(([id]) => id)).map(id => S.canEdit
-    ? `<div class="row"><span><strong>${girlName(id)}</strong></span>
+    ? `<div class="alertCard__row"><span><strong>${girlName(id)}</strong></span>
         <select class="periodSel periodMove" data-pmove="${esc(id)}" data-iso="${iso}" data-dir="${direction}" aria-label="${esc(t('period.view.place'))} ${esc(plainGirlName(id))}">
           <option value="">${t('period.view.place')}</option>
           ${cars.map((c, i) => `<option value="car:${i}">${esc(t('period.view.moveTo',{p1:i+1, p2:plainDriverName(c.driverFamilyId)}))}</option>`).join('')}
           ${free.map(([did, f]) => `<option value="new:${esc(did)}">${esc(t('period.view.newCar',{p1:f.parentName||did}))}</option>`).join('')}
         </select></div>`
-    : `<div class="row"><span><strong>${girlName(id)}</strong></span></div>`).join('');
-  return `<div class="unplacedAlert"><div class="ttl">${phIcon('warning')} ${esc(t('period.view.unplaced',{p1:un.length}))}</div>${rows}</div>`;
+    : `<div class="alertCard__row"><span><strong>${girlName(id)}</strong></span></div>`).join('');
+  return `<div class="alertCard alertCard--stack" role="alert"><div class="alertCard__text"><b><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span> ${esc(t('period.view.unplaced',{p1:un.length}))}</b></div>${rows}</div>`;
 }
 
 // One direction of one date: the handed-in times, the cars, and (coordinator) the buttons to change them.
@@ -191,7 +188,7 @@ export function periodDirectionHtml(iso, direction){
     : `<p class="muted">${t('period.view.notMade')}</p>`;
   const replan = S.canEdit? `<button type="button" class="btn small secondary" data-preplan="${iso}|${direction}">${t('period.view.replan')}</button>` : '';
   return `<div class="periodDir" data-perdir="${iso}|${direction}" style="margin-bottom:12px">
-      <div class="rowflex" style="justify-content:space-between;gap:6px">${dirLabelHtml(direction)}${replan}</div>
+      <div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div>${replan}</div>
       <div class="periodTimes"><div class="muted" style="font-size:12px;margin:6px 0 2px">${t('period.view.times')}</div>${periodTimesHtml(iso, direction)}</div>
       ${body}
     </div>`;
@@ -208,13 +205,13 @@ export function periodViewHtml(){
   const pills = days.map(iso => {
     const carCount = ['heen','terug'].reduce((n, d) => n + (periodCarsFor(iso, d) || []).length, 0);
     const unplaced = ['heen','terug'].reduce((n, d) => n + periodUnplacedFor(iso, d).length, 0);
-    return `<button type="button" class="daypill${iso===open? ' active' : ''}" data-perday="${iso}" aria-pressed="${iso===open}" aria-label="${esc(isoDayLabel(iso,'long'))}, ${carCount} ${t('schedule.rit')}${carCount===1? '' : 'ten'}${unplaced? ', '+esc(t('period.view.unplaced',{p1:unplaced})) : ''}">
-        <span class="daypillTop">${esc(dayUp(periodDayKey(iso)))} ${esc(isoDayLabel(iso,'').split(' ')[0])}</span>
-        <span class="daypillSub">${carCount} ${t('schedule.rit')}${carCount===1? '' : 'ten'}</span>
-        ${unplaced? `<span class="daypillAlert" aria-hidden="true">${unplaced}</span>` : ''}
+    return `<button type="button" class="dayPill${iso===open? ' on' : ''}" data-perday="${iso}" aria-pressed="${iso===open}" aria-label="${esc(isoDayLabel(iso,'long'))}, ${carCount} ${t('schedule.rit')}${carCount===1? '' : 'ten'}${unplaced? ', '+esc(t('period.view.unplaced',{p1:unplaced})) : ''}">
+        <span class="dayPill__ab">${esc(dayUp(periodDayKey(iso)).toLowerCase())}</span>
+        <span class="dayPill__n">${esc(isoDayLabel(iso,'').split(' ')[0])}</span>
+        ${unplaced? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
       </button>`;
   }).join('');
-  return `${pick}<div class="daypills periodPills" role="group" aria-label="${esc(t('deviation.kies_een_dag'))}">${pills}</div>
+  return `${pick}<div class="dayPills periodPills" role="group" aria-label="${esc(t('deviation.kies_een_dag'))}">${pills}</div>
     <div class="daysection"><h3>${esc(isoDayLabel(open,'long'))}</h3>
       ${periodDirectionHtml(open,'heen')}
       ${periodDirectionHtml(open,'terug')}
@@ -242,6 +239,23 @@ export function setPeriodDriver(iso, direction, index, driverId){
   return editShift(iso, direction, cars => periodSetDriver(cars, index, driverId, capOf));
 }
 
+// Another departure and/or arrival place for one car of the temporary rooster (only this car, only this date). '' = follow the standard.
+export function setPeriodCarPlace(iso, direction, index, fields){
+  return editShift(iso, direction, cars => {
+    if(!cars[index]) return { cars, error: { key:'period.rooster.err.unknown' } };
+    const car = { ...cars[index], ...fields };
+    ['stdLocationId','stdDestination'].forEach(k => { if(!car[k]) delete car[k]; });
+    return { cars: cars.map((c, i) => i===index? car : c), error: null };
+  });
+}
+
+function openPeriodCarPlace(iso, direction, index){
+  const car = (periodCarsFor(iso, direction) || [])[index]; if(!car) return;
+  const day = dayKeyOf(iso);
+  const dirName = direction==='heen'? t('dir.heenShort') : t('dir.terugShort');
+  openCarPlaceSheet(car, day, direction, t('loc.periodTitle'), t('loc.periodSub',{p1:dirName, p2:isoDayLabel(iso,'long')}), fields => setPeriodCarPlace(iso, direction, index, fields));
+}
+
 export function wirePeriodRooster(){
   document.querySelectorAll('[data-perday]').forEach(b => b.onclick = () => { S.periodDay = b.dataset.perday; hapticTap(); renderSchedule(); });
   document.querySelectorAll('[data-periodpick]').forEach(el => el.onchange = () => { S.periodSel = el.value; S.periodDay = null; renderSchedule(); });
@@ -253,6 +267,10 @@ export function wirePeriodRooster(){
   document.querySelectorAll('[data-preplan]').forEach(b => b.onclick = () => {
     const [iso, direction] = b.dataset.preplan.split('|');
     hapticTap(); return replanPeriodShift(iso, direction).then(then);
+  });
+  document.querySelectorAll('[data-pcarplace]').forEach(b => b.onclick = () => {
+    const [iso, direction, idx] = b.dataset.pcarplace.split('|');
+    hapticTap(); openPeriodCarPlace(iso, direction, +idx);
   });
   document.querySelectorAll('[data-pdrv]').forEach(el => el.onchange = () => setPeriodDriver(el.dataset.iso, el.dataset.dir, +el.dataset.pdrv, el.value));
   document.querySelectorAll('.periodMove').forEach(el => el.onchange = () => { if(el.value) movePeriodGirl(el.dataset.iso, el.dataset.dir, el.dataset.pmove, el.value); });

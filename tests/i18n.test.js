@@ -67,10 +67,34 @@ test('static page texts (data-i18n in index.html) all exist', () => {
   assert.deepEqual(keys.filter(k => !hasKey(k)), []);
 });
 
-test('navigation order is Mijn week, Wijzigen, Rooster, Mijn gezin, Wedstrijden, Beheer, and Mijn week starts open', () => {
+test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
+  assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
+  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('myweek.daughter_heen', { place: "AFC '34" }), "Op AFC '34 om");
+  assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', place: "AFC '34", time: '17:00' }), "Noor op AFC '34 17:00");
+  assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor klaar 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
+});
+test('the texts of the settings sheet and the Mijn gezin drill-down exist', () => {
+  assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
+  assert.equal(t('shell.parent_of', { name: 'Noor' }), 'Ouder van Noor'); assert.equal(t('shell.saved_instantly'), 'Wordt direct opgeslagen');
+  assert.equal(t('profile.plekken_in_je_auto'), 'Plekken in je auto'); assert.equal(t('profile.kan_jij_deze_dag_rijden'), 'Kun je zelf rijden?');
+});
+test('the texts of the design-v2 audit exist: Dagbericht, passenger flow, toasts, Niet ingedeeld', () => {
+  assert.equal(t('conclusie.title', { dayLabel: 'Woensdag' }), 'Dagbericht Woensdag'); assert.equal(t('conclusie.button'), 'Deel in de groep');
+  assert.equal(t('deviation.passagier_toevoegen'), '+ Passagier toevoegen'); assert.equal(t('deviation.auto_is_vol'), 'Auto is vol');
+  assert.equal(t('deviation.toast_vertrektijd'), 'Vertrektijd opgeslagen'); assert.equal(t('schedule.niet_ingedeeld_box'), 'Niet ingedeeld:'); assert.equal(t('flex.chip'), 'flex');
+  assert.equal(t('profile.stop_testen'), 'Stoppen'); assert.equal(t('maint.banner'), 'Onderhoudsmodus staat aan. Ouders zien de app nu niet.');
+});
+test('the texts of the group-2 audit exist: share sheet, shift tools', () => {
+  assert.equal(t('shell.share_title'), 'Mijn week delen'); assert.equal(t('shell.share_button'), 'Delen');
+  assert.equal(t('schedule.opnieuw_indelen'), 'Opnieuw indelen'); assert.equal(t('schedule.ophalen'), 'Ophalen:');
+  assert.equal(t('schedule.vaste_plek', { dir: 'heen', name: 'De Parel' }), 'Vaste plek heen: De Parel'); assert.equal(t('schedule.opnieuw_ingedeeld', { n: 2 }), "Opnieuw ingedeeld: 2 auto('s)");
+});
+test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijden, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));
-  assert.deepEqual([...nav.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]), ['myweek', 'deviation', 'schedule', 'profile', 'matches', 'beheer']);
+  assert.deepEqual([...nav.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]), ['myweek', 'schedule', 'deviation', 'matches', 'beheer', 'profile']);
+  assert.match(nav, /data-tab="profile" class="navtab" hidden/);   // Mijn gezin opens from the avatar, not from a tab
+  assert.equal(t('nav.matches'), 'Wedstrijden'); assert.equal(t('nav.matches_short'), 'Wedstrijd');   // five tabs (coordinator): the short label
   assert.match(nav, /data-tab="myweek" class="navtab active"/);
   assert.equal((nav.match(/navtab active/g) || []).length, 1);
   assert.match(html, /<div id="tab-myweek"><\/div>/); assert.match(html, /<div id="tab-schedule" style="display:none">/);
@@ -153,8 +177,8 @@ test('the place texts of the standaardrooster speak of one car, not of a whole s
 });
 
 test('the Beheer chips, section titles and attention texts', () => {
-  assert.deepEqual(['gezinnen', 'periodes', 'berichten', 'koppelingen'].map(k => t('beheer.chip_' + k)), ['Gezinnen', 'Periodes', 'Berichten', 'Koppelingen']);
-  assert.equal(t('beheer.sec_koppelingen'), 'Koppelingen en data'); assert.equal(t('beheer.attn_titel', { p1: 3 }), 'Om te checken (3)');
+  assert.deepEqual(['gezinnen', 'periodes', 'berichten', 'koppelingen'].map(k => t('beheer.chip_' + k)), ['Gezinnen', 'Planning', 'Berichten', 'Koppelingen']);
+  assert.equal(t('beheer.sec_koppelingen'), 'Koppelingen'); assert.equal(t('beheer.sec_periodes'), 'Planning'); assert.equal(t('beheer.sec_gezinnen'), 'Gezinnen');   // design v2 names assert.equal(t('beheer.attn_titel', { p1: 3 }), 'Om te checken (3)');
   assert.equal(t('beheer.attn_dubbel', { p1: 'Sanne', p2: 2 }), 'Dubbel gezin: Sanne (2×)');
 });
 
@@ -178,6 +202,7 @@ test('the Ritbeurs texts exist and fill their placeholders (no place buttons any
   assert.match(t('ritbeurs.confirm.regel3'), /Overnemen is definitief/);
   assert.match(t('ritbeurs.saved.off'), /Alle meldingen zijn gestopt/);
   assert.doesNotMatch(Object.entries({ a: t('ritbeurs.form.stappen'), b: t('ritbeurs.moment.intro'), c: t('ritbeurs.notif.offerBackupBody') }).map(x => x[1]).join(' '), /alle chauffeurs|in de buurt/i);
+  assert.equal(t('loc.periodTitle'), 'Plek van deze auto in het tijdelijke rooster');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
@@ -213,4 +238,9 @@ test('the period list texts: phase pills, who has handed in, and the capitalised
   assert.equal(t('period.who.missing', { p1: 'Emma, Sanne' }), 'Nog niet: Emma, Sanne'); assert.equal(t('period.who.more', { p1: 3 }), '+3');
   assert.equal(t('period.who.todo', { p1: 2 }), 'Nog niet doorgegeven (2)'); assert.equal(t('period.who.done', { p1: 6 }), 'Doorgegeven (6)');
   assert.equal(t('period.list.roosterMade'), 'Tijdelijk rooster gemaakt'); assert.equal(t('period.form.groupFill'), 'Invullen door ouders');
+});
+test('Wedstrijden intro and quick-car texts follow the design', () => {
+  assert.equal(t('matches.titel'), 'Wedstrijden van de komende 4 weken.');
+  assert.equal(t('deviation.zet_een_carpool_op_voor'), 'Een carpool kun je tot 7 dagen vooruit regelen.');
+  assert.equal(t('matches.ik_rij_ook'), 'Ik rij ook'); assert.equal(t('matches.auto_weghalen'), 'Mijn auto weghalen');
 });

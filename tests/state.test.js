@@ -91,5 +91,11 @@ test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch i
   assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbBusy, false);
 });
 
+test('the coordinator view starts as "coordinator" (viewAsParent is off until chosen in Instellingen)', () => {
+  assert.equal(S.viewAsParent, false);
+});
+
+test('"+ Passagier toevoegen" lists start closed (devPick)', () => { assert.deepEqual(S.devPick, {}); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

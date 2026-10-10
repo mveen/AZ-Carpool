@@ -1,0 +1,114 @@
+/* tokens.css: THE single source of truth for the look of AZ Carpool (design system v2).
+   Every colour, font, size, radius, shadow and spacing value lives here, as a CSS variable.
+   Rules for everyone (people and Claude): see DESIGN.md.
+   - No hex colours, no px font sizes, no radii outside this file (tests/design-rules.test.js checks this).
+   - Red (--az-red) is an ACCENT only. Primary buttons are ink (--action-bg), never red.
+   Dark theme = the same roles under [data-theme="dark"]. */
+
+/* ---------- Fonts: self-hosted in ./fonts (no request to Google). Latin subset only. ---------- */
+@font-face{font-family:'Onest';font-style:normal;font-weight:400;font-display:swap;src:url('./fonts/onest-latin-400.woff2') format('woff2');}
+@font-face{font-family:'Onest';font-style:normal;font-weight:500;font-display:swap;src:url('./fonts/onest-latin-500.woff2') format('woff2');}
+@font-face{font-family:'Onest';font-style:normal;font-weight:600;font-display:swap;src:url('./fonts/onest-latin-600.woff2') format('woff2');}
+@font-face{font-family:'Onest';font-style:normal;font-weight:700;font-display:swap;src:url('./fonts/onest-latin-700.woff2') format('woff2');}
+@font-face{font-family:'Onest';font-style:normal;font-weight:800;font-display:swap;src:url('./fonts/onest-latin-800.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:600;font-display:swap;src:url('./fonts/jetbrains-mono-v24-latin-600.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:700;font-display:swap;src:url('./fonts/jetbrains-mono-v24-latin-700.woff2') format('woff2');}
+@font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:800;font-display:swap;src:url('./fonts/jetbrains-mono-v24-latin-800.woff2') format('woff2');}
+
+:root{
+  /* ---------- Palette (raw values: use the semantic roles below in components, never these) ---------- */
+  --az-red:#d7001e; --red-50:#fde8eb; --red-700:#b0001a;
+  --ink-900:#14161a; --ink-700:#3a3d42; --ink-500:#6b6f76; --ink-400:#8d9096; --ink-300:#b9b8b4;
+  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea; --paper-200:#e7e5e0;
+  --green-500:#1fa463; --green-50:#e3f6ec; --green-700:#11734a;
+  --amber-50:#fff3dc; --amber-400:#f0b545; --amber-500:#c27200; --amber-700:#8a5200;
+  --violet-50:#efeafd; --violet-700:#5b36c9;
+  --blue-500:#4a7fd6; --blue-50:#e6eefb;
+  --notice-bg:#ffe9a8; --notice-ink:#5c3d00;
+
+  /* ---------- Semantic colour roles ---------- */
+  --surface-page:var(--paper-50);
+  --surface-card:var(--paper-0);
+  --surface-soft:var(--paper-100);      /* chips, segmented track, icon tiles */
+  --surface-inset:var(--paper-50);      /* inputs, inner panels inside a card */
+  --line:var(--paper-150);
+  --control-line:var(--ink-400);        /* edge of inputs and buttons that must reach 3:1 contrast */
+  --text-1:var(--ink-900);
+  --text-2:var(--ink-700);
+  --text-muted:var(--ink-500);
+  --action-bg:var(--ink-900);           /* primary buttons are INK, never red */
+  --action-ink:#ffffff;
+  --on-accent:#ffffff;                  /* text on a red or green fill */
+  --accent:var(--az-red);               /* app icon, active tab, "vandaag", own daughter, badges, destructive confirm */
+  --accent-soft:var(--red-50);
+  --accent-ink:var(--red-700);          /* own daughter's chip, destructive text */
+  --ok:var(--green-500);                /* switch on, "standaard" fill */
+  --ok-soft:var(--green-50);
+  --ok-ink:var(--green-700);            /* "Jij rijdt" */
+  --switch-off:var(--ink-300);
+  --warn-soft:var(--amber-50);
+  --warn-edge:var(--amber-400);
+  --warn-icon:var(--amber-500);
+  --warn-ink:var(--amber-700);          /* "Gewijzigd", "Nog geen rit" */
+  --match-soft:var(--violet-50);
+  --match-ink:var(--violet-700);        /* everything about matches */
+  --info:var(--blue-500);               /* progress bars, back-up selection, focus ring */
+  --info-soft:var(--blue-50);
+  --scrim:rgba(10,11,13,.45);
+  --toast-bg:#14161a; --toast-ink:#ffffff;
+  color-scheme:light;
+
+  /* ---------- Typography ---------- */
+  --font-sans:'Onest',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,Menlo,monospace;   /* ONLY for clock times and counts */
+  --type-screen:800 22px/1.15 var(--font-sans);   --track-screen:-.02em;   /* screen title "Mijn week" */
+  --type-section:800 17px/1.25 var(--font-sans);                            /* "Heen", "Terug" */
+  --type-card-title:700 15px/1.3 var(--font-sans);                          /* driver name, card title */
+  --type-body:500 14px/1.45 var(--font-sans);
+  --type-small:500 13px/1.45 var(--font-sans);
+  --type-caption:500 12px/1.4 var(--font-sans);                             /* routes, sublines */
+  --type-micro:700 11px/1.2 var(--font-sans);     --track-micro:.06em;      /* UPPERCASE labels, tags */
+  --type-time-lg:800 24px/1 var(--font-mono);     --track-time:-.03em;      /* today's departures */
+  --type-time-md:800 18px/1 var(--font-mono);
+  --type-time-sm:700 14px/1 var(--font-mono);
+  --type-button:700 14px/1 var(--font-sans);
+  --type-tab:600 11px/1 var(--font-sans);
+
+  /* ---------- Spacing, radii, shadows, motion ---------- */
+  --space-1:4px; --space-2:6px; --space-3:8px; --space-4:10px; --space-5:12px; --space-6:14px; --space-7:16px; --space-8:18px; --space-9:22px;
+  --page-gutter:18px;
+  --radius-pill:99px;
+  --radius-sheet:28px;      /* top corners of bottom sheets */
+  --radius-hero:22px;       /* "Vandaag" card, match card */
+  --radius-card:20px;       /* day cards, list cards */
+  --radius-car:18px;        /* car cards, fold cards */
+  --radius-alert:16px;      /* alerts, day pills, toasts */
+  --radius-panel:14px;      /* inset panels, big buttons */
+  --radius-control:12px;    /* inputs, buttons, steppers */
+  --radius-chip:10px;       /* icon tiles, ··· buttons */
+  --shadow-card:0 1px 0 #ecebe7,0 8px 24px rgba(20,22,26,.06);
+  --shadow-float:0 10px 24px rgba(0,0,0,.25);
+  --shadow-seg:0 1px 3px rgba(0,0,0,.12);
+  --hit-min:44px;           /* every tap target */
+  --tabbar-h:72px;
+  --motion-fast:.15s ease;
+  --content-max:520px;      /* phone column; wider screens centre it */
+
+  /* Bottom safe-area inset, used everywhere via var(--sab). The <head> script sets .no-bottom-inset for
+     Firefox on Android in a normal tab, where its own toolbar already covers that area. */
+  --sab:env(safe-area-inset-bottom,0px);
+}
+:root.no-bottom-inset{--sab:0px}
+
+[data-theme="dark"]{
+  --surface-page:#0f1012; --surface-card:#1a1c1f; --surface-soft:#26282c; --surface-inset:#0f1012; --line:#2a2c30; --control-line:#6b6f76;
+  --text-1:#f3f2ef; --text-2:#cfd0d3; --text-muted:#9a9da3;
+  --action-bg:#f3f2ef; --action-ink:#14161a;
+  --accent-soft:#3d1218; --accent-ink:#ff7584;
+  --ok-soft:#123222; --ok-ink:#62d69d;
+  --warn-soft:#33270f; --warn-icon:#f5a524; --warn-ink:#f5b94a; --warn-edge:#78510f;
+  --match-soft:#251d40; --match-ink:#b9a6ff;
+  --info-soft:#122036;
+  --shadow-card:0 0 0 1px #24262a;
+  color-scheme:dark;
+}
