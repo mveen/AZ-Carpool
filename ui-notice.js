@@ -55,7 +55,7 @@ export function noticeCardHtml(){
 
 function noticePreviewHtml(text){
   return text
-    ? `<div class="noticeBar" style="display:flex">${phIcon('info', { size:'14px' })}<span>${esc(text)}</span></div>`
+    ? `<div class="noticeBar" style="display:flex">${phIcon('megaphone-fill', { size:'14px' })}<span>${esc(text)}</span></div>`
     : `<div class="muted" style="padding:6px 12px;font-size:12px">${t('notice.preview.empty')}</div>`;
 }
 

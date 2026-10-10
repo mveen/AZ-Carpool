@@ -262,5 +262,9 @@ test('passengers in a car are listed A-Z, whatever order they were added in', ()
   }
 });
 
+test('design v2: no "je dochter" any more; the alert names the daughter', () => {
+  assert.match(text(render({})), /Jahaimy heeft nog geen rit/); assert.doesNotMatch(text(render({})), /[Jj]e dochter/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

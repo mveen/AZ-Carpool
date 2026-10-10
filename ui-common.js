@@ -19,7 +19,7 @@ export function phIcon(name, opts){
   const style = `width:${size};height:${size};vertical-align:-0.15em;flex-shrink:0${opts.style?';'+opts.style:''}`;
   const body = PH_PATHS[name];
   if(!body) return '';
-  return `<svg viewBox="0 0 256 256" style="${style}" aria-hidden="true">${body}</svg>`;
+  return `<svg viewBox="0 0 256 256" fill="currentColor" style="${style}" aria-hidden="true">${body}</svg>`;
 }
 
 // Collapsible section (native <details>), collapsed by default. The open state is kept in S.folds so it survives a redraw.
@@ -190,19 +190,20 @@ export function showToast(msg, opts){
   t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg)+(act? ` <button type="button" id="toastAction" class="toast__action">${esc(act.label)}</button>` : '');
   t.style.display='flex';
   t.onclick = act? (e)=>{ if(e && e.target && e.target.id==='toastAction'){ t.style.display='none'; clearTimeout(t._h); return act.run(); } } : null;
-  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';}, act? 7000 : 4000);
+  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';}, 3800);   // design v2: 3.8 s, also with an action
 }
 
 export function twoStepConfirm(btn, confirmLabel, action){
   if(btn.dataset.confirming==='1'){
     clearTimeout(btn._resetTimer);
-    btn.dataset.confirming=''; btn.innerHTML=btn.dataset.origLabel;
+    btn.dataset.confirming=''; if(btn.classList) btn.classList.remove('confirming'); btn.innerHTML=btn.dataset.origLabel;
     action();
   } else {
     btn.dataset.origLabel = btn.innerHTML;
     btn.dataset.confirming='1';
+    if(btn.classList) btn.classList.add('confirming');   // red: the second tap is the destructive one (design v2)
     btn.textContent = confirmLabel;
-    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; btn.innerHTML=btn.dataset.origLabel; }, 4000);
+    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; if(btn.classList) btn.classList.remove('confirming'); btn.innerHTML=btn.dataset.origLabel; }, 4000);
   }
 }
 

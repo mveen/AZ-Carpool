@@ -215,7 +215,7 @@ export function renderMyWeek(){
       const when = k===todayKey? t('myweek.vandaag') : label;
       const doneText = direction==='heen' ? t('myweek.alert_heen', { time: s }) : t('myweek.alert_terug', { time: s });
       alertRows.push(`<div class="alertCard"><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span>
-        <div class="alertCard__text"><b>${esc(when)} ${esc(dirName(direction).toLowerCase())} · ${esc(doneText)}</b><br>${esc(myFam.girlName||t('myweek.je_dochter'))} ${t('myweek.heeft_nog_geen_rit')}</div>
+        <div class="alertCard__text"><b>${esc(when)} ${esc(dirName(direction).toLowerCase())} · ${esc(doneText)}</b><br>${esc(plainGirlName(myId))} ${t('myweek.heeft_nog_geen_rit')}</div>
         <button type="button" class="btn" data-gowijzig="${k}">${t('myweek.regelen')}</button></div>`);
     });
   });

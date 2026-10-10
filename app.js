@@ -90,6 +90,8 @@ export function renderAll(){ syncCoordinatorNav(); renderProfile(); renderSchedu
 // The Beheer tab belongs to the coordinator view only ("Bekijk als: Ouder" hides it too).
 export function syncCoordinatorNav(){
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display = S.canEdit?'':'none';
+  // Five tabs for the coordinator: the longest label gets shorter (design v2).
+  const lbl=document.getElementById('navMatchesLabel'); if(lbl) lbl.textContent = t(S.canEdit? 'nav.matches_short' : 'nav.matches');
 }
 
 // Switches the visible tab; every switch starts at the top of the new tab.

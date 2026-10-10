@@ -18,9 +18,8 @@ export function renderImpersonateBanner(){
   const el=document.getElementById('impersonateBanner');
   if(!el) return;
   if(S.impersonateFamilyId){
-    el.style.display='block';
-    el.style.cssText='display:block;background:var(--warn-soft);color:var(--warn-icon);padding:8px 16px;font-size:12px;text-align:center;font-weight:600;border-bottom:1px solid var(--line)';
-    el.innerHTML = `${phIcon('flask')} ${t('profile.testweergave_als')} ${esc(fam(S.impersonateFamilyId).girlName||fam(S.impersonateFamilyId).parentName||S.impersonateFamilyId)} <button type="button" class="btn small secondary" id="stopImpersonateBtn" style="margin-left:8px">${t('profile.stop_testen')}</button>`;
+    el.className='testBar'; el.style.display='flex'; el.setAttribute('role','status');
+    el.innerHTML = `${phIcon('eye')}<span class="testBar__text">${t('profile.testweergave_als')} ${esc(fam(S.impersonateFamilyId).girlName||fam(S.impersonateFamilyId).parentName||S.impersonateFamilyId)}</span><button type="button" class="testBar__stop" id="stopImpersonateBtn">${t('profile.stop_testen')}</button>`;
     const btn=document.getElementById('stopImpersonateBtn');
     if(btn) btn.onclick=stopImpersonate;
   } else {

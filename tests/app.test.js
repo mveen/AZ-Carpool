@@ -51,6 +51,10 @@ test('the Beheer tab follows the coordinator view: shown for the coordinator, hi
   S.viewAsParent = true; recomputeCanEdit(); syncCoordinatorNav(); assert.equal(dom.el('navBeheer').style.display, 'none');
   sampleParentState(); syncCoordinatorNav(); assert.equal(dom.el('navBeheer').style.display, 'none');
 });
+test('the Wedstrijden tab label is short ("Wedstrijd") only when the coordinator has five tabs', () => {
+  sampleParentState(); syncCoordinatorNav(); assert.equal(dom.el('navMatchesLabel').textContent, 'Wedstrijden');
+  sampleCoordinatorState(); syncCoordinatorNav(); assert.equal(dom.el('navMatchesLabel').textContent, 'Wedstrijd');
+});
 test('activateTab leaves the tabs alone while the gate is showing', () => {
   installNav(); resetState({});
   dom.el('tab-gate').style.display = 'block'; dom.el('tab-myweek').style.display = 'none';

@@ -179,5 +179,19 @@ test('foldCards finds cards inside a .begSec section and shows the card icon in 
   assert.match(sum.innerHTML, /^<span class="foldTitle"><span class="foldIcon"><svg/); assert.match(sum.innerHTML, /<\/span>Titel<\/span>$/);
 });
 
+test('twoStepConfirm: the second-tap state is red (class confirming) and is cleared again', () => {
+  const classes = new Set(); const btn = { dataset: {}, innerHTML: 'Verwijder', textContent: '', classList: { add: c => classes.add(c), remove: c => classes.delete(c) } };
+  let done = 0; twoStepConfirm(btn, 'Zeker? Tik nogmaals', () => { done++; });
+  assert.equal(classes.has('confirming'), true); assert.equal(btn.textContent, 'Zeker? Tik nogmaals'); assert.equal(done, 0);
+  twoStepConfirm(btn, 'Zeker? Tik nogmaals', () => { done++; });
+  assert.equal(classes.has('confirming'), false); assert.equal(done, 1);
+});
+test('a toast stays 3.8 seconds (design v2), also with an action', () => {
+  const real = globalThis.setTimeout; const seen = [];
+  globalThis.setTimeout = (fn, ms) => { seen.push(ms); return 0; };
+  try { showToast('Opgeslagen'); showToast('Weg', { action: { label: 'Ongedaan', run() {} } }); } finally { globalThis.setTimeout = real; }
+  assert.deepEqual(seen, [3800, 3800]);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

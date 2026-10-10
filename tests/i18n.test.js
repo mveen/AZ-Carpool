@@ -78,12 +78,12 @@ test('the texts of the settings sheet and the Mijn gezin drill-down exist', () =
   assert.equal(t('shell.parent_of', { name: 'Noor' }), 'Ouder van Noor'); assert.equal(t('shell.saved_instantly'), 'Wordt direct opgeslagen');
   assert.equal(t('profile.plekken_in_je_auto'), 'Plekken in je auto'); assert.equal(t('profile.kan_jij_deze_dag_rijden'), 'Kun je zelf rijden?');
 });
-test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijd, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
+test('navigation order is Mijn week, Rooster, Wijzigen, Wedstrijden, Beheer (+ the hidden Mijn gezin route), and Mijn week starts open', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const nav = html.slice(html.indexOf('<nav id="bottomnav"'), html.indexOf('</nav>'));
   assert.deepEqual([...nav.matchAll(/data-tab="(\w+)"/g)].map(m => m[1]), ['myweek', 'schedule', 'deviation', 'matches', 'beheer', 'profile']);
   assert.match(nav, /data-tab="profile" class="navtab" hidden/);   // Mijn gezin opens from the avatar, not from a tab
-  assert.equal(t('nav.matches'), 'Wedstrijd');
+  assert.equal(t('nav.matches'), 'Wedstrijden'); assert.equal(t('nav.matches_short'), 'Wedstrijd');   // five tabs (coordinator): the short label
   assert.match(nav, /data-tab="myweek" class="navtab active"/);
   assert.equal((nav.match(/navtab active/g) || []).length, 1);
   assert.match(html, /<div id="tab-myweek"><\/div>/); assert.match(html, /<div id="tab-schedule" style="display:none">/);

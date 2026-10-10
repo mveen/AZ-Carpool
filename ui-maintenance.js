@@ -9,8 +9,8 @@ import { esc, hapticTap, phIcon, showToast } from './ui-common.js';
 import { renderBeheer } from './ui-beheer.js';
 import { MAINTENANCE_MAX, cleanMaintenanceText, maintenanceBlocks, maintenanceDoc, normalizeMaintenance } from './maintenance.js';
 
-// The app logo (the car of the header), drawn in one colour (currentColor, red via .maintLogo) without the red button behind it.
-const LOGO_SVG = `<svg viewBox="14 192 430 176" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round"><path d="M44 252 H80"/><path d="M28 286 H80"/><path d="M52 320 H78"/></g><g fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"><path d="M124 322 Q112 322 112 310 V232 Q112 206 138 206 H290 Q302 206 310 214 L352 254 L404 262 Q430 266 430 290 V310 Q430 322 418 322 H410"/><path d="M234 322 H298"/></g><path d="M134 226 H212 V268 H134 Z M226 226 H288 Q294 226 298 230 L336 268 H226 Z" fill="currentColor" opacity=".35"/><g fill="currentColor"><circle cx="178" cy="242" r="12"/><path d="M168 236 C150 232 142 246 146 260 C150 252 158 250 168 250 Z"/><path d="M158 268 Q158 256 178 256 Q198 256 198 268 Z"/></g><rect x="404" y="276" width="18" height="10" rx="5" fill="#fbbf24"/><circle cx="179" cy="326" r="36" fill="currentColor"/><g transform="translate(179 326)"><polygon points="0,-15 14.3,-4.6 8.8,12.1 -8.8,12.1 -14.3,-4.6" fill="var(--surface-page)"/><g stroke="var(--surface-page)" stroke-width="4.5" stroke-linecap="round"><line x1="0" y1="-15" x2="0" y2="-34"/><line x1="14.3" y1="-4.6" x2="32.3" y2="-10.5"/><line x1="8.8" y1="12.1" x2="20" y2="27.5"/><line x1="-8.8" y1="12.1" x2="-20" y2="27.5"/><line x1="-14.3" y1="-4.6" x2="-32.3" y2="-10.5"/></g></g><circle cx="352" cy="326" r="36" fill="currentColor"/><circle cx="352" cy="326" r="13" fill="var(--surface-page)"/></svg>`;
+// The only brand mark of the design system is the app icon.
+const LOGO_SVG = `<img src="./icon.svg" alt="" width="96" height="96">`;
 
 // The parts of the app that are switched off for screen readers and the keyboard while the page covers them.
 const COVERED = ['topbar', 'bottomnav'];

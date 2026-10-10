@@ -34,6 +34,17 @@ function parentName(){
   return linked ? (fam(myFamilyId()).parentName || '') : '';
 }
 
+// The small line above the screen title (design v2): Mijn week shows the week, the other screens say what they are for.
+export function contextLine(screen){
+  const week = S.currentWeekKey ? weekRangeLabel() : '';
+  if(screen === 'myweek') return week || t('shell.context_gezin');
+  if(screen === 'schedule') return S.currentWeekKey ? t('shell.context_rooster', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
+  if(screen === 'deviation') return t('shell.context_wijzigen');
+  if(screen === 'matches'){ const team = (S.matchFeeds && S.matchFeeds[0] && S.matchFeeds[0].label) || ''; return team ? t('shell.context_wedstrijden', { team: team.replace(/^AZ\s+/i, '') }) : t('shell.context_wedstrijden_plain'); }
+  if(screen === 'beheer') return t('shell.context_beheer');
+  return t('shell.context_gezin');
+}
+
 // Redraws the header for the given screen (title, week line, share button, avatar letters).
 export function updateHeader(tab){
   if(!tab){ const on = document.querySelector('nav button.active'); tab = on && on.dataset ? on.dataset.tab : 'myweek'; }
@@ -41,7 +52,7 @@ export function updateHeader(tab){
   const title = document.getElementById('headerTitle');
   if(title) title.textContent = t(TAB_TITLE_KEY[screen]);
   const ctx = document.getElementById('headerContext');
-  if(ctx) ctx.textContent = SHOWS_WEEK.has(screen) && S.currentWeekKey ? weekRangeLabel() : t('app.route');
+  if(ctx) ctx.textContent = contextLine(screen);
   const share = document.getElementById('shareToggle');
   if(share) share.hidden = !SHOWS_SHARE.has(screen);
   const av = document.getElementById('avatarInitials');
