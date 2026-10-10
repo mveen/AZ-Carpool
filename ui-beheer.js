@@ -570,9 +570,10 @@ export function renderBeheer(){
     return `
     <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--line);gap:8px">
       <div style="flex:1;min-width:0">
-        <div style="font-size:16px;font-weight:800">${esc(fd.girlName||'(naam?)')}</div>
-        <div class="muted">${esc(fd.parentName||'(ouder?)')} ${claimed[id]?t('beheer.span_class_badge_gekoppeld_span'):''} ${isCoord?t('beheer.span_class_badge_rec_coordinator'):''}${fd.familyType==='flex'? ` <span class="badge flexBadge">${t('flex.badge')}</span>` : ''}</div>
-        ${missing.length? `<div class="fitbad" style="font-size:12px;margin-top:2px">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
+        <div class="famName">${esc(fd.girlName||'(naam?)')}</div>
+        <div class="muted">${esc(fd.parentName||'(ouder?)')}</div>
+        <div class="famTags">${claimed[id]?`<span class="tag tag--ok">${t('beheer.gekoppeld')}</span>`:''}${isCoord?`<span class="tag tag--accent">${t('beheer.coordinator_tag')}</span>`:''}${fd.familyType==='flex'?`<span class="tag tag--flex">${t('flex.badge')}</span>`:''}</div>
+        ${missing.length? `<div class="fitbad famMissing">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
       <span style="display:flex;gap:6px;flex-shrink:0">
         <button type="button" class="btn small secondary" data-coordedit="${id}">${t('beheer.wijzig')}</button>

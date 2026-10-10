@@ -30,7 +30,7 @@ const state = (patch = {}) => sampleParentState({ matchFeeds: feeds, matches: [h
 let picks = [];
 function pageFrom(html) {
   const mk = attr => [...html.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map(m => ({ dataset: { [attr]: m[1] }, onclick: null, textContent: '' }));
-  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar') };
+  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-iremove]': mk('iremove') };
   picks = [...html.matchAll(/class="matchCarGirlPick" value="([^"]+)"/g)].map(m => ({ value: m[1], checked: false, onchange: null }));
   reg['.matchCarGirlPick'] = picks;
   dom.doc.querySelectorAll = sel => (sel === '.matchCarGirlPick:checked' ? picks.filter(p => p.checked) : (reg[sel] || []));
@@ -55,17 +55,18 @@ test('without an account nothing is shown', () => {
 test('matches of the next 29 days are listed in order; later ones are left out', () => {
   state({ matches: [far, home, tooFar] });
   const s = text(render());
-  assert.match(s, /^Wedstrijden komende 4 weken\. /);
-  assert.ok(s.indexOf('zaterdag 3 oktober') > -1 && s.indexOf('dinsdag 20 oktober') > s.indexOf('zaterdag 3 oktober'));
+  assert.match(s, /^Wedstrijden van de komende 4 weken\. /);
+  assert.ok(s.indexOf('za 3 okt') > -1 && s.indexOf('di 20 okt') > s.indexOf('za 3 okt'));
   assert.doesNotMatch(s, /7 november/);
 });
 test('a match within 8 days can get a carpool; the "set up a carpool" sentence shows only then', () => {
   state({ matches: [home] });
   const s = text(render());
-  assert.match(s, /AZ O15-1 \(Thuis\) vs Hoorn O15-2 zaterdag 3 oktober · 10:30 · Sportpark Hoorn/);
-  assert.match(s, /Zet een carpool op voor een wedstrijd/); assert.match(s, /Nog geen carpool ingesteld\. \+ Auto toevoegen/);
+  assert.match(s, /za 3 okt.*aftrap 10:30.*AZ O15-1 \(Thuis\) vs Hoorn O15-2.*Sportpark Hoorn/);
+  assert.match(s, /Een carpool kun je tot 7 dagen vooruit regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rij ook \+ Auto toevoegen/);
   state({ matches: [far] });
-  assert.doesNotMatch(text(render()), /Zet een carpool op voor een wedstrijd/);
+  assert.doesNotMatch(text(render()), /tot 7 dagen vooruit/);
+  assert.doesNotMatch(render(), /data-iride/);
 });
 test('a later match gets a note with the first day a carpool can be set up, and no add button', () => {
   state({ matches: [far] });
@@ -198,6 +199,20 @@ await testAsync('the trash button removes that car; removing the last car delete
 test('every match is its own card (matchCard) under an info line; no nested group cards any more', () => {
   const html = withFakeNow(NOW, () => { sampleParentState({ matchFeeds: [], matches: [] }); return matchesCardHtml(); });
   assert.doesNotMatch(html, /matchGroup|matchesCard/);
+});
+
+await testAsync('Ik rij ook adds the own car with the own daughter; Mijn auto weghalen removes it again', async () => {
+  const fake = useFakeDb(sampleDbSeed());
+  state({ me: 'u1', links: { u1: { familyId: 'f2' } } });
+  render();
+  assert.match(render(), /data-iride="/); assert.doesNotMatch(render(), /data-iremove/);
+  await withFakeNow(NOW, () => reg()('[data-iride]')[0].onclick());
+  const d = fake.get('matchCarpools/' + SLUG);
+  assert.deepEqual(d.cars.map(c => [c.driverFamilyId, c.girlIds]), [['f2', ['f2']]]);
+  state({ me: 'u1', links: { u1: { familyId: 'f2' } }, matchCarpools: { [SLUG]: d } });
+  assert.match(render(), /data-iremove="/); assert.doesNotMatch(render(), /data-iride/);
+  await reg()('[data-iremove]')[0].onclick();
+  assert.equal(fake.get('matchCarpools/' + SLUG), undefined);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

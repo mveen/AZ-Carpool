@@ -152,5 +152,12 @@ export function initShell(onNavigate, onViewChange){
   document.addEventListener('click', e => {
     const b = e.target && e.target.closest ? e.target.closest('[data-opensettings]') : null;
     if(b) openSettings(onNavigate, onViewChange);
+    // Vast | Flex switch in the family form: drives the (hidden) select that the save code reads.
+    const ft = e.target && e.target.closest ? e.target.closest('[data-famtype]') : null;
+    if(ft){
+      const sel = document.getElementById(ft.dataset.famtypefor);
+      if(sel) sel.value = ft.dataset.famtype;
+      document.querySelectorAll('[data-famtypefor="' + ft.dataset.famtypefor + '"]').forEach(x => x.classList.toggle('active', x === ft));
+    }
   });
 }

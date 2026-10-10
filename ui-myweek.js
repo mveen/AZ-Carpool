@@ -46,17 +46,18 @@ export function locationLinkHtml(location){
 // opts.geo: make the location a route link (Mijn week only).
 export function matchInfoHtml(m, opts){
   const a = analyzeMatch(m.summary);
-  const dayLabel = m.start.toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'long'});
+  const dateShort = m.start.toLocaleDateString(locale(),{weekday:'short', day:'numeric', month:'short'}).replace('.','');
   const timeLabel = m.start.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
   const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
+  // Design v2: violet date tag + kick-off, the title, the location (underlined, a route link in the Wedstrijden tab), distance and cost.
   return `<div class="matchInfo">
-    <div class="matchTitle"><span class="matchBall">${phIcon('soccer',{size:'16px'})}</span><span>${esc(matchLabel(m))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</span></div>
-    <div class="noteLine matchWhen">${dayLabel} · ${timeLabel}${m.location? ' · '+(opts&&opts.geo? locationLinkHtml(m.location) : esc(m.location)):''}</div>
+    <div class="matchHead"><span class="tag tag--match">${phIcon('soccer-ball-fill')}${esc(dateShort)}</span><span class="matchKick">${t('myweek.aftrap').toLowerCase()} ${esc(timeLabel)}</span></div>
+    <div class="matchTitle">${esc(matchLabel(m))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</div>
+    ${m.location? `<div class="matchLoc">${opts&&opts.geo? locationLinkHtml(m.location) : esc(m.location)}</div>` : ''}
     ${matchDistanceHtml(m)}
   </div>`;
 }
 
-// ---------- Mijn week: today first, then the rest of the week (design system v2) ----------
 // "Naam >" button that opens the contact sheet; a car without a known driver is an amber problem line instead.
 function driverButtonHtml(driverFamilyId, tagsHtml){
   const known = !!(driverFamilyId && S.families[driverFamilyId] && S.families[driverFamilyId].parentName);

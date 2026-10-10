@@ -104,10 +104,14 @@ test('setViewAs without a callback does not break', () => { coordWithFamily(); s
 test('initShell wires the avatar, the share button, the contact handler and the "back to Instellingen" links', () => {
   sampleParentState(); const { ov } = installSheet(); const handlers = []; dom.doc.addEventListener = (type, fn) => { if (type === 'click') handlers.push(fn); };
   initShell(() => {});
-  assert.equal(handlers.length, 2);   // contact names + [data-opensettings]
+  assert.equal(handlers.length, 2);   // contact names + [data-opensettings] and the Vast|Flex switch
   dom.el('avatarBtn').onclick(); assert.equal(ov.mounted, true);
   ov.mounted = false; ov.removed = false;
   handlers[1]({ target: { closest: sel => (sel === '[data-opensettings]' ? {} : null) } }); assert.equal(ov.mounted, true);
+  // Vast | Flex switch: sets the hidden select and moves the active mark.
+  const sel = { value: 'vast' }; const flexBtn = { dataset: { famtype: 'flex', famtypefor: 'coord_familyType' }, classList: { toggle() {} } };
+  dom.el('coord_familyType'); dom.doc.getElementById = id => (id === 'coord_familyType' ? sel : dom.el(id)); dom.doc.querySelectorAll = () => [flexBtn];
+  handlers[1]({ target: { closest: s => (s === '[data-famtype]' ? flexBtn : null) } }); assert.equal(sel.value, 'flex');
 });
 
 console.log('\n=== Mijn week delen (share sheet) ===');

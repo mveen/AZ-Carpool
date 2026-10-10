@@ -227,7 +227,11 @@ export function familyFormHtml(prefix,f){
       <div><label style="margin-top:0">${t('profile.naam_dochter')}</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
     </div>${prefix==='coord'? `
     <label>${t('profile.gezinstype')}</label>
-    <select id="${prefix}_familyType">
+    <div class="segmented" role="group" aria-label="${esc(t('profile.gezinstype'))}">
+      <button type="button" data-famtype="vast" data-famtypefor="${prefix}_familyType" class="${f.familyType==='flex'?'':'active'}">${t('profile.gezinstype.vast')}</button>
+      <button type="button" data-famtype="flex" data-famtypefor="${prefix}_familyType" class="${f.familyType==='flex'?'active':''}">${t('profile.gezinstype.flex')}</button>
+    </div>
+    <select id="${prefix}_familyType" hidden>
       <option value="vast" ${f.familyType==='flex'?'':'selected'}>${t('profile.gezinstype.vast')}</option>
       <option value="flex" ${f.familyType==='flex'?'selected':''}>${t('profile.gezinstype.flex')}</option>
     </select>` : ''}

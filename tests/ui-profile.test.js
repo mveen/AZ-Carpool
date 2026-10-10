@@ -305,7 +305,7 @@ console.log('\n=== gezinstype Vast/Flex (US-05) ===');
 test('the coordinator form has a Vast/Flex choice, default Vast; the parent form does not', () => {
   sampleCoordinatorState();
   const coordHtml = familyFormHtml('coord', { ...sampleParentState().families.f2 });
-  assert.match(coordHtml, /id="coord_familyType"/); assert.match(coordHtml, /<option value="vast" selected>/);
+  assert.match(coordHtml, /id="coord_familyType"/); assert.match(coordHtml, /data-famtype="vast"[^>]*class="active"/); assert.match(coordHtml, /<select id="coord_familyType" hidden>/); assert.match(coordHtml, /<option value="vast" selected>/);
   const flexHtml = familyFormHtml('coord', { ...sampleParentState().families.f2, familyType: 'flex' });
   assert.match(flexHtml, /<option value="flex" selected>/); assert.doesNotMatch(flexHtml, /<option value="vast" selected>/);
   assert.doesNotMatch(familyFormHtml('me', sampleParentState().families.f2), /familyType/);

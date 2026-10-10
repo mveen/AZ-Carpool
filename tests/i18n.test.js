@@ -238,3 +238,8 @@ test('the period list texts: phase pills, who has handed in, and the capitalised
   assert.equal(t('period.who.todo', { p1: 2 }), 'Nog niet doorgegeven (2)'); assert.equal(t('period.who.done', { p1: 6 }), 'Doorgegeven (6)');
   assert.equal(t('period.list.roosterMade'), 'Tijdelijk rooster gemaakt'); assert.equal(t('period.form.groupFill'), 'Invullen door ouders');
 });
+test('Wedstrijden intro and quick-car texts follow the design', () => {
+  assert.equal(t('matches.titel'), 'Wedstrijden van de komende 4 weken.');
+  assert.equal(t('deviation.zet_een_carpool_op_voor'), 'Een carpool kun je tot 7 dagen vooruit regelen.');
+  assert.equal(t('matches.ik_rij_ook'), 'Ik rij ook'); assert.equal(t('matches.auto_weghalen'), 'Mijn auto weghalen');
+});
