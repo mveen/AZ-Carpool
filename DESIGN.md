@@ -19,7 +19,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 2. **No colour literals** (`#fff`, `rgb(...)`) and **no radius or shadow literals** in CSS or in `style="..."` of new code. Use `var(--...)`.
 3. **No font sizes in px in screens.** Use a `--type-*` token (`font:var(--type-body)`). Times and counts use `--font-mono`, nothing else does.
 4. **Need something that does not exist?** Add the block to `components.css`, from tokens, and list it below. Then use it. Do not make a one-off.
-5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab, "vandaag", the own daughter's chip and initial, badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
+5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab, "vandaag", the own daughter's chip and initial, a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
 6. **Primary buttons are ink** (`--action-bg`). Selected = ink. Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
 7. **Every tap target is at least 44 px** (`--hit-min`).
 8. **Dark theme comes free** if you only use role tokens (`--surface-card`, `--text-1`, ...). Never use the raw palette (`--ink-900`, `--paper-0`, ...) in components.
@@ -65,6 +65,12 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 - Contact: no direct WhatsApp buttons per driver any more; names open the contact sheet. Group sharing stays (Dagbericht, share button).
 
 Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
+
+## Avatar choice
+
+- Default = initials (ink circle). A parent can pick one of 10 Phosphor icons (`avatars.js`, `AVATARS`); the id is stored as the optional field `avatar` on `families/<id>` ('' or missing = initials). Never rename an id: they live in Firestore.
+- Picker: tap the avatar in Instellingen -> sheet with `.avatarGrid` > `.avatarTile` (`__disc`, `__label`, `aria-pressed`). Saves at once with an Ongedaan toast. An icon circle gets `.avatar--icon` (`--accent-soft` / `--accent-ink`).
+- Shown in the header (`.avatarBtn`), Instellingen (`.settingsAvatar`) and the contact sheet (`.contactAvatar`).
 
 ## Migration status
 

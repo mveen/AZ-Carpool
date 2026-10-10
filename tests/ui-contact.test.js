@@ -71,6 +71,11 @@ test('design v2: the contact sheet starts with an avatar circle (initials) next 
   sampleParentState(); const ov = installSheet(); openContactSheet('f2');
   assert.match(ov.html, /<span class="settingsAvatar contactAvatar">PP<\/span>/);
 });
+test('the contact sheet shows the avatar icon of that family, initials when there is none', () => {
+  sampleParentState(); S.families.f2.avatar = 'handshake'; let ov = installSheet(); openContactSheet('f2');
+  assert.match(ov.html, /class="settingsAvatar contactAvatar avatar--icon"><svg/); assert.doesNotMatch(ov.html, />PP</);
+  delete S.families.f2.avatar; ov = installSheet(); openContactSheet('f2'); assert.match(ov.html, />PP</);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

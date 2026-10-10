@@ -246,3 +246,7 @@ test('Wedstrijden intro and quick-car texts follow the design', () => {
   assert.equal(t('deviation.zet_een_carpool_op_voor'), 'Een carpool kun je tot 7 dagen vooruit regelen.');
   assert.equal(t('matches.ik_rij_ook'), 'Ik rij ook'); assert.equal(t('matches.auto_weghalen'), 'Mijn auto weghalen');
 });
+test('the avatar texts exist, one label per library icon', () => {
+  assert.equal(t('avatar.title'), 'Kies je avatar'); assert.equal(t('avatar.initials'), 'Initialen');
+  for (const id of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.notEqual(t('avatar.l.' + id), 'avatar.l.' + id, id);
+});

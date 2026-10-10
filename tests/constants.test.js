@@ -62,6 +62,10 @@ test('todayKeyNow follows the clock (a phone that stays open past midnight), tod
   assert.equal(typeof todayKeyNow, 'function'); assert.ok(['Ma', 'Di', 'Wo', 'Do', 'Vr', null].includes(todayKeyNow())); assert.equal(todayKey, todayKeyNow());
   assert.ok(PH_PATHS['plus-circle']); assert.ok(PH_PATHS['minus-circle']);
 });
+test('the avatar library icons all exist in PH_PATHS', () => {
+  for (const k of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
+});
+test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -3,13 +3,15 @@
 // (Mijn gezin, theme, help). The tab bar itself is plain markup in index.html.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme } from './ui-common.js';
+import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast } from './ui-common.js';
 import { APP_VERSION } from './constants.js';
 import { weekRangeLabel } from './dates.js';
 import { fam } from './rides.js';
 import { canSwitchViewFor, myFamilyId, recomputeCanEdit } from './coordinator.js';
 import { openHelp } from './ui-help.js';
 import { sendWhatsAppUpdate } from './ui-deviation.js';
+import { AVATARS, avatarOf, avatarInner, avatarClass, avatarLabel } from './avatars.js';
+import { saveAvatar } from './data.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { initContact } from './ui-contact.js';
 
@@ -34,6 +36,13 @@ function parentName(){
   return linked ? (fam(myFamilyId()).parentName || '') : '';
 }
 
+// The family whose avatar this device may change: only when linked to a family (or testing as one), never the bare coordinator.
+function ownFamilyId(){
+  const linked = !!(S.links && S.links[S.me] && S.links[S.me].familyId) || !!S.impersonateFamilyId;
+  return linked ? myFamilyId() : '';
+}
+function ownAvatar(){ const id = ownFamilyId(); return id ? avatarOf(fam(id)) : ''; }
+
 // The small line above the screen title (design v2): Mijn week shows the week, the other screens say what they are for.
 export function contextLine(screen){
   const week = S.currentWeekKey ? weekRangeLabel() : '';
@@ -56,7 +65,11 @@ export function updateHeader(tab){
   const share = document.getElementById('shareToggle');
   if(share) share.hidden = !SHOWS_SHARE.has(screen);
   const av = document.getElementById('avatarInitials');
-  if(av) av.textContent = initials(parentName()) || (S.canEdit ? t('shell.avatar_coordinator') : '?');
+  if(av){
+    const pick = ownAvatar();
+    av.innerHTML = avatarInner(pick, initials(parentName()) || (S.canEdit ? t('shell.avatar_coordinator') : '?'));
+    const btn = document.getElementById('avatarBtn'); if(btn && btn.classList) btn.classList.toggle('avatar--icon', !!pick);
+  }
 }
 
 // "Mijn week delen": a sheet with the text and one Delen button. The phone's own share menu opens when the browser has one (any app);
@@ -119,7 +132,7 @@ export function openSettings(onNavigate, onViewChange){
   const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet__handle"></div>
-    <div class="settingsHead"><span class="settingsAvatar">${esc(initials(name) || (S.canEdit ? t('shell.avatar_coordinator') : '?'))}</span>
+    <div class="settingsHead">${avatarHead(name)}
       <div><h3 id="sheetTitle">${esc(name || t('shell.settings'))}</h3><p class="sheet__sub">${esc(role)}</p></div></div>
     ${row('setProfile', 'users', t('nav.profile'), t('shell.family_hint'))}
     <div class="settingsRow">${phIcon('moon')}<span class="settingsRow__label">${esc(t('shell.theme'))}</span>
@@ -131,6 +144,7 @@ export function openSettings(onNavigate, onViewChange){
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
   ov.querySelector('#setProfile').onclick = () => { closeSheet(); go('profile'); };
+  const setAv = ov.querySelector('#setAvatar'); if(setAv) setAv.onclick = () => openAvatarPicker(onNavigate, onViewChange);
   ov.querySelector('#setHelp').onclick = () => { closeSheet(); openHelp(document.getElementById('avatarBtn')); };
   ov.querySelector('#themeLight').onclick = () => setTheme('light');
   ov.querySelector('#themeDark').onclick = () => setTheme('dark');
@@ -141,6 +155,48 @@ export function openSettings(onNavigate, onViewChange){
   }
   applyTheme(currentTheme());   // marks the active theme button
   const first = ov.querySelector('#setProfile'); if(first) first.focus();
+}
+
+// The big avatar in the Instellingen sheet: a button (with a pencil) when this device can pick an avatar, a plain circle otherwise.
+function avatarHead(name){
+  const pick = ownAvatar(), inner = avatarInner(pick, initials(name) || (S.canEdit ? t('shell.avatar_coordinator') : '?'));
+  if(!ownFamilyId()) return `<span class="settingsAvatar">${inner}</span>`;
+  return `<button type="button" class="settingsAvatar settingsAvatar--btn${avatarClass(pick)}" id="setAvatar" aria-label="${esc(t('avatar.edit'))}">${inner}<span class="settingsAvatar__edit">${phIcon('pencil')}</span></button>`;
+}
+
+// "Kies je avatar": a sheet with the initials (default) and the library. A tap saves at once, with Ongedaan (design rule 9a).
+export function openAvatarPicker(onNavigate, onViewChange){
+  const fid = ownFamilyId(); if(!fid) return;
+  const current = ownAvatar(), name = parentName();
+  const letters = initials(name) || '?';
+  const tile = (id, inner, label, cls) => `<button type="button" class="avatarTile" data-avatar="${esc(id)}" aria-pressed="${id === current}"><span class="avatarTile__disc${cls}">${inner}</span><span class="avatarTile__label">${esc(label)}</span></button>`;
+  closeSheet();
+  const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${esc(t('avatar.title'))}</h3><p class="sheet__sub">${esc(t('avatar.sub'))}</p>
+    <div class="avatarGrid">${tile('', esc(letters), t('avatar.initials'), '')}${AVATARS.map(id => tile(id, phIcon(id), avatarLabel(id), ' avatar--icon')).join('')}</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => {
+    if(e.target === ov){ closeSheet(); return; }
+    const b = e.target && e.target.closest ? e.target.closest('[data-avatar]') : null;
+    if(!b) return;
+    pickAvatar(fid, b.dataset.avatar, onNavigate, onViewChange);
+  });
+  const sel = ov.querySelector('[aria-pressed="true"]'); if(sel && sel.focus) sel.focus();
+}
+
+async function pickAvatar(fid, next, onNavigate, onViewChange){
+  const prev = avatarOf(fam(fid));
+  closeSheet();
+  if(next === prev){ openSettings(onNavigate, onViewChange); return; }
+  if(!(await saveAvatar(fid, next))) return;
+  updateHeader();
+  showToast(t('avatar.saved'), { action: { label: t('avatar.undo'), run: async () => {
+    if(await saveAvatar(fid, prev)){ updateHeader(); showToast(t('avatar.restored')); }
+  } } });
+  openSettings(onNavigate, onViewChange);
 }
 
 // Called once from app.js bootstrap: wires the avatar, the share button, the contact names and the "back to Instellingen" links.

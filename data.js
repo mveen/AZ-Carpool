@@ -704,6 +704,18 @@ export async function saveCoordFamily(){
   catch(e){showToast(t('data.opslaan_mislukt')+(e&&e.message||e));}
 }
 
+// The avatar a parent picked ('' = initials) goes on the family document as the optional field `avatar`; only that field is written.
+// Returns true when stored. The snapshot listener redraws the app; S.families is updated at once so the header changes without waiting.
+export async function saveAvatar(familyId, avatar){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  if(!familyId) return false;
+  try{
+    await db.doc("families/"+familyId).set({avatar: avatar||''}, {merge:true});
+    if(S.families[familyId]) S.families[familyId].avatar = avatar||'';
+    return true;
+  }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
+}
+
 // Back-up restore (Beheer → Back-up gezinnen): writes the planned families (family-backup.js planRestore) in ONE batch, so a restore is
 // all-or-nothing. Fields that are not in the back-up (timeChanges, invite codes, links) stay untouched (merge). Returns true when stored.
 export async function restoreFamilies(plan){

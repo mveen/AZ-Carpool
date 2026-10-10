@@ -6,11 +6,11 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
+import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, useFakeDb } from './test-support.js';
 import { S } from '../state.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
-import { initials, updateHeader, openSettings, initShell, setViewAs, shareWeek, TAB_TITLE_KEY } from '../ui-shell.js';
+import { initials, updateHeader, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -27,7 +27,7 @@ test('every tab has a title text', () => {
 test('Mijn week: title, week line, share button and the avatar letters of the parent', () => {
   sampleParentState(); updateHeader('myweek');
   assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); assert.match(dom.el('headerContext').textContent, /^Week \d+ /);
-  assert.equal(dom.el('shareToggle').hidden, false); assert.equal(dom.el('avatarInitials').textContent, 'PP');
+  assert.equal(dom.el('shareToggle').hidden, false); assert.equal(dom.el('avatarInitials').innerHTML, 'PP');
 });
 test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig, deze week", Wedstrijden "<team> · komende 4 weken", Beheer "Alleen voor de coördinator"', () => {
   sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true); assert.equal(dom.el('headerContext').textContent, 'Week 40 · iedereen');
@@ -39,8 +39,8 @@ test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig,
 });
 test('an unknown screen falls back to Mijn week', () => { sampleParentState(); updateHeader('nope'); assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); });
 test('a coordinator without a family gets a C; an unlinked visitor gets a ?', () => {
-  sampleCoordinatorState({ coordinatorConfig: { uid: 'coord' } }); updateHeader('myweek'); assert.equal(dom.el('avatarInitials').textContent, 'C');
-  resetState({ me: 'x' }); updateHeader('myweek'); assert.equal(dom.el('avatarInitials').textContent, '?');
+  sampleCoordinatorState({ coordinatorConfig: { uid: 'coord' } }); updateHeader('myweek'); assert.equal(dom.el('avatarInitials').innerHTML, 'C');
+  resetState({ me: 'x' }); updateHeader('myweek'); assert.equal(dom.el('avatarInitials').innerHTML, '?');
 });
 
 console.log('\n=== Instellingen sheet ===');
@@ -139,6 +139,77 @@ test('the sheet names the team when the app has exactly one match calendar', () 
   sampleParentState({ matchFeeds: [{ calendarId: 'a', label: 'A' }, { calendarId: 'b', label: 'B' }] }); const o2 = installSheet(); openSettings(() => {});
   assert.doesNotMatch(text(o2.ov.html), /· A|· B/);
 });
+
+console.log('\n=== avatar choice ===');
+const tick = () => new Promise(r => setImmediate(r));
+function pickerSheet() {
+  const sheet = installSheet(); sheet.ov.click = null; sheet.ov.addEventListener = (type, fn) => { if (type === 'click') sheet.ov.click = fn; };
+  return sheet;
+}
+const tap = (ov, avatar) => ov.click({ target: { closest: sel => (sel === '[data-avatar]' ? { dataset: { avatar } } : null) } });
+test('default: no avatar field shows the initials in the header', () => {
+  sampleParentState(); updateHeader('myweek');
+  assert.equal(dom.el('avatarInitials').innerHTML, 'PP'); assert.doesNotMatch(dom.el('avatarInitials').innerHTML, /<svg/);
+});
+test('a family with an avatar shows the icon in the header, and the button gets the red-tint class', () => {
+  sampleParentState(); S.families.f2.avatar = 'trophy'; updateHeader('myweek');
+  assert.match(dom.el('avatarInitials').innerHTML, /<svg/); assert.doesNotMatch(dom.el('avatarInitials').innerHTML, /PP/);
+});
+test('an unknown stored avatar falls back to the initials', () => {
+  sampleParentState(); S.families.f2.avatar = 'does-not-exist'; updateHeader('myweek');
+  assert.equal(dom.el('avatarInitials').innerHTML, 'PP');
+});
+test('the Instellingen sheet has a tappable avatar for a linked parent, a plain one for a visitor without family', () => {
+  sampleParentState(); let { ov } = installSheet(); openSettings(() => {});
+  assert.match(ov.html, /id="setAvatar"/); assert.match(ov.html, /aria-label="Avatar wijzigen"/);
+  resetState({ me: 'x' }); ({ ov } = installSheet()); openSettings(() => {});
+  assert.doesNotMatch(ov.html, /id="setAvatar"/);
+  sampleCoordinatorState({ coordinatorConfig: { uid: 'coord' } }); ({ ov } = installSheet()); openSettings(() => {});
+  assert.doesNotMatch(ov.html, /id="setAvatar"/, 'the bare coordinator has no family to put an avatar on');
+});
+test('the avatar button in the sheet opens the picker', () => {
+  sampleParentState(); const { ov, els } = installSheet(); openSettings(() => {});
+  els.setAvatar.onclick(); assert.match(ov.html, /Kies je avatar/);
+});
+test('the picker shows the initials first, then the 10 icons, with the current one pressed', () => {
+  sampleParentState(); S.families.f2.avatar = 'car'; const { ov } = pickerSheet(); openAvatarPicker(() => {});
+  assert.equal((ov.html.match(/data-avatar=/g) || []).length, 11);
+  assert.match(ov.html, /data-avatar="" aria-pressed="false"><span class="avatarTile__disc">PP<\/span><span class="avatarTile__label">Initialen/);
+  assert.match(ov.html, /data-avatar="car" aria-pressed="true"/); assert.match(ov.html, /data-avatar="trophy" aria-pressed="false"/);
+});
+test('the picker is not offered without a family', () => {
+  resetState({ me: 'x' }); const { ov } = pickerSheet(); openAvatarPicker(() => { }); assert.equal(ov.mounted, false);
+});
+await (async () => {
+  const run = async (name, fn) => { try { await fn(); passed++; console.log('  ✓', name); } catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); } };
+  await run('a tap saves the avatar on the family document, updates the header and shows a toast with Ongedaan', async () => {
+    const fake = useFakeDb({ 'families/f2': { parentName: 'Piet Pieters', girlName: 'Jahaimy', capacity: 4 } });
+    sampleParentState(); const { ov } = pickerSheet(); openAvatarPicker(() => {});
+    tap(ov, 'soccer-ball'); await tick(); await tick();
+    assert.equal(fake.get('families/f2').avatar, 'soccer-ball'); assert.equal(fake.get('families/f2').parentName, 'Piet Pieters', 'other fields stay');
+    assert.equal(S.families.f2.avatar, 'soccer-ball'); assert.match(dom.el('avatarInitials').innerHTML, /<svg/);
+    assert.match(dom.doc.getElementById('toast').innerHTML, /Avatar opgeslagen/); assert.match(dom.doc.getElementById('toast').innerHTML, /Ongedaan/);
+  });
+  await run('Ongedaan puts the previous avatar back', async () => {
+    const fake = useFakeDb({ 'families/f2': { parentName: 'Piet Pieters', avatar: 'car' } });
+    sampleParentState(); S.families.f2.avatar = 'car'; const { ov } = pickerSheet(); openAvatarPicker(() => {});
+    tap(ov, 'medal'); await tick(); await tick(); assert.equal(fake.get('families/f2').avatar, 'medal');
+    dom.doc.getElementById('toast').onclick({ target: { id: 'toastAction' } }); await tick(); await tick();
+    assert.equal(fake.get('families/f2').avatar, 'car'); assert.match(dom.doc.getElementById('toast').innerHTML, /Avatar hersteld/);
+  });
+  await run('choosing Initialen stores an empty avatar (the field is never deleted)', async () => {
+    const fake = useFakeDb({ 'families/f2': { parentName: 'Piet Pieters', avatar: 'car' } });
+    sampleParentState(); S.families.f2.avatar = 'car'; const { ov } = pickerSheet(); openAvatarPicker(() => {});
+    tap(ov, ''); await tick(); await tick();
+    assert.equal(fake.get('families/f2').avatar, ''); updateHeader('myweek'); assert.equal(dom.el('avatarInitials').innerHTML, 'PP');
+  });
+  await run('tapping the current avatar writes nothing', async () => {
+    const fake = useFakeDb({ 'families/f2': { parentName: 'Piet Pieters', avatar: 'car' } });
+    sampleParentState(); S.families.f2.avatar = 'car'; const { ov } = pickerSheet(); openAvatarPicker(() => {});
+    dom.doc.getElementById('toast').innerHTML = ''; tap(ov, 'car'); await tick(); await tick();
+    assert.equal(fake.get('families/f2').avatar, 'car'); assert.doesNotMatch(dom.doc.getElementById('toast').innerHTML || '', /Avatar opgeslagen/);
+  });
+})();
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
