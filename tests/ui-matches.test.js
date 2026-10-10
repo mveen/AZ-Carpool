@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, NOW } from './test-support.js';
+import { installFakeDom, sampleFamilies, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { matchCarRowHtml, matchesCardHtml, renderMatchesTab, updateMatchCarCapacityWarning, wireMatchCarpool } from '../ui-matches.js';
 
@@ -30,7 +30,7 @@ const state = (patch = {}) => sampleParentState({ matchFeeds: feeds, matches: [h
 let picks = [];
 function pageFrom(html) {
   const mk = attr => [...html.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map(m => ({ dataset: { [attr]: m[1] }, onclick: null, textContent: '' }));
-  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-iremove]': mk('iremove') };
+  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar') };
   picks = [...html.matchAll(/class="matchCarGirlPick" value="([^"]+)"/g)].map(m => ({ value: m[1], checked: false, onchange: null }));
   reg['.matchCarGirlPick'] = picks;
   dom.doc.querySelectorAll = sel => (sel === '.matchCarGirlPick:checked' ? picks.filter(p => p.checked) : (reg[sel] || []));
@@ -121,6 +121,10 @@ test('"+ Auto toevoegen" opens the form with driver, riders and a departure time
   assert.match(form, /Jan Jansen \(3 plekken\)/);
   assert.doesNotMatch(html, /matchCarDriver_/, 'the form was closed before');
 });
+test('Opslaan (primary) and Annuleren sit together in one .formActions row', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  assert.match(boxHtml, /<div class="formActions">\s*<button[^>]*class="btn small" data-savematchcar[^>]*>Opslaan<\/button>\s*<button[^>]*class="btn small secondary" data-cancelmatchcar/);
+});
 test('Annuleren closes the form', () => {
   state(); render(); reg()('[data-addmatchcar]')[0].onclick();
   reg()('[data-cancelmatchcar]')[0].onclick();
@@ -210,9 +214,56 @@ await testAsync('Ik rij ook adds the own car with the own daughter; Mijn auto we
   const d = fake.get('matchCarpools/' + SLUG);
   assert.deepEqual(d.cars.map(c => [c.driverFamilyId, c.girlIds]), [['f2', ['f2']]]);
   state({ me: 'u1', links: { u1: { familyId: 'f2' } }, matchCarpools: { [SLUG]: d } });
-  assert.match(render(), /data-iremove="/); assert.doesNotMatch(render(), /data-iride/);
-  await reg()('[data-iremove]')[0].onclick();
-  assert.equal(fake.get('matchCarpools/' + SLUG), undefined);
+  const html = render();
+  assert.doesNotMatch(html, /data-iride/); assert.doesNotMatch(text(html), /Mijn auto weghalen/);   // the trash button is the way to remove it
+  await reg()('[data-delmatchcar]')[0].onclick();
+  assert.equal(fake.get('matchCarpools/' + SLUG), undefined); assert.equal(toast(), 'Auto weggehaald Ongedaan');
+});
+
+console.log('\n=== editing a car ===');
+const twoCars = { ...carpool, cars: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '09:15' }, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '07:30' }] };
+test('every car of a plannable match has a pencil button, for everyone; a too-far match has none', () => {
+  state({ matchCarpools: { [SLUG]: twoCars } });
+  const html = render();
+  assert.match(html, /data-editmatchcar="ev_cal1__e1\|0"/); assert.match(html, /data-editmatchcar="ev_cal1__e1\|1"/);
+  assert.match(html, /aria-label="Carpool van Kees de Vries wijzigen"/);
+  state({ matches: [far], matchCarpools: { ev_cal1__e2: { ...twoCars, eventId: 'e2', startMs: far.start.getTime() } } });
+  assert.doesNotMatch(render(), /data-editmatchcar/);
+});
+test('the pencil opens the form filled in with that car (driver, riders, time)', () => {
+  state({ matchCarpools: { [SLUG]: twoCars } }); render();
+  reg()('[data-editmatchcar]')[1].onclick();
+  assert.equal(S.editMatchCarIdx, 1);
+  assert.match(boxHtml, /<option value="f3" selected>/); assert.match(boxHtml, /id="matchCarTime_ev_cal1__e1" value="07:30"/);
+  assert.deepEqual(picks.map(p => p.value).filter(v => new RegExp(`value="${v}" checked`).test(boxHtml)), ['f5']);
+});
+await testAsync('saving an edit replaces only that car (also for someone who is not the driver) and says so', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: twoCars }); state({ matchCarpools: { [SLUG]: twoCars } }); render();
+  reg()('[data-editmatchcar]')[1].onclick();
+  setForm('f3', '07:45', ['f5', 'f4']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  const d = fake.get('matchCarpools/' + SLUG);
+  assert.equal(d.cars.length, 2); assert.deepEqual(d.cars[0], twoCars.cars[0]);
+  assert.deepEqual(d.cars[1], { driverFamilyId: 'f3', girlIds: ['f4', 'f5'], departureTime: '07:45' });
+  assert.equal(S.openMatchCarpoolForm, null); assert.equal(S.editMatchCarIdx, null); assert.equal(toast(), 'Carpool bijgewerkt ✓');
+});
+await testAsync('editing a car that has been removed meanwhile stores nothing', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); render();
+  reg()('[data-addmatchcar]')[0].onclick(); S.editMatchCarIdx = 3;
+  setForm('f1', '07:00', ['f2']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  assert.equal(fake.get('matchCarpools/' + SLUG), undefined); assert.match(toast(), /Kon deze wedstrijd niet vinden/);
+});
+test('Auto toevoegen after an edit starts with an empty form again', () => {
+  state({ matchCarpools: { [SLUG]: twoCars } }); render();
+  reg()('[data-editmatchcar]')[0].onclick(); reg()('[data-cancelmatchcar]')[0].onclick();
+  assert.equal(S.editMatchCarIdx, null);
+  reg()('[data-addmatchcar]')[0].onclick();
+  assert.doesNotMatch(boxHtml, / checked/);
+});
+test('riders are listed regular players A-Z first, then Flex players A-Z', () => {
+  const fams = sampleFamilies();
+  fams.f1.familyType = 'flex'; fams.f4.familyType = 'flex';   // Eline and Evi
+  state({ families: fams }); render(); reg()('[data-addmatchcar]')[0].onclick();
+  assert.deepEqual(picks.map(p => fams[p.value].girlName), ['Anouk', 'Jahaimy', 'Lois', 'Saar', 'Eline', 'Evi']);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

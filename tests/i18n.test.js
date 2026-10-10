@@ -244,7 +244,7 @@ test('the period list texts: phase pills, who has handed in, and the capitalised
 test('Wedstrijden intro and quick-car texts follow the design', () => {
   assert.equal(t('matches.titel'), 'Wedstrijden van de komende 4 weken.');
   assert.equal(t('deviation.zet_een_carpool_op_voor'), 'Een carpool kun je in de komende 8 dagen regelen.');
-  assert.equal(t('matches.ik_rij_ook'), 'Ik rij ook'); assert.equal(t('matches.auto_weghalen'), 'Mijn auto weghalen');
+  assert.equal(t('matches.ik_rij_ook'), 'Ik rij ook'); assert.equal(t('matches.auto_wijzigen', { driver: 'Jan' }), 'Carpool van Jan wijzigen');
 });
 test('the avatar texts exist, one label per library icon', () => {
   assert.equal(t('avatar.title'), 'Kies je avatar'); assert.equal(t('avatar.initials'), 'Initialen');

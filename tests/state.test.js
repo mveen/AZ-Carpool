@@ -98,6 +98,7 @@ test('the coordinator view starts as "coordinator" (viewAsParent is off until ch
 test('"+ Passagier toevoegen" lists start closed (devPick)', () => { assert.deepEqual(S.devPick, {}); });
 
 test('S.periodSwap starts empty', () => { assert.equal(S.periodSwap, null); });
+test('match carpool form: no form open and no car being edited at start', () => { assert.equal(S.openMatchCarpoolForm, null); assert.equal(S.editMatchCarIdx, null); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

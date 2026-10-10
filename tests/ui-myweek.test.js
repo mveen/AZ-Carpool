@@ -184,10 +184,10 @@ test('US-22: matchInfoHtml(geo) makes the location a route link (Wedstrijd tab);
   assert.doesNotMatch(info, /google/i);
   assert.doesNotMatch(info, /geo:0,0\?q=Busstation%20Aalsmeer/, 'the start is the current position, not the busstation');
   const html = withUserAgent(ANDROID, () => render({ matchesSource: 'live', matches: [m], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
-  assert.match(html, /<button type="button" class="matchTile" data-gomatchcarpool="1">/);
-  assert.match(text(html), /za 3 okt · AZ O15-1 \(Uit\) · Ajax O15-1 Aftrap 10:00 · carpool nog niet geregeld/);
+  assert.match(html, /<div role="button" tabindex="0" class="matchTile" data-gomatchcarpool="1">/);
+  assert.match(text(html), /za 3 okt · AZ O15-1 \(Uit\) · Ajax O15-1 De Toekomst, Amsterdam Aftrap 10:00 · carpool nog niet geregeld/);
   assert.doesNotMatch(text(html), /Wedstrijden deze week/);                     // design v2: no label above the tile
-  assert.match(html, /<div class="noteLine matchTileRoute">.*<a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam"/s);   // US-22: the route link stays in Mijn week, under the tile
+  assert.match(html, /matchTile__title.*<div class="matchTile__loc"><a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam".*matchTile__sub/s);   // US-22: the route link stays in Mijn week, directly under the title
 });
 test('US-22: the location of a stored match ride is a link too', () => {
   const html = withUserAgent(ANDROID, () => render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));

@@ -196,10 +196,11 @@ export function renderMyWeek(){
     const when = m.start.toLocaleDateString(locale(),{weekday:'short', day:'numeric', month:'short'}).replace('.','');
     const kick = m.start.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
     const sub = [`${t('myweek.aftrap')} ${kick}`, matchDistanceText(m), cars===1? t('myweek.match_cars_one') : cars? t('myweek.match_cars', { n: cars }) : t('myweek.match_geen_carpool')].filter(Boolean).join(' · ');
-    return `<button type="button" class="matchTile" data-gomatchcarpool="1"><span class="matchTile__icon">${phIcon('soccer-ball-fill')}</span>
+    return `<div role="button" tabindex="0" class="matchTile" data-gomatchcarpool="1"><span class="matchTile__icon">${phIcon('soccer-ball-fill')}</span>
       <span class="matchTile__text"><div class="matchTile__title">${esc(when)} · ${esc(matchLabel(m))}${esc(homeAway)} · ${esc(a.opponent)}</div>
+      ${m.location? `<div class="matchTile__loc">${locationLinkHtml(m.location)}</div>` : ''}
       <div class="matchTile__sub">${esc(sub)}</div></span>
-      <span class="matchTile__more">${phIcon('caret-right')}</span></button>${m.location? `<div class="noteLine matchTileRoute">${phIcon('map-pin')} ${locationLinkHtml(m.location)}</div>` : ''}`;
+      <span class="matchTile__more">${phIcon('caret-right')}</span></div>`;
   }).join('');
   const matchStatusNote = S.matchesSource==='live' ? '' : (S.cachedMatchesAt? `<p class="noteLine">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
   const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
@@ -239,7 +240,10 @@ export function renderMyWeek(){
       } } });
     }
   });
-  box.querySelectorAll('[data-gomatchcarpool]').forEach(b=>b.onclick=()=>goToMatchCarpool());
+  box.querySelectorAll('[data-gomatchcarpool]').forEach(b=>{
+    b.onclick=e=>{ if(!e.target.closest('a')) goToMatchCarpool(); };
+    b.onkeydown=e=>{ if((e.key==='Enter'||e.key===' ') && e.target===b){ e.preventDefault(); goToMatchCarpool(); } };
+  });
 }
 
 // Jump to the Wijzigen tab, optionally straight into one day.

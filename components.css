@@ -407,6 +407,7 @@ button.chip{cursor:pointer;font-family:inherit}
 .matchTile__icon svg{width:20px;height:20px;fill:currentColor}
 .matchTile__text{flex:1;min-width:0}
 .matchTile__title{font:700 14px/1.3 var(--font-sans);font-weight:800}
+.matchTile__loc{font:var(--type-small);color:var(--text-2);margin-top:2px;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
 .matchTile__sub{font:var(--type-caption);color:var(--text-muted)}
 .matchTile__more{color:var(--text-muted);display:inline-flex}
 .matchTile__more svg{width:16px;height:16px;fill:currentColor}
@@ -568,6 +569,8 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .matchCarRow.mine{background:var(--match-soft);border-radius:var(--radius-chip);padding:var(--space-3) var(--space-4);border-top-color:transparent}
 .matchCapWarn{color:var(--warn-ink);font:var(--type-caption);font-weight:700;margin-top:var(--space-3)}
 .matchNote{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0 0;font:var(--type-caption);color:var(--match-ink)}
+.formActions{display:flex;gap:var(--space-3);margin-top:var(--space-5)}
+.formActions .btn{flex:1}
 .dayFormCard{background:var(--surface-inset);border:0;border-radius:var(--radius-panel);padding:var(--space-5)}
 
 /* ============================================================
