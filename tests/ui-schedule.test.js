@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
-import { renderSchedule, saveCarPlace, openShiftLocationSheet, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
+import { renderSchedule, saveCarPlace, openShiftLocationSheet, openMoveSheet, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -26,7 +26,7 @@ test('Monday: the existing car with its riders, seats left, and the girls who st
   const html = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
   const s = text(html);
   assert.match(s, /Het vaste rooster, elke week gelijk\./);
-  assert.match(s, /ma 28 di 29 vandaag 30 do 1 vr 2/); assert.match(s, /Maandag 7 niet ingedeeld/);
+  assert.match(s, /ma 28 di 29 vandaag 30 do 1 vr 2/); assert.match(s, /Maandag Heen Busstation/); assert.match(s, /Niet ingedeeld: Anouk, Evi, Lois, Saar Voorstellen/);
   assert.match(s, /Heen Busstation → AFC (&#39;|')34 2\/3 .*Eline Jahaimy Aankomst Alkmaar nodig: 08:30/);
   assert.match(s, /Back-up: Piet Pieters, Kees de Vries, Tom Visser/);
   assert.match(s, /Nog niet ingedeeld \(4\): Anouk, Evi, Lois, Saar\./);
@@ -40,7 +40,7 @@ test('Monday: proposals are offered with the recommended one first', () => {
 });
 test('an empty day offers a proposal for the girls who have a time', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Wo' })));
-  assert.match(s, /Nog geen ritten ingepland\. Nog niet ingedeeld: Anouk\./);
+  assert.match(s, /Nog geen ritten ingepland\. Niet ingedeeld: Anouk Voorstellen Nog niet ingedeeld: Anouk\./);
   assert.match(s, /Optie 1: Nieuwe auto: Kees de Vries Kees de Vries: Anouk \(1\/5 pl\.\)/);
 });
 
@@ -51,7 +51,7 @@ test('Tuesday: the deviation replaces the standard rooster and is marked "gewijz
   assert.match(s, /Week 40 · 28 sep – 2 okt · met wijzigingen\./);
   assert.match(s, /Heen gewijzigd 09:15 Kees de Vries Busstation → AFC (&#39;|')34 2\/5 Eline Evi/);
   assert.match(s, /Back-up: Piet Pieters , Mo Bakker/);
-  assert.match(s, /Heen : Jahaimy, Lois, Saar Regelen/);
+  assert.match(s, /Niet ingedeeld: Jahaimy, Lois, Saar Regelen/);   // the dashed box under the cars of that direction
   expectSnapshot('ui-schedule', 'coordinator week Tuesday', html);
 });
 test('a day without any cars says so', () => {
@@ -62,7 +62,7 @@ test('a day without any cars says so', () => {
 console.log('\n=== parent view ===');
 test('a parent sees the week view without the editing buttons', () => {
   const html = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Wo' }));
-  assert.match(text(html), /Woensdag 4 niet ingedeeld/);
+  assert.match(text(html), /Woensdag Heen Geen ritten\. Niet ingedeeld: Anouk Regelen Terug Geen ritten\. Niet ingedeeld: Eline, Anouk, Lois Regelen/);
   assert.ok(!/Gebruik deze optie/.test(html)); assert.ok(!/Voorstellen/.test(text(html).replace('Voorstellen: AANBEVOLEN', '')));
   expectSnapshot('ui-schedule', 'parent week Wednesday', html);
 });
@@ -92,7 +92,7 @@ test('pillsHtml: one chip per girl, mine highlighted, a Flex player dashed', () 
   const fams = S.families; fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, schedule: {}, availability: {} };
   const html = pillsHtml(['f1', 'f2', 'f9'], 'f2');
   assert.equal((html.match(/class="chip/g) || []).length, 3);
-  assert.match(html, /<span class="chip">Eline<\/span>/); assert.match(html, /<span class="chip chip--mine">Jahaimy<\/span>/); assert.match(html, /<span class="chip chip--flex">Lotte<\/span>/);
+  assert.match(html, /<span class="chip">Eline<\/span>/); assert.match(html, /<span class="chip chip--mine">Jahaimy<\/span>/); assert.match(html, /<span class="chip chip--flex">Lotte · flex<\/span>/);
 });
 test('driverLineHtml names the driver; tripReserveHtml lists the reserves', () => {
   sampleCoordinatorState();
@@ -247,6 +247,14 @@ test('design v2: ui-schedule.js only uses variables from tokens.css in its inlin
   const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
   const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
   assert.deepEqual(unknown, []);
+});
+
+test('design v2: the move sheet has a car icon per row, dims a full car and has no Annuleren', () => {
+  sampleCoordinatorState({ groups: { ...sampleGroups(), Ma_heen_2: { day: 'Ma', direction: 'heen', girlIds: ['f5'], driverFamilyId: 'f3', reserveFamilyIds: [], departureTime: '09:00' } } });
+  const el = dom.doc.getElementById('sheetOverlay'); let html = '';
+  dom.doc.createElement = () => ({ set innerHTML(v) { html = v; }, addEventListener() {}, querySelector: () => null, querySelectorAll: () => [] }); dom.doc.body.appendChild = () => {};
+  openMoveSheet('Ma_heen_1', 'f1');
+  assert.match(html, /<svg[^>]*>.*<\/svg><span class="sheetItem__label">Auto 2/s); assert.doesNotMatch(html, /Annuleren/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

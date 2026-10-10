@@ -106,10 +106,11 @@ console.log('\n=== bottom sheet ===');
 test('openSheet builds a dialog with one button per item, and closeSheet removes it', () => {
   let removed = false;
   dom.doc.getElementById('sheetOverlay').remove = () => { removed = true; };
-  openSheet('Verplaats Eline', 'Heen · Maandag', [{ label: 'Auto 1', sub: '3 plekken', onClick() {} }, { label: 'Auto 2', onClick() {} }]);
+  openSheet('Verplaats Eline', 'Heen · Maandag', [{ label: 'Auto 1', sub: '3 plekken', icon: 'car', onClick() {} }, { label: 'Auto 2', muted: true, onClick() {} }]);
   const html = dom.doc.body.children.at(-1).innerHTML;
   assert.match(html, /role="dialog"/); assert.match(html, /Verplaats Eline/); assert.match(html, /Heen · Maandag/);
-  assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.match(html, /Annuleren/);
+  assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.doesNotMatch(html, /Annuleren|sheetCancel/);   // design v2: tap outside or Escape closes it
+  assert.match(html, /class="sheet__handle"/); assert.match(html, /sheetItem sheetItem--muted/); assert.match(html, /<svg[^>]*>.*<\/svg><span class="sheetItem__label">Auto 1/s);
   closeSheet(); assert.equal(removed, true);
 });
 test('hapticTap never throws, with or without vibration support', () => { hapticTap(); });
@@ -177,6 +178,20 @@ test('foldCards finds cards inside a .begSec section and shows the card icon in 
   document.createElement = realCreate;
   const sum = card.replacedBy.kids[0];
   assert.match(sum.innerHTML, /^<span class="foldTitle"><span class="foldIcon"><svg/); assert.match(sum.innerHTML, /<\/span>Titel<\/span>$/);
+});
+
+test('twoStepConfirm: the second-tap state is red (class confirming) and is cleared again', () => {
+  const classes = new Set(); const btn = { dataset: {}, innerHTML: 'Verwijder', textContent: '', classList: { add: c => classes.add(c), remove: c => classes.delete(c) } };
+  let done = 0; twoStepConfirm(btn, 'Zeker? Tik nogmaals', () => { done++; });
+  assert.equal(classes.has('confirming'), true); assert.equal(btn.textContent, 'Zeker? Tik nogmaals'); assert.equal(done, 0);
+  twoStepConfirm(btn, 'Zeker? Tik nogmaals', () => { done++; });
+  assert.equal(classes.has('confirming'), false); assert.equal(done, 1);
+});
+test('a toast stays 3.8 seconds (design v2), also with an action', () => {
+  const real = globalThis.setTimeout; const seen = [];
+  globalThis.setTimeout = (fn, ms) => { seen.push(ms); return 0; };
+  try { showToast('Opgeslagen'); showToast('Weg', { action: { label: 'Ongedaan', run() {} } }); } finally { globalThis.setTimeout = real; }
+  assert.deepEqual(seen, [3800, 3800]);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

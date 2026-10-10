@@ -47,7 +47,7 @@ test('the list shows the topics first and "Over deze app" as its own group at th
 });
 test('nothing found: a friendly message that points to the coordinator', () => {
   resetState({ canEdit: false });
-  assert.match(text(helpListHtml('xyzzyqq')), /^Niets gevonden\. Probeer een ander woord, of vraag het aan de coördinator\.$/);
+  assert.match(text(helpListHtml('xyzzyqq')), /^Niets gevonden\. Vraag het de coördinator\.$/);
 });
 test('titles are escaped', () => {
   resetState({ canEdit: false });
@@ -100,7 +100,7 @@ const clickOn = (body, kind, value) => body.listeners.click({ target: { closest:
 test('opening shows the panel with the list of topics and the search box focused', () => {
   resetState({ canEdit: false }); const o = installOverlay();
   openHelp(null);
-  assert.equal(o.ov.id, 'helpOverlay'); assert.match(o.ov.innerHTML, /role="dialog"/); assert.match(o.ov.innerHTML, /Waar kunnen we je mee helpen\?/);
+  assert.equal(o.ov.id, 'helpOverlay'); assert.match(o.ov.innerHTML, /role="dialog"/); assert.match(o.ov.innerHTML, /Stel je vraag, bv\. mijn dochter is ziek/);
   assert.match(o.body.innerHTML, /Alle onderwerpen/); assert.equal(o.input.focused, 1);
 });
 test('typing filters the list; opening an article and going back keeps working', () => {
@@ -113,10 +113,10 @@ test('typing filters the list; opening an article and going back keeps working',
   clickOn(o.body, 'back');
   assert.match(o.body.innerHTML, /Resultaten/); assert.equal(o.input.focused, 2);
 });
-test('the close button and a tap next to the panel both close it, and focus returns to the button that opened it', () => {
+test('a tap next to the panel closes it (design v2: no close button), and focus returns to the element that opened it', () => {
   resetState({ canEdit: false }); let o = installOverlay(); const opener = { focused: 0, focus() { this.focused++; } };
-  openHelp(opener); o.close.onclick();
-  assert.equal(o.ov.removed, true); assert.equal(opener.focused, 1);
+  openHelp(opener); assert.doesNotMatch(o.ov.innerHTML, /helpClose/);
+  closeHelp(); assert.equal(o.ov.removed, true); assert.equal(opener.focused, 1);
   o = installOverlay(); openHelp(opener);
   o.ov.listeners.click({ target: {} });               // inside the panel: stays open
   assert.equal(o.ov.removed, false);

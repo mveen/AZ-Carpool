@@ -1,4 +1,4 @@
-// help-nl.js — the help text of the app ("?" in the header): one article per question a parent may have.
+// help-nl.js — the help text of the app (Help, behind your initials in the header): one article per question a parent may have.
 // Rules for this file (a test enforces them):
 //  - Plain, short Dutch for parents who are not technical. Name buttons and tabs exactly as they appear in the app.
 //  - NEVER put a secret, API key, password, invite code, phone number, e-mail address or the name of a
@@ -18,7 +18,7 @@ export default [
     keywords: 'uitleg introductie overzicht carpool rooster ritten chauffeur dochter',
     body: [
       'AZ Carpool regelt wie de meiden naar Alkmaar rijdt (heen) en weer terug naar Aalsmeer (terug).',
-      'De onderste balk heeft de tabbladen: Mijn week (jouw overzicht), Wijzigen (eenmalige aanpassing), Rooster (alle ritten), Mijn gezin (jouw gegevens), Wedstrijden en, alleen voor de coördinator, Beheer.',
+      'De onderste balk heeft de tabbladen: Mijn week (jouw overzicht), Rooster (alle ritten), Wijzigen (eenmalige aanpassing), Wedstrijden en, alleen voor de coördinator, Beheer. Mijn gezin (jouw gegevens), het thema en deze Help vind je rechtsboven achter je initialen.',
       'Kosten worden niet in deze app verrekend. Dat gaat via de Wie Betaalt Wat-app.',
     ],
     tab: 'myweek',
@@ -40,7 +40,7 @@ export default [
     title: 'Wat is de gele balk bovenaan de app?',
     keywords: 'melding balk geel mededeling bericht bovenaan waarschuwing nieuws',
     body: [
-      'De coördinator kan een korte melding laten zien bovenaan de app, bijvoorbeeld dat een training niet doorgaat. Die melding staat in een dunne gele balk boven de rode kop, op elk tabblad.',
+      'De coördinator kan een korte melding laten zien bovenaan de app, bijvoorbeeld dat een training niet doorgaat. Die melding staat in een dunne gele balk bovenaan, op elk tabblad.',
       'Je kunt de balk niet wegklikken. Hij verdwijnt vanzelf als de coördinator hem uitzet, of op het moment dat de coördinator heeft ingesteld.',
     ],
   },
@@ -65,7 +65,7 @@ export default [
       'Rijd je zelf op een dag, dan staat er "Jouw rijbeurt om" met de tijd.',
       'Is er deze week iets aangepast, dan staat er "Wijziging actief" bij die dag.',
       'Mijn week is alleen om te lezen. Wil je iets veranderen, ga dan naar Wijzigen.',
-      'Met Deel mijn week via WhatsApp stuur je het overzicht door.',
+      'Met de deel-knop rechtsboven stuur je het overzicht door.',
     ],
     tab: 'myweek',
   },
@@ -91,8 +91,8 @@ export default [
       '3. Pas aan wat nodig is: vertrektijd, chauffeur, ophaalplek en aankomst (AFC \'34 of ATC). Bij Kinderen tik je op de drie puntjes om een meisje naar een andere auto te verplaatsen of uit de auto te halen. Een wijziging wordt meteen opgeslagen.',
       '4. Tik op Klaar om de rit weer dicht te klappen. Per ongeluk iets gewijzigd? Tik direct op Ongedaan.',
       'Wil je alles van die dag terugzetten? Tik op Terug naar standaard rooster. Tik twee keer om het zeker te weten.',
-      'Stem een wijziging altijd eerst af met de chauffeur. Bij elke chauffeur staat de knop Stem af met chauffeur, met een kant-en-klaar WhatsApp-bericht.',
-      'Onder de auto\'s staat Back-up: de chauffeurs die kunnen invallen, in de volgorde waarin je ze kunt vragen. Chauffeurs die die dag al rijden staan er niet bij. Tik op een naam om die chauffeur via WhatsApp te vragen.',
+      'Stem een wijziging altijd eerst af met de chauffeur. Tik op de naam van de chauffeur en kies WhatsApp of Bellen.',
+      'Onder de auto\'s staat Back-up: de chauffeurs die kunnen invallen, in de volgorde waarin je ze kunt vragen. Chauffeurs die die dag al rijden staan er niet bij. Tik op een naam om die chauffeur te vragen via WhatsApp of Bellen.',
     ],
     tab: 'deviation',
   },
@@ -111,7 +111,7 @@ export default [
     title: 'Hoe laat ik de anderen weten dat er iets verandert? (WhatsApp)',
     keywords: 'whatsapp delen bericht update conclusie appje versturen melden groep',
     body: [
-      'Onderaan elke dag in Wijzigen staat een kant-en-klaar bericht met de wijzigingen en het schema van die dag. Tik op Deel update via WhatsApp en WhatsApp opent met de tekst al ingevuld.',
+      'Onderaan elke dag in Wijzigen staat het Dagbericht: een kant-en-klaar bericht met de wijzigingen en het schema van die dag. Tik op Deel in de groep en WhatsApp opent met de tekst al ingevuld.',
       'De app stuurt zelf nooit iets. Jij kiest in WhatsApp naar wie het gaat en tikt op versturen.',
     ],
     tab: 'deviation',
@@ -233,7 +233,7 @@ export default [
     title: 'Hoe zet ik het donkere thema aan?',
     keywords: 'donker licht thema dark mode kleur scherm maan zon',
     body: [
-      'Tik rechtsboven in de kop op het maan-icoon voor het donkere thema. Het icoon wordt een zon. Tik daarop om terug te gaan naar licht. De app onthoudt je keuze op dit toestel.',
+      'Tik rechtsboven op je initialen en kies bij Thema Donker. Kies Licht om terug te gaan. De app onthoudt je keuze op dit toestel.',
     ],
   },
   {
@@ -262,7 +262,7 @@ export default [
     coordinatorOnly: true,
     body: [
       'Onder Beheer, bij Gezinnen beheren, voeg je gezinnen toe en pas je gegevens aan namens een ouder. Telefoonnummers en de uitnodigingscode staan onder Wijzig. Meerdere mensen kunnen dezelfde code gebruiken.',
-      'Het oog-icoon toont de app zoals die ouder hem ziet. Met Stop testen ga je terug naar jouw eigen weergave.',
+      'Het oog-icoon toont de app zoals die ouder hem ziet. Met Stoppen ga je terug naar jouw eigen weergave.',
       'Bij Type gezin kies je Vast of Flex.',
       'Onder Back-up gezinnen maak je een bestand (CSV, te openen in Excel) van alle gezinnen, met tijden, beschikbaarheid, coördinator, autocapaciteit en telefoonnummers. Met Terugzetten uit bestand zet je een eerder gemaakt bestand terug: de gezinnen in het bestand worden overschreven, gezinnen die er niet in staan blijven staan. Het bestand wordt eerst gecontroleerd; bij een fout wordt er niets gewijzigd.',
       'Geef de code en de link alleen door aan de ouder zelf, niet in een openbare groep.',
@@ -290,9 +290,9 @@ export default [
     title: 'Een rit aanbieden of overnemen (Ritbeurs)',
     keywords: 'ritbeurs aanbieden overnemen ruilen rit kan niet rijden inspringen back-up melding markt vervanger',
     body: [
-      'Kun je een rit niet rijden? Ga naar Wijzigen en tik bovenaan op Ritbeurs. Bij Mijn ritten deze week tik je op Aanbieden bij de rit die je niet kunt rijden. Je kunt er een kort bericht bij zetten.',
+      'Kun je een rit niet rijden? Ga naar Wijzigen en tik bovenaan op Ritbeurs. Bij Jouw rijbeurten tik je op Aanbieden bij de rit die je niet kunt rijden. Je kunt er een kort bericht bij zetten.',
       'Eerst horen de back-ups het die zich voor dat tijdstip hebben gemeld. Alle andere gezinnen zien de rit in de Ritbeurs. Het getal achter Ritbeurs en op het tabblad Wijzigen laat zien hoeveel ritten open staan.',
-      'Wil je een rit overnemen? Tik op Neem over en bevestig. Wie als eerste bevestigt, rijdt de rit. Ben je te laat, dan zie je dat meteen. Passen er te weinig kinderen in jouw auto, of rijd je al rond die tijd, dan krijg je een waarschuwing. Je mag de rit dan toch overnemen.',
+      'Wil je een rit overnemen? Tik op Ik neem deze rit over en bevestig. Wie als eerste bevestigt, rijdt de rit. Ben je te laat, dan zie je dat meteen. Passen er te weinig kinderen in jouw auto, of rijd je al rond die tijd, dan krijg je een waarschuwing. Je mag de rit dan toch overnemen.',
       'Overgenomen is van jou, ook als je later toch niet kunt. Dan bied je hem zelf opnieuw aan. De aanbieder kan zijn aanbod intrekken zolang niemand de rit heeft.',
       'Heb je tijd en wil je kunnen inspringen? Meld bij Ik kan inspringen een tijdvak. Chauffeurs met een rit in dat tijdvak krijgen een bericht. Met Alleen als ik niet al rijd krijg je alleen aanbiedingen op momenten dat je niet zelf rijdt. Een tijdvak verwijder je met de prullenbak.',
       'Staat een aangeboden rit om 18:00 de dag ervoor nog open, dan krijgen de aanbieder en de dagcoördinator een melding.',

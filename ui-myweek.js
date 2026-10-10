@@ -9,7 +9,7 @@ import { S } from './state.js';
 import { myFamilyId } from './coordinator.js';
 import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
 import { dayChanges } from './day-changes.js';
-import { DAYS, KM_COST_EUR, todayKey } from './constants.js';
+import { DAYS, KM_COST_EUR, todayKeyNow } from './constants.js';
 import { dateForWeekday, dayUp, effectivePlanningDate, startOfWeek } from './dates.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { matchCarRowHtml, renderMatchesTab } from './ui-matches.js';
@@ -18,18 +18,21 @@ import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
-export function matchDistanceHtml(m){
+export function matchDistanceText(m){
   const a = analyzeMatch(m.summary);
   const info = distanceInfo({ isHome:a.isHome, location:m.location, stored:S.matchDistances[matchSlug(m)], fixedKm:locationsCfg().fixedKm });
   if(!info) return '';
   if(info.kind==='pending' && !hasApiKey(S.orsApiKey)) return '';   // feature not switched on: say nothing rather than "calculating…"
   // Cost = km x KM_COST_EUR (one way, as the km). A calculated distance is an estimate ("±"); a fixed distance (AFC, ATC) is not.
   const eur = km => (Math.round(km*KM_COST_EUR*100)/100).toFixed(2).replace('.',',');
-  const text = info.kind==='km'? t('dist.km', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.cost', { eur: eur(info.km) })
+  return info.kind==='km'? t('dist.km', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.cost', { eur: eur(info.km) })
     : info.kind==='fixed'? t('dist.kmFixed', { km: String(info.km).replace('.',',') }) + ' · ' + t('dist.costFixed', { eur: eur(info.km) })
     : info.kind==='fixedMissing'? t('dist.fixedMissing', { venue: info.venue })
     : info.kind==='pending'? t('dist.pending') : t('dist.unknown');
-  return `<div class="matchDist">${esc(text)}</div>`;
+}
+export function matchDistanceHtml(m){
+  const text = matchDistanceText(m);
+  return text ? `<div class="matchDist">${esc(text)}</div>` : '';
 }
 
 // US-22: the location as a link that plans a route. Android: generic geo link (phone's own maps app);
@@ -159,7 +162,7 @@ export function renderMyWeek(){
   const weekdayDates = new Set(DAYS.map(([k])=>dateForWeekday(k).toDateString()));
   const dayInfo = DAYS.map(([k,label])=>{
     const rows = rideRow(k,'heen') + rideRow(k,'terug') + matchRowsFor(dateForWeekday(k));
-    return { key:k, label, date:dateForWeekday(k), rows, isToday: k===todayKey };
+    return { key:k, label, date:dateForWeekday(k), rows, isToday: k===todayKeyNow() };
   }).filter(d=>d.rows);
   const dateText = d => d.toLocaleDateString(locale(),{day:'numeric',month:'short'});
   const dayCardHtml = d => `<div class="rideCard"><div class="rideCard__head">${esc(d.label)} <small>${dateText(d.date)}</small></div>${d.rows}</div>`;
@@ -172,19 +175,16 @@ export function renderMyWeek(){
     const name = d.toLocaleDateString(locale(),{weekday:'long'});
     return `<div class="rideCard${key===todayStr?' rideCard--match':''}"><div class="rideCard__head">${esc(name.charAt(0).toUpperCase()+name.slice(1))} <small>${dateText(d)}</small></div>${matchRowsFor(d)}</div>`;
   };
-  const beforeCards = extraKeys.filter(k=>matchDateByKey[k]<planningMonday).map(extraCard).join('');
   const afterCards = extraKeys.filter(k=>matchDateByKey[k]>=planningMonday).map(extraCard).join('');
 
   const todayDay = dayInfo.find(d=>d.isToday);
   const todayCardHtml = todayDay ? `<div class="rideCard rideCard--today">
       <div class="rideCard__today"><span class="rideCard__dot"></span><span class="rideCard__todayLabel">${esc(t('myweek.vandaag'))}</span><span class="rideCard__date">${esc(todayDay.date.toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'short'}))}</span></div>
       ${todayDay.rows}</div>` : '';
-  const todayIdx = DAYS.findIndex(([k])=>k===todayKey);
+  const todayIdx = DAYS.findIndex(([k])=>k===todayKeyNow());
   const upcoming = dayInfo.filter(d=>!d.isToday && (todayIdx<0 || DAYS.findIndex(([k])=>k===d.key)>todayIdx));
-  const earlier = dayInfo.filter(d=>!d.isToday && todayIdx>=0 && DAYS.findIndex(([k])=>k===d.key)<todayIdx);
   const restHtml = (upcoming.length||afterCards) ? `<div class="sectionLabel">${esc(t('myweek.rest_van_de_week'))}</div>${upcoming.map(dayCardHtml).join('')}${afterCards}` : '';
-  const earlierHtml = (earlier.length||beforeCards) ? `<div class="sectionLabel">${esc(t('myweek.eerder_deze_week'))}</div>${beforeCards}${earlier.map(dayCardHtml).join('')}` : '';
-  const noRidesHtml = (!todayCardHtml && !restHtml && !earlierHtml) ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
+  const noRidesHtml = (!todayCardHtml && !restHtml) ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
 
   // This week's matches: one tile each, linking to the Wedstrijd tab where the carpool is arranged.
   const weekMatches = matchesThisWeek(currentMatchList());
@@ -194,10 +194,11 @@ export function renderMyWeek(){
     const cars = ((carpoolFor(m).doc||{}).cars||[]).length;
     const when = m.start.toLocaleDateString(locale(),{weekday:'short', day:'numeric', month:'short'}).replace('.','');
     const kick = m.start.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
+    const sub = [`${t('myweek.aftrap')} ${kick}`, matchDistanceText(m), cars===1? t('myweek.match_cars_one') : cars? t('myweek.match_cars', { n: cars }) : t('myweek.match_geen_carpool')].filter(Boolean).join(' · ');
     return `<button type="button" class="matchTile" data-gomatchcarpool="1"><span class="matchTile__icon">${phIcon('soccer-ball-fill')}</span>
       <span class="matchTile__text"><div class="matchTile__title">${esc(when)} · ${esc(matchLabel(m))}${esc(homeAway)} · ${esc(a.opponent)}</div>
-      <div class="matchTile__sub">${esc(t('myweek.aftrap'))} ${esc(kick)} · ${esc(cars===1? t('myweek.match_cars_one') : cars? t('myweek.match_cars', { n: cars }) : t('myweek.match_geen_carpool'))}</div></span>
-      <span class="matchTile__more">${phIcon('caret-right')}</span></button>`;
+      <div class="matchTile__sub">${esc(sub)}</div></span>
+      <span class="matchTile__more">${phIcon('caret-right')}</span></button>${m.location? `<div class="noteLine matchTileRoute">${phIcon('map-pin')} ${locationLinkHtml(m.location)}</div>` : ''}`;
   }).join('');
   const matchStatusNote = S.matchesSource==='live' ? '' : (S.cachedMatchesAt? `<p class="noteLine">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
   const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
@@ -212,17 +213,17 @@ export function renderMyWeek(){
       if(!s || isFlex(myFam)) return; // Flex is never auto-planned, so nothing is 'missing'
       if(effectiveCars(k,direction).some(c=>(c.girlIds||[]).includes(myId))) return;
       if(ovGirlsFor(k,undefined,direction).includes(myId)) return;   // marked "Rijdt niet mee"
-      const when = k===todayKey? t('myweek.vandaag') : label;
+      const when = label.slice(0,2);   // "Do terug · klaar 20:00" (design v2)
       const doneText = direction==='heen' ? t('myweek.alert_heen', { time: s }) : t('myweek.alert_terug', { time: s });
       alertRows.push(`<div class="alertCard"><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span>
-        <div class="alertCard__text"><b>${esc(when)} ${esc(dirName(direction).toLowerCase())} · ${esc(doneText)}</b><br>${esc(myFam.girlName||t('myweek.je_dochter'))} ${t('myweek.heeft_nog_geen_rit')}</div>
+        <div class="alertCard__text"><b>${esc(when)} ${esc(dirName(direction).toLowerCase())} · ${esc(doneText)}</b><br>${esc(plainGirlName(myId))} ${t('myweek.heeft_nog_geen_rit')}</div>
         <button type="button" class="btn" data-gowijzig="${k}">${t('myweek.regelen')}</button></div>`);
     });
   });
 
   box.innerHTML = `
-    ${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}${earlierHtml}
-    ${matchTiles? `<div class="sectionLabel">${esc(t('myweek.wedstrijden_deze_week'))}</div>${matchTiles}` : ''}${matchFailNote}${matchStatusNote}
+    ${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}
+    ${matchTiles}${matchFailNote}${matchStatusNote}
     ${dayCoordinatorHtml()}
     ${lastUpdateFooter([S.lastUpdateRooster,S.lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])}
   `;

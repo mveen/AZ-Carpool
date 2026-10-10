@@ -19,7 +19,7 @@ export function phIcon(name, opts){
   const style = `width:${size};height:${size};vertical-align:-0.15em;flex-shrink:0${opts.style?';'+opts.style:''}`;
   const body = PH_PATHS[name];
   if(!body) return '';
-  return `<svg viewBox="0 0 256 256" style="${style}" aria-hidden="true">${body}</svg>`;
+  return `<svg viewBox="0 0 256 256" fill="currentColor" style="${style}" aria-hidden="true">${body}</svg>`;
 }
 
 // Collapsible section (native <details>), collapsed by default. The open state is kept in S.folds so it survives a redraw.
@@ -87,16 +87,16 @@ export function dirLabelHtml(direction, extra){ return `<span class="dirLabel">$
 export function openSheet(title, subtitle, items){
   closeSheet();
   const ov=document.createElement('div'); ov.className='sheetOverlay'; ov.id='sheetOverlay';
+  // Design v2: a handle, a title, one row per choice with its own icon (no arrow, no Annuleren: tap outside or press Escape). `muted` rows (e.g. a full car) stay tappable but dim.
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
-    <h3 id="sheetTitle">${title}</h3>${subtitle? `<p class="muted" style="margin:0">${subtitle}</p>`:''}
-    ${items.map((it,i)=>`<button type="button" class="sheetItem" data-sheetidx="${i}"><span>${it.label}${it.sub? `<br><span class="sub">${it.sub}</span>`:''}</span>${phIcon('arrow-right')}</button>`).join('')}
-    <button type="button" class="btn secondary" id="sheetCancel" style="width:100%;margin-top:12px">${t('common.annuleren')}</button>
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${title}</h3>${subtitle? `<p class="sheet__sub">${subtitle}</p>`:''}
+    ${items.map((it,i)=>`<button type="button" class="sheetItem${it.muted? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${it.icon? phIcon(it.icon) : ''}<span class="sheetItem__label">${it.label}</span>${it.sub? `<span class="sub">${it.sub}</span>`:''}</button>`).join('')}
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e=>{ if(e.target===ov) closeSheet(); });
-  ov.querySelector('#sheetCancel').onclick=closeSheet;
   ov.querySelectorAll('[data-sheetidx]').forEach(b=>b.onclick=()=>{ const it=items[+b.dataset.sheetidx]; closeSheet(); it.onClick(); });
-  const first=ov.querySelector('.sheetItem')||ov.querySelector('#sheetCancel'); if(first) first.focus();
+  const first=ov.querySelector('.sheetItem'); if(first) first.focus();
 }
 
 export function closeSheet(){ const ov=document.getElementById('sheetOverlay'); if(ov) ov.remove(); }
@@ -190,19 +190,20 @@ export function showToast(msg, opts){
   t.innerHTML=(opts&&opts.icon? phIcon(opts.icon)+' ' : '')+esc(msg)+(act? ` <button type="button" id="toastAction" class="toast__action">${esc(act.label)}</button>` : '');
   t.style.display='flex';
   t.onclick = act? (e)=>{ if(e && e.target && e.target.id==='toastAction'){ t.style.display='none'; clearTimeout(t._h); return act.run(); } } : null;
-  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';}, act? 7000 : 4000);
+  clearTimeout(t._h); t._h=setTimeout(()=>{t.style.display='none';}, 3800);   // design v2: 3.8 s, also with an action
 }
 
 export function twoStepConfirm(btn, confirmLabel, action){
   if(btn.dataset.confirming==='1'){
     clearTimeout(btn._resetTimer);
-    btn.dataset.confirming=''; btn.innerHTML=btn.dataset.origLabel;
+    btn.dataset.confirming=''; if(btn.classList) btn.classList.remove('confirming'); btn.innerHTML=btn.dataset.origLabel;
     action();
   } else {
     btn.dataset.origLabel = btn.innerHTML;
     btn.dataset.confirming='1';
+    if(btn.classList) btn.classList.add('confirming');   // red: the second tap is the destructive one (design v2)
     btn.textContent = confirmLabel;
-    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; btn.innerHTML=btn.dataset.origLabel; }, 4000);
+    btn._resetTimer = setTimeout(()=>{ btn.dataset.confirming=''; if(btn.classList) btn.classList.remove('confirming'); btn.innerHTML=btn.dataset.origLabel; }, 4000);
   }
 }
 

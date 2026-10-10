@@ -23,7 +23,9 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 6. **Primary buttons are ink** (`--action-bg`). Selected = ink. Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
 7. **Every tap target is at least 44 px** (`--hit-min`).
 8. **Dark theme comes free** if you only use role tokens (`--surface-card`, `--text-1`, ...). Never use the raw palette (`--ink-900`, `--paper-0`, ...) in components.
-9. **Texts** go in `texts-nl.js`. Icons: Phosphor, through `phIcon('name')` (regular; `name-fill` for the active state).
+9. **Texts** go in `texts-nl.js`. Icons: Phosphor ONLY, through `phIcon('name')` (regular; `name-fill` for the active state, `-bold` in the switch knob). No hand-drawn SVG (a test checks `PH_PATHS`).
+9a. **Feedback:** every one-off change saves at once and confirms with a toast (3.8 s) that has **Ongedaan** (`saveWithUndo`). A destructive action needs a second tap: `twoStepConfirm` turns the button red (`.confirming`). Sheets have a handle, rows with an icon and no Annuleren button: tap outside or press Escape.
+9b. **Header context line** per screen is in `contextLine()` (`ui-shell.js`); keep it in step with the design.
 10. **Layout:** phone first. A centred column of `--content-max` (520 px) on wider screens.
 
 ## Tokens (see `tokens.css` for values)

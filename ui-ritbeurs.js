@@ -66,32 +66,34 @@ function offerCardHtml(o, nowMs){
   const route = car ? routeLabel(car, o.direction, locationsCfg(), o.day) : '';
   const girls = car ? (car.girlIds || []).map(id => `<span class="chip${id === me_ ? ' chip--mine' : ''}">${esc((fam(id).girlName) || id)}</span>`).join('') : '';
   const u = urgency(o.date, nowMs);
-  const chip = `<span class="rbChip rbChip-${u}">${t(u === 'late' ? 'ritbeurs.urg.late' : u === 'soon' ? 'ritbeurs.urg.soon' : 'ritbeurs.urg.ok')}</span>`;
+  const urgentText = u === 'late' ? ` · ${t('ritbeurs.urg.late')}` : u === 'soon' ? ` · ${t('ritbeurs.urg.soon')}` : '';
   const w = mine ? null : warningsFor(o, me);
   const hasWarn = !!(w && (!w.seats.ok || w.conflict));
   let confirm = '';
   if(S.rbConfirm === o.id && !mine){
-    const warns = [];
-    if(w && !w.seats.ok) warns.push(t('ritbeurs.warn.zitplaatsen', { need: w.seats.need, have: w.seats.have }));
-    if(w && w.conflict) warns.push(t('ritbeurs.warn.conflict', { day: dayLabel(w.conflict.day).toLowerCase(), dir: dirShort(w.conflict.direction).toLowerCase(), time: w.conflict.time }));
+    // Two lines: seats and conflicts, each with a check (all fine) or a warning (design v2).
+    const seatsLine = w && !w.seats.ok ? `⚠ ${t('ritbeurs.warn.zitplaatsen', { need: w.seats.need, have: w.seats.have })}` : `✓ ${t('ritbeurs.check.zitplaatsen', { need: w ? w.seats.need : (car ? (car.girlIds || []).length : 0), have: w ? w.seats.have : '' })}`;
+    const conflictLine = w && w.conflict ? `⚠ ${t('ritbeurs.warn.conflict', { day: dayLabel(w.conflict.day).toLowerCase(), dir: dirShort(w.conflict.direction).toLowerCase(), time: w.conflict.time })}` : `✓ ${t('ritbeurs.check.geen_conflict')}`;
     confirm = `<div class="rbConfirm" role="group" aria-label="${esc(t('ritbeurs.confirm.title'))}">
-      <h4>${t('ritbeurs.confirm.title')}</h4>
-      <ul class="rbChecks">${[t('ritbeurs.confirm.regel1'), t('ritbeurs.confirm.regel2'), t('ritbeurs.confirm.regel3')].map(x => `<li>${phIcon('check')} ${esc(x)}</li>`).join('')}</ul>
-      ${warns.map(x => `<p class="rbWarn">${phIcon('warning')} ${esc(x)}</p>`).join('')}
+      <h4>${t('ritbeurs.confirm.title', { short: `${dayLabel(o.day).toLowerCase()} ${dirShort(o.direction).toLowerCase()} ${t('ritbeurs.om')} ${o.time}` })}</h4>
+      <p class="rbChecks">${esc(seatsLine)}<br>${esc(conflictLine)}</p>
       <div class="rowflex" style="gap:8px;margin-top:8px"><button type="button" class="btn" data-rbtake="${esc(o.id)}">${t('ritbeurs.confirm.ja')}</button>
       <button type="button" class="btn secondary" data-rbconfirmno="1">${t('ritbeurs.confirm.nee')}</button></div></div>`;
   }
+  const status = mine ? `<span class="tag tag--ok">${t('ritbeurs.open.eigen')}</span>` : `<span class="tag tag--warn">${t('ritbeurs.tag.open')}</span>`;
   return `<div class="card rbOffer${hasWarn ? ' rbHasWarn' : ''}" data-rboffer="${esc(o.id)}">
-    <div class="rowflex" style="justify-content:space-between;gap:8px"><span class="rbTime">${esc(dayLabel(o.day))} ${esc(o.time)}</span>${chip}</div>
-    <div class="rbRoute">${esc(dirShort(o.direction))}${route ? ' · ' + esc(route) : ''}</div>
+    <div class="rbHeadline">${status}<span class="rbWhen">${esc(dayLabel(o.day))} · ${esc(dirShort(o.direction).toLowerCase())}${esc(urgentText)}</span></div>
+    <div class="rbRideLine"><span class="rbTime">${esc(o.time)}</span><span class="rbRoute">${esc(route)}</span></div>
+    <div class="rbBy">${mine ? t('ritbeurs.open.eigen') : t('ritbeurs.open.door', { name: famName(o.offeredBy) })}</div>
+    ${o.message ? `<div class="rbNote">“${esc(o.message)}”</div>` : ''}
     ${girls ? `<div class="chips rbPills">${girls}</div>` : ''}
-    <p class="muted rbBy">${mine ? t('ritbeurs.open.eigen') : t('ritbeurs.open.door', { name: famName(o.offeredBy) })}${o.message ? ' · “' + esc(o.message) + '”' : ''}</p>
-    ${mine ? `<button type="button" class="btn small secondary" data-rbwithdraw="${esc(o.id)}">${phIcon('trash')} ${t('ritbeurs.trekIn')}</button>`
+    ${mine ? `<button type="button" class="btn secondary" data-rbwithdraw="${esc(o.id)}">${t('ritbeurs.trekIn')}</button>`
       : (S.rbConfirm === o.id ? '' : `<button type="button" class="btn" data-rbask="${esc(o.id)}">${t(hasWarn ? 'ritbeurs.toch' : 'ritbeurs.neemOver')}</button>`)}
     ${confirm}
   </div>`;
 }
 
+// "Jouw rijbeurten": one card per ride you still have to drive, with Aanbieden (ink) or Intrekken (outline).
 function ownRidesHtml(nowMs){
   const me = myLinkedFamilyId();
   const rides = ridesOf(me).filter(r => rideStartMs(r.date, r.time) > nowMs);
@@ -105,10 +107,11 @@ function ownRidesHtml(nowMs){
         <p class="muted">${t('ritbeurs.form.stappen')}</p>
         <div class="rowflex" style="gap:8px"><button type="button" class="btn" data-rboffergo="${esc(key)}">${t('ritbeurs.form.bevestig')}</button>
         <button type="button" class="btn secondary" data-rbofferno="1">${t('ritbeurs.confirm.nee')}</button></div></div>` : '';
-    return `<div class="rbMine"><div class="rowflex" style="justify-content:space-between;gap:8px;align-items:center">
-        <span><b class="rbTime">${esc(dayLabel(r.day))} ${esc(r.time)}</b> · ${esc(dirShort(r.direction))}</span>
-        ${offer ? `<span class="tag tag--ok">${t('ritbeurs.eigen.aangeboden')}</span>`
-          : `<button type="button" class="btn small secondary" data-rboffer-open="${esc(key)}">${t('ritbeurs.eigen.aanbieden')}</button>`}</div>${form}</div>`;
+    const action = offer
+      ? `<button type="button" class="btn secondary pill small" data-rbwithdraw="${esc(offer.id)}">${t('ritbeurs.trekIn')}</button>`
+      : `<button type="button" class="btn pill small" data-rboffer-open="${esc(key)}">${t('ritbeurs.eigen.aanbieden')}</button>`;
+    return `<div class="card rbRide"><div class="rbRide__row"><span class="rbRide__time">${esc(r.time)}</span>
+        <div class="rbRide__what"><div class="rbRide__when">${esc(dayLabel(r.day))} · ${esc(dirShort(r.direction).toLowerCase())}</div>${offer ? `<div class="rbRide__sub">${t('ritbeurs.eigen.aangeboden')}</div>` : ''}</div>${action}</div>${form}</div>`;
   }).join('');
 }
 
@@ -180,7 +183,7 @@ export function ritbeursViewHtml(nowMs = Date.now()){
   const mineFirst = [...open.filter(o => o.offeredBy !== me), ...open.filter(o => o.offeredBy === me)];
   return `<div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
     <div class="sectionLabel">${t('ritbeurs.open.title')}</div>${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
-    <div class="sectionLabel">${t('ritbeurs.eigen.title')}</div><div class="card rbOwn">${ownRidesHtml(nowMs)}</div>
+    <div class="sectionLabel">${t('ritbeurs.eigen.title')}</div>${ownRidesHtml(nowMs)}
     <div class="card" id="rbMomentCard"><h2>${t('ritbeurs.moment.title')}</h2><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>
     <div class="card" id="rbNotifCard"><h2>${t('ritbeurs.notif.title')}</h2>${notificationsHtml(nowMs)}</div>`;
 }

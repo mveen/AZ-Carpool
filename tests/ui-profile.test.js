@@ -279,7 +279,7 @@ console.log('\n=== test view as a parent ===');
 test('banner shows who the coordinator is viewing as, and hides when off', () => {
   useFakeDb({}); sampleCoordinatorState({ impersonateFamilyId: 'f2' });
   renderImpersonateBanner();
-  assert.match(text(dom.html('impersonateBanner')), /Testweergave als: Jahaimy Stop testen/);
+  assert.match(text(dom.html('impersonateBanner')), /Testweergave als: Jahaimy Stoppen/);
   S.impersonateFamilyId = null; renderImpersonateBanner();
   assert.equal(dom.html('impersonateBanner'), ''); assert.equal(dom.el('impersonateBanner').style.display, 'none');
 });
@@ -371,6 +371,12 @@ test('design v2: ui-profile.js only uses variables from tokens.css in its inline
   const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
   const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
   assert.deepEqual(unknown, []);
+});
+
+test('design v2: the test view is a black bar (class testBar) with an eye and a Stoppen button, no inline colours', () => {
+  useFakeDb({}); sampleCoordinatorState({ impersonateFamilyId: 'f2' }); renderImpersonateBanner();
+  const html = dom.html('impersonateBanner');
+  assert.equal(dom.el('impersonateBanner').className, 'testBar'); assert.match(html, /id="stopImpersonateBtn"/); assert.doesNotMatch(html, /background|color:/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

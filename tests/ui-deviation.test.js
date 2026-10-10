@@ -35,9 +35,9 @@ console.log('=== day pills (same design as Rooster) ===');
 test('shows the week, one pill per day and the content of one day straight away', () => {
   const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: null });
   const s = text(html);
-  assert.match(s, /^ma 28 di 29 vandaag 30 do 1 vr 2 Eenmalige ritaanpassing voor deze week .* Week 40 · 28 sep – 2 okt\./);
-  assert.equal((html.match(/data-devday=/g) || []).length, 5);
-  assert.match(html, /class="dayPills"/);
+  assert.match(s, /^vandaag 30 do 1 vr 2 Eenmalige ritaanpassing voor deze week .* Week 40 · 28 sep – 2 okt\./);
+  assert.equal((html.match(/data-devday=/g) || []).length, 3);   // today (Wed) and the two days after it
+  assert.match(html, /class="dayPills dayPills--3"/);
   assert.doesNotMatch(html, /devDayBtn|grid5/);            // the old day tiles are gone
   const day = todayKey || 'Ma';
   assert.match(html, new RegExp(`dayPill devDayPill on[^"]*" data-devday="${day}"`)); // today (or Monday) is open by default
@@ -50,9 +50,14 @@ test('day names are lowercase in the middle of a sentence, capitalised as headin
   const yes = text(render(sampleParentState, { deviationDay: 'Do', dayCoordinators: { Do: 'f2' } }));
   assert.match(yes, /Jij bent dagcoördinator op donderdag\./);
 });
+test('design v2: the pills are today and the days after it (the open day stays visible)', () => {
+  const html = render(sampleParentState, { deviationDay: 'Wo' });
+  assert.deepEqual([...html.matchAll(/data-devday="(\w\w)"/g)].map(m => m[1]), ['Wo', 'Do', 'Vr']); assert.match(html, /class="dayPills dayPills--3"/);
+  assert.deepEqual([...render(sampleParentState, { deviationDay: 'Ma' }).matchAll(/data-devday="(\w\w)"/g)].map(m => m[1]), ['Ma', 'Wo', 'Do', 'Vr']);
+});
 test('a day that was changed this week is marked on its pill', () => {
-  const html = render(sampleParentState, { deviationDay: 'Ma' });
-  assert.match(html, /devDayPill changed" data-devday="Di"/);
+  const html = render(sampleParentState, { deviationDay: 'Di' });
+  assert.match(html, /devDayPill on changed" data-devday="Di"/);
   assert.match(text(html), /= deze week gewijzigd/);
 });
 test('tapping a pill loads that day (like Rooster)', () => {
@@ -85,7 +90,7 @@ console.log('\n=== periode met andere tijden: the card sits on top of Wijzigen =
 const periodDoc = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
 test('while filling in is open the task card comes before the weekly changes; without a period Wijzigen is as before', () => {
   const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ periods: oneP(periodDoc), periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
-  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('class="dayPills"'));
+  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('class="dayPills '));
   assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma' }), /periodTask|periodDone/);
 });
 
@@ -102,9 +107,14 @@ test('a parent editing Tuesday sees both directions with drivers, and a way back
 test('a driver without availability gets a warning', () => {
   assert.match(text(renderOpen(sampleParentState, { deviationDay: 'Di' })), /Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven/);
 });
-test('girls who normally do not ride can still be added to a car', () => {
-  const s = text(render(sampleCoordinatorState, { deviationDay: 'Ma' }));
-  assert.match(s, /Andere meiden Ook meiden die niet standaard meerijden, kun je hier alsnog aan een auto toevoegen\. Anouk Voeg toe aan auto… Auto: Jan Jansen/);
+test('girls who are in no car can be added with "+ Passagier toevoegen" (design v2)', () => {
+  const closed = text(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }));
+  assert.match(closed, /\+ Passagier toevoegen/); assert.doesNotMatch(closed, /Andere meiden/);
+  S.devPick['Ma|heen|0'] = true;
+  const html = withFakeNow(NOW, () => renderDeviationTab());
+  const open = text(dom.html('tab-deviation'));
+  assert.match(open, /Annuleren/); assert.match(dom.html('tab-deviation'), /data-devaddpick="Ma\|heen\|0\|f5"/);
+  S.devPick = {};
 });
 test('Monday: the standard cars are the starting point (Eline and Jahaimy with Jan)', () => {
   const s = text(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }));
@@ -159,7 +169,7 @@ import { sampleFamilies as _sampleFamilies } from './test-support.js';
 console.log('\n=== conclusie-appje (US-03) ===');
 test('the card shows the drafted text: "volgens schema" when nothing changed', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Vr' }));
-  assert.match(s, /Conclusie-appje Vrijdag Controleer de tekst en verstuur hem zelf in de groepsapp\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/mveen\.github\.io\/AZ-Carpool\/#myweek Open in WhatsApp/);
+  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/mveen\.github\.io\/AZ-Carpool\/#myweek Deel in de groep/);
 });
 test('with a deviation there is one line per change from Wijzigen', () => {
   const html = render(sampleParentState, { deviationDay: 'Di' });
@@ -185,7 +195,7 @@ test('the button opens WhatsApp with the text filled in and sends nothing itself
 });
 test('the card follows the open day', () => {
   sampleParentState({ deviationDay: 'Ma' });
-  assert.match(withFakeNow(NOW, () => conclusieCardHtml('Ma')), /Conclusie-appje Maandag/);
+  assert.match(withFakeNow(NOW, () => conclusieCardHtml('Ma')), /Dagbericht Maandag/);
 });
 
 console.log('\n=== no 1-op-1 WhatsApp buttons any more (design v2) ===');
@@ -363,11 +373,12 @@ test('without a temporary rooster nothing changes for Wijzigen', () => {
   assert.equal(a, b);
 });
 
-test('the "andere meiden" list is A-Z by daughter name', () => {
-  const h = render(sampleCoordinatorState, { deviationDay: 'Di' });
-  const names = [...h.matchAll(/<span style="flex:1">([^<]+)<\/span>\s*<select class="devAddSel"/g)].map(m => m[1]);
-  assert.ok(names.length > 1);
-  assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')));
+test('the "+ Passagier toevoegen" list is A-Z by daughter name', () => {
+  sampleCoordinatorState({ deviationDay: 'Di' }); S.devOpen['Di|heen|0'] = true; S.devPick['Di|heen|0'] = true;
+  withFakeNow(NOW, () => renderDeviationTab());
+  const names = [...dom.html('tab-deviation').matchAll(/devPickRow__name">([^<·]+?)(?: · flex)?<\/span>/g)].map(m => m[1]);
+  assert.ok(names.length > 1); assert.deepEqual(names, [...names].sort((a, b) => a.localeCompare(b, 'nl')));
+  S.devPick = {};
 });
 
 console.log('\n=== compact ride card (Ritkaart): one line closed, "Wijzig" unfolds the form ===');
@@ -462,7 +473,7 @@ test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off 
   assert.match(on, /Eenmalige ritaanpassing voor deze week/);
   S.rbView = 'ritbeurs';
   const rb = render(sampleParentState, { ritbeurs: { on: true }, rbView: 'ritbeurs' });
-  assert.match(text(rb), /Ritten die nog een chauffeur zoeken/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
+  assert.match(text(rb), /Aangeboden ritten/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
 });
 
 test('design v2: ui-deviation.js only uses variables from tokens.css in its inline styles', async () => {

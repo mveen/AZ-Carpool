@@ -11,7 +11,7 @@ import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.j
 import { plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodWorkdays } from './period.js';
-import { carRouteHtml, driverLineHtml, renderSchedule } from './ui-schedule.js';
+import { carRouteHtml, driverLineHtml, flexSuffix, renderSchedule } from './ui-schedule.js';
 import { myLinkedFamilyId } from './coordinator.js';
 
 const madeShifts = p => Object.values(S.periodCars || {}).filter(d => d && d.periodFirstDay===p.firstDay).length;
@@ -146,14 +146,14 @@ function carHtml(iso, direction, car, idx, cars){
     : driverLineHtml(car.driverFamilyId, myId);
   const targets = cars.map((c, i) => ({ value:'car:'+i, label:t('period.view.moveTo',{p1:i+1, p2:plainDriverName(c.driverFamilyId)}) })).filter((x, i) => i!==idx);
   const riders = sortGirlIds(car.girlIds||[]).map(id => edit
-    ? `<div class="periodRider"><span class="chip${id===myId? ' chip--mine' : ''}">${girlName(id)}</span>
+    ? `<div class="periodRider"><span class="chip${id===myId? ' chip--mine' : ''}${isFlex(fam(id))? ' chip--flex' : ''}">${girlName(id)}${flexSuffix(id)}</span>
         <select class="periodSel periodMove" data-pmove="${esc(id)}" data-iso="${iso}" data-dir="${direction}" aria-label="${esc(t('period.view.move'))} ${esc(plainGirlName(id))}">
           <option value="">${t('period.view.move')}</option>
           ${targets.map(x => `<option value="${x.value}">${esc(x.label)}</option>`).join('')}
           <option value="none">${t('period.view.notPlaced')}</option>
         </select></div>`
     : `<span class="chip${id===myId? ' chip--mine' : ''}">${girlName(id)}</span>`).join('');
-  return `<div class="carCard${myId && car.driverFamilyId===myId? ' carCard--mine' : ''}">
+  return `<div class="carCard">
       <div class="carCard__head">
         <span class="carCard__time">${esc(car.departureTime||'--:--')}</span>
         <div class="carCard__who">${edit? '' : driverPart}${carRouteHtml(car, direction, day)}</div>

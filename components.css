@@ -8,19 +8,20 @@
    Screens migrated from the old stylesheet (phase 4): Beheer, Mijn gezin, Help, period cards, banners, forms.
    Same rules as before, now on tokens. Keep this block shrinking: when a screen gets a proper component, move its rules up.
    ============================================================ */
-.helpTop{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-.helpTop h2{margin:0;font-size:18px;font-weight:800}
-.helpClose{width:44px;height:44px;min-width:44px;display:flex;align-items:center;justify-content:center;padding:0}
+.helpTop{display:flex;align-items:center;margin:var(--space-2) 0 var(--space-3)}
+.helpTop h2{margin:0;font:800 20px/1.2 var(--font-sans)}
 .helpSearchLabel{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
-.helpSearch{width:100%;box-sizing:border-box;min-height:48px;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page);color:var(--text-1)}
+.helpSearch{width:100%;box-sizing:border-box;min-height:48px;padding:0 var(--space-7);border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface-page);color:var(--text-1);font:500 15px/1.2 var(--font-sans)}
 .helpBody{flex:1;overflow-y:auto;margin-top:8px;-webkit-overflow-scrolling:touch}
 .helpHead{margin:8px 0 0;font-size:12px;font-weight:700;color:var(--text-muted)}
-.helpItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page);color:var(--text-1);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
-.helpBack{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 4px;border:0;background:none;color:var(--accent);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
-.helpTitle{margin:4px 0 8px;font-size:16px;font-weight:800}
-.helpP{margin:0 0 10px;font-size:14px;line-height:1.5}
+.helpItem{font-size:18px;display:flex;align-items:center;gap:var(--space-4);width:100%;text-align:left;padding:0;min-height:52px;border:0;border-bottom:1px solid var(--line);border-radius:0;background:none;color:var(--text-1);font-family:inherit;cursor:pointer}
+.helpItem span{flex:1;font:600 15px/1.3 var(--font-sans)}
+.helpItem svg{color:var(--text-muted);fill:currentColor}
+.helpBack{display:inline-flex;align-items:center;gap:var(--space-2);min-height:var(--hit-min);padding:0;border:0;background:none;color:var(--text-1);font:var(--type-button);cursor:pointer}
+.helpTitle{margin:var(--space-3) 0 0;font:800 20px/1.25 var(--font-sans);text-wrap:pretty}
+.helpP{margin:var(--space-5) 0 0;font:500 15px/1.55 var(--font-sans);color:var(--text-2);text-wrap:pretty}
 .helpLine{padding-left:6px}
-.helpGo{width:100%;margin-top:6px}
+.helpGo{width:100%;height:50px;margin-top:var(--space-8);border-radius:var(--radius-sheet);font-size:15px}
 .helpContact,.helpEmpty{font-size:12px;margin-top:14px}
 /* ---------- Bottom tab bar (flex item, safe-area aware, thumb-reachable) ---------- */
 .card.timeChangeCard{border-color:var(--warn-icon);border-left:4px solid var(--warn-icon)}
@@ -47,7 +48,7 @@ details.group.fold>summary{font-size:14px}
 .foldIcon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-chip);background:var(--surface-soft);color:var(--text-2);font-size:18px;flex-shrink:0}
 .cardActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 /* Melding voor iedereen: dunne gele balk bovenaan (alle gebruikers) + kaart in Beheer. Geen knop, dus ruim lager dan de testbalk. */
-.noticeBar{display:flex;align-items:center;justify-content:center;gap:6px;background:var(--warn-soft);color:var(--warn-ink);padding:4px 12px;font-size:12px;line-height:1.35;font-weight:600;border-bottom:1px solid var(--line);text-align:center}
+.noticeBar{display:flex;align-items:center;justify-content:center;gap:var(--space-3);background:var(--notice-bg);color:var(--notice-ink);padding:var(--space-2) var(--space-6);font:var(--type-caption);font-weight:600;line-height:1.35;text-align:center}
 .noticeBar svg{flex-shrink:0}
 .noticeBar span{min-width:0;overflow-wrap:anywhere}
 /* Onderhoudsmodus: volledig scherm voor alle gebruikers behalve de coördinator, boven alles (ook Help en sheets). */
@@ -112,8 +113,6 @@ input.switch:focus-visible{outline:2px solid var(--info);outline-offset:2px}
 .addrHint{margin:4px 0 0;font-size:12px;color:var(--text-muted)}
 a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
 .changedTag{display:inline-flex;align-items:center;gap:4px;background:var(--warn-soft);color:var(--warn-ink);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-pill)}
-.sheet .sheetItem{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:12px;margin-top:8px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page);color:var(--text-1);font:inherit;font-size:14px;cursor:pointer;min-height:48px}
-.sheet .sheetItem .sub{font-size:12px;color:var(--text-muted)}
 .daypill.active{background:var(--accent);border-color:var(--accent)}
 .daypill.active .daypillTop{color:var(--on-accent)}
 .daypill.active .daypillSub{color:var(--on-accent)}
@@ -315,12 +314,12 @@ button.btn:disabled,.btn:disabled{opacity:.35;cursor:default}
 .sheet__label{margin:var(--space-6) 0 var(--space-3);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
 .sheet__actions{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3);margin-top:var(--space-5)}
 .sheet__actions .btn{margin:0;text-decoration:none}
-.sheetItem{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);width:100%;text-align:left;padding:var(--space-5) var(--space-6);margin-top:var(--space-3);
+.sheetItem{font-size:20px;display:flex;align-items:center;justify-content:flex-start;gap:var(--space-4);width:100%;text-align:left;padding:var(--space-5) var(--space-6);margin-top:var(--space-3);
   border:1px solid var(--line);border-radius:var(--radius-panel);background:var(--surface-inset);color:var(--text-1);font:var(--type-body);cursor:pointer;min-height:48px}
 .sheetItem .sub{font:var(--type-caption);color:var(--text-muted)}
 
 /* ---------- Toast ---------- */
-.toast{position:fixed;left:50%;bottom:calc(var(--space-8) + var(--sab));transform:translateX(-50%);display:flex;align-items:center;gap:var(--space-3);
+.toast{position:fixed;left:50%;bottom:calc(var(--tabbar-h) + var(--sab) + var(--space-5));transform:translateX(-50%);display:flex;align-items:center;gap:var(--space-3);
   background:var(--toast-bg);color:var(--toast-ink);border-radius:var(--radius-alert);padding:var(--space-2) var(--space-2) var(--space-2) var(--space-7);min-height:52px;
   font:var(--type-body);box-shadow:var(--shadow-float);max-width:90%;z-index:90}
 .toast__action{background:none;border:0;color:inherit;font:var(--type-button);text-decoration:underline;min-height:var(--hit-min);padding:0 var(--space-5);cursor:pointer}
@@ -428,7 +427,7 @@ button.chip{cursor:pointer;font-family:inherit}
 
 /* ---------- Car card (Rooster): time, driver, route, seats, passenger chips ---------- */
 .carCard{background:var(--surface-card);border-radius:var(--radius-car);padding:var(--space-5) var(--space-6);margin-top:var(--space-3);box-shadow:var(--shadow-card);border:2px solid transparent}
-.carCard--mine{border-color:var(--warn-edge)}
+.carCard--changed{border-color:var(--warn-edge)}
 .carCard--match{border-color:var(--match-ink)}
 .carCard__head{display:flex;align-items:center;gap:var(--space-5)}
 .carCard__time{font:800 20px/1 var(--font-mono);letter-spacing:var(--track-time)}
@@ -461,10 +460,9 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 /* ---------- Old "group" cards (suggestions, pickers, Wijzigen, matches): same card look until their screens are rebuilt ---------- */
 .group{border:0;border-radius:var(--radius-car);box-shadow:var(--shadow-card);padding:var(--space-6);margin:var(--space-4) 0;background:var(--surface-card)}
 .group.suggestion,.group.warning,.group.mineDriving,.group.matchGroup{border-left:0}
-.group.suggestion{box-shadow:var(--shadow-card),inset 4px 0 0 var(--ok)}
+.group.suggestion{box-shadow:var(--shadow-card)}
 .group.suggestion.primary{background:var(--ok-soft)}
-.group.warning{box-shadow:var(--shadow-card),inset 4px 0 0 var(--warn-icon)}
-.group.matchGroup{box-shadow:var(--shadow-card),inset 4px 0 0 var(--match-ink)}
+.group.warning{border:2px solid var(--warn-edge)}
 .pill{display:inline-block;padding:var(--space-2) var(--space-4);margin:2px 3px 0 0;font:var(--type-caption);font-weight:600;border-radius:var(--radius-pill);background:var(--surface-soft);color:var(--text-2);border:1px solid transparent}
 .pill.mine{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
 
@@ -522,6 +520,10 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
    ============================================================ */
 .rbOffer{padding-top:var(--space-6)}
 .rbOffer .rowflex{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.rbHeadline{display:flex;align-items:center;gap:var(--space-3)}
+.rbWhen{font:var(--type-caption);color:var(--text-muted)}
+.rbRideLine{display:flex;align-items:baseline;gap:var(--space-4);margin-top:var(--space-3)}
+.rbNote{margin-top:var(--space-2);font:var(--type-small);color:var(--text-muted);font-style:italic}
 .rbTime{font:var(--type-time-lg);letter-spacing:var(--track-time);color:var(--text-1)}
 .rbRoute{font:var(--type-card-title);margin:var(--space-2) 0 var(--space-1);color:var(--text-1)}
 .rbPills{margin:var(--space-3) 0 var(--space-2)}
@@ -609,3 +611,40 @@ div.settingsRow{cursor:default}
 .driveToggleInput:checked+.driveToggleBtn-standard .driveToggleCheck svg,.driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck svg{color:inherit}
 .driveToggleInput:checked+.driveToggleBtn-backup{border-color:var(--info);background:var(--info-soft);color:var(--info)}
 .driveToggleInput:checked+.driveToggleBtn-backup .driveToggleCheck{background:none;border:0}
+
+/* Second tap of a destructive action: red (design v2). Works on .btn, .iconbtn, .linkbtn. */
+.confirming{background:var(--accent)!important;color:var(--on-accent)!important;border-color:var(--accent)!important}
+.maintLogo img{display:block;margin:0 auto;border-radius:var(--radius-sheet)}
+
+/* Test view: a black bar with Stoppen (design v2) */
+.testBar{flex:none;display:flex;align-items:center;gap:var(--space-3);background:var(--toast-bg);color:var(--toast-ink);padding:var(--space-2) var(--space-3) var(--space-2) var(--space-7);font:var(--type-caption);font-weight:600}
+.testBar__text{flex:1}
+.testBar__stop{height:32px;padding:0 var(--space-5);border-radius:var(--radius-pill);border:0;background:var(--on-accent);color:var(--ink-900);font:700 12px/1 var(--font-sans);cursor:pointer}
+
+.dashBox__actions{display:flex;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4)}
+.carCard__head input.timeBig{width:104px;flex:none}
+.carCard__edit select{width:100%}
+
+.dayPills--1{grid-template-columns:minmax(0,1fr)}
+.dayPills--2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.dayPills--3{grid-template-columns:repeat(3,minmax(0,1fr))}
+.dayPills--4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tag--flex{background:transparent;border:1px dashed var(--text-muted);color:var(--text-2)}
+.dashBox__hint{color:var(--text-2)}
+.devPickToggle{height:var(--hit-min);border-radius:var(--radius-control);border:1px dashed var(--text-muted);background:var(--surface-inset);color:var(--text-1);font:var(--type-button);cursor:pointer}
+.devPickList{display:flex;flex-direction:column;gap:var(--space-2)}
+.devPickRow{display:flex;align-items:center;gap:var(--space-4);min-height:48px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-card);color:var(--text-1);padding:0 var(--space-5);cursor:pointer;text-align:left;font-family:inherit;font-size:20px}
+.devPickRow__name{flex:1;font:var(--type-card-title);font-weight:600}
+.devPickRow__sub{font:var(--type-caption);color:var(--text-muted)}
+.conclusieCard .btn{width:100%;height:48px;border-radius:var(--radius-panel);font-size:14px}
+
+.rbRide__row{display:flex;align-items:center;gap:var(--space-5)}
+.rbRide__time{font:var(--type-time-md);letter-spacing:var(--track-time)}
+.rbRide__what{flex:1;min-width:0}
+.rbRide__when{font:var(--type-card-title);font-weight:700}
+.rbRide__sub{font:var(--type-caption);color:var(--text-muted)}
+.rbRide .btn.pill.small{height:40px;padding:0 var(--space-6);font-size:13px}
+
+.sheetItem>svg{flex:none;fill:currentColor}
+.sheetItem__label{flex:1;font:var(--type-card-title);font-weight:600}
+.sheetItem--muted{opacity:.45}

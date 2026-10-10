@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import fs from 'node:fs';
-import { APP_VERSION, PH_PATHS, DAYS, DIR_TEXT, APP_URL, WHATSAPP_SVG, todayKey } from '../constants.js';
+import { APP_VERSION, PH_PATHS, DAYS, DIR_TEXT, APP_URL, WA_ICON_SMALL, WHATSAPP_SVG, todayKey, todayKeyNow } from '../constants.js';
 
 console.log('=== constants.js ===');
 test('DAYS are Monday to Friday, with the stored key first and the Dutch name second', () => {
@@ -36,8 +36,8 @@ test('every icon the code asks for with phIcon(\'name\') exists in PH_PATHS', ()
   assert.deepEqual([...missing], []);
 });
 test('WhatsApp icon is an inline svg (no external image to load)', () => { assert.ok(WHATSAPP_SVG.startsWith('<svg')); });
-test('the Beheer section icons exist and draw with currentColor', () => {
-  for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','chevron-left','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].includes('currentColor'), k);
+test('the Beheer section icons exist and are Phosphor paths', () => {
+  for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','chevron-left','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
 
 test('the Phosphor icons of the design system v2 exist, regular and -fill (tab bar and header)', () => {
@@ -50,8 +50,18 @@ test('the icons of the settings sheet and Mijn gezin exist, and the app version 
   for (const k of ['lifebuoy','user-switch','caret-left','users','moon','question','info']) assert.ok(PH_PATHS[k], k);
   assert.match(APP_VERSION, /^v\d+$/);
 });
-test('the info icon exists (used by the notice bar)', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.includes('circle')); });
-test('the car-slash icon ("Rijdt niet mee" button) exists and draws a slash over the car', () => { assert.ok(PH_PATHS['car-slash'] && PH_PATHS['car-slash'].includes('<line')); });
+test('the info icon exists', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.startsWith('<path')); });
+test('design v2: no hand-drawn icon is left (no <line>, <circle>, <rect>, <polyline>) and every icon is drawn in the text colour', () => {
+  const hand = Object.entries(PH_PATHS).filter(([, v]) => /<(line|circle|rect|polyline|polygon)\b/.test(v)).map(([k]) => k);
+  assert.deepEqual(hand, []);
+  assert.match(WHATSAPP_SVG, /fill="currentColor"/); assert.match(WA_ICON_SMALL, /fill="currentColor"/);
+});
+test('the megaphone (notice bar) and the eye (test bar) exist', () => { assert.ok(PH_PATHS['megaphone-fill'] && PH_PATHS.eye); });
+
+test('todayKeyNow follows the clock (a phone that stays open past midnight), todayKey is the value at start-up', () => {
+  assert.equal(typeof todayKeyNow, 'function'); assert.ok(['Ma', 'Di', 'Wo', 'Do', 'Vr', null].includes(todayKeyNow())); assert.equal(todayKey, todayKeyNow());
+  assert.ok(PH_PATHS['plus-circle']);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
