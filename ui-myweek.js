@@ -119,8 +119,7 @@ export function renderMyWeek(){
       status += `<div class="rideRow__extra">${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</div>`;
     }
     // Her own time: when she has to be there (heen) / when she is done (terug).
-    const dest = destinationFor(ownCar||{}, cfg).name;
-    const daughterLine = s ? `<div class="daughterTime"><span class="daughterTime__initial">${initial}</span><span>${direction==='heen' ? esc(t('myweek.daughter_heen', { place: dest })) : esc(t('myweek.daughter_terug'))} <b>${esc(s)}</b></span></div>` : '';
+    const daughterLine = s ? `<div class="daughterTime"><span class="daughterTime__initial">${initial}</span><span>${direction==='heen' ? esc(t('myweek.daughter_heen')) : esc(t('myweek.daughter_terug'))} <b>${esc(s)}</b></span></div>` : '';
     // US-06: parent switch "Rijdt niet mee" (no reason needed), not for days already past, and not for Flex.
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const sw = !dayPassed && !isFlex(myFam)

@@ -45,6 +45,13 @@ test('an empty day offers a proposal for the girls who have a time', () => {
   assert.match(s, /Optie 1: Nieuwe auto: Kees de Vries Kees de Vries: Anouk \(1\/5 pl\.\)/);
 });
 
+test('own daughter\'s time in the direction title reads "{name} aanwezig {time}" (no place, same for heen and terug)', () => {
+  const html = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
+  const subs = [...html.matchAll(/sectionHead__sub">([^<]*)</g)].map(m => m[1]).filter(Boolean);
+  assert.ok(subs.length >= 1, 'a time line is shown');
+  for (const x of subs) assert.match(x, /^\S+ aanwezig \d\d:\d\d$/);
+});
+
 console.log('\n=== Deze week (with this week\'s changes) ===');
 test('Tuesday: the deviation replaces the standard rooster and is marked "gewijzigd"', () => {
   const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));

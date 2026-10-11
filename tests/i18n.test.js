@@ -69,9 +69,9 @@ test('static page texts (data-i18n in index.html) all exist', () => {
 
 test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
   assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
-  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('myweek.daughter_heen', { place: "AFC '34" }), "Op AFC '34 om");
-  assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', place: "AFC '34", time: '17:00' }), "Noor op AFC '34 17:00");
-  assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor klaar 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
+  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('myweek.daughter_heen'), 'Aanwezig om'); assert.equal(t('myweek.daughter_terug'), 'Aanwezig om');
+  assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', time: '17:00' }), 'Noor aanwezig 17:00');
+  assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });
 test('the texts of the settings sheet and the Mijn gezin drill-down exist', () => {
   assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
