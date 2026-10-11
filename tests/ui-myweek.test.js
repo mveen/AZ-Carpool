@@ -40,8 +40,8 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 });
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
-  assert.match(s, /Vandaag maandag 28 sep 07:30 vertrek Heen · Busstation → AFC (&#39;|')34 Jan Jansen J Op AFC (&#39;|')34 om 08:30/);
-  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar J Klaar om 17:30/);
+  assert.match(s, /Vandaag maandag 28 sep 07:30 vertrek Heen · Busstation → AFC (&#39;|')34 Jan Jansen J Aanwezig om 08:30/);
+  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar J Aanwezig om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
@@ -107,7 +107,7 @@ test('a Flex daughter has no "not planned" alerts, and sees only the days she si
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'], departureTime: '07:30' }] } };
   const s = text(renderAt(MON, { me: 'p9', links: { p9: { familyId: 'f9' } }, families: fams, deviations: dev }));
   assert.doesNotMatch(s, /heeft nog geen rit/);
-  assert.match(s, /maandag 28 sep/); assert.match(s, /Jan Jansen/); assert.doesNotMatch(s, /09:00|16:00|Op AFC/, 'no fixed times for a Flex daughter');
+  assert.match(s, /maandag 28 sep/); assert.match(s, /Jan Jansen/); assert.doesNotMatch(s, /09:00|16:00|Aanwezig om/, 'no fixed times for a Flex daughter');
   assert.doesNotMatch(s, /Donderdag 1 okt/);
 });
 test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', () => {
@@ -241,8 +241,8 @@ const period40 = () => ({
 });
 test('a day shows the handed-in times and the car of the temporary rooster', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
-  assert.match(s, /Dinsdag 29 sep 08:00 vertrek Heen · Busstation → AFC (&#39;|')34 Kees de Vries J Op AFC (&#39;|')34 om 09:00/);
-  assert.match(s, /12:00 vertrek Terug · AFC (&#39;|')34 → Busstation Kees de Vries J Klaar om 12:00/);
+  assert.match(s, /Dinsdag 29 sep 08:00 vertrek Heen · Busstation → AFC (&#39;|')34 Kees de Vries J Aanwezig om 09:00/);
+  assert.match(s, /12:00 vertrek Terug · AFC (&#39;|')34 → Busstation Kees de Vries J Aanwezig om 12:00/);
 });
 test('a day she does not ride is gone, and is not reported as "niet ingepland"', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
@@ -256,7 +256,7 @@ test('outside the days with a temporary rooster the week is exactly as before', 
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd J Klaar om 12:00/);
+  assert.match(s, /12:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd J Aanwezig om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {

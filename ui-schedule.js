@@ -199,7 +199,7 @@ function directionHeadHtml(day,direction,devTagHtml){
   if(myFamId){
     const f = fam(myFamId), time = rideTime(myFamId,day,direction);
     if(time) sub = direction==='heen'
-      ? t('schedule.sub_heen', { name: f.girlName||'', place: destinationFor({},locationsCfg()).name, time })
+      ? t('schedule.sub_heen', { name: f.girlName||'', time })
       : t('schedule.sub_terug', { name: f.girlName||'', time });
   }
   return `<div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')} ${devTagHtml||''}</div><div class="sectionHead__sub">${esc(sub)}</div></div>`;
