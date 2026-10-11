@@ -23,10 +23,28 @@ export function activeDeviation(day,direction, st=S){
 // and deviations never touch those.
 export function effectiveCars(day,direction, st=S){
   const dev = activeDeviation(day,direction, st);
-  if(dev) return dev.cars.map(c=>({...c}));
+  if(dev) return withStandardsOf(dev.cars, baseCars(day,direction, st));
   const ps = periodShift(day,direction, st);
   if(ps) return ps.doc.cars.map(c=>({...c, girlIds:[...(c.girlIds||[])]}));
   return groupsFor(day,direction, st).map(([gid,g])=>({...g, baseGroupId:gid}));
+}
+
+// The standard pickup place and arrival of a car (stdLocationId, stdDestination) belong to the rooster underneath it: the temporary
+// rooster on a date of a period, else the standard rooster. A one-off change only stores its own choices (locationId, locationText,
+// destination), so these two fields are taken from the car of the same driver in that rooster, never from the copy the change holds
+// (that copy is old when the change was made before the temporary rooster existed, or before its arrival was changed).
+// A car without a counterpart (another driver than in the rooster underneath) keeps what it has.
+const STANDARD_FIELDS = ['stdLocationId','stdDestination'];
+function withStandardsOf(devCars, under){
+  const pool = [...under];
+  return devCars.map(c=>{
+    const out = {...c};
+    const i = c.driverFamilyId? pool.findIndex(b=>b.driverFamilyId===c.driverFamilyId) : -1;
+    if(i<0) return out;
+    const [b] = pool.splice(i,1);
+    STANDARD_FIELDS.forEach(k=>{ if(b[k]) out[k]=b[k]; else delete out[k]; });
+    return out;
+  });
 }
 
 // What a one-off change is compared with: the temporary rooster on a date where it applies, else the standard rooster.
