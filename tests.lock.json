@@ -8,8 +8,8 @@
     "test": "5057ab8b981cf306304022fe9c3584dc833e1f04ea0f974b54b57afbaa5926be"
   },
   "constants.js": {
-    "module": "e79bbf09e11bdb69bffe6d70146d247d3741b25513f921db428a12840c21016b",
-    "test": "0791f5849f4957e740be65d497a5181bfa5a95c4d5c21d812539ca85ff536eb1"
+    "module": "a55a0cbcf9f572720cccd1c9163a1a1ad6a3b210d1996edb89abaf8ed13b5139",
+    "test": "efddc34c76582c5a5294bb8fa01412de1e9e2dddbab40d720d3eddb66938d83c"
   },
   "coordinator.js": {
     "module": "d995027466b4c79fe3f530e8ed77ac3f035fd0106d2f6936f0d8b0167f9bef2f",
@@ -96,8 +96,8 @@
     "test": "e3e20141f6d99303f2d854ed15de11a3e72f6f1e1067c6deedd9c04a52200794"
   },
   "rides.js": {
-    "module": "49459987e420da6643c501bd3d8a2a804524428cbbf1bcc75ae2550ed460fd67",
-    "test": "f5af368776fc7b7624fd220a4bb83df2a155cbfe149185027f4988d07aa55ac8"
+    "module": "28025d85cd2cc8ee7314cd58aaeb85a9d39623afbe56370e21155e3e2e5ea686",
+    "test": "c25e1702709422b9ef6d10990d8869c4f19db574a23193575e3b512779212ad4"
   },
   "ritbeurs-data.js": {
     "module": "e1a6f0580444056cf427a14799234cc570e4219fbd3fb7ce6d4a83550a7d4030",

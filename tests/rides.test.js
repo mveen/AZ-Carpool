@@ -284,6 +284,38 @@ test('periodShift: only where the temporary rooster was made, inside the period,
   assert.equal(periodShift('Di', 'terug', pst({ periodCars: { '2026-10-26_2026-10-27_terug': { ...shiftDoc('2026-10-27', 'terug', XCARS), periodFirstDay: '2026-12-21' } } })), null, 'a document of another period');
   assert.equal(periodShift('Di', 'terug', pst({ periodCars: { '2026-10-26_2026-10-27_terug': { periodFirstDay: '2026-10-26' } } })), null, 'a broken document');
 });
+// A one-off change (Wijzigen, "Rijdt niet mee") keeps its own copy of the cars; the standard place and arrival must still come from the rooster underneath.
+const THU_HEEN = { '2026-10-26_2026-10-29_heen': shiftDoc('2026-10-29', 'heen', [{ driverFamilyId: 'f3', girlIds: ['f1', 'f4'], departureTime: '13:45', stdDestination: 'ATC', stdLocationId: 'de-parel' }]) };
+const devOf = cars => ({ Do_heen: { day: 'Do', direction: 'heen', weekKey: W44, expiresAt: 1791500000000, cars } });
+test('a one-off change made before the temporary rooster: arrival and pickup place come from the temporary rooster', () => {
+  const st = pst({ periodCars: THU_HEEN, deviations: devOf([{ driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '13:30' }]) });
+  const [car] = effectiveCars('Do', 'heen', st);
+  assert.equal(car.stdDestination, 'ATC'); assert.equal(car.stdLocationId, 'de-parel'); assert.equal(car.departureTime, '13:30', 'the change itself is kept');
+});
+test('a one-off change holding an old copy of the standard fields: the rooster underneath wins, also when it has none any more', () => {
+  const old = { driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '13:30', stdDestination: 'ATC', stdLocationId: 'busstation' };
+  const plain = { ...THU_HEEN, '2026-10-26_2026-10-29_heen': shiftDoc('2026-10-29', 'heen', [{ driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '13:45' }]) };
+  const [car] = effectiveCars('Do', 'heen', pst({ periodCars: plain, deviations: devOf([old]) }));
+  assert.equal(car.stdDestination, undefined); assert.equal(car.stdLocationId, undefined);
+});
+test('a one-off choice (destination, locationId) is never touched by the rooster underneath', () => {
+  const dev = devOf([{ driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '13:30', destination: 'AFC', locationId: 'a4-de-hoek' }]);
+  const [car] = effectiveCars('Do', 'heen', pst({ periodCars: THU_HEEN, deviations: dev }));
+  assert.equal(car.destination, 'AFC'); assert.equal(car.locationId, 'a4-de-hoek'); assert.equal(car.stdDestination, 'ATC');
+});
+test('a car of another driver than in the rooster underneath keeps what it has', () => {
+  const dev = devOf([{ driverFamilyId: 'f5', girlIds: ['f1'], departureTime: '13:30', stdDestination: 'ATC' }]);
+  const [car] = effectiveCars('Do', 'heen', pst({ periodCars: THU_HEEN, deviations: dev }));
+  assert.equal(car.stdDestination, 'ATC'); assert.equal(car.stdLocationId, undefined);
+});
+test('the same on the standard rooster: a one-off change takes the standard place of the car of that driver', () => {
+  const st = state();
+  const [gid, g] = Object.entries(st.groups).find(([, x]) => x.day === 'Ma' && x.direction === 'heen' && x.driverFamilyId);
+  st.groups = { ...st.groups, [gid]: { ...g, stdLocationId: 'de-parel', stdDestination: 'ATC' } };
+  st.deviations = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: WEEK_KEY, expiresAt: 1791500000000, cars: [{ driverFamilyId: g.driverFamilyId, girlIds: g.girlIds, departureTime: '07:15' }] } };
+  const car = effectiveCars('Ma', 'heen', st)[0];
+  assert.equal(car.stdLocationId, 'de-parel'); assert.equal(car.stdDestination, 'ATC');
+});
 test('periodShift: a stored shift outside the period (the period was shortened or moved afterwards) never applies', () => {
   const stale = { '2026-10-26_2026-10-29_terug': shiftDoc('2026-10-29', 'terug', XCARS), '2026-10-26_2026-10-26_heen': shiftDoc('2026-10-26', 'heen', XCARS) };
   assert.equal(periodShift('Do', 'terug', pst({ periods: oneP({ ...P, lastDay: '2026-10-28' }), periodCars: stale })), null, 'after the last day');
