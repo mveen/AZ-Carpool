@@ -117,6 +117,19 @@ test('a parent sees own family form, linked name and an unlink button', () => {
   assert.match(dom.html('tab-profile'), /value="Piet Pieters"/);
   expectSnapshot('ui-profile', 'parent profile', dom.html('tab-profile'));
 });
+test('the Agenda card sits in Mijn gezin of a linked parent, between the family form and "Ontkoppelen"', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
+  withFakeNow(NOW, () => renderProfile());
+  const html = dom.html('tab-profile');
+  assert.match(html, /id="agendaCard"/);
+  assert.ok(html.indexOf('id="agendaCard"') > html.indexOf('Terug') && html.indexOf('id="agendaCard"') < html.indexOf('id="unlinkBtn"'));
+  assert.match(text(html), /Agenda De link wordt klaargezet/);
+});
+test('the coordinator\'s test view as another parent has no Agenda card', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ impersonateFamilyId: 'f3' });
+  withFakeNow(NOW, () => renderProfile());
+  assert.doesNotMatch(dom.html('tab-profile'), /agendaCard/);
+});
 test('a coordinator without a family gets no daughter picker, only a pointer to Beheer', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState(); S.links = {};
   withFakeNow(NOW, () => renderProfile());

@@ -67,6 +67,14 @@ test('static page texts (data-i18n in index.html) all exist', () => {
   assert.deepEqual(keys.filter(k => !hasKey(k)), []);
 });
 
+test('the agenda texts exist and fill their placeholders (card in Profiel and the .ics file)', () => {
+  assert.equal(t('agenda.kaart_titel'), 'Agenda'); assert.equal(t('agenda.toevoegen'), 'Zet in mijn agenda'); assert.equal(t('agenda.kopieer'), 'Kopieer link');
+  assert.match(t('agenda.kaart_uitleg', { name: 'Noor' }), /ritten van Noor voor de komende 3 weken/);
+  assert.equal(t('agenda.titel_rit', { dir: 'Heen', route: "Busstation → AFC '34" }), "Carpool Heen: Busstation → AFC '34");
+  assert.equal(t('agenda.chauffeur', { name: 'Piet' }), 'Chauffeur: Piet'); assert.equal(t('agenda.aanwezig', { time: '08:30' }), 'Aanwezig om 08:30');
+  assert.equal(t('agenda.klaar', { time: '17:00' }), 'Klaar om 17:00'); assert.equal(t('agenda.kalendernaam', { name: 'Noor' }), 'Carpool Noor');
+  assert.equal(t('agenda.titel_wedstrijd', { match: 'A - B' }), 'Wedstrijd: A - B'); assert.equal(t('agenda.aftrap', { time: '14:30' }), 'Aftrap 14:30');
+});
 test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
   assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
   assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('myweek.daughter_heen'), 'Aanwezig om'); assert.equal(t('myweek.daughter_terug'), 'Aanwezig om');

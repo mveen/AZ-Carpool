@@ -21,6 +21,21 @@ test('the Dagbericht article says the place of Heen and Terug follows the arriva
   assert.ok(art, 'no article about the Dagbericht');
   assert.match(allText(art), /Wijdewormer/); assert.match(allText(art), /AFC '34 of ATC/);
 });
+test('the agenda article: how to add the calendar, how fast it updates, who may have the link, and no "new link"', () => {
+  const art = articles.find(a => a.id === 'agenda');
+  assert.ok(art, 'no agenda article'); assert.equal(art.tab, 'profile');
+  const all = allText(art);
+  assert.match(all, /komende 3 weken/); assert.match(all, /alleen om te lezen/); assert.match(all, /Zet in mijn agenda/); assert.match(all, /Kopieer link/);
+  assert.match(all, /Via URL/); assert.match(all, /één keer in/); assert.match(all, /tot een dag/); assert.match(all, /alleen met wie de ritten mag zien/);
+  assert.match(all, /Er is geen knop om een nieuwe link te maken/); assert.match(all, /alleen in als je dochter in de carpool van die wedstrijd is ingedeeld/);
+  assert.ok(searchHelp('agenda', { canEdit: false }).some(a => a.id === 'agenda'));
+  assert.ok(searchHelp('kalender iphone', { canEdit: false }).some(a => a.id === 'agenda'));
+});
+test('privacy and services say what the agenda link shows and where the file is', () => {
+  const privacy = allText(articles.find(a => a.id === 'over-privacy')), services = allText(articles.find(a => a.id === 'over-diensten'));
+  assert.match(privacy, /Agenda-link:.*voornaam van de dochter, tijden, plekken en naam van de chauffeur/); assert.match(privacy, /mijn\.host in Nederland/);
+  assert.match(services, /Agenda van je dochter/);
+});
 test('every article has a unique id, a title, keywords and at least one paragraph', () => {
   assert.ok(articles.length >= 10);
   const seen = new Set();

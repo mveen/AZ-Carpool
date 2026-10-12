@@ -16,6 +16,7 @@ import { S } from '../state.js';
 
 console.log('=== state.js ===');
 test('S has the expected top-level fields with safe starting values', () => {
+  assert.equal(S.calendarLink, null);   // Profiel > Agenda: nothing asked yet
   assert.equal(S.me, null);
   assert.equal(S.canEdit, false);
   assert.deepEqual(S.families, {});

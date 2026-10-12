@@ -295,6 +295,7 @@ button.btn.danger,.btn.danger{background:var(--surface-card);color:var(--accent-
 button.btn.confirming,.btn.confirming{background:var(--accent);color:var(--on-accent);border:0}
 button.btn.small,.btn.small{height:40px;min-height:40px;padding:0 var(--space-6);font-size:13px;margin:0}
 button.btn:disabled,.btn:disabled{opacity:.35;cursor:default}
+a.btn{text-decoration:none}
 .linkbtn{background:none;border:0;padding:0 var(--space-2);min-height:var(--hit-min);display:inline-flex;align-items:center;font:var(--type-button);color:var(--text-1);
   text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .linkbtn.danger{color:var(--accent-ink)}

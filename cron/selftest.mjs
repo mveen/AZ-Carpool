@@ -1,10 +1,10 @@
 // cron/selftest.mjs — "is this host ready?" Prints one line per check; exits 1 only on a real problem.
 // A key file that is not uploaded yet is a WARN (the deploy runs this before the keys exist), a broken one is a FAIL.
-import { statSync, existsSync } from 'node:fs';
+import { statSync, existsSync, accessSync, constants as fsConstants } from 'node:fs';
 import { generateKeyPairSync } from 'node:crypto';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { signJwt, readServiceAccount, fetchAccessToken, SCOPE_DATASTORE } from './lib/google-auth.mjs';
-import { loadConfig, secretsDir, dataDir } from './lib/setup.mjs';
+import { agendaDir, loadConfig, secretsDir, dataDir } from './lib/setup.mjs';
 
 let failed = 0;
 const line = (kind, text) => { console.log(`${kind.padEnd(4)} ${text}`); if (kind === 'FAIL') failed++; };
@@ -33,4 +33,10 @@ for (const [file, role] of [['backup-key.json', 'back-up (read only)'], ['calend
   });
 }
 line('ok', `data folder ${dataDir()}`);
+// The calendar files go in the web folder (agenda/). The folder itself is made by the job; the web folder must exist and be writable.
+{
+  const web = dirname(agendaDir());
+  if (!existsSync(web)) line('WARN', `web folder ${web} not found (the agenda job writes the calendar files in ${agendaDir()})`);
+  else { try { accessSync(existsSync(agendaDir()) ? agendaDir() : web, fsConstants.W_OK); line('ok', `agenda folder ${agendaDir()}`); } catch (e) { line('FAIL', `agenda folder ${agendaDir()} is not writable`); } }
+}
 process.exit(failed ? 1 : 0);

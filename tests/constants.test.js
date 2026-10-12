@@ -71,3 +71,4 @@ test('APP_VERSION is at least v73 (mobile layout fixes)', () => { assert.ok(Numb
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('APP_VERSION is at least v75 (rides.js no longer imports the screen code, so the server job can use it)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 75); });
+test('APP_VERSION is at least v77 (the agenda link in Mijn gezin and the agenda job on the server)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 77); });

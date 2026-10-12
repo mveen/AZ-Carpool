@@ -4,7 +4,7 @@
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v76';
+const CACHE_NAME = 'az-carpool-v77';
 const ASSETS = [
   './',
   './index.html',
@@ -60,6 +60,8 @@ const ASSETS = [
   './test-count.js',
   './ui-beheer.js',
   './ui-profile.js',
+  './ui-agenda.js',
+  './calendar-feed.js',
   './schedule-changes.js',
   './firebase-config.js',
   './manifest.json',
