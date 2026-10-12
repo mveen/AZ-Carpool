@@ -636,8 +636,8 @@ export default {
   "flex.removed": "{p1} is afgemeld",
   "flex.badge": "Flex",
   "profile.gezinstype": "Type gezin",
-  "profile.gezinstype.vast": "Vast: rijdt volgens het schema",
-  "profile.gezinstype.flex": "Flex: rijdt alleen op aangemelde dagen, wordt nooit automatisch ingepland",
+  "profile.gezinstype.vast": "Vast (volgens schema)",
+  "profile.gezinstype.flex": "Flex (zelf plannen)",
   // ---- API-sleutels (Beheer) ----
   "apikeys.titel": "API-sleutels",
   "apikeys.uitleg": "De sleutel voor OpenRouteService (afstand van uitwedstrijden) staat hier in de database, niet in de publieke GitHub-map. Alleen leden kunnen hem lezen; alleen de coördinator kan hem wijzigen.",

@@ -126,5 +126,16 @@ test('the driver dropdown in the Vast rooster spans the full card width', () => 
   assert.match(components, /\.carCard__edit\{display:grid;grid-template-columns:1fr;/);
 });
 
+test('the time field in a Heen/Terug panel keeps its 120px width (beats the generic input[type=time] 100%)', () => {
+  assert.match(components, /\.panel__head \.panel__time\{[^}]*width:120px/);
+});
+test('the family-type buttons have short labels that fit a segmented button', () => {
+  const nl = readFileSync(path.join(root, 'texts-nl.js'), 'utf8');
+  for (const k of ['vast', 'flex']) {
+    const m = new RegExp('"profile\\.gezinstype\\.' + k + '": "([^"]+)"').exec(nl);
+    assert.ok(m && m[1].length <= 24, k + ' label is short');
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
