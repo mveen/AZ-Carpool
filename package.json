@@ -7,6 +7,7 @@
   "scripts": {
     "test": "node run-tests.js",
     "lock": "node run-tests.js --lock",
-    "preview": "node preview.mjs"
+    "preview": "node preview.mjs",
+    "build:deploy": "node scripts/build-deploy.mjs"
   }
 }
