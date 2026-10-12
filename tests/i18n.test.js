@@ -260,3 +260,7 @@ test('the avatar texts exist, one label per library icon', () => {
   assert.equal(t('avatar.title'), 'Kies je avatar'); assert.equal(t('avatar.initials'), 'Initialen');
   for (const id of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.notEqual(t('avatar.l.' + id), 'avatar.l.' + id, id);
 });
+test('the family-type buttons use short labels', () => {
+  assert.equal(t('profile.gezinstype.vast'), 'Vast (volgens schema)');
+  assert.equal(t('profile.gezinstype.flex'), 'Flex (zelf plannen)');
+});

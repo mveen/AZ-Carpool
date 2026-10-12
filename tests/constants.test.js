@@ -70,3 +70,4 @@ test('APP_VERSION is at least v73 (mobile layout fixes)', () => { assert.ok(Numb
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
+test('APP_VERSION is at least v74 (family-type labels, time field width)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 74); });
