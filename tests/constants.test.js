@@ -21,8 +21,8 @@ test('DAYS are Monday to Friday, with the stored key first and the Dutch name se
 test('there is no fixed wording per direction any more: the place comes from the rides (see locations.js and the texts dir.heenTo / dir.terugFrom)', () => {
   assert.equal('DIR_TEXT' in constantsModule, false);
 });
-test('APP_URL is the public GitHub Pages address, with a trailing slash', () => {
-  assert.equal(APP_URL, 'https://mveen.github.io/AZ-Carpool/');
+test('APP_URL is the public address of the app, with a trailing slash', () => {
+  assert.equal(APP_URL, 'https://azcarpool.nl/');
 });
 test('todayKey is a weekday key, or null on the weekend', () => {
   assert.ok([null, 'Ma', 'Di', 'Wo', 'Do', 'Vr'].includes(todayKey));

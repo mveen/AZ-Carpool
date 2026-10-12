@@ -47,7 +47,7 @@ test('one line per day with a time; days without any time are left out', () => {
     'MA 28 — heen: 07:30 met Jan | terug: 17:30 (nog niet ingepland)',
     'DI 29 — heen: 10:15 (nog niet ingepland) | terug: –',
     '',
-    'https://mveen.github.io/AZ-Carpool/',
+    'https://azcarpool.nl/',
   ].join('\n'));
 });
 test('a day with a deviation is marked "(gewijzigd)"', () => {
@@ -71,7 +71,7 @@ test('match rides are sorted into the week by date and described with team, oppo
 });
 test('nothing planned at all: says so instead of an empty list', () => {
   const text = buildMyWeekMessageFrom(ctx({ myId: 'f9', myFam: { girlName: 'Nieuw', schedule: {} }, matchRides: [] }));
-  assert.equal(text, 'Carpool deze week – Nieuw:\nGeen ritten ingesteld deze week.\n\nhttps://mveen.github.io/AZ-Carpool/');
+  assert.equal(text, 'Carpool deze week – Nieuw:\nGeen ritten ingesteld deze week.\n\nhttps://azcarpool.nl/');
 });
 
 console.log('\n=== "can you drive?" asks ===');
@@ -92,7 +92,7 @@ test('parent view: Mijn week message', () => {
     'DI 29 (gewijzigd) — heen: 10:15 (nog niet ingepland) | terug: 17:30 (nog niet ingepland)',
     'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
     'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
-    '', 'https://mveen.github.io/AZ-Carpool/',
+    '', 'https://azcarpool.nl/',
   ].join('\n')));
 });
 test('helpers for the asks follow the current state', () => {
@@ -146,7 +146,7 @@ const grp = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamil
 function conclCtx(base, eff) {
   return ctx({ baseCars: (d, dir) => (base[d + '_' + dir] || []), cars: (d, dir) => (eff[d + '_' + dir] || base[d + '_' + dir] || []) });
 }
-const CURL = 'https://mveen.github.io/AZ-Carpool/';
+const CURL = 'https://azcarpool.nl/';
 test('no deviations: "<Dag>: volgens schema" plus the Mijn week link', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
   assert.equal(buildConclusieFrom(conclCtx(base, {}), 'Do'), 'Donderdag: volgens schema. Zie Mijn week: ' + CURL);
@@ -274,7 +274,7 @@ test('the Mijn week message uses the handed-in times; a day she does not ride is
     'DI 29 (gewijzigd) — heen: 09:00 (nog niet ingepland) | terug: 12:00 met Kees de Vries',   // Tuesday heen: the one-off change (f3 drives f1 and f4) goes before the temporary rooster
     'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
     'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
-    '', 'https://mveen.github.io/AZ-Carpool/',
+    '', 'https://azcarpool.nl/',
   ].join('\n')));
 });
 test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app gives it, else from the standard schedule', () => {
@@ -286,7 +286,7 @@ test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app give
 test('the conclusie compares with the temporary rooster, not with the standard rooster', () => {
   sampleParentState({ ...period40(), deviations: {} });
   // no one-off changes: the temporary rooster IS the plan, so there is nothing to report
-  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Di')), 'Dinsdag: volgens schema. Zie Mijn week: https://mveen.github.io/AZ-Carpool/');
+  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Di')), 'Dinsdag: volgens schema. Zie Mijn week: https://azcarpool.nl/');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

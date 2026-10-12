@@ -105,7 +105,7 @@ export function todayKeyNow(){ const map=[null,"Ma","Di","Wo","Do","Vr",null]; r
 export const todayKey = todayKeyNow();   // value at start-up: only for code that must not change while the app is open
 
 // ---------- Address of the app, put at the end of the WhatsApp messages ----------
-export const APP_URL = "https://mveen.github.io/AZ-Carpool/";
+export const APP_URL = "https://azcarpool.nl/";
 
 // Rough carpool cost per (estimated) kilometre, shown as an estimate next to the distance of a match.
 export const KM_COST_EUR = 0.20;

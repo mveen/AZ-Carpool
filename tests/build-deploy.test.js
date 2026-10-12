@@ -34,8 +34,8 @@ await test('the start page and app point to the new address and not to GitHub Pa
   assert.ok(read('app.js').includes(SITE + 'service-worker.js'));
   for (const f of r.files) if (/\.(html|js|css|json)$/.test(f)) assert.ok(!read(f).includes(SOURCE_SITE), f);
 });
-await test('the source files in the repo are not changed (GitHub Pages keeps working)', () => {
-  assert.ok(readFileSync(join(repo, 'constants.js'), 'utf8').includes(SOURCE_SITE));
+await test('the source files in the repo are not changed (GitHub Pages keeps working); APP_URL, used in the WhatsApp messages, is already the new address', () => {
+  assert.ok(readFileSync(join(repo, 'constants.js'), 'utf8').includes(`APP_URL = "${SITE}"`));
   assert.ok(readFileSync(join(repo, 'index.html'), 'utf8').includes(SOURCE_SITE + 'app.js'));
 });
 await test('binary files are copied byte for byte', () => {

@@ -160,7 +160,7 @@ import { sampleFamilies as _sampleFamilies } from './test-support.js';
 console.log('\n=== conclusie-appje (US-03) ===');
 test('the card shows the drafted text: "volgens schema" when nothing changed', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Vr' }));
-  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/mveen\.github\.io\/AZ-Carpool\/ Deel in de groep/);
+  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/azcarpool\.nl\/ Deel in de groep/);
 });
 test('with a deviation there is one line per change from Wijzigen', () => {
   const html = render(sampleParentState, { deviationDay: 'Di' });

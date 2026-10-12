@@ -327,7 +327,7 @@ test('introWaHref: fixed "Hi!" intro to the number, with app link and code, neve
   const href = introWaHref('06-12345678', 'ABCD1234');
   assert.match(href, /^https:\/\/wa\.me\/31612345678\?text=/);
   const msg = decodeURIComponent(href.split('?text=')[1]);
-  assert.match(msg, /^Hi! /); assert.match(msg, /mveen\.github\.io\/AZ-Carpool/); assert.match(msg, /ABCD1234/);
+  assert.match(msg, /^Hi! /); assert.match(msg, /azcarpool\.nl/); assert.match(msg, /ABCD1234/);
   assert.doesNotMatch(msg, /Piet|ouder/i);
 });
 test('introWaHref: no code -> generic text; no number -> no link', () => {
