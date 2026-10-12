@@ -36,6 +36,9 @@ jobs:
       - name: Build the upload folder
         run: npm run build:deploy
 
+      - name: Build the cron jobs
+        run: npm run build:cron
+
       - name: Check that the secrets are set
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
@@ -80,3 +83,16 @@ jobs:
           echo "app.js: $type"
           echo "$type" | grep -qi 'javascript' || { echo "::error::app.js is not served as JavaScript"; exit 1; }
           echo "OK: $SITE serves $expected"
+
+      # The cron jobs (nightly back-up, daily match calendars) live outside the web folder, in ~/azcarpool-cron/.
+      # Their key files are NOT in GitHub: they are put on the host by hand, once (see README).
+      - name: Upload the cron jobs and check the host
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          SSH_OPTS="-p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
+          export RSYNC_SSH="ssh $SSH_OPTS"
+          bash scripts/deploy-rsync.sh dist-cron/ "$user@$SSH_HOST:azcarpool-cron/"
+          # Does the host have a suitable Node.js, can it log in to Google with the uploaded keys?
+          ssh $SSH_OPTS "$user@$SSH_HOST" "bash azcarpool-cron/run.sh selftest"

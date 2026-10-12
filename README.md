@@ -211,6 +211,13 @@ Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {place
 4. Open the app once online. The service worker (cache `az-carpool-v16`) then replaces the old cache.
 5. **Always bump `CACHE_NAME` in `service-worker.js` on every deploy.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
 
+### Cron jobs on the host (`cron/`)
+Two jobs run on the mijn.host account, outside the web folder. The deploy workflow uploads `cron/` (plus a generated `config.json` with the public project id and Calendar key) to `~/azcarpool-cron/` and runs `run.sh selftest` there; it fails when the host has no Node.js 20+ or an uploaded key does not log in.
+- **Back-up** (`bash ~/azcarpool-cron/run.sh backup`, nightly): reads the whole database and writes `~/azcarpool-data/backups/firestore-YYYY-MM-DD.jsonl.gz` (Firestore's own format, one document per line, mode 600). Keeps the last 30 and the 1st of each month for a year. Needs the key `~/azcarpool-secrets/backup-key.json` of a service account with the role *Cloud Datastore Viewer* (read only).
+- **Match calendars** (`bash ~/azcarpool-cron/run.sh matches`, daily early morning): does what the first member of the day does in the app (`loadAllMatches` in `matches.js`) and writes `settings/matchCache`. The app then finds a cache from today and fetches nothing itself; if the job is down, the app still fetches by itself. A calendar that fails keeps its earlier matches and the cache is marked partial. Needs `~/azcarpool-secrets/calendar-key.json` (role *Cloud Datastore User*). A test compares its output with the app's.
+- The keys are never in git or GitHub: they are put on the host by hand (folder 700, files 600). Output: one line on success, errors on stderr with exit code 1 (cron mails them). In DirectAdmin use `bash ~/azcarpool-cron/run.sh backup > /dev/null` so only errors are mailed.
+- Changes to `cron/` do not need a `CACHE_NAME` bump (the app is not changed).
+
 ### Manual smoke test on a phone (before every go-live)
 Automated tests cover logic and page output, but not a real phone, real Firebase, or the real WhatsApp app. Check these on a mobile browser:
 1. Open the app and log in (parent through the gate, or coordinator).
