@@ -5,8 +5,8 @@ import { ATC_NAME, CITY_AFC, CITY_ATC, FREE_TEXT_MAX, arrivalPlaces, carStdId, d
 import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
-import { buildConclusieMessage, buildWhatsAppMessage, reserveAskText } from './message-texts.js';
-import { DAYS, WHATSAPP_SVG, todayKeyNow } from './constants.js';
+import { buildConclusieMessage, reserveAskText } from './message-texts.js';
+import { DAYS, todayKeyNow } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey, weekRangeLabel } from './dates.js';
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { contactButtonHtml } from './ui-contact.js';
@@ -16,13 +16,8 @@ import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs,
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
 export function sendWhatsAppUpdate(buildFn){
-  const msg = (typeof buildFn==='function'? buildFn : buildWhatsAppMessage)();
+  const msg = buildFn();
   window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank', 'noopener,noreferrer');
-}
-
-export function whatsAppButtonHtml(btnId){
-  btnId = btnId || 'waUpdateBtn';
-  return `<button type="button" class="btn secondary" id="${btnId}" style="display:inline-flex;align-items:center">${WHATSAPP_SVG}${t('deviation.deel_update_via_whatsapp')}</button>`;
 }
 
 export function wireWhatsAppButton(btnId, buildFn){

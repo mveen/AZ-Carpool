@@ -8,10 +8,6 @@ export default {
   'ask.unknownTime': '?',
 
   // WhatsApp — generic update
-  'wa.generic': 'Het schema is bijgewerkt voor {days}. Zie Mijn week voor de impact: {url}',
-  'wa.thisWeek': 'deze week',
-  'wa.and': ' en ',
-
   // WhatsApp — Mijn week (one line per day for one family's daughter)
   'wa.my.header': 'Carpool deze week – {name}:',
   'wa.my.line': '{day}{changed} — heen: {heen} | terug: {terug}',
@@ -22,7 +18,6 @@ export default {
   'wa.my.match': '{day} — wedstrijd {team} vs {opponent}: vertrek {time} met {driver}',
 
   // WhatsApp — one day's full schedule (Wijzigen)
-  'wa.day.title': 'Aangepast schema {dayLabel} {date}:',
   'wa.day.adapted': ' (aangepast)',
   'wa.day.noRides': '• geen ritten',
   'wa.day.car': '• {time} – {driver}: {girls}',
@@ -243,7 +238,6 @@ export default {
   "deviation.toch_opslaan": "Toch opslaan",
   "deviation.kon_deze_wedstrijd_niet_vinden": "Kon deze wedstrijd niet vinden — herlaad de pagina.",
   "deviation.carpool_toegevoegd": "Carpool toegevoegd ✓",
-  "deviation.deel_update_via_whatsapp": "Deel update via WhatsApp",
   "deviation.wijzigen": "Wijzigen",
   "deviation.kon_je_account_niet_herkennen": "Kon je account niet herkennen. Herlaad de pagina.",
   "deviation.wijzigingen": "Wijzigingen ·",

@@ -1,5 +1,5 @@
 // i18n.js — the one place that turns message keys into on-screen / WhatsApp text.
-//   t('wa.day.title', { dayLabel: 'Maandag', date: '28 sep' })   ->  "Aangepast schema Maandag 28 sep:"
+//   t('wa.my.header', { name: 'Eline' })   ->  "Carpool deze week – Eline:"
 // Texts live in one dictionary file per language (texts-nl.js is the source language).
 // To add a language: copy texts-nl.js to texts-xx.js, translate the values (keep the {placeholders}),
 // register it below and call setLanguage('xx'). A missing key falls back to Dutch, then to the key itself,
