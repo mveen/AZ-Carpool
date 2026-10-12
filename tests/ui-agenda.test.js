@@ -1,6 +1,6 @@
 // Run with: node ui-agenda.test.js
-// Profiel > Agenda: the link to the calendar of the family's daughter. The secret is made once per family and never replaced,
-// the card is only in the family's own Profiel, and it offers "Zet in mijn agenda" and "Kopieer link" but no "new link".
+// Instellingen > Agenda: the link to the calendar of the family's daughter. The secret is made once per family and never replaced,
+// the sheet is only for the family's own link, and it offers "Zet in mijn agenda" and "Kopieer link" but no "new link".
 import assert from 'node:assert/strict';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -14,8 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { TOKEN_RE } from '../calendar-feed.js';
-import { agendaCardHtml, agendaCardInnerHtml, calendarUrl, loadCalendarLink, webcalUrl, wireAgendaCard } from '../ui-agenda.js';
-import { renderProfile } from '../ui-profile.js';
+import { hasAgenda, openAgendaSheet, agendaCardInnerHtml, calendarUrl, loadCalendarLink, webcalUrl, wireAgendaCard } from '../ui-agenda.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -79,7 +78,7 @@ console.log('=== the card ===');
 test('what the card says: the daughter, 3 weeks, read only, one time, how to add it, how fast, who may have the link', () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ calendarLink: { familyId: 'f2', token: SECRET, status: 'ready' } });
   const html = agendaCardInnerHtml('f2'), s = text(html);
-  assert.match(s, /Agenda/); assert.match(s, /ritten van Jahaimy voor de komende 3 weken/); assert.match(s, /alleen lezen/); assert.match(s, /één keer in/);
+  assert.match(s, /ritten van Jahaimy voor de komende 3 weken/); assert.match(s, /alleen lezen/); assert.match(s, /één keer in/);
   assert.match(s, /Zet in mijn agenda/); assert.match(s, /Kopieer link/); assert.match(s, /Google Agenda/); assert.match(s, /tot een dag/); assert.match(s, /alleen met wie de ritten mag zien/);
 });
 test('no way to make a new link', () => {
@@ -88,18 +87,21 @@ test('no way to make a new link', () => {
   assert.doesNotMatch(html, /nieuwe link maken|agendaNew|agendaReset|Opnieuw/i);
   assert.deepEqual([...html.matchAll(/<(?:button|a)\b[^>]*id="([^"]+)"/g)].map(m => m[1]), ['agendaAdd', 'agendaCopy']);
 });
-test('the card sits in the Profiel of a linked parent', () => {
+test('the Agenda sheet opens for a linked parent, with its own title and the card inside', () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ calendarLink: { familyId: 'f2', token: SECRET, status: 'ready' } });
-  withFakeNow(NOW, () => renderProfile());
-  const html = dom.html('tab-profile');
-  assert.match(html, /id="agendaCard"/);
-  assert.ok(html.indexOf('id="agendaCard"') > html.indexOf('profileForm') && html.indexOf('id="agendaCard"') < html.indexOf('id="unlinkBtn"'), 'between the family form and "Ontkoppelen"');
+  assert.equal(hasAgenda(), true);
+  let mounted = null; const created = { innerHTML: '', addEventListener() {} };
+  const had = dom.doc.createElement, hadAppend = dom.doc.body.appendChild;
+  dom.doc.createElement = () => created; dom.doc.body.appendChild = el => { mounted = el; };
+  try { openAgendaSheet(); } finally { dom.doc.createElement = had; dom.doc.body.appendChild = hadAppend; }
+  assert.equal(mounted, created);
+  assert.match(text(created.innerHTML), /^Agenda Zie de ritten van Jahaimy/); assert.match(created.innerHTML, /id="agendaCard"/); assert.match(created.innerHTML, /id="agendaAdd"/);
 });
-test('the card is not in the coordinator\'s test view as another parent, and not for a coordinator without a family', () => {
+test('no Agenda for the coordinator\'s test view as another parent, and not for a coordinator without a family', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState({ impersonateFamilyId: 'f3' });
-  assert.equal(agendaCardHtml(), '');
+  assert.equal(hasAgenda(), false);
   sampleCoordinatorState(); S.links = {};
-  assert.equal(agendaCardHtml(), '');
+  assert.equal(hasAgenda(), false);
 });
 await testAsync('in the test view as another parent nothing is read or made', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ impersonateFamilyId: 'f3' });

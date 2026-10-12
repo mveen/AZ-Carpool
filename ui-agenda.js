@@ -1,4 +1,4 @@
-// ui-agenda.js — Profiel: the link to the calendar of the family's daughter (the next 3 weeks of rides, read only).
+// ui-agenda.js — Instellingen > Agenda: the link to the calendar of the family's daughter (the next 3 weeks of rides, read only).
 // The link is https://azcarpool.nl/agenda/<secret>.ics. The secret is made here, once per family, and stored in calendarTokens/<familyId>
 // (readable by that family and the coordinator only). The file itself is made on the server by cron/agenda.mjs.
 // There is no "new link": the link stays the same, so a calendar that was set up once keeps working.
@@ -6,7 +6,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { db } from './data.js';
 import { APP_URL } from './constants.js';
-import { esc, phIcon, showToast } from './ui-common.js';
+import { esc, phIcon, showToast, closeSheet } from './ui-common.js';
 import { fam, plainGirlName } from './rides.js';
 import { myFamilyId } from './coordinator.js';
 import { TOKEN_RE, newCalendarToken } from './calendar-feed.js';
@@ -17,10 +17,11 @@ export const webcalUrl = token => calendarUrl(token).replace(/^https?:/, 'webcal
 
 const validToken = x => typeof x === 'string' && TOKEN_RE.test(x);
 
-// The inside of the card, for the family whose Profiel is open. S.calendarLink = { familyId, token, status: 'loading' | 'ready' | 'error' }.
+// The inside of the Agenda sheet, for the family whose link it is. S.calendarLink = { familyId, token, status: 'loading' | 'ready' | 'error' }.
+// The sheet has its own title, so the text starts straight away.
 export function agendaCardInnerHtml(familyId) {
   const link = S.calendarLink && S.calendarLink.familyId === familyId ? S.calendarLink : null;
-  const head = `<div class="panel__title">${phIcon('calendar')} ${t('agenda.kaart_titel')}</div>`;
+  const head = '';
   if (!link || link.status === 'loading') return `${head}<div class="panel__sub">${t('agenda.laden')}</div>`;
   if (link.status === 'error' || !validToken(link.token)) return `${head}<div class="panel__sub">${t('agenda.laden_mislukt')}</div>`;
   return `${head}
@@ -41,10 +42,23 @@ function ownFamilyId() {
   return myFamilyId() || '';
 }
 
-// The card in the Profiel of a linked family.
-export function agendaCardHtml() {
-  const id = ownFamilyId();
-  return id ? `<div class="panel" id="agendaCard">${agendaCardInnerHtml(id)}</div>` : '';
+// Does this browser have an agenda link to show? Decides whether the Agenda row appears in Instellingen.
+export function hasAgenda() { return !!ownFamilyId(); }
+
+// Instellingen > Agenda: a sheet with the card. The link is read (or made, the first time) when the sheet opens.
+export function openAgendaSheet() {
+  const id = ownFamilyId(); if (!id) return;
+  closeSheet();
+  const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${esc(t('agenda.kaart_titel'))}</h3>
+    <div id="agendaCard">${agendaCardInnerHtml(id)}</div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if (e.target === ov) closeSheet(); });
+  wireAgendaCard();
+  loadCalendarLink();
 }
 
 export function wireAgendaCard() {
