@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import fs from 'node:fs';
-import { APP_VERSION, PH_PATHS, DAYS, APP_URL, WA_ICON_SMALL, WHATSAPP_SVG, todayKey, todayKeyNow } from '../constants.js';
+import { APP_VERSION, PH_PATHS, DAYS, APP_URL, WA_ICON_SMALL, todayKey, todayKeyNow } from '../constants.js';
 
 console.log('=== constants.js ===');
 test('DAYS are Monday to Friday, with the stored key first and the Dutch name second', () => {
@@ -21,7 +21,7 @@ test('DAYS are Monday to Friday, with the stored key first and the Dutch name se
 test('there is no fixed wording per direction any more: the place comes from the rides (see locations.js and the texts dir.heenTo / dir.terugFrom)', () => {
   assert.equal('DIR_TEXT' in constantsModule, false);
 });
-test('APP_URL is the public GitHub Pages address, with a trailing slash (links append #myweek)', () => {
+test('APP_URL is the public GitHub Pages address, with a trailing slash', () => {
   assert.equal(APP_URL, 'https://mveen.github.io/AZ-Carpool/');
 });
 test('todayKey is a weekday key, or null on the weekend', () => {
@@ -35,7 +35,7 @@ test('every icon the code asks for with phIcon(\'name\') exists in PH_PATHS', ()
   });
   assert.deepEqual([...missing], []);
 });
-test('WhatsApp icon is an inline svg (no external image to load)', () => { assert.ok(WHATSAPP_SVG.startsWith('<svg')); });
+test('WhatsApp icon is an inline svg (no external image to load)', () => { assert.ok(WA_ICON_SMALL.startsWith('<svg')); });
 test('the Beheer section icons exist and are Phosphor paths', () => {
   for (const k of ['list','heart','map-pin','bell','key','download','chart','wrench','clock','chevron-right','chevron-left','users','user','gear','info','soccer','calendar']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
@@ -54,7 +54,7 @@ test('the info icon exists', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.st
 test('design v2: no hand-drawn icon is left (no <line>, <circle>, <rect>, <polyline>) and every icon is drawn in the text colour', () => {
   const hand = Object.entries(PH_PATHS).filter(([, v]) => /<(line|circle|rect|polyline|polygon)\b/.test(v)).map(([k]) => k);
   assert.deepEqual(hand, []);
-  assert.match(WHATSAPP_SVG, /fill="currentColor"/); assert.match(WA_ICON_SMALL, /fill="currentColor"/);
+  assert.match(WA_ICON_SMALL, /fill="currentColor"/);
 });
 test('the megaphone (notice bar) and the eye (test bar) exist', () => { assert.ok(PH_PATHS['megaphone-fill'] && PH_PATHS.eye); });
 

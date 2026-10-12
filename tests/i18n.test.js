@@ -17,10 +17,10 @@ import nl from '../texts-nl.js';
 console.log('=== t() ===');
 test('returns the Dutch text for a key', () => { assert.equal(t('driver.none'), 'nog geen chauffeur'); });
 test('fills {placeholders}', () => {
-  assert.equal(t('wa.day.title', { dayLabel: 'Maandag', date: '28 sep' }), 'Aangepast schema Maandag 28 sep:');
+  assert.equal(t('wa.my.header', { name: 'Eline' }), 'Carpool deze week – Eline:');
 });
 test('a placeholder without a value is left visible, not replaced by "undefined"', () => {
-  assert.equal(t('wa.day.title', { dayLabel: 'Maandag' }), 'Aangepast schema Maandag {date}:');
+  assert.equal(t('wa.my.header'), 'Carpool deze week – {name}:');
 });
 test('a value of 0 is kept (not treated as missing)', () => {
   assert.equal(t('deviation.gekozen', { n: 0 }), '0 gekozen');
@@ -36,7 +36,7 @@ test('another language can be registered and selected, and falls back to Dutch f
     assert.equal(getLanguage(), 'xx');
     assert.equal(t('driver.none'), 'nobody yet');
     assert.equal(locale(), 'en-GB');
-    assert.equal(t('wa.thisWeek'), 'deze week', 'missing key falls back to Dutch');
+    assert.equal(t('wa.dir.heen'), 'heen', 'missing key falls back to Dutch');
   } finally { setLanguage('nl'); }
   assert.equal(t('driver.none'), 'nog geen chauffeur');
 });

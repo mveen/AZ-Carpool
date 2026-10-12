@@ -95,7 +95,7 @@ export const PH_PATHS = {
 export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 
 // Shown in the Instellingen sheet. Bump together with CACHE_NAME in service-worker.js (a test checks they match).
-export const APP_VERSION = 'v75';
+export const APP_VERSION = 'v76';
 
 // Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
 // True weekday-or-null: null on Sat/Sun means "no day is actually today" — used ONLY for
@@ -104,12 +104,10 @@ export const APP_VERSION = 'v75';
 export function todayKeyNow(){ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return map[new Date().getDay()]; }
 export const todayKey = todayKeyNow();   // value at start-up: only for code that must not change while the app is open
 
-// ---------- WhatsApp update button: opens a pre-filled draft, coordinator/parent still sends it ----------
+// ---------- Address of the app, put at the end of the WhatsApp messages ----------
 export const APP_URL = "https://mveen.github.io/AZ-Carpool/";
 
 // Rough carpool cost per (estimated) kilometre, shown as an estimate next to the distance of a match.
 export const KM_COST_EUR = 0.20;
-
-export const WHATSAPP_SVG = `<svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" style="vertical-align:-0.2em;margin-right:6px">${PH_PATHS['whatsapp-logo-fill']}</svg>`;
 
 export const WA_ICON_SMALL = `<svg viewBox="0 0 256 256" fill="currentColor" aria-hidden="true">${PH_PATHS['whatsapp-logo-fill']}</svg>`;

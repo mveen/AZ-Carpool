@@ -14,9 +14,9 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, withFakeNow, NOW, oneP } from './test-support.js';
 import {
-  dayHeading, activeDeviationDayLabelFrom, buildWhatsAppMessageFrom, buildMyWeekMessageFrom, buildDayMessageFrom,
-  reserveAskTextFrom, driverAskTextFrom, buildWhatsAppMessage, buildMyWeekWhatsAppMessage, buildDayWhatsAppMessage,
-  activeDeviationDayLabel, waDayLabel, reserveAskText, driverAskText,
+  dayHeading, buildMyWeekMessageFrom,
+  reserveAskTextFrom, driverAskTextFrom, buildMyWeekWhatsAppMessage,
+  reserveAskText, driverAskText,
 } from '../message-texts.js';
 
 import { S } from '../state.js';
@@ -33,20 +33,8 @@ function ctx(over = {}) {
   };
 }
 
-console.log('=== dayHeading / deviation label ===');
+console.log('=== dayHeading ===');
 test('dayHeading: capitals plus the date number', () => { assert.equal(dayHeading('Ma', day.Ma), 'MA 28'); });
-test('no deviations: "deze week"', () => { assert.equal(activeDeviationDayLabelFrom(ctx()), 'deze week'); });
-test('one or more days with a deviation are named in full, joined with "en"', () => {
-  assert.equal(activeDeviationDayLabelFrom(ctx({ hasDeviation: (d, dir) => d === 'Di' && dir === 'heen' })), 'Dinsdag');
-  assert.equal(activeDeviationDayLabelFrom(ctx({ hasDeviation: d => d === 'Di' || d === 'Vr' })), 'Dinsdag en Vrijdag');
-});
-
-console.log('\n=== generic message ===');
-test('names the changed days and links to Mijn week', () => {
-  assert.equal(buildWhatsAppMessageFrom(ctx({ hasDeviation: d => d === 'Di' })),
-    'Het schema is bijgewerkt voor Dinsdag. Zie Mijn week voor de impact: https://mveen.github.io/AZ-Carpool/#myweek');
-});
-
 console.log('\n=== Mijn week message ===');
 const myFam = { girlName: 'Jahaimy', parentName: 'Piet', schedule: { Ma: { heen: '08:30', terug: '17:30' }, Di: { heen: '10:15', terug: '' }, Wo: { heen: '', terug: '' } } };
 test('one line per day with a time; days without any time are left out', () => {
@@ -59,7 +47,7 @@ test('one line per day with a time; days without any time are left out', () => {
     'MA 28 — heen: 07:30 met Jan | terug: 17:30 (nog niet ingepland)',
     'DI 29 — heen: 10:15 (nog niet ingepland) | terug: –',
     '',
-    'https://mveen.github.io/AZ-Carpool/#myweek',
+    'https://mveen.github.io/AZ-Carpool/',
   ].join('\n'));
 });
 test('a day with a deviation is marked "(gewijzigd)"', () => {
@@ -83,27 +71,7 @@ test('match rides are sorted into the week by date and described with team, oppo
 });
 test('nothing planned at all: says so instead of an empty list', () => {
   const text = buildMyWeekMessageFrom(ctx({ myId: 'f9', myFam: { girlName: 'Nieuw', schedule: {} }, matchRides: [] }));
-  assert.equal(text, 'Carpool deze week – Nieuw:\nGeen ritten ingesteld deze week.\n\nhttps://mveen.github.io/AZ-Carpool/#myweek');
-});
-
-console.log('\n=== one-day message (Wijzigen) ===');
-test('lists every car of the day per direction, earliest first, with driver and passengers', () => {
-  const cars = { heen: [{ girlIds: ['f3'], driverFamilyId: 'f2', departureTime: '08:00' }, { girlIds: ['f1', 'f2'], driverFamilyId: 'f1', departureTime: '07:30' }], terug: [] };
-  const text = buildDayMessageFrom(ctx({ cars: (d, dir) => cars[dir], hasDeviation: (d, dir) => dir === 'heen' }), 'Ma');
-  assert.equal(text, [
-    'Aangepast schema Maandag 28 sep:', '',
-    'Heen · Aalsmeer → Alkmaar (aangepast):', '• 07:30 – Jan: Eline, Jahaimy', '• 08:00 – Piet: Anouk', '',
-    'Terug · Alkmaar → Aalsmeer:', '• geen ritten', '',
-    'https://mveen.github.io/AZ-Carpool/#myweek',
-  ].join('\n'));
-});
-test('a car without driver or time is still listed', () => {
-  const text = buildDayMessageFrom(ctx({ cars: (d, dir) => (dir === 'heen' ? [{ girlIds: ['f1'], driverFamilyId: null }] : []) }), 'Di');
-  assert.match(text, /• --:-- – nog geen chauffeur: Eline/);
-});
-test('cars without passengers are not listed', () => {
-  const text = buildDayMessageFrom(ctx({ cars: () => [{ girlIds: [], driverFamilyId: 'f1' }] }), 'Di');
-  assert.equal((text.match(/• geen ritten/g) || []).length, 2);
+  assert.equal(text, 'Carpool deze week – Nieuw:\nGeen ritten ingesteld deze week.\n\nhttps://mveen.github.io/AZ-Carpool/');
 });
 
 console.log('\n=== "can you drive?" asks ===');
@@ -124,24 +92,12 @@ test('parent view: Mijn week message', () => {
     'DI 29 (gewijzigd) — heen: 10:15 (nog niet ingepland) | terug: 17:30 (nog niet ingepland)',
     'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
     'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
-    '', 'https://mveen.github.io/AZ-Carpool/#myweek',
+    '', 'https://mveen.github.io/AZ-Carpool/',
   ].join('\n')));
 });
-test('coordinator view: one-day message for Monday', () => {
-  sampleCoordinatorState();
-  withFakeNow(NOW, () => assert.equal(buildDayWhatsAppMessage('Ma'), [
-    'Aangepast schema Maandag 28 sep:', '',
-    'Heen · Aalsmeer → Alkmaar:', '• 07:30 – Jan Jansen: Eline, Jahaimy', '',
-    'Terug · Alkmaar → Aalsmeer:', '• 17:30 – Piet Pieters: Eline, Jahaimy, Saar', '',
-    'https://mveen.github.io/AZ-Carpool/#myweek',
-  ].join('\n')));
-});
-test('generic message and helpers follow the current deviations', () => {
+test('helpers for the asks follow the current state', () => {
   sampleCoordinatorState();
   withFakeNow(NOW, () => {
-    assert.equal(activeDeviationDayLabel(), 'Dinsdag');
-    assert.match(buildWhatsAppMessage(), /^Het schema is bijgewerkt voor Dinsdag\./);
-    assert.equal(waDayLabel('Wo'), 'WO 30');
     assert.equal(reserveAskText('Ma', 'heen', '07:30'), 'Hi! Zou jij de rit heen van maandag 28 september om 07:30 kunnen doen?');
     assert.equal(driverAskText('Ma', '07:30'), 'Hi! Je rijdt de rit van maandag 28 september om 07:30. ');
   });
@@ -151,17 +107,26 @@ import { buildConclusieFrom, buildConclusieMessage } from '../message-texts.js';
 
 console.log('\n=== the place in the day messages follows the rides (AFC \'34 or ATC) ===');
 const atc = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamilyId, girlIds, departureTime, destination: 'ATC' });
-test('one-day message: cars that go to ATC say Wijdewormer, in both directions', () => {
-  const cars = { heen: [atc('f1', ['f1', 'f2'])], terug: [atc('f1', ['f1', 'f2'], '17:30')] };
-  const text = buildDayMessageFrom(ctx({ cars: (d, dir) => cars[dir] }), 'Ma');
-  assert.match(text, /\nHeen · Aalsmeer → Wijdewormer:\n• 07:30 – Jan: Eline, Jahaimy\n/);
-  assert.match(text, /\nTerug · Wijdewormer → Aalsmeer:\n• 17:30 – Jan: Eline, Jahaimy\n/);
+test('conclusie: cars that go to ATC say Wijdewormer, in both directions', () => {
+  const plain = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamilyId, girlIds, departureTime });
+  const base = { Ma_heen: [plain('f1', ['f1', 'f2'])], Ma_terug: [plain('f1', ['f1', 'f2'], '17:30')] };
+  const eff = { Ma_heen: [atc('f1', ['f1', 'f2'])], Ma_terug: [atc('f1', ['f1', 'f2'], '17:30')] };
+  const text = buildConclusieFrom(conclCtx(base, eff), 'Ma');
+  assert.match(text, /\nHeen · Aalsmeer → Wijdewormer \(aangepast\):\n• 07:30 – Jan: Eline, Jahaimy\n/);
+  assert.match(text, /\nTerug · Wijdewormer → Aalsmeer \(aangepast\):\n• 17:30 – Jan: Eline, Jahaimy\n/);
   assert.doesNotMatch(text, /Alkmaar/);
 });
-test('one-day message: one car to AFC and one to ATC names both places and tells which car goes where', () => {
-  const cars = { heen: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '13:30' }, atc('f2', ['f2'], '15:00')], terug: [] };
-  const text = buildDayMessageFrom(ctx({ cars: (d, dir) => cars[dir] }), 'Do');
-  assert.match(text, /\nHeen · Aalsmeer → Alkmaar \/ Wijdewormer:\n• 13:30 – Jan \(AFC '34\): Eline\n• 15:00 – Piet \(ATC\): Jahaimy\n/);
+test('conclusie: one car to AFC and one to ATC names both places and tells which car goes where', () => {
+  const afc = { driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '13:30' };
+  const base = { Do_heen: [afc] };
+  const eff = { Do_heen: [afc, atc('f2', ['f2'], '15:00')] };
+  const text = buildConclusieFrom(conclCtx(base, eff), 'Do');
+  assert.match(text, /\nHeen · Aalsmeer → Alkmaar \/ Wijdewormer \(aangepast\):\n• 13:30 – Jan \(AFC '34\): Eline\n• 15:00 – Piet \(ATC\): Jahaimy\n/);
+});
+test('conclusie: a car without driver or time is still listed, cars without passengers are not', () => {
+  const base = { Di_heen: [{ girlIds: ['f1', 'f2'], driverFamilyId: 'f1', departureTime: '07:30' }] };
+  const text = buildConclusieFrom(conclCtx(base, { Di_heen: [{ girlIds: ['f1'], driverFamilyId: null }, { girlIds: [], driverFamilyId: 'f1' }] }), 'Di');
+  assert.match(text, /• --:-- – nog geen chauffeur: Eline/); assert.doesNotMatch(text, /Jan: *\n/);
 });
 test('the conclusie-appje takes the place from the rooster too, and a day without rides keeps AFC \'34', () => {
   const base = { Do_heen: [atc('f1', ['f1', 'f2'])] };
@@ -175,20 +140,13 @@ test('only the arrival changed: the conclusie says so instead of "volgens schema
   assert.match(out, /^Andere aankomstplek: heen Jan ATC\n\nAangepast schema donderdag 1 okt\nHeen · Aalsmeer → Wijdewormer \(aangepast\):/);
   assert.doesNotMatch(out, /volgens schema/);
 });
-test('the wrapper reads the running app: a standard car with stdDestination ATC makes Monday heen say Wijdewormer', () => {
-  sampleParentState();
-  assert.match(withFakeNow(NOW, () => buildDayWhatsAppMessage('Ma')), /\nHeen · Aalsmeer → Alkmaar/);
-  S.groups.Ma_heen_1.stdDestination = 'ATC';
-  const out = withFakeNow(NOW, () => buildDayWhatsAppMessage('Ma'));
-  assert.match(out, /\nHeen · Aalsmeer → Wijdewormer/); assert.match(out, /\nTerug · Alkmaar → Aalsmeer/);
-});
 
 console.log('\n=== conclusie-appje (US-03) ===');
 const grp = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamilyId, girlIds, departureTime });
 function conclCtx(base, eff) {
   return ctx({ baseCars: (d, dir) => (base[d + '_' + dir] || []), cars: (d, dir) => (eff[d + '_' + dir] || base[d + '_' + dir] || []) });
 }
-const CURL = 'https://mveen.github.io/AZ-Carpool/#myweek';
+const CURL = 'https://mveen.github.io/AZ-Carpool/';
 test('no deviations: "<Dag>: volgens schema" plus the Mijn week link', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
   assert.equal(buildConclusieFrom(conclCtx(base, {}), 'Do'), 'Donderdag: volgens schema. Zie Mijn week: ' + CURL);
@@ -316,7 +274,7 @@ test('the Mijn week message uses the handed-in times; a day she does not ride is
     'DI 29 (gewijzigd) — heen: 09:00 (nog niet ingepland) | terug: 12:00 met Kees de Vries',   // Tuesday heen: the one-off change (f3 drives f1 and f4) goes before the temporary rooster
     'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
     'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
-    '', 'https://mveen.github.io/AZ-Carpool/#myweek',
+    '', 'https://mveen.github.io/AZ-Carpool/',
   ].join('\n')));
 });
 test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app gives it, else from the standard schedule', () => {
@@ -327,8 +285,8 @@ test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app give
 });
 test('the conclusie compares with the temporary rooster, not with the standard rooster', () => {
   sampleParentState({ ...period40(), deviations: {} });
-  const msg = withFakeNow(NOW, () => buildDayWhatsAppMessage('Di'));
-  assert.match(msg, /12:00/); assert.match(msg, /Kees de Vries/);
+  // no one-off changes: the temporary rooster IS the plan, so there is nothing to report
+  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Di')), 'Dinsdag: volgens schema. Zie Mijn week: https://mveen.github.io/AZ-Carpool/');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

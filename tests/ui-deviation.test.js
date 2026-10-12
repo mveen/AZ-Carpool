@@ -15,7 +15,7 @@ import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, s
 import { S } from '../state.js';
 import { todayKey } from '../constants.js';
 import {
-  renderDeviationTab, whatsAppButtonHtml, wireWhatsAppButton, sendWhatsAppUpdate, renderDevDirection,
+  renderDeviationTab, wireWhatsAppButton, sendWhatsAppUpdate, renderDevDirection,
 } from '../ui-deviation.js';
 
 const dom = installFakeDom();
@@ -134,10 +134,6 @@ test('the day screen no longer has the generic "Deel update via WhatsApp" button
   const html = render(sampleCoordinatorState, { deviationDay: 'Ma' });
   assert.doesNotMatch(html, /waUpdateBtn|Deel update via WhatsApp/); assert.match(html, /id="conclusieBtn"/);
 });
-test('the button has the WhatsApp icon and the label "Deel update via WhatsApp"', () => {
-  const html = whatsAppButtonHtml('myBtn');
-  assert.match(html, /id="myBtn"/); assert.match(html, /<svg/); assert.match(text(html), /Deel update via WhatsApp/);
-});
 test('sendWhatsAppUpdate opens wa.me with the composed message (URL-encoded), in a new tab', () => {
   sampleParentState(); dom.opened.length = 0;
   withFakeNow(NOW, () => sendWhatsAppUpdate(() => 'Hallo & welkom\nTweede regel'));
@@ -147,11 +143,6 @@ test('sendWhatsAppUpdate encodes non-ASCII characters as UTF-8 (en dash, arrow, 
   sampleParentState(); dom.opened.length = 0;
   withFakeNow(NOW, () => sendWhatsAppUpdate(() => 'MA – Aalsmeer → Alkmaar café'));
   assert.equal(dom.opened[0][0], 'https://wa.me/?text=MA%20%E2%80%93%20Aalsmeer%20%E2%86%92%20Alkmaar%20caf%C3%A9');
-});
-test('sendWhatsAppUpdate without a builder uses the generic "schema is bijgewerkt" message', () => {
-  sampleParentState(); dom.opened.length = 0;
-  withFakeNow(NOW, () => sendWhatsAppUpdate());
-  assert.match(decodeURIComponent(dom.opened[0][0]), /^https:\/\/wa\.me\/\?text=Het schema is bijgewerkt voor Dinsdag\./);
 });
 test('wireWhatsAppButton hooks the click to sending that message', () => {
   sampleParentState(); dom.opened.length = 0;
@@ -169,7 +160,7 @@ import { sampleFamilies as _sampleFamilies } from './test-support.js';
 console.log('\n=== conclusie-appje (US-03) ===');
 test('the card shows the drafted text: "volgens schema" when nothing changed', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Vr' }));
-  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/mveen\.github\.io\/AZ-Carpool\/#myweek Deel in de groep/);
+  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/mveen\.github\.io\/AZ-Carpool\/ Deel in de groep/);
 });
 test('with a deviation there is one line per change from Wijzigen', () => {
   const html = render(sampleParentState, { deviationDay: 'Di' });

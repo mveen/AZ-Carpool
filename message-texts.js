@@ -18,20 +18,6 @@ export function dayHeading(dayKey, date){ return dayUp(dayKey)+' '+date.getDate(
 
 // ---------- pure builders ----------
 
-// Which days have a deviation this week: "Maandag en Dinsdag", or "deze week" when none.
-// ctx: { hasDeviation(day, direction) -> bool }
-export function activeDeviationDayLabelFrom(ctx){
-  const labels = DAYS.filter(([k])=>['heen','terug'].some(dir=>ctx.hasDeviation(k,dir))).map(([,label])=>label);
-  return labels.length? labels.join(t('wa.and')) : t('wa.thisWeek');
-}
-
-// Generic fallback (used only when no specific day/family context is available).
-// WhatsApp messages are plain text — there is no way to make "Mijn week" itself a hidden hyperlink.
-// The raw link is placed right after it and WhatsApp auto-linkifies it.
-export function buildWhatsAppMessageFrom(ctx){
-  return t('wa.generic', { days: activeDeviationDayLabelFrom(ctx), url: APP_URL+'#myweek' });
-}
-
 // Mijn week: one line per day for THIS family's daughter —
 // "Ma 28 — heen: 07:15 met Jan | terug: 17:30 met Piet"
 // ctx: { myId, myFam, cars(day,direction), hasDeviation(day,direction), dateFor(day)->Date,
@@ -70,7 +56,7 @@ export function buildMyWeekMessageFrom(ctx){
   entries.sort((x,y)=>x.sort-y.sort || x.order-y.order);
   const lines = entries.map(e=>e.text);
   const header = t('wa.my.header', { name: myFam.girlName||myFam.parentName||'' });
-  return [header, ...(lines.length? lines : [t('wa.my.none')]), '', `${APP_URL}#myweek`].join('\n');
+  return [header, ...(lines.length? lines : [t('wa.my.none')]), '', APP_URL].join('\n');
 }
 
 // One direction of a day as a text block: "Heen · Aalsmeer → Alkmaar (aangepast):" and a line per car.
@@ -90,29 +76,13 @@ function directionBlock(ctx, day, direction, adapted){
   return [`${title}${adapted? t('wa.day.adapted') : ''}:`, ...carLines].join('\n');
 }
 
-// Dagafwijking: the full (effective) schedule of one day — every car, its driver and passengers.
-// ctx: { cars(day,direction), hasDeviation(day,direction), dateFor(day)->Date, driverName(id), girlName(id), locCfg? }
-export function buildDayMessageFrom(ctx, day){
-  const dayLabel = DAYS.find(([k])=>k===day)[1];
-  const dateLabel = ctx.dateFor(day).toLocaleDateString(locale(),{day:'numeric',month:'short'});
-  return [
-    t('wa.day.title', { dayLabel, date: dateLabel }),
-    '',
-    directionBlock(ctx, day, 'heen', ctx.hasDeviation(day,'heen')),
-    '',
-    directionBlock(ctx, day, 'terug', ctx.hasDeviation(day,'terug')),
-    '',
-    `${APP_URL}#myweek`
-  ].join('\n');
-}
-
 // Conclusie-appje (US-03): the text the day coordinator sends to the group after changes on one day.
 // No changes: "<Dag>: volgens schema. Zie Mijn week: <link>". Otherwise: first what changed (one line per kind,
 // a kind without entries is left out), then the full schedule of the day, then the link.
 // ctx: { baseCars(day,direction), cars(day,direction), dateFor(day)->Date, driverName(id), girlName(id), locCfg? }
 export function buildConclusieFrom(ctx, day){
   const dayLabel = DAYS.find(([k])=>k===day)[1];
-  const link = APP_URL+'#myweek';
+  const link = APP_URL;
   const dirs = ['heen','terug'];
   const word = d=> d==='heen'? t('wa.dir.heen') : t('wa.dir.terug');
   const changes = {};
@@ -182,14 +152,10 @@ function stateCtx(){
     locCfg: normalizeLocations(S.locationsDoc),
   };
 }
-export function buildWhatsAppMessage(){ return buildWhatsAppMessageFrom(stateCtx()); }
 export function buildMyWeekWhatsAppMessage(){
   const myId = myFamilyId();
   return buildMyWeekMessageFrom({ ...stateCtx(), myId, myFam: fam(myId), matchRides: myMatchRides(myId), isOv: (day,id,direction)=>ovGirlsFor(day,undefined,direction).includes(id) });
 }
 export function buildConclusieMessage(day){ return buildConclusieFrom(stateCtx(), day); }
-export function buildDayWhatsAppMessage(day){ return buildDayMessageFrom(stateCtx(), day); }
-export function activeDeviationDayLabel(){ return activeDeviationDayLabelFrom(stateCtx()); }
-export function waDayLabel(k){ return dayHeading(k, dateForWeekday(k)); }
 export function reserveAskText(day,direction,time){ return reserveAskTextFrom(waDayDate(day), direction, time); }
 export function driverAskText(day,time){ return driverAskTextFrom(waDayDate(day), time); }
