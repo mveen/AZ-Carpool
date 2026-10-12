@@ -268,5 +268,13 @@ test('the avatar article quotes names that exist in the app', () => {
   ['Initialen', 'Ongedaan', 'Avatar wijzigen'].forEach(q => assert.ok(Object.values(nl).includes(q), q));
 });
 
+test('help reflects the server jobs, the new host and the "Aanwezig om" texts', () => {
+  assert.match(allText(findArticle('mijn-week')), /Aanwezig om/); assert.ok(Object.values(nl).includes('Aanwezig om'));
+  assert.match(allText(findArticle('over-privacy')), /mijn\.host[\s\S]*Back-ups[\s\S]*30 dagen/);
+  assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*zaterdag/);
+  assert.match(allText(findArticle('beheer-kalenders', { canEdit: true })), /elke ochtend vroeg/);
+  assert.doesNotMatch(allText(findArticle('over-privacy')), /gehost op GitHub Pages\./);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

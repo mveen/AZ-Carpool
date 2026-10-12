@@ -2,7 +2,7 @@
 // Rules for this file (a test enforces them):
 //  - Plain, short Dutch for parents who are not technical. Name buttons and tabs exactly as they appear in the app.
 //  - NEVER put a secret, API key, password, invite code, phone number, e-mail address or the name of a
-//    parent or child in here. This file is public (GitHub Pages). It explains how the app works, nothing else.
+//    parent or child in here. This file is public (it is part of the website). It explains how the app works, nothing else.
 //    (The developer's name in 'over-achtergrond' and 'over-privacy' is there on purpose.)
 //  - Each article: id (unique), title (a question or a short topic), keywords (extra words people may type),
 //    body (list of paragraphs; a paragraph that starts with "• " or "1. " is shown as its own line),
@@ -63,6 +63,7 @@ export default [
     keywords: 'mijn week overzicht wie rijdt vertrektijd heen terug chauffeur vandaag wanneer opgehaald',
     body: [
       'Op Mijn week zie je per dag de rit van je dochter: heen en terug, met de tijd en de chauffeur. Vandaag heeft een label VANDAAG.',
+      'Bij de rit staat "Aanwezig om" met de tijd waarop je dochter er moet zijn (heen) of klaar is (terug). In het Rooster staat bij Heen en Terug hetzelfde: de naam van je dochter met "aanwezig" en de tijd.',
       'Rijd je zelf op een dag, dan staat er "Jouw rijbeurt om" met de tijd.',
       'Is er deze week iets aangepast, dan staat er "Wijziging actief" bij die dag.',
       'Mijn week is alleen om te lezen. Wil je iets veranderen, ga dan naar Wijzigen.',
@@ -184,7 +185,7 @@ export default [
       '3. Sla op. Iedereen kan een wedstrijdcarpool opzetten en aanpassen.',
       'Rijd je zelf ook en wil je het snel regelen? Tik bij de wedstrijd op Ik rij ook. Je auto staat dan in de carpool. Met Mijn auto weghalen haal je hem er weer uit.',
       'Onder de wedstrijd staat de afstand (enkele reis) en de carpoolkosten. Bij wedstrijden op AFC \'34 of het AZ Trainingscomplex is de afstand vast. Bij andere plekken is het een schatting en staat er een ± voor.',
-      'De wedstrijden komen uit de agenda\'s van de teams. Ze worden één keer per dag bijgewerkt. Klopt er iets niet, laat het de coördinator weten.',
+      'De wedstrijden komen uit de agenda\'s van de teams. Ze worden elke ochtend vroeg automatisch bijgewerkt. Klopt er iets niet, laat het de coördinator weten.',
     ],
     tab: 'matches',
   },
@@ -464,7 +465,7 @@ export default [
     coordinatorOnly: true,
     body: [
       'Onder Koppelingen, bij Wedstrijdkalenders (Google Calendar), voer je per team een naam en een Calendar ID in. Elke agenda moet openbaar staan in Google Calendar.',
-      'Met Nu verversen haal je de wedstrijden meteen op. Anders gebeurt dat één keer per dag, door de eerste ouder die de app opent.',
+      'Met Nu verversen haal je de wedstrijden meteen op. Anders gebeurt dat elke ochtend vroeg vanzelf, door een taak op de webserver. Is die taak er niet, dan doet de eerste ouder die de app opent het.',
       'Gebruik altijd de teamnaam zoals je die hier invult, en verander die niet los ergens anders.',
       'Ontbreken de afstanden bij uitwedstrijden, dan is er nog geen routeservice-sleutel ingesteld. Die stel je in onder Beheer, bij Koppelingen, bij API-sleutels. Zet die sleutel nooit in een bericht of in dit hulpvenster.',
     ],
@@ -497,11 +498,12 @@ export default [
       'Er worden geen woonadressen, geboortedata of e-mailadressen opgeslagen. De adressen in de app zijn openbare plaatsen, zoals voetbalvelden.',
       'Naam en telefoonnummer zijn zichtbaar voor alle gebruikers. Dat is bewust: carpoolers moeten elkaar kunnen bereiken, bijvoorbeeld bij een wijziging of vertraging. De app is alleen bedoeld voor de carpoolgroep en niet openbaar.',
       'De gegevens worden alleen gebruikt om de carpool te organiseren en elkaar daarover te bereiken. Ze worden niet verkocht en niet voor reclame of andere doelen gebruikt. De grondslag is jouw toestemming: je vult de gegevens zelf in en doet vrijwillig mee. Je kunt die toestemming altijd intrekken.',
-      'De gegevens staan in een database van Google Firebase op servers in de Europese Unie. De app wordt gehost op GitHub Pages.',
+      'De gegevens staan in een database van Google Firebase op servers in de Europese Unie. De app wordt gehost bij mijn.host in Nederland en staat daarnaast ook op GitHub Pages.',
       'Toegang is alleen mogelijk met telefoonnummer en code. De database weigert toegang voor niet-leden, ook buiten de app om.',
       'De app gebruikt geen cookies en heeft geen tracking of meting (geen Google Analytics, Sentry of Hotjar, geen advertenties). Het toestel bewaart alleen wat nodig is voor de werking: een anonieme inlogcode en de themakeuze. Er is daarom geen cookiebanner.',
-      'Naar externe diensten gaan geen persoonsgegevens. Het IP-adres is wel zichtbaar voor de partijen die de app laden: GitHub (hosting), Google (database, agenda-opvraging) en OpenRouteService (routes). Dat geldt voor elke website. OpenRouteService ontvangt alleen de adressen van de voetbalvelden en Google Agenda alleen het agenda-ID.',
+      'Naar externe diensten gaan geen persoonsgegevens. Het IP-adres is wel zichtbaar voor de partijen die de app laden: mijn.host en GitHub (hosting), Google (database, agenda-opvraging) en OpenRouteService (routes). Dat geldt voor elke website. OpenRouteService ontvangt alleen de adressen van de voetbalvelden en Google Agenda alleen het agenda-ID.',
       'Agenda-link: wie de persoonlijke link van een gezin heeft, kan de ritten van de komende 3 weken lezen: voornaam van de dochter, tijden, plekken en naam van de chauffeur. Het agenda-bestand staat op de webserver van mijn.host in Nederland. De link is geheim en alleen voor het gezin zelf en de coördinator zichtbaar in de app.',
+      'Back-ups: elke nacht maakt een taak op de webserver van mijn.host in Nederland een kopie van de database, voor het geval er iets misgaat. Die kopieën worden 30 dagen bewaard, plus de eerste van elke maand een jaar lang. Verwijder je je gegevens, dan verdwijnen ze dus pas na die tijd ook uit de back-ups.',
       'Na elke grote wijziging wordt de app gecontroleerd op security- en privacy-risico\'s.',
       'Gegevens blijven bewaard tot je de carpool verlaat of om verwijdering vraagt. De coördinator verwijdert de gegevens als iemand stopt, of aan het einde van het seizoen.',
       'Je mag je gegevens inzien, laten aanpassen of laten verwijderen. Je naam kun je zelf wijzigen in de app. Voor inzage, een kopie of verwijdering vraag je het aan de coördinator. Dan worden ook de gegevens van je dochter(s) verwijderd, waarna je niet meer in de app kunt. Je krijgt meestal binnen 3 dagen antwoord, uiterlijk binnen een maand.',
@@ -516,10 +518,11 @@ export default [
     body: [
       '• Routes: OpenRouteService, een Europese open-sourcedienst op basis van OpenStreetMap-gegevens. Gebruikt voor afstand en kosten van uitwedstrijden.',
       '• Navigatie: op Android is de navigatie-app vrij te kiezen (bijvoorbeeld TomTom, HERE WeGo, Waze, Google Maps). Op iPhone en andere apparaten opent Google Maps.',
-      '• Wedstrijden: uit een apart Google-agenda met de wedstrijdkalenders van de teams. Wordt één keer per dag bijgewerkt.',
+      '• Wedstrijden: uit een apart Google-agenda met de wedstrijdkalenders van de teams. Wordt elke ochtend vroeg bijgewerkt door een taak op de webserver van mijn.host.',
       '• Agenda van je dochter: een agenda-bestand per gezin (Mijn gezin → Agenda) dat je agenda-app zelf ophaalt. Het wordt elk half uur bijgewerkt door een taak op de webserver van mijn.host.',
       '• Berichten: via WhatsApp. De app verstuurt zelf geen berichten.',
-      '• Opslag en hosting: Google Firebase (database) en GitHub Pages (hosting).',
+      '• Opslag en hosting: Google Firebase (database), mijn.host in Nederland (hosting, back-ups en geplande taken) en GitHub Pages (hosting).',
+      '• Opschonen: elke zaterdag kort na middernacht worden de eenmalige wijzigingen van de afgelopen week door een taak op de webserver verwijderd. Daarvoor worden de gereden ritten eerst vastgelegd.',
     ],
   },
   {
