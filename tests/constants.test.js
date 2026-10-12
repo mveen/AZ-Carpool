@@ -1,5 +1,6 @@
 // Run with: node constants.test.js
 import assert from 'node:assert/strict';
+import * as constantsModule from '../constants.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -10,16 +11,15 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import fs from 'node:fs';
-import { APP_VERSION, PH_PATHS, DAYS, DIR_TEXT, APP_URL, WA_ICON_SMALL, WHATSAPP_SVG, todayKey, todayKeyNow } from '../constants.js';
+import { APP_VERSION, PH_PATHS, DAYS, APP_URL, WA_ICON_SMALL, WHATSAPP_SVG, todayKey, todayKeyNow } from '../constants.js';
 
 console.log('=== constants.js ===');
 test('DAYS are Monday to Friday, with the stored key first and the Dutch name second', () => {
   assert.deepEqual(DAYS.map(d => d[0]), ['Ma', 'Di', 'Wo', 'Do', 'Vr']);
   assert.deepEqual(DAYS.map(d => d[1]), ['Maandag', 'Dinsdag', 'Woensdag', 'Donderdag', 'Vrijdag']);
 });
-test('DIR_TEXT gives one wording per direction, from the translation file', () => {
-  assert.equal(DIR_TEXT.heen, 'Heen · Aalsmeer → Alkmaar');
-  assert.equal(DIR_TEXT.terug, 'Terug · Alkmaar → Aalsmeer');
+test('there is no fixed wording per direction any more: the place comes from the rides (see locations.js and the texts dir.heenTo / dir.terugFrom)', () => {
+  assert.equal('DIR_TEXT' in constantsModule, false);
 });
 test('APP_URL is the public GitHub Pages address, with a trailing slash (links append #myweek)', () => {
   assert.equal(APP_URL, 'https://mveen.github.io/AZ-Carpool/');

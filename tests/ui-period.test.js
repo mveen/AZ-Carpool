@@ -125,7 +125,7 @@ test('the form opens with the standard rooster; a day without standard times sta
   assert.equal(withFakeNow(OPEN, () => openF()), true);
   assert.deepEqual(Object.keys(S.periodForm.days), DAYS5); assert.equal(S.periodForm.familyId, 'f2');
   const s = text(html);
-  assert.match(s, /^Tijden Herfstvakantie Herfstvakantie · 26 – 30 okt · deadline vr 16 okt 12:00 Ingevuld is het vaste rooster\. Pas aan wat anders is\. Een tijd invullen = meerijden\. Heen: aankomst Alkmaar Terug: klaar om op te halen MA 26 okt Rijdt mee /);
+  assert.match(s, /^Tijden Herfstvakantie Herfstvakantie · 26 – 30 okt · deadline vr 16 okt 12:00 Ingevuld is het vaste rooster\. Pas aan wat anders is\. Een tijd invullen = meerijden\. Heen: aankomsttijd Terug: klaar om op te halen MA 26 okt Rijdt mee /);
   assert.match(s, /WO 28 okt Rijdt niet mee Jahaimy rijdt deze dag niet mee\./);
   assert.equal((html.match(/type="time"/g) || []).length, 8);   // four riding days, two times each
   assert.match(html, /id="periodHeen_2026-10-26" value="08:30"/); assert.match(html, /id="periodTerug_2026-10-30" value="17:00"/);

@@ -267,6 +267,13 @@ test('no free seat: only "ik rijd zelf" is offered; no car of her own: only ride
   const noCar = withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1'] }]));
   assert.match(text(noCar), /Geen auto beschikbaar om zelf te rijden\./); assert.match(noCar, /data-flexpass/); assert.doesNotMatch(noCar, /data-flexdrive/);
 });
+test('the Flex arrival label names the arrival place of the rides of that shift', () => {
+  flexParent();
+  const label = cars => text(withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', cars)));
+  assert.match(label([{ driverFamilyId: 'f1', girlIds: ['f1'] }]), /Aankomst in Alkmaar/);
+  assert.match(label([{ driverFamilyId: 'f1', girlIds: ['f1'], destination: 'ATC' }]), /Aankomst in Wijdewormer/);
+  assert.match(label([{ driverFamilyId: 'f1', girlIds: ['f1'] }, { driverFamilyId: 'f2', girlIds: ['f2'], destination: 'ATC' }]), /Aankomst in Alkmaar \/ Wijdewormer/);
+});
 test('a Flex girl who is signed up sees "Aangemeld" and a sign-off button instead of the form', () => {
   flexParent();
   const html = withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'] }]));

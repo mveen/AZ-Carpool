@@ -16,6 +16,11 @@ const ids = q => searchHelp(q, { canEdit: false }).map(a => a.id);
 const allText = a => [a.title, a.keywords || '', ...a.body].join('\n');
 
 console.log('=== the articles (help-nl.js) ===');
+test('the Dagbericht article says the place of Heen and Terug follows the arrival of the cars (AFC \'34 or ATC)', () => {
+  const art = articles.find(x => /Dagbericht/.test(allText(x)) && /Deel in de groep/.test(allText(x)));
+  assert.ok(art, 'no article about the Dagbericht');
+  assert.match(allText(art), /Wijdewormer/); assert.match(allText(art), /AFC '34 of ATC/);
+});
 test('every article has a unique id, a title, keywords and at least one paragraph', () => {
   assert.ok(articles.length >= 10);
   const seen = new Set();

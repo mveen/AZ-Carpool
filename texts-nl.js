@@ -3,10 +3,6 @@
 export default {
   'meta.locale': 'nl-NL',
 
-  // Travel directions (one wording everywhere in the app)
-  'dir.heen': 'Heen · Aalsmeer → Alkmaar',
-  'dir.terug': 'Terug · Alkmaar → Aalsmeer',
-
   // Names
   'driver.none': 'nog geen chauffeur',
   'ask.unknownTime': '?',
@@ -30,6 +26,7 @@ export default {
   'wa.day.adapted': ' (aangepast)',
   'wa.day.noRides': '• geen ritten',
   'wa.day.car': '• {time} – {driver}: {girls}',
+  'wa.day.carTo': '• {time} – {driver} ({dest}): {girls}',
 
   // WhatsApp — "can you drive / you are driving" asks from the Rooster
   'wa.ask.reserve': 'Hi! Zou jij de rit {direction} van {date} om {time} kunnen doen?',
@@ -319,7 +316,7 @@ export default {
   "profile.stop_testen": "Stoppen",
   "profile.testweergave_gestart": "Testweergave gestart ✓",
   "profile.terug_naar_coordinatorweergave": "Terug naar coördinatorweergave ✓",
-  "profile.heen_aankomst_alkmaar_nodig": "Heen: aankomst Alkmaar nodig",
+  "profile.heen_aankomst_nodig": "Heen: aankomsttijd",
   "profile.terug_klaar_om_op_te": "Terug: klaar om op te halen",
   "profile.kan_jij_deze_dag_rijden": "Kun je zelf rijden?",
   "profile.beschikbaar": "Beschikbaar",
@@ -467,7 +464,6 @@ export default {
   "matches.geen_api_key": "Geen Google Calendar API-key ingesteld in firebase-config.js.",
   // ---- Static page texts (index.html data-i18n attributes) ----
   "app.title": "AZ Carpool",
-  "app.route": "Aalsmeer – Alkmaar",
   "app.loading": "Laden…",
   "nav.main": "Hoofdnavigatie",
   "nav.rooster": "Rooster",
@@ -481,7 +477,7 @@ export default {
   "shell.context_wedstrijden": "{team} · komende 4 weken",
   "shell.context_wedstrijden_plain": "Komende 4 weken",
   "shell.context_beheer": "Alleen voor de coördinator",
-  "shell.context_gezin": "Aalsmeer – Alkmaar",
+  "shell.context_gezin": "AZ Carpool",
   "contact.parent_of": "Ouder van {name}",
   "contact.whatsapp": "WhatsApp",
   "contact.call": "Bellen",
@@ -498,7 +494,7 @@ export default {
   "shell.view_parent": "Ouder",
   "shell.view_coord": "Coördinator",
   "shell.parent_of": "Ouder van {name}",
-  "shell.app_name": "AZ Carpool Aalsmeer – Alkmaar",
+  "shell.app_name": "AZ Carpool",
   "shell.back": "Instellingen",
   "shell.share_title": "Mijn week delen",
   "shell.share_sub": "Je kiest zelf met wie, in WhatsApp of een andere app.",
@@ -507,7 +503,7 @@ export default {
   "profile.plekken_in_je_auto": "Plekken in je auto",
   "profile.naast_jou_als_chauffeur": "naast jou als chauffeur",
   "profile.vaste_tijden_en_beschikbaarheid": "Vaste tijden en beschikbaarheid",
-  "profile.sub_heen": "Aankomst in Alkmaar",
+  "profile.sub_heen": "Aankomsttijd",
   "profile.sub_terug": "Klaar om opgehaald te worden",
   "shell.not_linked": "Nog niet gekoppeld",
   "shell.avatar_coordinator": "C",
@@ -545,7 +541,7 @@ export default {
   "schedule.niet_ingedeeld_2": ", {p1} niet ingedeeld",
   "schedule.het_standaardrooster_met_de_wijzigingen": "{p1} · met wijzigingen.",
   "schedule.het_vaste_rooster_elke_week": "Het vaste rooster, elke week gelijk.{p1}",
-  "schedule.aankomst_alkmaar_nodig": "Aankomst Alkmaar nodig: {p1}",
+  "schedule.aankomst_nodig": "Aankomst {city} nodig: {p1}",
   "schedule.klaar_om_op_te_halen": "Klaar om op te halen: {p1}",
   "schedule.nog_niet_ingedeeld": "Nog niet ingedeeld: {p1}.",
   "schedule.nog_niet_ingedeeld_2": "Nog niet ingedeeld ({p1}): {p2}.",
@@ -586,6 +582,8 @@ export default {
   "wa.conclusie.out": "Rijdt niet mee {direction}: {names}",
   "wa.conclusie.changed": "Gewijzigde chauffeur/tijd: {entries}",
   "wa.conclusie.changedEntry": "{direction} {driver} {time}",
+  "wa.conclusie.place": "Andere aankomstplek: {entries}",
+  "wa.conclusie.placeEntry": "{direction} {driver} {place}",
   "wa.conclusie.extra": "Rijdt ook mee {direction}: {names}",
   "wa.conclusie.title": "Aangepast schema {day} {date}",
   "wa.conclusie.onSchedule": "{dayLabel}: volgens schema. Zie Mijn week: {url}",
@@ -623,7 +621,7 @@ export default {
   "flex.speelsterChauffeur": "speelster-chauffeur",
   "flex.title": "Flex: aanmelden voor deze dag",
   "flex.intro": "Flex-leden rijden alleen mee op dagen dat ze zich aanmelden.",
-  "flex.timeHeen": "Aankomst in Alkmaar",
+  "flex.timeHeen": "Aankomst in {city}",
   "flex.timeTerug": "Klaar om op te halen",
   "flex.chooseCar": "Kies auto…",
   "flex.rideAlong": "Rij mee",
@@ -876,7 +874,7 @@ export default {
   "period.form.title": "Tijden {p1}",
   "period.form.sub": "{p1} · {p2} · deadline {p3}",
   "period.form.hint": "Ingevuld is het vaste rooster. Pas aan wat anders is. Een tijd invullen = meerijden.",
-  "period.form.heen": "Heen: aankomst Alkmaar",
+  "period.form.heen": "Heen: aankomsttijd",
   "period.form.terug": "Terug: klaar om op te halen",
   "period.form.rides": "Rijdt mee",
   "period.form.notRides": "Rijdt niet mee",

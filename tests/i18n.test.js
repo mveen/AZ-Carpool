@@ -162,6 +162,13 @@ test('the period back-up texts exist and fill in their numbers', () => {
 
 
 test('the Wijzigen ride card texts exist and the arrival names ATC', () => {
+  assert.equal(t('app.route'), 'app.route'); assert.equal(t('shell.app_name'), 'AZ Carpool'); assert.equal(t('shell.context_gezin'), 'AZ Carpool');
+  assert.equal(t('period.form.heen'), 'Heen: aankomsttijd'); assert.equal(t('profile.heen_aankomst_nodig'), 'Heen: aankomsttijd'); assert.equal(t('profile.sub_heen'), 'Aankomsttijd');
+  assert.equal(t('wa.conclusie.place', { entries: 'heen Jan ATC' }), 'Andere aankomstplek: heen Jan ATC');
+  assert.equal(t('dir.heen'), 'dir.heen'); assert.equal(t('dir.terug'), 'dir.terug');   // the fixed wordings are gone: the place comes from the rides
+  assert.equal(t('schedule.aankomst_nodig', { city: 'Wijdewormer', p1: '08:30' }), 'Aankomst Wijdewormer nodig: 08:30');
+  assert.equal(t('flex.timeHeen', { city: 'Alkmaar / Wijdewormer' }), 'Aankomst in Alkmaar / Wijdewormer');
+  assert.equal(t('wa.day.carTo', { time: '13:30', driver: 'Jan', dest: 'ATC', girls: 'Saar' }), '• 13:30 – Jan (ATC): Saar');
   assert.equal(t('dir.heenTo', { city: 'Wijdewormer' }), 'Heen · Aalsmeer → Wijdewormer');
   assert.equal(t('dir.terugFrom', { city: 'Wijdewormer' }), 'Terug · Wijdewormer → Aalsmeer');
   assert.deepEqual(['wijzig', 'klaar', 'ophalen', 'aankomst', 'kinderen', 'opties', 'verwijder', 'ongedaan'].map(k => hasKey('deviation.' + k)), Array(8).fill(true));

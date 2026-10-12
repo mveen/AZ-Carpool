@@ -105,6 +105,15 @@ export function destinationFor(car, cfg) {
   return { key: 'AFC', name: cfg.destination.name, city: CITY_AFC };
 }
 
+// The arrival places of the rides of one direction, for headers and messages: each place once, AFC '34 before ATC.
+// No rides: the default (AFC '34), so a header is never empty. Returns [{ key, name, city }].
+export function arrivalPlaces(cars, cfg) {
+  const seen = new Map();
+  (cars || []).forEach(c => { const d = destinationFor(c, cfg); if (!seen.has(d.key)) seen.set(d.key, d); });
+  if (!seen.size) seen.set('AFC', destinationFor(null, cfg));
+  return [...seen.values()].sort((x, y) => x.key.localeCompare(y.key));
+}
+
 // "Busstation → AFC '34" (heen) / "AFC '34 → Busstation" (terug): the route of one ride.
 export function routeLabel(car, direction, cfg, day) {
   const place = placeName(car, direction, cfg, day), dest = destinationFor(car, cfg).name;

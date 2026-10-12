@@ -95,6 +95,14 @@ test('neededTimesHtml: one time, or the range when times differ', () => {
   assert.match(text(neededTimesHtml('Ma', 'heen', ['f1', 'f2'])), /08:30/);
   assert.match(text(neededTimesHtml('Ma', 'heen', ['f1', 'f3'])), /08:30.10:15/);
 });
+test('neededTimesHtml: the heen line names the arrival place of its car (Alkmaar, or Wijdewormer for ATC); terug does not', () => {
+  sampleCoordinatorState();
+  assert.match(text(neededTimesHtml('Ma', 'heen', ['f1'], undefined, { stdDestination: 'ATC' })), /Aankomst Wijdewormer nodig: 08:30/);
+  assert.match(text(neededTimesHtml('Ma', 'heen', ['f1'], undefined, { destination: 'ATC' })), /Aankomst Wijdewormer nodig/);
+  assert.match(text(neededTimesHtml('Ma', 'heen', ['f1'], undefined, {})), /Aankomst Alkmaar nodig: 08:30/);
+  assert.match(text(neededTimesHtml('Ma', 'heen', ['f1'])), /Aankomst Alkmaar nodig: 08:30/);
+  assert.doesNotMatch(text(neededTimesHtml('Ma', 'terug', ['f1'], undefined, { destination: 'ATC' })), /Wijdewormer|Alkmaar/);
+});
 test('pillsHtml: one chip per girl, mine highlighted, a Flex player dashed', () => {
   sampleParentState();
   const fams = S.families; fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, schedule: {}, availability: {} };
