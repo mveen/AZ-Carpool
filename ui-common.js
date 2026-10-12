@@ -5,7 +5,7 @@ import { S } from './state.js';
 import { renderProfile } from './ui-profile.js';
 import { fam } from './rides.js';
 import { myFamilyId } from './coordinator.js';
-import { isOverride, normalizeLocations, placeFor, shiftLabel } from './locations.js';
+import { isOverride, normalizeLocations, shiftLabel } from './locations.js';
 
 // ============================================================
 

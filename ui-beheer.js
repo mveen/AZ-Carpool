@@ -13,7 +13,7 @@ import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, t
 import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
-import { createPeriodBackup, db, deletePeriodBackup, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodBackupList, periodHasData, recordLastUpdate, restorePeriodBackup, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
+import { createPeriodBackup, db, deletePeriodBackup, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodBackupList, periodHasData, restorePeriodBackup, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
 import { backupFileName, buildBackupCsv, parseBackup, planRestore } from './family-backup.js';
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireIntroWa, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
@@ -22,7 +22,6 @@ import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, normalizePeriod, periodList, peri
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
-import { renderDeviationTab } from './ui-deviation.js';
 
 export function renderAvailabilityTable(){
   const rows = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
@@ -535,16 +534,6 @@ export async function removeLocationPlace(id){
   const cur = locationsCfg();
   if(id===BUSSTATION_ID || !cur.places.some(p=>p.id===id)) return false;
   return writeLocations({ ...cur, places:cur.places.filter(p=>p.id!==id) }, 'loc.saved');
-}
-
-// Standaardrooster: another standard place for one shift (day + direction). placeId '' = follow the heen/terug default.
-export async function saveShiftLocation(day,direction,placeId){
-  const cur = locationsCfg();
-  const shifts = {...cur.shifts};
-  if(placeId) shifts[day+'_'+direction]=placeId; else delete shifts[day+'_'+direction];
-  const ok = await writeLocations({ ...cur, shifts }, 'loc.shiftSaved');
-  if(ok){ recordLastUpdate('Rooster'); renderSchedule(); renderMyWeek(); renderDeviationTab(); }
-  return ok;
 }
 
 export function renderBeheer(){

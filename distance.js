@@ -12,7 +12,7 @@ const AALSMEER = { lon: 4.7605, lat: 52.2625 }; // bias for the address search
 //   isHome: true/false/null (null = unknown)   location: calendar location text
 //   stored: { loc, km } | { loc, unknown:true } | undefined      fixedKm: { AFC, ATC }
 // Result: null (show nothing) | {kind:'km'|'fixed', km} | {kind:'fixedMissing', venue} | {kind:'unknown'} | {kind:'pending'}
-export function distanceInfo({ isHome, location, stored, fixedKm }) {
+export function distanceInfo({ location, stored, fixedKm }) {
   const loc = String(location || '').trim();
   const venue = fixedVenue(loc);
   if (venue) {
@@ -90,7 +90,7 @@ export async function ensureDistances({ matches, storedByKey, fixedKm, fetchFn, 
   let calls = 0, errorsInARow = 0;
   for (const m of matches) {
     if (errorsInARow >= MAX_CONSECUTIVE_ERRORS) break;   // circuit open: the rest is tried in a later session
-    const info = distanceInfo({ isHome: m.isHome, location: m.location, stored: storedByKey[m.key], fixedKm });
+    const info = distanceInfo({ location: m.location, stored: storedByKey[m.key], fixedKm });
     if (!info || info.kind !== 'pending') continue;
     const loc = String(m.location).trim();
     const id = m.key + '|' + loc;

@@ -372,5 +372,8 @@ await testAsync('removing the rooster of one period leaves the other one', async
   assert.deepEqual(Object.keys(S.periodCars), ['2026-10-26_2026-10-27_terug']);
 }); });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-period-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-period-rooster.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

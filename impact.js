@@ -14,9 +14,9 @@ import { effectiveCars, shiftFamilies } from './rides.js';
 
 // ---------- pure: the analysis ----------
 const seatsOf = f => Math.max(0, ((f && f.capacity) || 0) - 1);
-const availOf = (f, day, dir) => (f && f.availability && f.availability[day]) || {};
-const isStandaard = (f, day, dir) => !!availOf(f, day, dir)[dir];
-const isBackup = (f, day, dir) => !!availOf(f, day, dir)[dir === 'heen' ? 'backupHeen' : 'backupTerug'];
+const availOf = (f, day) => (f && f.availability && f.availability[day]) || {};
+const isStandaard = (f, day, dir) => !!availOf(f, day)[dir];
+const isBackup = (f, day, dir) => !!availOf(f, day)[dir === 'heen' ? 'backupHeen' : 'backupTerug'];
 const withGirls = cars => (cars || []).filter(c => (c.girlIds || []).length);
 
 // Fewest cars the planning engine needs for the girls in these cars, or null when it finds no solution.

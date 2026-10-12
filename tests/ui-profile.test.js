@@ -381,5 +381,8 @@ test('design v2: the test view is a black bar (class testBar) with an eye and a 
   assert.equal(dom.el('impersonateBanner').className, 'testBar'); assert.match(html, /id="stopImpersonateBtn"/); assert.doesNotMatch(html, /background|color:/);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-profile.js imports nothing it does not use', () => assertNoUnusedImports('ui-profile.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

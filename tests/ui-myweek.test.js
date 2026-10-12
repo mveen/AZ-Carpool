@@ -273,5 +273,8 @@ test('design v2: no "je dochter" any more; the alert names the daughter', () => 
   assert.match(text(render({})), /Jahaimy heeft nog geen rit/); assert.doesNotMatch(text(render({})), /[Jj]e dochter/);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-myweek.js imports nothing it does not use', () => assertNoUnusedImports('ui-myweek.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

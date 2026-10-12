@@ -21,7 +21,7 @@ export function dayChanges(baseCars, effCars){
 
   // Match every effective car with the standard car that shares most girls (each standard car once).
   const taken = new Set();
-  const matchOf = eff.map((c,ei)=>{
+  const matchOf = eff.map(c=>{
     let best = -1, bestOverlap = 0;
     base.forEach((b,bi)=>{
       if(taken.has(bi)) return;

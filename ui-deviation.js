@@ -166,7 +166,6 @@ function devDirHeader(direction,cars){
   return `<div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div><div class="sectionHead__sub">${esc(t(direction==='heen'? 'dir.heenTo' : 'dir.terugFrom', { city: cities.join(' / ') }))}</div></div>`;
 }
 
-const rawGirlName = id => fam(id).girlName||fam(id).parentName||id;
 
 // "+ Passagier toevoegen": pick someone who is not in any car of this shift (design v2). A full car says "Auto is vol".
 function addPassengerHtml(key, car, girls, unassigned, day, direction){

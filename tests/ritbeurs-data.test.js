@@ -235,5 +235,8 @@ await testAsync('housekeeping: the coordinator removes offers of other weeks and
   assert.equal(fake.get('families/f1/notifications/x'), undefined); assert.ok(fake.get('families/f1/notifications/y'));
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+await testAsync('ritbeurs-data.js imports nothing it does not use', async () => assertNoUnusedImports('ritbeurs-data.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

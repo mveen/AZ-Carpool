@@ -7,7 +7,6 @@ import { isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
 import { APP_URL, DAYS, WA_ICON_SMALL } from './constants.js';
 import { waPhone } from './ui-schedule.js';
-import { dayUp } from './dates.js';
 import { db } from './data.js';
 import { goToWijzigen } from './ui-myweek.js';
 import { describeWeekschemaChange } from './ui-deviation.js';
@@ -178,7 +177,6 @@ export function familyFormHtml(prefix,f){
   ).join('');
   const s=(f.schedule&&f.schedule[activeDay])||{};
   const a=(f.availability&&f.availability[activeDay])||{};
-  const dayLabel = DAYS.find(([k])=>k===activeDay)[1];
   // One panel per direction: its time on the right, then "Kun je zelf rijden?" with Beschikbaar / Back-up.
   const dirPanel = (dir, sub, avId, bkId, bkKey) => `<div class="panel">
       <div class="panel__head"><div><div class="panel__title">${dir==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div><div class="panel__sub">${sub}</div></div>
@@ -274,8 +272,6 @@ export function wireFamilyFormExtras(prefix, rerenderFn){
   });
   const hidden=document.getElementById(`${prefix}_capacity`);
   const valueEl=document.getElementById(`${prefix}_capacityValue`);
-  const titleEl=document.getElementById(`${prefix}_capacityTitle`);
-  const hintEl=document.getElementById(`${prefix}_capacityHint`);
   function step(delta){
     let v=(parseInt(hidden.value)||4)+delta;
     v=Math.max(1,Math.min(9,v));

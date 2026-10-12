@@ -446,7 +446,6 @@ export default {
   "app.verbinden": "Verbinden…",
   "coordinator.onbekend": "Onbekend",
   "common.ouder": "Ouder",
-  "deviation.opslaan": "Opslaan",
   "myweek.vandaag": "Vandaag",
   "myweek.vertrek": "vertrek",
   "myweek.rest_van_de_week": "Rest van de week",

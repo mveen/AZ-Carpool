@@ -14,7 +14,7 @@ import { showToast } from './ui-common.js';
 import { cleanCars, currentDeviationDoc, db, recordLastUpdate } from './data.js';
 import {
   CONFLICT_MINUTES, applyTakeOver, backupRecipients, buildMoment, buildOffer, hasOpenOffer, momentId, normalizeQuiet, normalizeRitbeurs,
-  notificationDoc, notificationId, offerId, ridersToWarn, ritbeursDoc, rideStartMs, stalePaths, takeWarnings, toMin, urgency, deadlineMs,
+  notificationDoc, notificationId, offerId, ridersToWarn, ritbeursDoc, rideStartMs, stalePaths, takeWarnings, toMin, urgency,
 } from './ritbeurs.js';
 
 const DIRECTIONS = ['heen', 'terug'];

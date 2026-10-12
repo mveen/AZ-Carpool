@@ -491,5 +491,8 @@ test('design v2: ui-deviation.js only uses variables from tokens.css in its inli
   assert.deepEqual(unknown, []);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-deviation.js imports nothing it does not use', () => assertNoUnusedImports('ui-deviation.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -211,5 +211,8 @@ await (async () => {
   });
 })();
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-shell.js imports nothing it does not use', () => assertNoUnusedImports('ui-shell.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

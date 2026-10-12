@@ -263,5 +263,8 @@ test('stale paths: other weeks, ended moments and expired notifications', () => 
   assert.deepEqual(paths.sort(), ['backupMoments/m1', 'families/f1/notifications/n1', 'offers/a']);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ritbeurs.js imports nothing it does not use', () => assertNoUnusedImports('ritbeurs.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

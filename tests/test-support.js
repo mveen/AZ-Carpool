@@ -155,3 +155,23 @@ export function expectSnapshot(file, name, actual) {
 
 // The periods list the app keeps (S.periods) for a single period: { firstDay: period }, or nothing.
 export const oneP = p => (p ? { [p.firstDay]: p } : {});
+
+// ---------- dead-code guards ----------
+// Fails when a module imports a name it never uses, or when a text file defines the same key twice (the second silently wins).
+const stripComments = s => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[\s;{}(),])\/\/.*$/gm, '$1');
+export function assertNoUnusedImports(file) {
+  const src = stripComments(fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8'));
+  const unused = [];
+  for (const m of src.matchAll(/import\s*\{([^}]*)\}\s*from\s*['"][^'"]+['"]/g)) {
+    for (const part of m[1].split(',').map(x => x.trim()).filter(Boolean)) {
+      const local = part.split(/\s+as\s+/).pop();
+      const uses = (src.match(new RegExp('(?<![\\w$])' + local.replace(/\$/g, '\\$') + '(?![\\w$])', 'g')) || []).length;
+      if (uses < 2) unused.push(local);
+    }
+  }
+  assert.deepEqual(unused, [], file + ' imports names it never uses');
+}
+export function assertNoDuplicateKeys(file) {
+  const keys = [...fs.readFileSync(new URL('../' + file, import.meta.url), 'utf8').matchAll(/^\s*["']([\w.\-]+)["']\s*:/gm)].map(m => m[1]);
+  assert.deepEqual(keys.filter((k, i) => keys.indexOf(k) !== i), [], file + ' defines a key twice');
+}
