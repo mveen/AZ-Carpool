@@ -407,7 +407,7 @@ button.chip{cursor:pointer;font-family:inherit}
 .matchTile__icon svg{width:20px;height:20px;fill:currentColor}
 .matchTile__text{flex:1;min-width:0}
 .matchTile__title{font:700 14px/1.3 var(--font-sans);font-weight:800}
-.matchTile__loc{font:var(--type-small);color:var(--text-2);margin-top:2px;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.matchTile__loc{font:var(--type-small);color:var(--text-2);margin-top:2px;overflow-wrap:anywhere}
 .matchTile__sub{font:var(--type-caption);color:var(--text-muted)}
 .matchTile__more{color:var(--text-muted);display:inline-flex}
 .matchTile__more svg{width:16px;height:16px;fill:currentColor}
@@ -451,12 +451,15 @@ label{display:block;margin:var(--space-3) 0 var(--space-1);font:var(--type-capti
 input[type=text],input[type=tel],input[type=number],input[type=search],select{width:100%;min-height:var(--hit-min);padding:0 var(--space-4);border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-inset);color:var(--text-1);font:var(--type-body)}
 input[type=time],input[type=date]{width:100%;min-height:var(--hit-min);padding:0 var(--space-4);border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-inset);color:var(--text-1);font:var(--type-time-sm);font-size:15px}
 input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
-.carCard__edit{display:grid;grid-template-columns:110px 1fr;gap:var(--space-3);margin-top:var(--space-4)}
+.carCard__edit{display:grid;grid-template-columns:1fr;gap:var(--space-3);margin-top:var(--space-4)}
 .carCard__edit select,.carCard__edit input{margin:0}
 .alertCard__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--warn-edge);font:var(--type-small)}
 .alertCard--stack .alertCard__text{flex:none}
 .shiftLocBtn{display:inline-flex;align-items:center;gap:var(--space-2);max-width:100%;padding:0 var(--space-4);min-height:34px;margin-top:var(--space-1);border:1px dashed var(--text-muted);border-radius:var(--radius-pill);background:transparent;color:inherit;font:var(--type-caption);cursor:pointer;text-align:left}
 .shiftLocBtn svg{width:14px;height:14px;fill:currentColor;flex:none}
+.shiftLocBtn{box-sizing:border-box;padding-block:var(--space-2)}
+.shiftLocBtn .shiftLocText{flex:1;min-width:0;overflow-wrap:anywhere}
+.carCard__who{flex:1;min-width:0}
 
 /* ---------- Old "group" cards (suggestions, pickers, Wijzigen, matches): same card look until their screens are rebuilt ---------- */
 .group{border:0;border-radius:var(--radius-car);box-shadow:var(--shadow-card);padding:var(--space-6);margin:var(--space-4) 0;background:var(--surface-card)}
@@ -559,7 +562,7 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .matchHead{display:flex;align-items:center;gap:var(--space-3)}
 .matchKick{font:var(--type-caption);color:var(--text-muted)}
 .matchTitle{margin-top:var(--space-3);font:800 17px/1.25 var(--font-sans)}
-.matchLoc{margin-top:2px;font:var(--type-small);color:var(--text-2);text-decoration:underline;text-underline-offset:3px}
+.matchLoc{margin-top:2px;font:var(--type-small);color:var(--text-2)}
 .matchLoc a{color:inherit}
 .matchDist{font:var(--type-caption);color:var(--text-muted)}
 .matchCarRow{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);font:var(--type-caption)}
