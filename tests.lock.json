@@ -48,12 +48,12 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "6ebec07a74ae41f4c3ecc36682d36d4f7576c908c2d158d1ba32aac862913ca9",
-    "test": "9da2afbe2a70658c418a14c5c1afce5e1bb48f26a463763228fbf091c3591765"
+    "module": "917df7e8d8a2e5bde363d8ccd840b766ce9e72068123add4a4e4181f9630ee5d",
+    "test": "8be8e35982da5f6ffa264ab903562c10ce305ace1e10b88eb73c9dbc5357a2b5"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "9da2afbe2a70658c418a14c5c1afce5e1bb48f26a463763228fbf091c3591765"
+    "test": "8be8e35982da5f6ffa264ab903562c10ce305ace1e10b88eb73c9dbc5357a2b5"
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
@@ -132,8 +132,8 @@
     "test": "01c92dcfd0221b5d8e85a972a5b4bdff9e3088f4c3fa44b1c0eb9028b37b69e1"
   },
   "ui-agenda.js": {
-    "module": "8cece54a3e879608cb35c35acf0577f4deb5cb13ce9ef4248aeab19e61dda3e3",
-    "test": "fa06f7fb8a2cf09debf790c6cbedb08dfff65cd59a608b32e35634299a5894a1"
+    "module": "d1c5d4dce8476e4cd344f49ef3ba5e45c74630dd1b5ba0c6e4324d4c95bb3b89",
+    "test": "73782dc1ddb4f6fc56d75fe867443b9d3797650a2be01079ed993ea59fdeeb8c"
   },
   "ui-beheer.js": {
     "module": "f6d796848a44d63d96df44d8bb5a9e2fc9188e769edeea8a177861cf42388a9d",
@@ -184,8 +184,8 @@
     "test": "69147c18755a5c5a3fe7373489694d11164c44c24d296489b440cbbd4d252fdf"
   },
   "ui-profile.js": {
-    "module": "fca87504bbf1c166f91c76d7f658d2cfed77255f6aeaf50407aab5a613e736ff",
-    "test": "dc1458d70d4b33c4dc7c15cd5b65b107dbeabc43697cdbbcc06b26575548c1d8"
+    "module": "bcecb2e9497d9bef81887a8740369e501080912482bc5f36dcd68f139d822289",
+    "test": "28a63acdd618c52e678fe931f6d609d2f706a4505c65ab3e94ad25c20c9f6176"
   },
   "ui-ride-log.js": {
     "module": "9254e7d73e707d3f067eea194f2a4d98605334f23127c9e60df397ab6efc8c1d",
@@ -200,7 +200,7 @@
     "test": "c4d4a93c7cbeb4c08abd7dbd5f6a4e2b41c1d4394042737302c3d54195efe4ab"
   },
   "ui-shell.js": {
-    "module": "e71786896f34a3ffa6b8cdc9f10350aba43f990fae343c4e02e62aa4da19f36f",
-    "test": "13c0c429de233177bea27d1b1728b66600a82fea60a352b2cd2d92219a0406fe"
+    "module": "8919f6e20dfa4726206352a947b27da4e581b57b1724f7fb0787c526a242c8c9",
+    "test": "17c14ad8859fef4f2733602d2d4bfbafa8bc6360654448ae33f604908dcff354"
   }
 }

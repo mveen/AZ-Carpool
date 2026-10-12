@@ -1,6 +1,6 @@
 // ui-shell.js — the frame around every screen (design system v2): the header with the screen title,
 // the week line, the share button and the avatar, and the Instellingen sheet behind the avatar
-// (Mijn gezin, theme, help). The tab bar itself is plain markup in index.html.
+// (Mijn gezin, theme, Agenda, help). The tab bar itself is plain markup in index.html.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast } from './ui-common.js';
@@ -14,6 +14,7 @@ import { AVATARS, avatarOf, avatarInner, avatarClass, avatarLabel } from './avat
 import { saveAvatar } from './data.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { initContact } from './ui-contact.js';
+import { hasAgenda, openAgendaSheet } from './ui-agenda.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
@@ -113,7 +114,7 @@ function markSegments(){
   });
 }
 
-// The Instellingen sheet: who you are, then one row per setting (Mijn gezin, Thema, Bekijk als, Help) and the version.
+// The Instellingen sheet: who you are, then one row per setting (Mijn gezin, Thema, Bekijk als [coordinator only], Agenda, Help) and the version.
 export function openSettings(onNavigate, onViewChange){
   closeSheet();
   const name = parentName();
@@ -136,6 +137,7 @@ export function openSettings(onNavigate, onViewChange){
     <div class="settingsRow">${phIcon('moon')}<span class="settingsRow__label">${esc(t('shell.theme'))}</span>
       <div class="segmented segmented--inline" role="group" aria-label="${esc(t('shell.theme'))}"><button type="button" id="themeLight">${esc(t('shell.theme_light'))}</button><button type="button" id="themeDark">${esc(t('shell.theme_dark'))}</button></div></div>
     ${viewRow}
+    ${hasAgenda() ? row('setAgenda', 'calendar', t('agenda.kaart_titel')) : ''}
     ${row('setHelp', 'question', t('help.title'))}
     <div class="settingsRow settingsRow--info">${phIcon('info')}<span class="settingsRow__label">${esc(t('shell.app_name'))}</span><span class="settingsRow__hint">${esc(APP_VERSION)}</span></div>
   </div>`;
@@ -143,6 +145,7 @@ export function openSettings(onNavigate, onViewChange){
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
   ov.querySelector('#setProfile').onclick = () => { closeSheet(); go('profile'); };
   const setAv = ov.querySelector('#setAvatar'); if(setAv) setAv.onclick = () => openAvatarPicker(onNavigate, onViewChange);
+  const setAgenda = ov.querySelector('#setAgenda'); if(setAgenda) setAgenda.onclick = () => openAgendaSheet();
   ov.querySelector('#setHelp').onclick = () => { closeSheet(); openHelp(document.getElementById('avatarBtn')); };
   ov.querySelector('#themeLight').onclick = () => setTheme('light');
   ov.querySelector('#themeDark').onclick = () => setTheme('dark');

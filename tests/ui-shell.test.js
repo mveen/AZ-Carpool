@@ -56,13 +56,20 @@ function installSheet() {
   return { ov, els };
 }
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-test('the sheet shows avatar, name and role, then Mijn gezin (with hint), Thema, Help and the app version', () => {
+test('the sheet shows avatar, name and role, then Mijn gezin (with hint), Thema, Agenda, Help and the app version', () => {
   sampleParentState(); const { ov } = installSheet(); openSettings(() => {});
   const s = text(ov.html);
   assert.equal(ov.mounted, true);
-  assert.match(s, /^PP Piet Pieters Ouder van Jahaimy Mijn gezin tijden, auto, beschikbaar Thema Licht Donker Help AZ Carpool v\d+$/);
+  assert.match(s, /^PP Piet Pieters Ouder van Jahaimy Mijn gezin tijden, auto, beschikbaar Thema Licht Donker Agenda Help AZ Carpool v\d+$/);
   assert.match(ov.html, /id="themeLight"/); assert.match(ov.html, /id="setHelp"/);
   assert.doesNotMatch(ov.html, /viewParent/, 'a parent has no "Bekijk als"');
+});
+test('the order is Mijn gezin, Thema, Agenda, Help for a parent; a visitor without a family has no Agenda row', () => {
+  sampleParentState(); let { ov } = installSheet(); openSettings(() => {});
+  const at = k => ov.html.indexOf(k);
+  assert.ok(at('id="setProfile"') < at('id="themeLight"') && at('id="themeLight"') < at('id="setAgenda"') && at('id="setAgenda"') < at('id="setHelp"'));
+  resetState({ me: 'x' }); ({ ov } = installSheet()); openSettings(() => {});
+  assert.doesNotMatch(ov.html, /setAgenda/);
 });
 test('the app version in the sheet is the same as the cache name of the service worker', () => {
   const sw = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
@@ -93,6 +100,13 @@ test('a coordinator with a family gets the switch, a coordinator without one doe
   assert.match(ov.html, /id="viewParent"/); assert.match(ov.html, /id="viewCoord"/); assert.match(text(ov.html), /Bekijk als Ouder Coördinator/);
   sampleCoordinatorState({ coordinatorConfig: { uid: 'coord' } }); ({ ov } = installSheet()); openSettings(() => {});
   assert.doesNotMatch(ov.html, /viewParent/);
+});
+test('a coordinator sees Bekijk als between Thema and Agenda, and Agenda stays above Help; a parent never gets Bekijk als', () => {
+  coordWithFamily(); let { ov } = installSheet(); openSettings(() => {});
+  const at = k => ov.html.indexOf(k);
+  assert.ok(at('id="themeLight"') < at('id="viewParent"') && at('id="viewParent"') < at('id="setAgenda"') && at('id="setAgenda"') < at('id="setHelp"'));
+  sampleParentState(); ({ ov } = installSheet()); openSettings(() => {});
+  assert.doesNotMatch(ov.html, /viewParent|viewCoord|Bekijk als/);
 });
 test('Ouder hides the coordinator rights and remembers the choice; Coördinator brings them back', () => {
   coordWithFamily(); const { els } = installSheet(); let changed = 0; openSettings(() => {}, () => { changed++; });

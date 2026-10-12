@@ -19,7 +19,7 @@ export default [
     body: [
       'AZ Carpool regelt wie de meiden naar Alkmaar rijdt (heen) en weer terug naar Aalsmeer (terug).',
       'De onderste balk heeft de tabbladen: Mijn week (jouw overzicht), Rooster (alle ritten), Wijzigen (eenmalige aanpassing, ritten ruilen), Wedstrijden en, alleen voor de coördinator, Beheer.',
-      'Rechtsboven staat je avatar (je initialen of een icoon). Tik erop voor Instellingen: Mijn gezin (jouw gegevens), het thema, Help en, voor de coördinator, Bekijk als. Zoek in deze Help met je eigen woorden, bijvoorbeeld "mijn dochter is ziek".',
+      'Rechtsboven staat je avatar (je initialen of een icoon). Tik erop voor Instellingen: Mijn gezin (jouw gegevens), het thema, Agenda, Help en, voor de coördinator, Bekijk als. Zoek in deze Help met je eigen woorden, bijvoorbeeld "mijn dochter is ziek".',
       'Kosten worden niet in deze app verrekend. Dat gaat via de Wie Betaalt Wat-app.',
     ],
     tab: 'myweek',
@@ -77,7 +77,7 @@ export default [
     keywords: 'agenda kalender ical ics webcal google apple iphone outlook abonneren abonnement link synchroniseren dochter ritten telefoon alleen lezen delen',
     body: [
       'Je kunt de ritten van je dochter voor de komende 3 weken in je eigen agenda zetten. De agenda is alleen om te lezen: wijzigen kan alleen in de app.',
-      'Open Mijn gezin en ga naar Agenda. Wat je daarna doet, hangt af van je agenda-app:',
+      'Tik rechtsboven op je avatar en kies Agenda. Wat je daarna doet, hangt af van je agenda-app:',
       '• iPhone, iPad en Mac: tik op Zet in mijn agenda en bevestig het abonneren.',
       '• Google Agenda: tik op Kopieer link. In de Google Agenda-app op de telefoon kan dit niet. Open Google Agenda op een computer, kies Andere agenda\'s toevoegen, dan Via URL, en plak de link. De agenda komt daarna ook op je telefoon.',
       '• Outlook: kies Agenda toevoegen, dan Abonneren via internet, en plak de link.',
@@ -85,7 +85,6 @@ export default [
       'Wedstrijden staan er alleen in als je dochter in de carpool van die wedstrijd is ingedeeld.',
       'De link is persoonlijk. Deel hem alleen met wie de ritten mag zien, bijvoorbeeld je dochter. Wie de link heeft, ziet de voornaam van je dochter, de tijden, de plekken en de naam van de chauffeur. Er is geen knop om een nieuwe link te maken. Is de link bij de verkeerde persoon terechtgekomen, vraag het dan aan de coördinator.',
     ],
-    tab: 'profile',
   },
   {
     id: 'rit-ontbreekt',
