@@ -87,6 +87,7 @@ export const S = {
   shiftPriority: {},
   deferredInstallPrompt: null,
   appIsInstalled: false,
+  calendarLink: null,      // Profiel > Agenda: { familyId, token, status } of the calendar link of the family whose Profiel is open (null = not asked yet)
   dataUnsubs: [],
   linksCollUnsub: null,
   sessionsUnsub: null,

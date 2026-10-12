@@ -11,6 +11,7 @@ import { db } from './data.js';
 import { goToWijzigen } from './ui-myweek.js';
 import { describeWeekschemaChange } from './ui-deviation.js';
 import { diffSchedules, diffWeekschema, mergePendingChanges } from './schedule-changes.js';
+import { agendaCardHtml, loadCalendarLink, wireAgendaCard } from './ui-agenda.js';
 
 // ---------- Coordinator test mode: view the app as a specific parent, without losing real rights ----------
 export function renderImpersonateBanner(){
@@ -462,6 +463,7 @@ export function renderProfile(){
         <div class="panel panel--row familyHead"><span class="familyHead__initial">${esc((lf.girlName||lf.parentName||'?').trim().charAt(0).toUpperCase())}</span>
           <div><div class="familyHead__name">${esc(lf.girlName||lf.parentName||effId)}</div><div class="panel__sub">${t('profile.gekoppeld_aan')} ${esc(lf.parentName||'')}</div></div></div>
         ${familyFormHtml('me', fam(effId))}
+        ${agendaCardHtml()}
         ${unlinkCtl}
       </div>`;
     } else {
@@ -485,6 +487,8 @@ export function renderProfile(){
       wireWeekschemaWarning();
       wireExclusiveAvailability('me');
       wireFamilyFormExtras('me', renderProfile);
+      wireAgendaCard();
+      loadCalendarLink();
       const ub=document.getElementById('unlinkBtn'); if(ub) ub.onclick=()=>twoStepConfirm(ub,t('profile.zeker_tik_nogmaals_om_te'),async ()=>{
         try{ await db.doc("links/"+S.me).delete(); showToast(t('profile.ontkoppeld')); }catch(e){showToast(t('data.mislukt')+(e&&e.message||e));}
       });

@@ -272,6 +272,21 @@ service cloud.firestore {
       allow read, write: if isCoordinator();
     }
 
+    // ---- Agenda link (calendar subscription, Profiel > Agenda) ---------------------
+    // calendarTokens/<familyId> = { token, createdAt }: the secret in the link https://azcarpool.nl/agenda/<token>.ics of one family.
+    // Only that family and the coordinator can read it (the server job reads it with its own key). A family makes it once and nobody can
+    // replace it (no update), so the link a family put in its calendar keeps working; only the coordinator can remove it (then the app
+    // makes a new one). The token must be exactly 32 URL-safe characters: the server job uses it as a file name.
+    match /calendarTokens/{familyId} {
+      allow get: if isCoordinator() || (isLinked() && linkedFamilyId() == familyId);
+      allow create: if (isCoordinator() || (isLinked() && linkedFamilyId() == familyId))
+        && request.resource.data.keys().hasOnly(['token', 'createdAt'])
+        && request.resource.data.token is string
+        && request.resource.data.token.matches('^[A-Za-z0-9_-]{32}$')
+        && request.resource.data.createdAt is number;
+      allow delete: if isCoordinator();
+    }
+
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();
     }

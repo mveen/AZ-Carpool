@@ -9,7 +9,7 @@
 #   - refuses a remote destination that is not exactly the matching folder (the same account holds other sites);
 #   - uploads everything except index.html and service-worker.js first, then those two last, so a phone never
 #     gets a new start page or service worker that points to files that are not there yet;
-#   - removes files that are no longer part of the app, but never touches .well-known (certificate checks) or cgi-bin.
+#   - removes files that are no longer part of the app, but never touches .well-known (certificate checks), cgi-bin or agenda (the calendar files that cron/agenda.mjs makes).
 set -euo pipefail
 
 src="${1:?usage: deploy-rsync.sh <source-folder> <destination>}"
@@ -40,7 +40,7 @@ if [ "$mode" = cron ]; then
   exit 0
 fi
 
-opts=(-rlt --human-readable --itemize-changes --chmod=D755,F644 --exclude=/.well-known/ --exclude=/cgi-bin/)
+opts=(-rlt --human-readable --itemize-changes --chmod=D755,F644 --exclude=/.well-known/ --exclude=/cgi-bin/ --exclude=/agenda/)
 if [ -n "${RSYNC_SSH:-}" ]; then opts+=(-e "$RSYNC_SSH"); fi
 
 echo "== pass 1: everything except the start page and the service worker"
