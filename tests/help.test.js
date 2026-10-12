@@ -23,7 +23,7 @@ test('the Dagbericht article says the place of Heen and Terug follows the arriva
 });
 test('the agenda article: how to add the calendar, how fast it updates, who may have the link, and no "new link"', () => {
   const art = articles.find(a => a.id === 'agenda');
-  assert.ok(art, 'no agenda article'); assert.equal(art.tab, 'profile');
+  assert.ok(art, 'no agenda article'); assert.match(allText(art), /rechtsboven op je avatar en kies Agenda/);
   const all = allText(art);
   assert.match(all, /komende 3 weken/); assert.match(all, /alleen om te lezen/); assert.match(all, /Zet in mijn agenda/); assert.match(all, /Kopieer link/);
   assert.match(all, /Via URL/); assert.match(all, /één keer in/); assert.match(all, /tot een dag/); assert.match(all, /alleen met wie de ritten mag zien/);
