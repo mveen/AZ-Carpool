@@ -2,6 +2,7 @@
 import { t, locale } from './i18n.js';
 import { PH_PATHS } from './constants.js';
 import { S } from './state.js';
+import { esc } from './escape.js';
 import { renderProfile } from './ui-profile.js';
 import { fam } from './rides.js';
 import { myFamilyId } from './coordinator.js';
@@ -112,7 +113,7 @@ if(typeof document!=='undefined' && document.addEventListener) document.addEvent
 // Safari has no equivalent API at all, so this silently does nothing there (not faked).
 export function hapticTap(){ try{ if(navigator.vibrate) navigator.vibrate(10); }catch(e){} }
 
-export function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+export { esc };   // lives in escape.js (no imports), so the server job can use rides.js without the whole screen code
 
 export function lastUpdateFooter(info){
   if(!info || !info.at) return '';

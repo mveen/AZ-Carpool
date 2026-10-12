@@ -114,6 +114,22 @@ await test('setDocument replaces exactly one document in one commit (no update m
   assert.equal(calls[0].url, 'https://firestore.googleapis.com/v1/projects/az-carpool/databases/(default)/documents:commit');
   assert.deepEqual(JSON.parse(calls[0].init.body), { writes: [{ update: { name: `${ROOT}/settings/matchCache`, fields: { fetchedAt: { integerValue: '5' }, partial: { booleanValue: false } } } }] });
 });
+await test('deleteDocument deletes one document; with updateTime only that version (changed or gone = false, other errors still fail)', async () => {
+  const a = client(() => json(200, {}));
+  assert.equal(await a.fs.deleteDocument('deviations/Di_heen'), true);
+  assert.equal(a.calls[0].init.method, 'DELETE'); assert.match(a.calls[0].url, /\/deviations\/Di_heen$/);
+  const b = client(() => json(200, {}));
+  await b.fs.deleteDocument('deviations/Di_heen', { updateTime: '2026-10-03T00:00:00.123456Z' });
+  assert.match(b.calls[0].url, /\?currentDocument\.updateTime=2026-10-03T00%3A00%3A00\.123456Z$/);
+  const c = client(() => json(400, { error: { message: 'the version does not match', status: 'FAILED_PRECONDITION' } }));
+  assert.equal(await c.fs.deleteDocument('deviations/x', { updateTime: 'u' }), false); assert.equal(c.calls.length, 1);
+  const d = client(() => json(404, { error: { message: 'not found' } }));
+  assert.equal(await d.fs.deleteDocument('deviations/x', { updateTime: 'u' }), false);
+  const e = client(() => json(403, { error: { message: 'Missing or insufficient permissions.' } }));
+  await assert.rejects(e.fs.deleteDocument('deviations/x', { updateTime: 'u' }), /HTTP 403/);
+  const f = client(() => json(400, { error: { message: 'bad', status: 'INVALID_ARGUMENT' } }));
+  await assert.rejects(f.fs.deleteDocument('deviations/x', { updateTime: 'u' }), /HTTP 400/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { deviationKey, weekKeyDayIso } from './dates.js';
 import { periodDayKey, periodEntryId, periodForDate, periodShiftId, periodWorkdays } from './period.js';
 import { ovIds } from './ov.js';
-import { esc } from './ui-common.js';
+import { esc } from './escape.js';
 import { checkPlan, computeDepartureTime as pureComputeDepartureTime, planAlternativeAssignments, planShift, timeToMinutes as pureTimeToMinutes } from './planning.js';
 
 // Day labels are always shown in capitals ("MA"); the keys themselves ("Ma") stay as stored data.

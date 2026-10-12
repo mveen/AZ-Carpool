@@ -63,6 +63,7 @@ export function createFirestore({ projectId, getToken, fetchFn = fetch, sleep = 
       const msg = (data && data.error && (data.error.message || data.error.status)) || '';
       last = new Error(`Firestore ${method} failed: HTTP ${res.status} ${msg}`.trim());
       last.status = res.status;
+      last.code = (data && data.error && data.error.status) || '';
       if (res.status !== 429 && res.status < 500) throw last;
     }
     throw last;
@@ -99,6 +100,13 @@ export function createFirestore({ projectId, getToken, fetchFn = fetch, sleep = 
       await call('POST', `${HOST}/projects/${projectId}/databases/(default)/documents:commit`, {
         writes: [{ update: { name: `${root}/${path}`, fields: encodeFields(data) } }],
       });
+    },
+    // Deletes one document. With `updateTime` (the version that was read) it only deletes THAT version: when the document was changed
+    // or already deleted in the meantime nothing is deleted. Returns true when it deleted, false when it did not because of that.
+    async deleteDocument(path, { updateTime } = {}) {
+      const q = updateTime ? '?' + new URLSearchParams({ 'currentDocument.updateTime': updateTime }) : '';
+      try { await call('DELETE', `${base}/${segments(path)}${q}`); return true; }
+      catch (e) { if (updateTime && (e.status === 404 || e.status === 412 || e.code === 'FAILED_PRECONDITION')) return false; throw e; }
     },
     // Walks the whole database: yields { path, doc, missing } for every document, sub-collections included.
     async *walk() {
