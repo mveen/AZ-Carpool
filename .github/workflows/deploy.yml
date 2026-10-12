@@ -21,6 +21,9 @@ jobs:
     env:
       SITE: https://azcarpool.nl
       TARGET_DIR: domains/azcarpool.nl/public_html/
+      # Not secret. The server's public identity is pinned in .github/deploy/known_hosts for exactly this host and port.
+      SSH_HOST: h70.mijn.host
+      SSH_PORT: '26'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -35,32 +38,31 @@ jobs:
 
       - name: Check that the secrets are set
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
           missing=0
-          for name in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_KEY DEPLOY_KNOWN_HOSTS; do
+          for name in DEPLOY_USER DEPLOY_KEY; do
             if [ -z "${!name}" ]; then echo "::error::GitHub secret $name is not set (repo Settings -> Secrets and variables -> Actions)"; missing=1; fi
           done
           exit $missing
 
       - name: Upload to mijn.host
         env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
           install -d -m 700 ~/.ssh
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          export RSYNC_SSH="ssh -p $DEPLOY_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
-          bash scripts/deploy-rsync.sh dist/ "$DEPLOY_USER@$DEPLOY_HOST:$TARGET_DIR"
+          cp .github/deploy/known_hosts ~/.ssh/known_hosts
+          # Diagnostics (nothing secret): does the key file look like a private key, and which server identity is pinned?
+          head -1 ~/.ssh/deploy_key | grep -q 'BEGIN OPENSSH PRIVATE KEY' || { echo "::error::DEPLOY_KEY does not start with -----BEGIN OPENSSH PRIVATE KEY-----"; exit 1; }
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_KEY is not a valid private key (copy it again with: pbcopy < ~/.ssh/azcarpool_deploy)"; exit 1; }
+          ssh-keygen -lf ~/.ssh/known_hosts
+          export RSYNC_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
+          bash scripts/deploy-rsync.sh dist/ "$user@$SSH_HOST:$TARGET_DIR"
 
       - name: Check that the new version is live
         run: |

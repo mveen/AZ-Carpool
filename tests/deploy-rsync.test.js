@@ -21,17 +21,21 @@ const have = c => spawnSync('sh', ['-c', `command -v ${c}`]).status === 0;
 const run = (src, dest) => spawnSync('bash', [script, src, dest], { encoding: 'utf8' });
 
 console.log('=== the workflow ===');
-await test('deploys after a merge to main, never in parallel, with only the five secrets and the fixed azcarpool.nl folder', () => {
+await test('deploys after a merge to main, never in parallel, with only the two secrets (user and key) and the fixed azcarpool.nl folder', () => {
   const y = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8');
   assert.match(y, /push:\s*\n\s*branches: \[main\]/);
   assert.match(y, /workflow_dispatch:/);
   assert.match(y, /cancel-in-progress: false/);
   assert.match(y, /TARGET_DIR: domains\/azcarpool\.nl\/public_html\//);
-  for (const s of ['DEPLOY_HOST', 'DEPLOY_PORT', 'DEPLOY_USER', 'DEPLOY_KEY', 'DEPLOY_KNOWN_HOSTS']) assert.match(y, new RegExp(`secrets\\.${s}\\b`), s);
-  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_HOST', 'DEPLOY_KEY', 'DEPLOY_KNOWN_HOSTS', 'DEPLOY_PORT', 'DEPLOY_USER']);
+  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER']);
 });
-await test('tests run before the upload, and the host key is checked (no blind trust)', () => {
+await test('tests run before the upload, and the server identity is pinned in the repo and checked (no blind trust, no copy-paste secret)', () => {
   const y = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8');
+  const kh = readFileSync(join(repo, '.github/deploy/known_hosts'), 'utf8').trim().split('\n');
+  assert.equal(kh.length, 1);
+  assert.match(kh[0], /^\[h70\.mijn\.host\]:26 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5[A-Za-z0-9+/]{48}$/);
+  assert.match(y, /SSH_HOST: h70\.mijn\.host/); assert.match(y, /SSH_PORT: '26'/);
+  assert.match(y, /cp \.github\/deploy\/known_hosts/);
   assert.ok(y.indexOf('npm test') < y.indexOf('deploy-rsync.sh'));
   assert.match(y, /StrictHostKeyChecking=yes/);
   assert.match(y, /permissions:\s*\n\s*contents: read/);
