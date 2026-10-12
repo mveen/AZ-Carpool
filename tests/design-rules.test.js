@@ -109,5 +109,22 @@ test('the avatar picker tiles with an icon get the red tint after the base tile 
   assert.match(components.slice(tint, tint + 120), /--accent-soft[^}]*--accent-ink/);
 });
 
+
+console.log('\n=== mobile rendering regressions (Android Firefox/Chrome) ===');
+test('a match location is underlined once: only the link, never its wrapper too (double underline)', () => {
+  for (const sel of ['.matchTile__loc', '.matchLoc']) {
+    const rule = new RegExp('(^|\\n)' + sel.replace('.', '\\.') + '\\{([^}]*)\\}').exec(components);
+    assert.ok(rule, sel + ' exists'); assert.doesNotMatch(rule[2], /text-decoration/, sel);
+  }
+  assert.match(components, /a\.geoLink\{[^}]*text-decoration:underline/);
+});
+test('the dashed route button wraps its text inside its border and its column can shrink', () => {
+  assert.match(components, /\.shiftLocBtn \.shiftLocText\{[^}]*min-width:0/);
+  assert.match(components, /\.carCard__who\{[^}]*min-width:0/);
+});
+test('the driver dropdown in the Vast rooster spans the full card width', () => {
+  assert.match(components, /\.carCard__edit\{display:grid;grid-template-columns:1fr;/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
