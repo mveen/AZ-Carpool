@@ -1,0 +1,80 @@
+name: Deploy azcarpool.nl
+
+# Runs after every merge to main (and by hand: Actions -> Deploy azcarpool.nl -> Run workflow).
+# GitHub Pages is not touched by this: it keeps deploying from main on its own.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-azcarpool
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE: https://azcarpool.nl
+      TARGET_DIR: domains/azcarpool.nl/public_html/
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Run tests (never upload a broken app)
+        run: npm test
+
+      - name: Build the upload folder
+        run: npm run build:deploy
+
+      - name: Check that the secrets are set
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          missing=0
+          for name in DEPLOY_HOST DEPLOY_PORT DEPLOY_USER DEPLOY_KEY DEPLOY_KNOWN_HOSTS; do
+            if [ -z "${!name}" ]; then echo "::error::GitHub secret $name is not set (repo Settings -> Secrets and variables -> Actions)"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Upload to mijn.host
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ secrets.DEPLOY_PORT }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          export RSYNC_SSH="ssh -p $DEPLOY_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts"
+          bash scripts/deploy-rsync.sh dist/ "$DEPLOY_USER@$DEPLOY_HOST:$TARGET_DIR"
+
+      - name: Check that the new version is live
+        run: |
+          expected=$(grep -oE "CACHE_NAME *= *'[^']+'" dist/service-worker.js | head -1)
+          echo "Expected: $expected"
+          for attempt in 1 2 3 4 5 6; do
+            live=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
+            echo "Attempt $attempt, live: ${live:-nothing}"
+            if [ "$live" = "$expected" ]; then break; fi
+            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve the new service worker"; exit 1; fi
+            sleep 10
+          done
+          curl -fsS --max-time 20 "$SITE/" | grep -q "$SITE/app.js" || { echo "::error::start page does not point to $SITE/app.js"; exit 1; }
+          type=$(curl -fsSI --max-time 20 "$SITE/app.js" | tr -d '\r' | grep -i '^content-type:' || true)
+          echo "app.js: $type"
+          echo "$type" | grep -qi 'javascript' || { echo "::error::app.js is not served as JavaScript"; exit 1; }
+          echo "OK: $SITE serves $expected"
