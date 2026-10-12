@@ -191,7 +191,7 @@ test('the privacy text says what the app stores and what it does not do', () => 
 test('the privacy text covers the AVG/GDPR: controller, data, visibility, basis, location, retention, rights, reaction time, complaint', () => {
   const s = allText(findArticle('over-privacy'));
   [/AVG, in het Engels GDPR/, /Verantwoordelijk.*Michiel Veen.*coördinator/, /initiatief van ouders voor ouders.*geen onderdeel van de club/, /Dochters: alleen de voornaam, tenzij de ouder die zelf aanpast/, /rijtijden en beschikbaarheid/,
-   /geen woonadressen, geboortedata of e-mailadressen/, /zichtbaar voor alle gebruikers/, /toestemming.*altijd intrekken/, /servers in de Europese Unie/, /GitHub Pages/,
+   /geen woonadressen, geboortedata of e-mailadressen/, /zichtbaar voor alle gebruikers/, /toestemming.*altijd intrekken/, /servers in de Europese Unie/, /gehost bij mijn\.host/,
    /Sentry of Hotjar/, /geen cookiebanner/, /OpenRouteService ontvangt alleen de adressen van de voetbalvelden/, /Google Agenda alleen het agenda-ID/,
    /security- en privacy-risico/, /tot je de carpool verlaat of om verwijdering vraagt/, /einde van het seizoen/, /inzien, laten aanpassen of laten verwijderen/,
    /gegevens van je dochter\(s\) verwijderd/, /binnen 3 dagen.*uiterlijk binnen een maand/, /Autoriteit Persoonsgegevens/].forEach(re => assert.match(s, re, String(re)));
@@ -201,8 +201,8 @@ test('searching AVG, GDPR, verwijderen or bewaartermijn finds the privacy articl
   ['avg', 'gdpr', 'verwijderen', 'bewaartermijn', 'klacht autoriteit persoonsgegevens'].forEach(q => assert.ok(ids(q).includes('over-privacy'), q));
   assert.equal(top('avg'), 'over-privacy'); assert.equal(top('gdpr'), 'over-privacy');
 });
-test('the services article names every service the app loads (GitHub, Google, OpenRouteService, WhatsApp)', () => {
-  const s = allText(findArticle('over-diensten')); ['GitHub', 'Google Firebase', 'OpenRouteService', 'WhatsApp'].forEach(x => assert.ok(s.includes(x), x));
+test('the services article names every service the app loads (mijn.host, Google, OpenRouteService, WhatsApp)', () => {
+  const s = allText(findArticle('over-diensten')); ['mijn.host', 'Google Firebase', 'OpenRouteService', 'WhatsApp'].forEach(x => assert.ok(s.includes(x), x));
 });
 test('the number of tests in "Over deze app" is the exact count from test-count.js (written by npm run lock)', async () => {
   const { TEST_COUNT } = await import('../test-count.js');
@@ -266,6 +266,14 @@ test('help explains the avatar choice, Ik rij ook, Gereden shifts and the impact
 });
 test('the avatar article quotes names that exist in the app', () => {
   ['Initialen', 'Ongedaan', 'Avatar wijzigen'].forEach(q => assert.ok(Object.values(nl).includes(q), q));
+});
+
+test('help reflects the server jobs, the new host and the "Aanwezig om" texts', () => {
+  assert.match(allText(findArticle('mijn-week')), /Aanwezig om/); assert.ok(Object.values(nl).includes('Aanwezig om'));
+  assert.match(allText(findArticle('over-privacy')), /mijn\.host[\s\S]*Back-ups[\s\S]*30 dagen/);
+  assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*zaterdag/);
+  assert.match(allText(findArticle('beheer-kalenders', { canEdit: true })), /elke ochtend vroeg/);
+  assert.doesNotMatch(allText(findArticle('over-privacy')) + allText(findArticle('over-diensten')), /GitHub/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
