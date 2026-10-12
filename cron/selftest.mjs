@@ -21,7 +21,7 @@ if (!process.env.AZ_SELFTEST_OFFLINE) {
   await guard('Google reachable', async () => { const r = await fetch('https://firestore.googleapis.com/', { signal: AbortSignal.timeout(15000) }); return 'HTTP ' + r.status; });
 }
 
-for (const [file, role] of [['backup-key.json', 'back-up (read only)'], ['calendar-key.json', 'match calendars (read/write settings)']]) {
+for (const [file, role] of [['backup-key.json', 'back-up (read only)'], ['calendar-key.json', 'match calendars and weekly purge (read/write data)']]) {
   const path = join(secretsDir(), file);
   if (!existsSync(path)) { line('WARN', `${file} not uploaded yet (${role})`); continue; }
   const mode = statSync(path).mode & 0o077;

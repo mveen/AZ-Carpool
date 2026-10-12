@@ -207,6 +207,10 @@ test('Escape removes the open sheet or help overlay; other keys and no overlay d
 });
 
 import { assertNoUnusedImports } from './test-support.js';
+test('esc is re-exported from escape.js, so the screens keep importing it from here', async () => {
+  const { esc: original } = await import('../escape.js');
+  assert.equal(esc, original);
+});
 test('ui-common.js imports nothing it does not use', () => assertNoUnusedImports('ui-common.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

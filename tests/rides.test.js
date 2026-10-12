@@ -461,6 +461,11 @@ test('sortFamEntriesByGirl sorts [id, family] entries A-Z by daughter name', () 
 });
 
 import { assertNoUnusedImports } from './test-support.js';
+test('rides.js escapes with escape.js and does not import any screen code (the server job loads it on the host)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../rides.js', import.meta.url), 'utf8');
+  assert.match(src, /from '\.\/escape\.js'/); assert.doesNotMatch(src, /from '\.\/ui-/);
+});
 test('rides.js imports nothing it does not use', () => assertNoUnusedImports('rides.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

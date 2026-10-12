@@ -3,6 +3,7 @@
 // It copies cron/ and adds config.json: the public values the jobs need (Firebase project id, the Calendar key),
 // taken from firebase-config.js so they are never typed twice. Key files with secrets are NOT part of this.
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { APP_MODULES } from '../cron/purge.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,12 +27,30 @@ function copyTree(from, to, written, prefix = '') {
   }
 }
 
+// The app modules the purge job reuses (cron/purge.mjs, APP_MODULES) plus everything they import, so the job logs rides with the very
+// same code as the app. Static `import ... from './x.js'` only; a missing file is an error, not a silent gap.
+export function appClosure(rootDir = root, entries = APP_MODULES) {
+  const seen = new Set(), todo = [...entries];
+  while (todo.length) {
+    const f = todo.pop();
+    if (seen.has(f)) continue;
+    if (!existsSync(join(rootDir, f))) throw new Error('app module not found: ' + f);
+    seen.add(f);
+    const src = readFileSync(join(rootDir, f), 'utf8');
+    for (const m of src.matchAll(/(?:^|\n)\s*(?:import|export)\b[^;'"]*?\bfrom\s*['"]\.\/([^'"]+\.js)['"]|(?:^|\n)\s*import\s*['"]\.\/([^'"]+\.js)['"]/g)) todo.push(m[1] || m[2]);
+  }
+  return [...seen].sort();
+}
+
 export function buildCron({ rootDir = root, out = join(root, 'dist-cron') } = {}) {
   const from = join(rootDir, 'cron');
   if (!existsSync(join(from, 'run.sh'))) throw new Error('cron/run.sh not found');
   rmSync(out, { recursive: true, force: true });
   const written = [];
   copyTree(from, out, written);
+  mkdirSync(join(out, 'app'), { recursive: true });
+  for (const f of appClosure(rootDir)) { writeFileSync(join(out, 'app', f), readFileSync(join(rootDir, f))); written.push('app/' + f); }
+  writeFileSync(join(out, 'package.json'), '{\n  "type": "module",\n  "private": true\n}\n'); written.push('package.json');   // so the copied app modules (.js) are read as modules
   writeFileSync(join(out, 'config.json'), JSON.stringify(cronConfig(rootDir), null, 2) + '\n'); written.push('config.json');
   const secret = written.filter(f => /key.*\.json$|\.pem$|\.env$/i.test(f) && f !== 'config.json');
   if (secret.length) throw new Error('Refusing to build: secret-looking files in cron/: ' + secret.join(', '));

@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildCron, cronConfig, CRON_REFERER } from '../scripts/build-cron.mjs';
+import { APP_MODULES } from '../cron/purge.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -22,8 +23,11 @@ const bash = spawnSync('sh', ['-c', 'command -v bash'], { encoding: 'utf8' }).st
 const runSh = (args, env = {}) => spawnSync(bash, [join(out, 'run.sh'), ...args], { encoding: 'utf8', env: { ...env } });
 
 console.log('=== the cron folder ===');
-await test('holds the jobs, the helpers and config.json, and nothing else', () => {
-  assert.deepEqual(r.files, ['backup.mjs', 'config.json', 'lib/firestore-rest.mjs', 'lib/google-auth.mjs', 'lib/setup.mjs', 'match-calendars.mjs', 'run.sh', 'selftest.mjs']);
+await test('holds the jobs, the helpers, the few app modules the purge reuses and config.json, and nothing else', () => {
+  const own = r.files.filter(f => !f.startsWith('app/'));
+  assert.deepEqual(own, ['backup.mjs', 'config.json', 'lib/firestore-rest.mjs', 'lib/google-auth.mjs', 'lib/setup.mjs', 'match-calendars.mjs', 'package.json', 'purge.mjs', 'run.sh', 'selftest.mjs']);
+  // the app code the purge job reuses: only what rides.js needs, no screens, no database code
+  assert.deepEqual(r.files.filter(f => f.startsWith('app/')).sort(), ['app/constants.js', 'app/dates.js', 'app/escape.js', 'app/i18n.js', 'app/ov.js', 'app/period.js', 'app/planning.js', 'app/ride-log.js', 'app/rides.js', 'app/state.js', 'app/texts-nl.js']);
 });
 await test('config.json carries the public values from firebase-config.js (project, Calendar key, the website as Referer)', () => {
   const c = JSON.parse(readFileSync(join(out, 'config.json'), 'utf8'));
@@ -32,13 +36,14 @@ await test('config.json carries the public values from firebase-config.js (proje
 });
 await test('no key file or secret is ever in the repo\'s cron folder or in the build (the build refuses it)', () => {
   const fake = join(tmp, 'repo'); mkdirSync(join(fake, 'cron'), { recursive: true });
+  for (const f of APP_MODULES) writeFileSync(join(fake, f), '');
   writeFileSync(join(fake, 'cron/run.sh'), '#!/bin/sh'); writeFileSync(join(fake, 'cron/backup-key.json'), '{}');
   writeFileSync(join(fake, 'firebase-config.js'), 'export const firebaseConfig = {\n projectId: "p",\n};\nexport const googleCalendarApiKey = "AIzaX";\n');
   assert.throws(() => buildCron({ rootDir: fake, out: join(tmp, 'x') }), /secret-looking files/);
   assert.equal(existsSync(join(repo, 'cron/backup-key.json')), false);
 });
 await test('the jobs only read their key from the secrets folder outside the code, and write only to the data folder', () => {
-  const all = ['backup.mjs', 'match-calendars.mjs'].map(f => readFileSync(join(repo, 'cron', f), 'utf8')).join('\n');
+  const all = ['backup.mjs', 'match-calendars.mjs', 'purge.mjs'].map(f => readFileSync(join(repo, 'cron', f), 'utf8')).join('\n');
   assert.match(all, /secretsDir\(\), 'backup-key\.json'/); assert.match(all, /secretsDir\(\), 'calendar-key\.json'/);
   assert.doesNotMatch(all, /console\.(log|error)\([^)]*(private_key|account\b)/);
 });
@@ -64,6 +69,10 @@ await test('no Node.js 20+ anywhere: a clear error, exit code 1', () => {
   const x = runSh(['backup'], { PATH: '/nonexistent', HOME: home });
   // A machine that has its own newer Node under /usr or /opt/alt would legitimately pass; only assert the failure when none exists.
   if (!existsSync('/usr/local/bin/node') && !existsSync('/usr/bin/node') && !existsSync('/opt/alt')) { assert.equal(x.status, 1); assert.match(x.stderr, /no Node\.js 20 or newer/); }
+});
+await test('purge is a known job and a missing app copy or key file fails loudly', () => {
+  const x = runSh(['purge'], { PATH: process.env.PATH, HOME: tmp });
+  assert.equal(x.status, 1); assert.match(x.stderr, /PURGE FAILED: Cannot read the key file/);
 });
 await test('a job without its key file fails loudly (stderr, exit 1) instead of silently', () => {
   const x = runSh(['backup'], { PATH: process.env.PATH, HOME: tmp });
