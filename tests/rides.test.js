@@ -460,5 +460,8 @@ test('sortFamEntriesByGirl sorts [id, family] entries A-Z by daughter name', () 
   assert.deepEqual(out, [...out].sort((a, b) => a.localeCompare(b, 'nl')));
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('rides.js imports nothing it does not use', () => assertNoUnusedImports('rides.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

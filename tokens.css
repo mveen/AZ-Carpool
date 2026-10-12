@@ -19,7 +19,7 @@
   /* ---------- Palette (raw values: use the semantic roles below in components, never these) ---------- */
   --az-red:#d7001e; --red-50:#fde8eb; --red-700:#b0001a;
   --ink-900:#14161a; --ink-700:#3a3d42; --ink-500:#6b6f76; --ink-400:#8d9096; --ink-300:#b9b8b4;
-  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea; --paper-200:#e7e5e0;
+  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea;
   --green-500:#1fa463; --green-50:#e3f6ec; --green-700:#11734a;
   --amber-50:#fff3dc; --amber-400:#f0b545; --amber-500:#c27200; --amber-700:#8a5200;
   --violet-50:#efeafd; --violet-700:#5b36c9;

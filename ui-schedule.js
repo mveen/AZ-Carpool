@@ -5,11 +5,11 @@ import { DAYS, WA_ICON_SMALL, todayKeyNow } from './constants.js';
 import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
-import { esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, shiftLocationHtml, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
-import { dayCoordinatorFor, myLinkedFamilyId, normalizePhone } from './coordinator.js';
+import { dayCoordinatorFor, myLinkedFamilyId } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandardShift, useOption } from './data.js';
 import { openOverview } from './ui-overview.js';
@@ -100,7 +100,6 @@ export function renderSchedule(){
 }
 
 export function renderDay(day,label){
-  const mode = S.roosterMode;
   return `<div class="daysection"><h3 class="srOnly">${label}</h3>
     ${renderDirection(day,'heen')}
     ${renderDirection(day,'terug')}
@@ -211,9 +210,8 @@ export function renderDirectionWeek(day,direction){
   const cars = effectiveCars(day,direction).filter(c=>(c.girlIds||[]).length);
   const dev = activeDeviation(day,direction);
   const myId = myLinkedFamilyId();
-  const cardsHtml = cars.map((c,i)=>{
+  const cardsHtml = cars.map(c=>{
     const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
-    const mineDriving = myId && c.driverFamilyId===myId;
     return `<div class="carCard">
       <div class="carCard__head">
         <span class="carCard__time">${esc(c.departureTime||'--:--')}</span>
@@ -248,7 +246,6 @@ export function renderDirectionStandard(day,direction){
     const departure = g.departureTime || departureFallback || '--:--';
     const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
     const otherGroups = grps.filter(([oid])=>oid!==gid);
-    const mineDriving = myId && g.driverFamilyId===myId;
     // Only offer drivers who aren't already committed to another car this same trip —
     // prevents double-booking instead of fixing it up after the fact.
     const busyElsewhere = new Set(otherGroups.map(([,og])=>og.driverFamilyId).filter(Boolean));

@@ -206,5 +206,8 @@ test('Escape removes the open sheet or help overlay; other keys and no overlay d
   dom.doc.getElementById = real;
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-common.js imports nothing it does not use', () => assertNoUnusedImports('ui-common.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

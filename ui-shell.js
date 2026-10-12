@@ -17,8 +17,6 @@ import { initContact } from './ui-contact.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
-// Screens that belong to one planning week show the week line under the icon.
-const SHOWS_WEEK = new Set(['myweek', 'schedule', 'deviation']);
 // Only Mijn week has the share button (it shares that week).
 const SHOWS_SHARE = new Set(['myweek']);
 

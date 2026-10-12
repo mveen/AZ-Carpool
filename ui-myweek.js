@@ -4,23 +4,22 @@ import { analyzeMatch, carpoolFor, currentMatchList, docToMatch, matchLabel, mat
 import { esc, hapticTap, isAndroidDevice, lastUpdateFooter, locationsCfg, phIcon, showToast } from './ui-common.js';
 import { setReturnByPublicTransport } from './data.js';
 import { distanceInfo, hasApiKey } from './distance.js';
-import { mapLink, destinationFor, isOverride, routeLabel } from './locations.js';
+import { mapLink, isOverride, routeLabel } from './locations.js';
 import { S } from './state.js';
 import { myFamilyId } from './coordinator.js';
 import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
 import { dayChanges } from './day-changes.js';
 import { DAYS, KM_COST_EUR, todayKeyNow } from './constants.js';
-import { dateForWeekday, dayUp, effectivePlanningDate, startOfWeek } from './dates.js';
+import { dateForWeekday, effectivePlanningDate, startOfWeek } from './dates.js';
 import { renderDeviationTab } from './ui-deviation.js';
-import { matchCarRowHtml, renderMatchesTab } from './ui-matches.js';
+import { renderMatchesTab } from './ui-matches.js';
 import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
 export function matchDistanceText(m){
-  const a = analyzeMatch(m.summary);
-  const info = distanceInfo({ isHome:a.isHome, location:m.location, stored:S.matchDistances[matchSlug(m)], fixedKm:locationsCfg().fixedKm });
+  const info = distanceInfo({ location:m.location, stored:S.matchDistances[matchSlug(m)], fixedKm:locationsCfg().fixedKm });
   if(!info) return '';
   if(info.kind==='pending' && !hasApiKey(S.orsApiKey)) return '';   // feature not switched on: say nothing rather than "calculating…"
   // Cost = km x KM_COST_EUR (one way, as the km). A calculated distance is an estimate ("±"); a fixed distance (AFC, ATC) is not.
@@ -97,7 +96,7 @@ export function renderMyWeek(){
     const changedTag = (differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '';
     const route = `${dirName(direction)} · ${routeLabel(ownCar||{},direction,cfg,day)}`;
 
-    let status = '';
+    let status;
     if(ownCar){
       if(ownCar.driverFamilyId===myId){
         // Full passenger list, including your own daughter — not just "everyone else".

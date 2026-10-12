@@ -214,6 +214,9 @@ test('the Ritbeurs texts exist and fill their placeholders (no place buttons any
   assert.equal(t('period.view.overruledClear'), 'Eenmalige wijziging verwijderen');
 });
 
+import { assertNoDuplicateKeys } from './test-support.js';
+test('texts-nl.js defines every key once', () => assertNoDuplicateKeys('texts-nl.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

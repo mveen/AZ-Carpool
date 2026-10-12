@@ -8,7 +8,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { dayUp, isoDayLabel, isoRangeLabel, weekKeyDayIso } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
-import { activeDeviation, availableDrivers, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodRidersFor, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
+import { activeDeviation, availableDrivers, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { clearDeviation, deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodSwapGirls, periodWorkdays } from './period.js';
 import { carRouteHtml, driverLineHtml, flexSuffix, openCarPlaceSheet, renderSchedule } from './ui-schedule.js';

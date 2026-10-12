@@ -164,5 +164,8 @@ test('hasApiKey: the placeholder of firebase-config.js is not a key', () => {
   assert.equal(hasApiKey('PASTE_YOUR_OPENROUTESERVICE_API_KEY_HERE'), false);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('distance.js imports nothing it does not use', () => assertNoUnusedImports('distance.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

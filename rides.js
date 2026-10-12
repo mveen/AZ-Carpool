@@ -5,7 +5,7 @@ import { deviationKey, weekKeyDayIso } from './dates.js';
 import { periodDayKey, periodEntryId, periodForDate, periodShiftId, periodWorkdays } from './period.js';
 import { ovIds } from './ov.js';
 import { esc } from './ui-common.js';
-import { checkPlan, computeDepartureTime as pureComputeDepartureTime, minutesToTime as pureMinutesToTime, planAlternativeAssignments, planShift, timeToMinutes as pureTimeToMinutes } from './planning.js';
+import { checkPlan, computeDepartureTime as pureComputeDepartureTime, planAlternativeAssignments, planShift, timeToMinutes as pureTimeToMinutes } from './planning.js';
 
 // Day labels are always shown in capitals ("MA"); the keys themselves ("Ma") stay as stored data.
 // A family's time for one day+direction; '' when the family, its schedule or that day is missing
@@ -185,8 +185,6 @@ export function isStandaardDriver(f,day,direction){ return isStandaardAvailable(
 // timeToMinutes/minutesToTime/computeDepartureTime/planOptions are thin wrappers around the tested, standalone planning.js module
 // (see planning.test.js and planning-scenarios.test.js for the actual rules and the real roster cases).
 export function timeToMinutes(t){ return pureTimeToMinutes(t); }
-
-function minutesToTime(min){ return pureMinutesToTime(min); }
 
 export function computeDepartureTime(day,direction,girlIds, st=S){
   const minutesList = girlIds.map(id=>pureTimeToMinutes(famTime(id,day,direction, st)));

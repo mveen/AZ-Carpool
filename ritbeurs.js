@@ -165,7 +165,6 @@ export function ridersToWarn({ moment, rides }){
 }
 
 // ---------- notifications (an in-app inbox now; a push sender can read the same documents later) ----------
-export const NOTIFICATION_KINDS = ['offerBackup', 'backupForRide', 'taken', 'takenDayCoordinator', 'uncovered'];
 
 // One id per kind, source (offer or moment) and recipient, so a notification can never be written twice.
 export function notificationId(kind, sourceId, toFamilyId){ return `${kind}_${sourceId}_${toFamilyId}`; }

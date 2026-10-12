@@ -24,7 +24,7 @@ import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
-import { deadlineMs, isValidIsoDate, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
+import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
 
 // ============================================================
 // Firestore access. The app talks to `db` only; `db` delegates to whichever adapter

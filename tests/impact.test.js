@@ -154,5 +154,8 @@ test('a Flex family that is available is a driver for the planning engine, never
   assert.deepEqual(analyzeImpact({ ...base, families: f, before, after }), { kind: 'none' });
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('impact.js imports nothing it does not use', () => assertNoUnusedImports('impact.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

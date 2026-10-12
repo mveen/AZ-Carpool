@@ -604,5 +604,8 @@ test('design v2: ui-beheer.js only uses variables from tokens.css in its inline 
   assert.deepEqual(unknown, []);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-beheer.js imports nothing it does not use', () => assertNoUnusedImports('ui-beheer.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

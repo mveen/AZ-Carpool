@@ -291,5 +291,8 @@ test('design v2: the shift tools (Ophalen: <plek>, Opnieuw indelen) are only for
   assert.doesNotMatch(parent, /data-cycleplace|data-replan/);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

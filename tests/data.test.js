@@ -912,5 +912,8 @@ await testAsync('saveAvatar says so when the database refuses', async () => {
   try { assert.equal(await saveAvatar('f2', 'car'), false); assert.match(toast(), /Opslaan mislukt/); } finally { db.doc = real; }
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('data.js imports nothing it does not use', () => assertNoUnusedImports('data.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -69,6 +69,9 @@ test('a new car only lists as "extra" the girls who have no standard ride at all
   assert.deepEqual(items, [{ type: 'newcar', driverId: 'f9', girlIds: ['f9', 'f2'], time: '08:00', extraGirlIds: ['f9'] }]);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('day-changes.js imports nothing it does not use', () => assertNoUnusedImports('day-changes.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 
