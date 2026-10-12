@@ -2,7 +2,9 @@
 // The build*From(ctx) functions are PURE: all data comes in through `ctx`, nothing reads the browser or the
 // database, so they are tested without a browser (message-texts.test.js). The build*WhatsApp() wrappers below
 // only collect the current app state into a ctx and call them.
-import { APP_URL, DAYS, DIR_TEXT } from './constants.js';
+import { APP_URL, DAYS } from './constants.js';
+import { S } from './state.js';
+import { arrivalPlaces, destinationFor, normalizeLocations } from './locations.js';
 import { t, locale } from './i18n.js';
 import { activeDeviation, baseCars, effectiveCars, fam, plainDriverName, plainGirlName, rideTime } from './rides.js';
 import { dateForWeekday, dayUp, waDayDate } from './dates.js';
@@ -71,25 +73,34 @@ export function buildMyWeekMessageFrom(ctx){
   return [header, ...(lines.length? lines : [t('wa.my.none')]), '', `${APP_URL}#myweek`].join('\n');
 }
 
+// One direction of a day as a text block: "Heen · Aalsmeer → Alkmaar (aangepast):" and a line per car.
+// The place comes from the cars themselves (their arrival: AFC '34 = Alkmaar, ATC = Wijdewormer), so it follows the rooster.
+// When the cars of one direction do not all go to the same place, the header names both and every car line names its own.
+// ctx.locCfg: the locations settings (Beheer); without it the defaults apply (AFC '34).
+function directionBlock(ctx, day, direction, adapted){
+  const cfg = ctx.locCfg || normalizeLocations(null);
+  const cars = ctx.cars(day,direction).filter(c=>c.girlIds && c.girlIds.length);
+  const places = arrivalPlaces(cars, cfg);
+  const title = t(direction==='heen'? 'dir.heenTo' : 'dir.terugFrom', { city: places.map(p=>p.city).join(' / ') });
+  const lineKey = places.length>1? 'wa.day.carTo' : 'wa.day.car';
+  const carLines = cars.length
+    ? [...cars].sort((a,b)=>(a.departureTime||'').localeCompare(b.departureTime||'')).map(c=>
+        t(lineKey, { time: c.departureTime||'--:--', driver: ctx.driverName(c.driverFamilyId), dest: destinationFor(c,cfg).name, girls: c.girlIds.map(id=>ctx.girlName(id)).join(', ') }))
+    : [t('wa.day.noRides')];
+  return [`${title}${adapted? t('wa.day.adapted') : ''}:`, ...carLines].join('\n');
+}
+
 // Dagafwijking: the full (effective) schedule of one day — every car, its driver and passengers.
-// ctx: { cars(day,direction), hasDeviation(day,direction), dateFor(day)->Date, driverName(id), girlName(id) }
+// ctx: { cars(day,direction), hasDeviation(day,direction), dateFor(day)->Date, driverName(id), girlName(id), locCfg? }
 export function buildDayMessageFrom(ctx, day){
   const dayLabel = DAYS.find(([k])=>k===day)[1];
   const dateLabel = ctx.dateFor(day).toLocaleDateString(locale(),{day:'numeric',month:'short'});
-  function block(direction,title){
-    const cars = ctx.cars(day,direction).filter(c=>c.girlIds && c.girlIds.length);
-    const carLines = cars.length
-      ? [...cars].sort((a,b)=>(a.departureTime||'').localeCompare(b.departureTime||'')).map(c=>
-          t('wa.day.car', { time: c.departureTime||'--:--', driver: ctx.driverName(c.driverFamilyId), girls: c.girlIds.map(id=>ctx.girlName(id)).join(', ') }))
-      : [t('wa.day.noRides')];
-    return [`${title}${ctx.hasDeviation(day,direction)? t('wa.day.adapted') : ''}:`, ...carLines].join('\n');
-  }
   return [
     t('wa.day.title', { dayLabel, date: dateLabel }),
     '',
-    block('heen',DIR_TEXT.heen),
+    directionBlock(ctx, day, 'heen', ctx.hasDeviation(day,'heen')),
     '',
-    block('terug',DIR_TEXT.terug),
+    directionBlock(ctx, day, 'terug', ctx.hasDeviation(day,'terug')),
     '',
     `${APP_URL}#myweek`
   ].join('\n');
@@ -98,7 +109,7 @@ export function buildDayMessageFrom(ctx, day){
 // Conclusie-appje (US-03): the text the day coordinator sends to the group after changes on one day.
 // No changes: "<Dag>: volgens schema. Zie Mijn week: <link>". Otherwise: first what changed (one line per kind,
 // a kind without entries is left out), then the full schedule of the day, then the link.
-// ctx: { baseCars(day,direction), cars(day,direction), dateFor(day)->Date, driverName(id), girlName(id) }
+// ctx: { baseCars(day,direction), cars(day,direction), dateFor(day)->Date, driverName(id), girlName(id), locCfg? }
 export function buildConclusieFrom(ctx, day){
   const dayLabel = DAYS.find(([k])=>k===day)[1];
   const link = APP_URL+'#myweek';
@@ -126,23 +137,23 @@ export function buildConclusieFrom(ctx, day){
   const summary = [];
   dirs.forEach(d=>{ const n = [names(d,'out'), ...ovBy[d].map(id=>ctx.girlName(id))].filter(Boolean).join(', '); if(n) summary.push(t('wa.conclusie.out', { direction: word(d), names: n })); });
   if(entries.length) summary.push(t('wa.conclusie.changed', { entries: entries.join('; ') }));
+  const cfg = ctx.locCfg || normalizeLocations(null);
+  const placeEntries = [];
+  dirs.forEach(d=>changes[d].forEach(it=>{
+    if(it.type!=='place') return;
+    const e = t('wa.conclusie.placeEntry', { direction: word(d), driver: ctx.driverName(it.driverId), place: destinationFor({ destination: it.place }, cfg).name });
+    if(!placeEntries.includes(e)) placeEntries.push(e);
+  }));
+  if(placeEntries.length) summary.push(t('wa.conclusie.place', { entries: placeEntries.join('; ') }));
   dirs.forEach(d=>{ const n = names(d,'extra'); if(n) summary.push(t('wa.conclusie.extra', { direction: word(d), names: n })); });
 
   const dateLabel = ctx.dateFor(day).toLocaleDateString(locale(),{day:'numeric',month:'short'});
-  function block(d){
-    const cars = ctx.cars(day,d).filter(c=>c.girlIds && c.girlIds.length);
-    const carLines = cars.length
-      ? [...cars].sort((x,y)=>(x.departureTime||'').localeCompare(y.departureTime||'')).map(c=>
-          t('wa.day.car', { time: c.departureTime||'--:--', driver: ctx.driverName(c.driverFamilyId), girls: c.girlIds.map(id=>ctx.girlName(id)).join(', ') }))
-      : [t('wa.day.noRides')];
-    return [`${DIR_TEXT[d]}${changes[d].length? t('wa.day.adapted') : ''}:`, ...carLines].join('\n');
-  }
   return [
     ...summary,
     '',
     t('wa.conclusie.title', { day: dayLabel.toLowerCase(), date: dateLabel }),
-    block('heen'),
-    block('terug'),
+    directionBlock(ctx, day, 'heen', changes.heen.length>0),
+    directionBlock(ctx, day, 'terug', changes.terug.length>0),
     '',
     link
   ].join('\n');
@@ -168,6 +179,7 @@ function stateCtx(){
     girlName: (id)=>plainGirlName(id),
     matchLabel,
     ovGirls: (day,direction)=>ovGirlsFor(day,undefined,direction),
+    locCfg: normalizeLocations(S.locationsDoc),
   };
 }
 export function buildWhatsAppMessage(){ return buildWhatsAppMessageFrom(stateCtx()); }

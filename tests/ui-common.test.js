@@ -2,6 +2,7 @@
 // Small shared UI helpers: escaping, icons, toast, header status line, theme, bottom sheet.
 // They run against a tiny fake DOM (test-support.js), so no browser is needed.
 import assert from 'node:assert/strict';
+import * as uiCommonModule from '../ui-common.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -14,7 +15,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import {
-  foldHtml, phIcon, dirLabelHtml, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
+  foldHtml, phIcon, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
   isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape,
 } from '../ui-common.js';
 
@@ -33,9 +34,8 @@ test('phIcon honours size and extra style, and returns nothing for an unknown ic
   assert.match(phIcon('check', { size: '20px', style: 'color:red' }), /width:20px;height:20px;[^"]*;color:red/);
   assert.equal(phIcon('does-not-exist'), '');
 });
-test('dirLabelHtml uses the one wording of each direction', () => {
-  assert.equal(dirLabelHtml('heen'), '<span class="dirLabel">Heen · Aalsmeer → Alkmaar</span>');
-  assert.match(dirLabelHtml('terug', '<b>x</b>'), /Terug · Alkmaar → Aalsmeer<\/span><b>x<\/b>$/);
+test('there is no fixed direction label any more (the place follows the rides)', () => {
+  assert.equal('dirLabelHtml' in uiCommonModule, false);
 });
 test('lastUpdateFooter: empty without data, otherwise who and when (name escaped)', () => {
   assert.equal(lastUpdateFooter(null), ''); assert.equal(lastUpdateFooter({}), '');

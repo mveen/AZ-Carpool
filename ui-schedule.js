@@ -134,10 +134,11 @@ export function tripReserveHtml(day,direction,cars,withWhatsApp,askTime){
 }
 
 // timeOf: standard times by default ("Vast rooster"); "Deze week" passes rideTime, so a date with a temporary rooster shows the handed-in times.
-export function neededTimesHtml(day,direction,girlIds,timeOf=famTime){
+// car: the car this note belongs to; its arrival place (AFC '34 = Alkmaar, ATC = Wijdewormer) is named in the heen line.
+export function neededTimesHtml(day,direction,girlIds,timeOf=famTime,car=null){
   const times = girlIds.map(id=>timeOf(id,day,direction)).filter(Boolean).sort();
   const range = `${times[0]||'?'}${times[times.length-1]!==times[0]?'–'+times[times.length-1]:''}`;
-  return `<div class="carCard__note subtime">${direction==='heen'? t('schedule.aankomst_alkmaar_nodig', { p1: range }) : t('schedule.klaar_om_op_te_halen', { p1: range })}</div>`;
+  return `<div class="carCard__note subtime">${direction==='heen'? t('schedule.aankomst_nodig', { city: destinationFor(car,locationsCfg()).city, p1: range }) : t('schedule.klaar_om_op_te_halen', { p1: range })}</div>`;
 }
 
 // Small badge after a Flex driver's name (used where the name is already a button).
@@ -220,7 +221,7 @@ export function renderDirectionWeek(day,direction){
         ${driver? `<span class="tag" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${c.girlIds.length}/${seats(driver)}</span>` : ''}
       </div>
       <div class="chips">${pillsHtml(c.girlIds,myId)}</div>
-      ${neededTimesHtml(day,direction,c.girlIds,rideTime)}
+      ${neededTimesHtml(day,direction,c.girlIds,rideTime,c)}
     </div>`;
   }).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`;
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
@@ -274,7 +275,7 @@ export function renderDirectionStandard(day,direction){
       </div>
       ${S.canEdit? `<div class="carCard__edit">${driverHtml}</div>` : ''}
       <div class="chips">${pills}</div>
-      ${neededTimesHtml(day,direction,g.girlIds)}
+      ${neededTimesHtml(day,direction,g.girlIds,undefined,g)}
       ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn-icon)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>

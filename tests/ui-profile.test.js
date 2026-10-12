@@ -112,7 +112,7 @@ test('a parent sees own family form, linked name and an unlink button', () => {
   const s = text(dom.html('tab-profile'));
   assert.match(s, /^Instellingen Wordt direct opgeslagen J Jahaimy Gekoppeld aan: Piet Pieters/);   // back to Instellingen, the family panel
   assert.match(dom.html('tab-profile'), /data-opensettings="1"/);
-  assert.match(s, /Plekken in je auto naast jou als chauffeur − 4 \+ Vaste tijden en beschikbaarheid Ma Di Wo Do Vr Heen Aankomst in Alkmaar Kun je zelf rijden\? Beschikbaar Back-up Terug Klaar om opgehaald te worden/);
+  assert.match(s, /Plekken in je auto naast jou als chauffeur − 4 \+ Vaste tijden en beschikbaarheid Ma Di Wo Do Vr Heen Aankomsttijd Kun je zelf rijden\? Beschikbaar Back-up Terug Klaar om opgehaald te worden/);
   assert.match(dom.html('tab-profile'), /id="unlinkBtn"/);
   assert.match(dom.html('tab-profile'), /value="Piet Pieters"/);
   expectSnapshot('ui-profile', 'parent profile', dom.html('tab-profile'));
@@ -309,6 +309,8 @@ test('the coordinator form has a Vast/Flex choice, default Vast; the parent form
   const flexHtml = familyFormHtml('coord', { ...sampleParentState().families.f2, familyType: 'flex' });
   assert.match(flexHtml, /<option value="flex" selected>/); assert.doesNotMatch(flexHtml, /<option value="vast" selected>/);
   assert.doesNotMatch(familyFormHtml('me', sampleParentState().families.f2), /familyType/);
+  // The heen / terug panels no longer come from a fixed direction wording.
+  assert.match(text(coordHtml), /Heen/); assert.match(text(coordHtml), /Terug/);
 });
 test('readFamilyForm returns the chosen type for the coordinator form only', () => {
   resetState({});

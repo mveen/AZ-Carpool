@@ -19,6 +19,8 @@ import {
   activeDeviationDayLabel, waDayLabel, reserveAskText, driverAskText,
 } from '../message-texts.js';
 
+import { S } from '../state.js';
+
 installFakeDom();
 const day = { Ma: new Date(2026, 8, 28), Di: new Date(2026, 8, 29), Wo: new Date(2026, 8, 30), Do: new Date(2026, 9, 1), Vr: new Date(2026, 9, 2) };
 const names = { f1: 'Jan', f2: 'Piet' };
@@ -146,6 +148,40 @@ test('generic message and helpers follow the current deviations', () => {
 });
 
 import { buildConclusieFrom, buildConclusieMessage } from '../message-texts.js';
+
+console.log('\n=== the place in the day messages follows the rides (AFC \'34 or ATC) ===');
+const atc = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamilyId, girlIds, departureTime, destination: 'ATC' });
+test('one-day message: cars that go to ATC say Wijdewormer, in both directions', () => {
+  const cars = { heen: [atc('f1', ['f1', 'f2'])], terug: [atc('f1', ['f1', 'f2'], '17:30')] };
+  const text = buildDayMessageFrom(ctx({ cars: (d, dir) => cars[dir] }), 'Ma');
+  assert.match(text, /\nHeen · Aalsmeer → Wijdewormer:\n• 07:30 – Jan: Eline, Jahaimy\n/);
+  assert.match(text, /\nTerug · Wijdewormer → Aalsmeer:\n• 17:30 – Jan: Eline, Jahaimy\n/);
+  assert.doesNotMatch(text, /Alkmaar/);
+});
+test('one-day message: one car to AFC and one to ATC names both places and tells which car goes where', () => {
+  const cars = { heen: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '13:30' }, atc('f2', ['f2'], '15:00')], terug: [] };
+  const text = buildDayMessageFrom(ctx({ cars: (d, dir) => cars[dir] }), 'Do');
+  assert.match(text, /\nHeen · Aalsmeer → Alkmaar \/ Wijdewormer:\n• 13:30 – Jan \(AFC '34\): Eline\n• 15:00 – Piet \(ATC\): Jahaimy\n/);
+});
+test('the conclusie-appje takes the place from the rooster too, and a day without rides keeps AFC \'34', () => {
+  const base = { Do_heen: [atc('f1', ['f1', 'f2'])] };
+  const out = buildConclusieFrom(conclCtx(base, { Do_heen: [atc('f1', ['f1'])] }), 'Do');
+  assert.match(out, /\nHeen · Aalsmeer → Wijdewormer \(aangepast\):\n• 07:30 – Jan: Eline\nTerug · Alkmaar → Aalsmeer:\n• geen ritten\n/);
+});
+test('only the arrival changed: the conclusie says so instead of "volgens schema"', () => {
+  const plain = (driverFamilyId, girlIds) => ({ driverFamilyId, girlIds, departureTime: '07:30' });
+  const base = { Do_heen: [plain('f1', ['f1', 'f2'])] };
+  const out = buildConclusieFrom(conclCtx(base, { Do_heen: [atc('f1', ['f1', 'f2'])] }), 'Do');
+  assert.match(out, /^Andere aankomstplek: heen Jan ATC\n\nAangepast schema donderdag 1 okt\nHeen · Aalsmeer → Wijdewormer \(aangepast\):/);
+  assert.doesNotMatch(out, /volgens schema/);
+});
+test('the wrapper reads the running app: a standard car with stdDestination ATC makes Monday heen say Wijdewormer', () => {
+  sampleParentState();
+  assert.match(withFakeNow(NOW, () => buildDayWhatsAppMessage('Ma')), /\nHeen · Aalsmeer → Alkmaar/);
+  S.groups.Ma_heen_1.stdDestination = 'ATC';
+  const out = withFakeNow(NOW, () => buildDayWhatsAppMessage('Ma'));
+  assert.match(out, /\nHeen · Aalsmeer → Wijdewormer/); assert.match(out, /\nTerug · Alkmaar → Aalsmeer/);
+});
 
 console.log('\n=== conclusie-appje (US-03) ===');
 const grp = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamilyId, girlIds, departureTime });

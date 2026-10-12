@@ -35,7 +35,7 @@ test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig,
   updateHeader('matches'); assert.equal(dom.el('headerTitle').textContent, 'Wedstrijden'); assert.equal(dom.el('headerContext').textContent, 'Komende 4 weken');
   S.matchFeeds = [{ calendarId: 'c', label: 'AZ O15-1' }]; updateHeader('matches'); assert.equal(dom.el('headerContext').textContent, 'O15-1 · komende 4 weken');
   updateHeader('beheer'); assert.equal(dom.el('headerContext').textContent, 'Alleen voor de coördinator');
-  updateHeader('profile'); assert.equal(dom.el('headerContext').textContent, 'Aalsmeer – Alkmaar');
+  updateHeader('profile'); assert.equal(dom.el('headerContext').textContent, 'AZ Carpool');
 });
 test('an unknown screen falls back to Mijn week', () => { sampleParentState(); updateHeader('nope'); assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); });
 test('a coordinator without a family gets a C; an unlinked visitor gets a ?', () => {
@@ -60,7 +60,7 @@ test('the sheet shows avatar, name and role, then Mijn gezin (with hint), Thema,
   sampleParentState(); const { ov } = installSheet(); openSettings(() => {});
   const s = text(ov.html);
   assert.equal(ov.mounted, true);
-  assert.match(s, /^PP Piet Pieters Ouder van Jahaimy Mijn gezin tijden, auto, beschikbaar Thema Licht Donker Help AZ Carpool Aalsmeer – Alkmaar v\d+$/);
+  assert.match(s, /^PP Piet Pieters Ouder van Jahaimy Mijn gezin tijden, auto, beschikbaar Thema Licht Donker Help AZ Carpool v\d+$/);
   assert.match(ov.html, /id="themeLight"/); assert.match(ov.html, /id="setHelp"/);
   assert.doesNotMatch(ov.html, /viewParent/, 'a parent has no "Bekijk als"');
 });

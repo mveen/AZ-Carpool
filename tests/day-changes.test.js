@@ -71,3 +71,13 @@ test('a new car only lists as "extra" the girls who have no standard ride at all
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
+
+console.log('\n=== arrival place ===');
+test('the same car arriving somewhere else is a place change (one-off choice or standard of the car)', () => {
+  assert.deepEqual(dayChanges([car('f1', ['f1'])], [{ ...car('f1', ['f1']), destination: 'ATC' }]), [{ type: 'place', driverId: 'f1', time: '07:30', place: 'ATC' }]);
+  assert.deepEqual(dayChanges([{ ...car('f1', ['f1']), stdDestination: 'ATC' }], [{ ...car('f1', ['f1']), stdDestination: 'ATC', destination: 'AFC' }]), [{ type: 'place', driverId: 'f1', time: '07:30', place: 'AFC' }]);
+});
+test('no place change when both say AFC, or both ATC (one-off or standard)', () => {
+  assert.deepEqual(dayChanges([car('f1', ['f1'])], [{ ...car('f1', ['f1']), destination: 'AFC' }]), []);
+  assert.deepEqual(dayChanges([{ ...car('f1', ['f1']), stdDestination: 'ATC' }], [{ ...car('f1', ['f1']), destination: 'ATC' }]), []);
+});

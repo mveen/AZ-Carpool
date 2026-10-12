@@ -7,6 +7,9 @@
 //   { type:'driver', driverId, fromDriverId, time }          another driver takes over a car
 //   { type:'newcar', driverId, girlIds, time, extraGirlIds }  extraGirlIds = girls without any standard ride               a car that is not in the standard rooster
 //   { type:'time',   driverId, time }                  same car, other departure time
+//   { type:'place',  driverId, time, place:'AFC'|'ATC' } same car, other arrival place (cars carry destination / stdDestination)
+// The arrival place of a car: a one-off choice (destination) wins over the standard of the car (stdDestination); anything else is AFC.
+const placeKey = c => (c.destination==='ATC' || c.destination==='AFC')? c.destination : (c.stdDestination==='ATC'? 'ATC' : 'AFC');
 export function dayChanges(baseCars, effCars){
   const base = (baseCars||[]).filter(c=>(c.girlIds||[]).length);
   const eff = (effCars||[]).filter(c=>(c.girlIds||[]).length);
@@ -38,6 +41,7 @@ export function dayChanges(baseCars, effCars){
     } else if((c.departureTime||'')!==(b.departureTime||'') && c.departureTime){
       items.push({ type:'time', driverId:c.driverFamilyId||null, time:c.departureTime });
     }
+    if(placeKey(c)!==placeKey(b)) items.push({ type:'place', driverId:c.driverFamilyId||null, time:c.departureTime||'', place:placeKey(c) });
     c.girlIds.forEach(g=>{
       if(!baseOfGirl.has(g)){ items.push({ type:'extra', girlId:g, driverId:c.driverFamilyId||null, time:c.departureTime||'' }); }
       else if(baseOfGirl.get(g)!==bi){ items.push({ type:'moved', girlId:g, driverId:c.driverFamilyId||null, time:c.departureTime||'' }); }

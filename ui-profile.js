@@ -5,7 +5,7 @@ import { adjustMainPadding, esc, hapticTap, installCardHtml, phIcon, showToast, 
 import { fam } from './rides.js';
 import { isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
-import { APP_URL, DAYS, DIR_TEXT, WA_ICON_SMALL } from './constants.js';
+import { APP_URL, DAYS, WA_ICON_SMALL } from './constants.js';
 import { waPhone } from './ui-schedule.js';
 import { dayUp } from './dates.js';
 import { db } from './data.js';
@@ -182,7 +182,7 @@ export function familyFormHtml(prefix,f){
   // One panel per direction: its time on the right, then "Kun je zelf rijden?" with Beschikbaar / Back-up.
   const dirPanel = (dir, sub, avId, bkId, bkKey) => `<div class="panel">
       <div class="panel__head"><div><div class="panel__title">${dir==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div><div class="panel__sub">${sub}</div></div>
-        <input type="time" class="panel__time" id="${prefix}_sch_${activeDay}_${dir}" value="${s[dir]||''}" aria-label="${dir==='heen'? t('profile.heen_aankomst_alkmaar_nodig') : t('profile.terug_klaar_om_op_te')}"></div>
+        <input type="time" class="panel__time" id="${prefix}_sch_${activeDay}_${dir}" value="${s[dir]||''}" aria-label="${dir==='heen'? t('profile.heen_aankomst_nodig') : t('profile.terug_klaar_om_op_te')}"></div>
       <p class="panel__q">${t('profile.kan_jij_deze_dag_rijden')}</p>
       <div class="driveToggleGroup">
         <input type="checkbox" class="driveToggleInput" id="${avId}" ${a[dir]?'checked':''}>

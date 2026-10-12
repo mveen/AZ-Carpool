@@ -6,7 +6,7 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { carStdId, destinationFor, routeLabel, DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from '../locations.js';
+import { arrivalPlaces, carStdId, destinationFor, routeLabel, DEFAULT_PLACES, normalizeLocations, placeFor, isOverride, shiftLabel, geoLink, googleMapsLink, mapLink, fixedVenue } from '../locations.js';
 
 console.log('=== defaults ===');
 test('without stored settings there are the 3 places and AFC \'34 as destination', () => {
@@ -139,3 +139,16 @@ test('the route and the shift label follow the arrival place, heen and terug', (
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
+
+console.log('\n=== arrival places of one direction ===');
+test("arrivalPlaces: the places of the rides, each once, AFC '34 before ATC", () => {
+  const cfg = normalizeLocations(null);
+  assert.deepEqual(arrivalPlaces([{ stdDestination: 'ATC' }], cfg).map(p => p.city), ['Wijdewormer']);
+  assert.deepEqual(arrivalPlaces([{}, { destination: 'ATC' }, { stdDestination: 'ATC' }], cfg).map(p => p.city), ['Alkmaar', 'Wijdewormer']);
+  assert.deepEqual(arrivalPlaces([{ destination: 'ATC' }, {}], cfg).map(p => p.key), ['AFC', 'ATC']);
+});
+test("arrivalPlaces: no rides means AFC '34, so a header is never empty", () => {
+  const cfg = normalizeLocations(null);
+  assert.deepEqual(arrivalPlaces([], cfg).map(p => p.city), ['Alkmaar']);
+  assert.deepEqual(arrivalPlaces(undefined, cfg).map(p => p.name), ["AFC '34"]);
+});

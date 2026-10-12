@@ -114,6 +114,7 @@ export default [
     keywords: 'whatsapp delen bericht update conclusie appje versturen melden groep',
     body: [
       'Onderaan elke dag in Wijzigen staat het Dagbericht: een kant-en-klaar bericht met de wijzigingen en het schema van die dag. Tik op Deel in de groep en WhatsApp opent met de tekst al ingevuld.',
+      'Boven Heen en Terug staat waar de auto\'s naartoe gaan, bijvoorbeeld Alkmaar of Wijdewormer. Dat komt uit de aankomst die je bij de auto\'s hebt gekozen (AFC \'34 of ATC). Gaan de auto\'s van één rit naar verschillende plekken, dan staat de plek achter elke auto.',
       'De dagcoördinator deelt dit bericht om 20:00 in de groep, zodat iedereen het besluit van de volgende dag kent.',
       'De app stuurt zelf nooit iets. Jij kiest in WhatsApp naar wie het gaat en tikt op versturen.',
     ],
