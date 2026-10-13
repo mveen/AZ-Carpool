@@ -1102,6 +1102,8 @@ export default {
   'agenda.kaart_titel': 'Agenda',
   'agenda.kaart_uitleg': 'Zie de ritten van {name} voor de komende 3 weken in je eigen agenda, alleen lezen. Je stelt het één keer in; daarna werkt de agenda zichzelf bij.',
   'agenda.toevoegen': 'Zet in mijn agenda',
+  'agenda.toevoegen_google': 'Zet in Google Agenda',
+  'agenda.android_uitleg': 'Op Android opent de knop Google Agenda in je browser; log in en bevestig daar. Gebruik je een andere agenda-app, kopieer dan de link en voeg die toe als internetagenda (bijvoorbeeld met de gratis app ICSx⁵).',
   'agenda.kopieer': 'Kopieer link',
   'agenda.gekopieerd': 'Link gekopieerd ✓',
   'agenda.kopieer_mislukt': 'Kopiëren lukt niet op dit apparaat.',

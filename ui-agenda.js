@@ -15,6 +15,11 @@ export const calendarUrl = token => APP_URL + 'agenda/' + token + '.ics';
 // webcal:// opens the calendar app on an iPhone, iPad and Mac directly; Google Agenda takes the https link (see the text on the card).
 export const webcalUrl = token => calendarUrl(token).replace(/^https?:/, 'webcal:');
 
+// Android has no app that opens webcal:// links, so the button does nothing there. On Android the button opens Google Agenda's own
+// "add by link" page instead (it subscribes to the same file); the copied link and the text below work for any other calendar app.
+export const googleSubscribeUrl = token => 'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(webcalUrl(token));
+export const isAndroid = () => typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
+
 const validToken = x => typeof x === 'string' && TOKEN_RE.test(x);
 
 // The inside of the Agenda sheet, for the family whose link it is. S.calendarLink = { familyId, token, status: 'loading' | 'ready' | 'error' }.
@@ -27,10 +32,12 @@ export function agendaCardInnerHtml(familyId) {
   return `${head}
     <div class="panel__sub">${esc(t('agenda.kaart_uitleg', { name: plainGirlName(familyId) }))}</div>
     <div class="formActions">
-      <a class="btn" id="agendaAdd" href="${esc(webcalUrl(link.token))}">${t('agenda.toevoegen')}</a>
+      ${isAndroid()
+        ? `<a class="btn" id="agendaAdd" href="${esc(googleSubscribeUrl(link.token))}" target="_blank" rel="noopener">${t('agenda.toevoegen_google')}</a>`
+        : `<a class="btn" id="agendaAdd" href="${esc(webcalUrl(link.token))}">${t('agenda.toevoegen')}</a>`}
       <button type="button" class="btn secondary" id="agendaCopy">${t('agenda.kopieer')}</button>
     </div>
-    <p class="muted">${t('agenda.google_uitleg')}</p>
+    <p class="muted">${t(isAndroid() ? 'agenda.android_uitleg' : 'agenda.google_uitleg')}</p>
     <p class="muted">${t('agenda.bijwerken')}</p>
     <p class="muted">${t('agenda.geheim')}</p>`;
 }
