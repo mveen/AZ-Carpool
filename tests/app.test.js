@@ -203,6 +203,37 @@ test('the minute check and coming back to the app run the Ritbeurs checks (late 
   assert.equal((src.match(/checkRitbeurs\(\)/g) || []).length, 2);
 });
 
+console.log('\n=== a tapped test push (coordinator only) ===');
+test('renderAll carries out a waiting "open as this family" request as soon as the app is ready; the coordinator ends up in Testweergave on the Wijzigen tab', () => {
+  installNav(); useFakeDb(sampleDbSeed()); sampleCoordinatorState({ linksLoaded: true, ritbeurs: { on: true } });
+  dom.el('tab-gate').style.display = 'none';
+  S.push.pendingOpen = 'f6';
+  withFakeNow(NOW, () => renderAll());
+  assert.equal(S.impersonateFamilyId, 'f6'); assert.equal(S.push.pendingOpen, ''); assert.equal(dom.el('tab-deviation').style.display, 'block');
+});
+test('for a parent the same request is dropped and nothing changes', () => {
+  installNav(); useFakeDb(sampleDbSeed()); sampleParentState({ linksLoaded: true });
+  S.push.pendingOpen = 'f6';
+  withFakeNow(NOW, () => renderAll());
+  assert.equal(S.impersonateFamilyId, null); assert.equal(S.push.pendingOpen, '');
+});
+await testAsync('init picks up ?pushas=<family> from the address and removes it from the address bar', async () => {
+  const calls = []; const had = globalThis.history; globalThis.history = { replaceState: (...a) => calls.push(a) };
+  globalThis.location = { pathname: '/', hash: '', search: '?pushas=f6', href: 'https://azcarpool.nl/?pushas=f6' };
+  try {
+    installNav(); useFakeDb(sampleDbSeed(), { uid: 'coord' }); resetState({});
+    await withFakeNowAsync(NOW, () => init());
+    for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r));   // the links, then the families, arrive
+    assert.deepEqual(calls, [[null, '', '/']]);
+    assert.equal(S.impersonateFamilyId, 'f6'); assert.equal(S.push.pendingOpen, '');
+  } finally { globalThis.history = had; globalThis.location = { hash: '', href: 'https://mveen.github.io/AZ-Carpool/', search: '' }; }
+});
+test('the service worker message "push-open" (the app was already open) is wired to the same request', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /navigator\.serviceWorker\.addEventListener\('message'/); assert.match(src, /d\.type === 'push-open'\) queuePushOpen\(d\.forFamilyId\)/);
+  assert.match(src, /applyPendingPushOpen\(\); \}/);
+});
+
 console.log('\n=== swipe between tabs ===');
 test('bootstrap wires swipe-between-tabs to activateTab', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');

@@ -225,6 +225,18 @@ test('the Ritbeurs texts exist and fill their placeholders (no place buttons any
 import { assertNoDuplicateKeys } from './test-support.js';
 test('texts-nl.js defines every key once', () => assertNoDuplicateKeys('texts-nl.js'));
 
+test('the push test texts exist and fill their placeholders', () => {
+  assert.equal(t('push.title'), 'Meldingen testen'); assert.equal(t('push.ouderVan', { name: 'Saar' }), 'Ouder van Saar'); assert.equal(t('push.test.titel', { who: 'Ouder van Saar' }), 'Test · Ouder van Saar');
+  assert.equal(t('push.server.detail', { ago: '2 min geleden', sent: 3, pending: 1 }), 'Laatste keer 2 min geleden · 3 verstuurd · 1 wachtend');
+  assert.equal(t('push.preview.state.wacht', { time: '06:00' }), 'Wacht op stille uren, bezorgd om 06:00'); assert.equal(t('push.toestel.label', { browser: 'Chrome', os: 'Android' }), 'Chrome op Android');
+  assert.equal(t('push.ago.min', { n: 5 }), '5 min geleden'); assert.equal(t('push.ago.uur', { n: 2 }), '2 uur geleden'); assert.equal(t('push.preview.title', { who: 'Ouder van Saar' }), 'Zo ziet Ouder van Saar het');
+});
+test('every state the push screen can be in has a text', () => {
+  for (const k of ['push.server.ok', 'push.server.stil', 'push.server.onbekend', 'push.preview.state.bezorgd', 'push.preview.state.verlopen', 'push.preview.push.verstuurd', 'push.preview.push.wachtrij', 'push.preview.push.geen',
+    'push.preview.bron.test', 'push.preview.bron.echt', 'push.wie.echt', 'push.wie.gekozen', 'push.wie.reden.ok', 'push.wie.reden.niet-gedekt', 'push.wie.reden.eigen-rit', 'push.wie.reden.bezig', 'push.wie.reden.dubbel',
+    'push.err.timeout', 'push.err.alleenCoordinator', 'push.err.kiesGezin', 'push.err.geenAnder', 'push.err.zetTestAan', 'push.err.meldingWeg', 'push.scen.rijVrij', 'push.scen.overgenomen', 'push.scen.backup', 'push.scen.nietGedekt', 'push.scen.dagcoordinator']) assert.ok(hasKey(k), k);
+});
+
 test('the home-screen sheet has all its texts (iOS steps, Firefox steps, buttons)', () => {
   for (const k of ['title', 'sub', 'sub_native', 'stap1', 'stap2', 'stap3', 'ff_stap1', 'ff_stap2', 'later', 'begrepen']) {
     assert.ok(hasKey('installprompt.' + k), k); assert.notEqual(t('installprompt.' + k), '');

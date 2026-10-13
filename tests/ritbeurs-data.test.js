@@ -200,6 +200,58 @@ await testAsync('quiet hours default to 22:00-06:00, are saved on the own family
   assert.equal(fake.get('families/f2/notifications/a').read, true); assert.equal(fake.get('families/f2/notifications/b').read, true);
 });
 
+console.log('=== the push queue (test phase) ===');
+const TEST_ON = { mode: 'test' };
+await testAsync('with the push switch on test every saved notification is also put in the queue, with the same due time and expiry', async () => {
+  const fake = useFakeDb(seed({ 'offers/o1': openOffer, 'settings/dayCoordinators': { Do: 'f5' } }));
+  parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: openOffer }, dayCoordinators: { Do: 'f5' }, pushSettings: TEST_ON });
+  assert.equal(await run(() => takeOffer('o1')), true);
+  const q = Object.fromEntries(keys(fake, 'pushQueue/').map(k => [k.slice(10), fake.get(k)]));
+  assert.deepEqual(Object.keys(q).sort(), ['families__f2__notifications__taken_o1_f2', 'families__f5__notifications__takenDayCoordinator_o1_f5']);
+  for (const [key, e] of Object.entries(q)) {
+    const n = fake.get(e.path);
+    assert.equal(key, e.path.replace(/\//g, '__')); assert.equal(e.test, false); assert.equal(e.toFamilyId, n.toFamilyId); assert.equal(e.kind, n.kind);
+    assert.equal(e.deliverAt, n.deliverAt); assert.equal(e.expiresAt, n.expiresAt); assert.deepEqual(Object.keys(e).sort(), ['createdAt', 'deliverAt', 'expiresAt', 'kind', 'path', 'test', 'toFamilyId']);
+  }
+});
+await testAsync('offers, back-up moments and the late-offer check all queue what they write', async () => {
+  let fake = useFakeDb(seed({ 'backupMoments/m3': { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: true, createdAt: 1 } }));
+  parent({ moments: { m3: fake.get('backupMoments/m3') }, pushSettings: TEST_ON });
+  await run(() => createOffer('Do', 'heen', ''));
+  assert.deepEqual(keys(fake, 'pushQueue/').map(k => fake.get(k).kind), ['offerBackup']);
+  fake = useFakeDb(seed());
+  parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, pushSettings: TEST_ON, rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: false } });
+  await run(() => addMoment({ date: '2026-10-01', from: '15:00', to: '18:00', onlyIfFree: false }));
+  assert.deepEqual(keys(fake, 'pushQueue/').map(k => fake.get(k).kind), ['backupForRide']);
+  const late = { ...openOffer, date: '2026-10-01' };
+  fake = useFakeDb(seed({ 'offers/o1': late }));
+  parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: late }, dayCoordinators: { Do: 'f5' }, pushSettings: TEST_ON });
+  await withFakeNowAsync('2026-09-30T18:30:00+02:00', () => checkRitbeurs());
+  assert.deepEqual(keys(fake, 'pushQueue/').map(k => fake.get(k).kind), ['uncovered', 'uncovered']);
+});
+await testAsync('while the push switch is off or missing, nothing extra is written for anyone: only the notifications themselves', async () => {
+  for (const pushSettings of [null, { mode: 'uit' }]) {
+    const fake = useFakeDb(seed({ 'offers/o1': openOffer }));
+    parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: openOffer }, pushSettings });
+    assert.equal(await run(() => takeOffer('o1')), true);
+    assert.equal(keys(fake, 'pushQueue/').length, 0); assert.equal(keys(fake, 'families/f2/notifications/').length, 1);
+    assert.ok(fake.writes.every(([, p]) => !p.startsWith('pushQueue/')));
+  }
+});
+await testAsync('a queue that cannot be written never makes offering or taking over fail (the real data is saved first)', async () => {
+  const fake = useFakeDb(seed({ 'offers/o1': openOffer }));
+  parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: openOffer }, pushSettings: TEST_ON });
+  fake.failWrites('pushQueue/', 'permission-denied');
+  assert.equal(await run(() => takeOffer('o1')), true);
+  assert.equal(fake.get('offers/o1').status, 'taken'); assert.equal(keys(fake, 'families/f2/notifications/').length, 1); assert.equal(keys(fake, 'pushQueue/').length, 0);
+  assert.match(toast(), /Je rijdt deze rit/);
+});
+await testAsync('with Ritten ruilen switched off nothing is queued either, whatever the push switch says', async () => {
+  const fake = useFakeDb(seed({}, false)); parent({ pushSettings: TEST_ON }, false);
+  assert.equal(await run(() => createOffer('Do', 'heen', '')), false);
+  assert.equal(keys(fake, 'pushQueue/').length, 0);
+});
+
 console.log('=== background checks ===');
 await testAsync('a late open offer is announced once to the offerer and the day coordinator', async () => {
   const late = { ...openOffer, date: '2026-10-01' };

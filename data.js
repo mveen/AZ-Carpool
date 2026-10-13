@@ -10,6 +10,9 @@ import { normalizeNotice } from './notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
 import { normalizeMaintenance } from './maintenance.js';
 import { normalizeRitbeurs } from './ritbeurs.js';
+import { normalizePush } from './push.js';
+import { stopPushListeners, syncPushListeners } from './push-data.js';
+import { applyPendingPushOpen } from './ui-push.js';
 import { checkRitbeurs } from './ritbeurs-data.js';
 import { setStatus, showToast, updateStatusLine } from './ui-common.js';
 import { renderSchedule } from './ui-schedule.js';
@@ -470,6 +473,7 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
+  syncPushListeners();
   if(!coord){
     if(S.rideLogUnsub){ S.rideLogUnsub(); S.rideLogUnsub=null; S.rideLog={}; S.rideLogLoaded=false; }
     if(S.periodBackupsUnsub){ S.periodBackupsUnsub(); S.periodBackupsUnsub=null; S.periodBackups={}; }
@@ -500,8 +504,11 @@ export function startDataListeners(){
     db.doc("settings/maintenance").onSnapshot(snap=>{ S.maintenance = snap.exists? normalizeMaintenance(snap.data()) : null; renderMaintenance(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
-    db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
+    db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; applyPendingPushOpen(); renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    // Push test phase: every member reads the master switch (so no queue entry is written while it is off); the screens are coordinator-only.
+    db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
+      err=>{});
     db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); checkRitbeurs(); },
       err=>{});
     db.collection("backupMoments").onSnapshot(snap=>{ S.moments={}; snap.docs.forEach(d=>S.moments[d.id]=d.data()); renderDeviationTab(); },
@@ -574,8 +581,9 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
+  stopPushListeners();
   renderNoticeBanner();
   renderMaintenance();
   updateStatusLine();
