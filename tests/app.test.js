@@ -209,5 +209,12 @@ test('bootstrap wires swipe-between-tabs to activateTab', () => {
   assert.match(src, /initSwipeTabs\(activateTab\)/);
 });
 
+test('afterLinksChanged offers the home-screen sheet at the end (the feature toggle inside decides; off = nothing happens)', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export function afterLinksChanged'), src.indexOf('export function renderAll'));
+  assert.match(body, /chooseDefaultTab\(\);\s*renderAll\(\);\s*maybeShowInstallPrompt\(\);/);
+  assert.match(src, /S\.deferredInstallPrompt=e; renderProfile\(\); maybeShowInstallPrompt\(\);/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

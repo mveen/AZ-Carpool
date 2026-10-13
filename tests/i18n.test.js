@@ -225,6 +225,14 @@ test('the Ritbeurs texts exist and fill their placeholders (no place buttons any
 import { assertNoDuplicateKeys } from './test-support.js';
 test('texts-nl.js defines every key once', () => assertNoDuplicateKeys('texts-nl.js'));
 
+test('the home-screen sheet has all its texts (iOS steps, Firefox steps, buttons)', () => {
+  for (const k of ['title', 'sub', 'sub_native', 'stap1', 'stap2', 'stap3', 'ff_stap1', 'ff_stap2', 'later', 'begrepen']) {
+    assert.ok(hasKey('installprompt.' + k), k); assert.notEqual(t('installprompt.' + k), '');
+  }
+});
+
+test('the Firefox menu step is short enough for one line', () => { assert.equal(t('installprompt.ff_stap1'), 'Tik op het menu (drie puntjes)'); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
