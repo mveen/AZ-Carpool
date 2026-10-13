@@ -95,7 +95,7 @@ export const PH_PATHS = {
 export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 
 // Shown in the Instellingen sheet. Bump together with CACHE_NAME in service-worker.js (a test checks they match).
-export const APP_VERSION = 'v80';
+export const APP_VERSION = 'v81';
 
 // Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
 // True weekday-or-null: null on Sat/Sun means "no day is actually today" — used ONLY for

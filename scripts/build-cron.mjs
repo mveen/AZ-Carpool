@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { APP_MODULES } from '../cron/purge.mjs';
 import { AGENDA_APP_MODULES } from '../cron/agenda.mjs';
+import { PUSH_APP_MODULES } from '../cron/push.mjs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -28,9 +29,9 @@ function copyTree(from, to, written, prefix = '') {
   }
 }
 
-// The app modules the jobs reuse (cron/purge.mjs APP_MODULES, cron/agenda.mjs AGENDA_APP_MODULES) plus everything they import, so the jobs work with the very
+// The app modules the jobs reuse (cron/purge.mjs APP_MODULES, cron/agenda.mjs AGENDA_APP_MODULES, cron/push.mjs PUSH_APP_MODULES) plus everything they import, so the jobs work with the very
 // same code as the app. Static `import ... from './x.js'` only; a missing file is an error, not a silent gap.
-export function appClosure(rootDir = root, entries = [...new Set([...APP_MODULES, ...AGENDA_APP_MODULES])]) {
+export function appClosure(rootDir = root, entries = [...new Set([...APP_MODULES, ...AGENDA_APP_MODULES, ...PUSH_APP_MODULES])]) {
   const seen = new Set(), todo = [...entries];
   while (todo.length) {
     const f = todo.pop();

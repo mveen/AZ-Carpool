@@ -874,6 +874,34 @@ await testAsync('Ritbeurs: a missing switch document means off', async () => {
   stopDataListeners();
 });
 
+await testAsync('Push test phase: a tapped test push that waits for the Ritten-ruilen switch gets its screen as soon as the switch is read', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/ritbeurs': { on: true } });
+  sampleCoordinatorState({ links: { coord: { familyId: 'f1' } }, linksLoaded: true, impersonateFamilyId: 'f6', ritbeurs: null, rbView: 'wijzigen', push: { ...S.push, pendingView: true } });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.ritbeurs.on, true); assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.push.pendingView, false);
+  stopDataListeners();
+});
+await testAsync('Push test phase: every member reads the master switch (only "test" counts), and it is released on stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/push': { mode: 'test', updatedAt: 1 } }); sampleParentState({ pushSettings: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.pushSettings, { mode: 'test' });
+  stopDataListeners(); assert.equal(S.pushSettings, null);
+  for (const doc of [{ mode: 'live' }, { mode: 7 }, {}]) { useFakeDb({ ...sampleDbSeed(), 'settings/push': doc }); sampleParentState({ pushSettings: null }); startDataListeners(); await tick(); await tick(); assert.deepEqual(S.pushSettings, { mode: 'uit' }, JSON.stringify(doc)); stopDataListeners(); }
+  useFakeDb(sampleDbSeed()); sampleParentState({ pushSettings: { mode: 'test' } }); startDataListeners(); await tick(); await tick();
+  assert.equal(S.pushSettings, null, 'no document: not loaded, which means off'); stopDataListeners();
+});
+await testAsync('Push test phase: only the coordinator\'s app follows the push data (key, status, devices, queue, made-up notifications)', async () => {
+  const seedPush = { ...sampleDbSeed(), 'settings/pushKey': { publicKey: 'K' }, 'pushDevices/d1': { label: 'x' }, 'pushQueue/q1': { path: 'p' }, 'testNotifications/t1': { kind: 'taken' } };
+  const parentFake = useFakeDb(seedPush); sampleParentState();
+  const before = parentFake.listenerCount(); syncListeners(); await tick();
+  assert.deepEqual(S.push.devices, {}); assert.equal(S.push.unsubs.length, 0);
+  assert.ok(parentFake.listenerCount() >= before);
+  useFakeDb(seedPush); sampleCoordinatorState({ links: {} });
+  syncListeners(); await tick(); await tick();
+  assert.deepEqual(Object.keys(S.push.devices), ['d1']); assert.deepEqual(Object.keys(S.push.queue), ['q1']); assert.deepEqual(Object.keys(S.push.tests), ['t1']); assert.deepEqual(S.push.key, { publicKey: 'K' });
+  stopDataListeners(); assert.equal(S.push.unsubs.length, 0); assert.deepEqual(S.push.devices, {});
+});
+
 console.log('\n=== Vast rooster: Opnieuw indelen and the cycling pick-up place (design v2) ===');
 await testAsync('cycleShiftPlace sets the next place of Beheer on every car of the shift, and Ongedaan puts it back', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState();

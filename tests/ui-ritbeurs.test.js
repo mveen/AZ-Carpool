@@ -17,7 +17,7 @@ import { renderBeheer } from '../ui-beheer.js';
 import { updatePeriodBadge } from '../ui-period.js';
 import {
   ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, ritbeursSegmentHtml, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
-  ritbeursCardHtml, wireRitbeursCard, offerRide, takeRide, saveMomentDraft,
+  ritbeursCardHtml, wireRitbeursCard, offerRide, takeRide, saveMomentDraft, testNotificationsForView,
 } from '../ui-ritbeurs.js';
 
 const dom = installFakeDom();
@@ -155,6 +155,33 @@ await testAsync('saveMomentDraft stores the moment and resets the draft', async 
 });
 
 console.log('=== notifications and the badge ===');
+test('Testweergave (coordinator): the made-up notifications of that family are in the inbox, marked "test", held back by quiet hours, never in the badge', () => {
+  const mine = { kind: 'taken', toFamilyId: 'f2', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 5, deliverAt: 5, expiresAt: 9e12, read: false };
+  sampleCoordinatorState({ impersonateFamilyId: 'f2', ritbeurs: { on: true }, groups: groups(), links: { coord: { familyId: 'f1' } },
+    push: { ...S.push, tests: { t1: mine, later: { ...mine, createdAt: 9, deliverAt: Date.now() + 3600e3 }, old: { ...mine, expiresAt: 5 }, other: { ...mine, toFamilyId: 'f3' } } } });
+  const html = view();
+  assert.match(html, /Kees de Vries neemt je rit over <span class="noticeChip off">test<\/span>/);
+  assert.equal((html.match(/noticeChip off">test/g) || []).length, 1, 'only the delivered, unexpired one of this family');
+  assert.doesNotMatch(html, /rbNotif unread/); assert.doesNotMatch(html, /id="rbReadAll"/);
+  assert.equal(ritbeursBadgeCount(), 0); assert.deepEqual(Object.keys(testNotificationsForView(Date.now())), ['t1']);
+  S.impersonateFamilyId = null; assert.deepEqual(testNotificationsForView(Date.now()), {}); assert.doesNotMatch(view(), /noticeChip off">test/);
+});
+test('a parent never sees made-up notifications, even if they were somehow in the state', () => {
+  asF2({ push: { ...S.push, tests: { t1: { kind: 'taken', toFamilyId: 'f2', fromFamilyId: 'f3', createdAt: 5, deliverAt: 5, expiresAt: 9e12, read: false } } }, impersonateFamilyId: 'f2' });
+  assert.doesNotMatch(view(), /noticeChip off">test|neemt je rit over/);
+});
+
+test('a name with special characters is escaped once in the inbox, not twice, and its HTML is never run', () => {
+  const families = { ...sampleParentState().families };
+  families.f3 = { ...families.f3, parentName: 'Mark & Els' }; families.f4 = { ...families.f4, parentName: '<img src=x onerror=alert(1)>' };
+  asF2({ families, notifications: {
+    a: { kind: 'taken', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 2, deliverAt: 1, expiresAt: 9e12, read: false },
+    b: { kind: 'taken', fromFamilyId: 'f4', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 1, deliverAt: 1, expiresAt: 9e12, read: false } } });
+  const html = view();
+  assert.match(html, /<b>Mark &amp; Els neemt je rit over<\/b>/); assert.doesNotMatch(html, /&amp;amp;/);
+  assert.doesNotMatch(html, /<img src=x/); assert.match(html, /&lt;img src=x onerror=alert\(1\)&gt; neemt je rit over/);
+});
+
 test('notifications read in plain Dutch and never claim to know where someone is', () => {
   asF2({ families: { ...sampleParentState().families }, notifications: {
     n1: { kind: 'taken', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 5, deliverAt: 5, expiresAt: 9e12, read: false },

@@ -131,5 +131,30 @@ await test('deleteDocument deletes one document; with updateTime only that versi
   await assert.rejects(f.fs.deleteDocument('deviations/x', { updateTime: 'u' }), /HTTP 400/);
 });
 
+console.log('\n=== several writes in one commit (the push job) ===');
+await test('commit() sends all writes at once, with the right preconditions and update masks', async () => {
+  const c = client(() => json(200, {}));
+  assert.equal(await c.fs.commit([
+    { update: 'offers/o1', fields: { uncoveredAt: 5 }, updateTime: 'T1' },
+    { update: 'pushDevices/d1', fields: { lastOkAt: 7, 'odd name': 1 } },
+    { create: 'families/f1/notifications/n1', data: { kind: 'uncovered', read: false } },
+    { delete: 'pushQueue/q1' },
+  ]), true);
+  assert.equal(c.calls.length, 1); assert.match(c.calls[0].url, /documents:commit$/);
+  const w = JSON.parse(c.calls[0].init.body).writes;
+  assert.deepEqual(w[0].updateMask, { fieldPaths: ['uncoveredAt'] }); assert.deepEqual(w[0].currentDocument, { updateTime: 'T1' });
+  assert.deepEqual(w[1].updateMask, { fieldPaths: ['lastOkAt', '`odd name`'] }); assert.deepEqual(w[1].currentDocument, { exists: true });
+  assert.deepEqual(w[2].currentDocument, { exists: false }); assert.equal(w[2].updateMask, undefined);
+  assert.match(w[2].update.name, /documents\/families\/f1\/notifications\/n1$/); assert.match(w[3].delete, /documents\/pushQueue\/q1$/);
+});
+await test('commit() says false when a precondition fails (changed, missing or already there) and throws on real errors', async () => {
+  for (const [status, body] of [[400, { error: { status: 'FAILED_PRECONDITION', message: 'x' } }], [409, { error: { status: 'ALREADY_EXISTS', message: 'x' } }], [404, { error: { message: 'x' } }]]) {
+    assert.equal(await client(() => json(status, body)).fs.commit([{ create: 'a/b', data: {} }]), false, String(status));
+  }
+  await assert.rejects(client(() => json(403, { error: { message: 'nope' } })).fs.commit([{ delete: 'a/b' }]), /HTTP 403/);
+  await assert.rejects(client(() => json(400, { error: { status: 'INVALID_ARGUMENT', message: 'bad' } })).fs.commit([{ delete: 'a/b' }]), /HTTP 400/);
+  await assert.rejects(client(() => json(200, {})).fs.commit([{ nothing: 'a' }]), /unknown write/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

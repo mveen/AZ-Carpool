@@ -92,6 +92,11 @@ test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch i
   assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbBusy, false);
 });
 
+test('the push test phase state starts empty: the switch is off until read, nothing is listened to, no family chosen, nothing pending', () => {
+  assert.equal(S.pushSettings, null);
+  assert.deepEqual(S.push, { unsubs: [], key: null, status: null, devices: {}, queue: {}, tests: {}, personaId: '', personaNotifs: {}, personaFor: null, personaUnsub: null, timeChoice: 'nu', last: null, thisDeviceId: '', pendingOpen: '', pendingView: false });
+});
+
 test('the coordinator view starts as "coordinator" (viewAsParent is off until chosen in Instellingen)', () => {
   assert.equal(S.viewAsParent, false);
 });

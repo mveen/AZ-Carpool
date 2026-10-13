@@ -9,6 +9,8 @@ import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { effectiveCars, fam } from './rides.js';
 import { esc, hapticTap, locationsCfg, phIcon, twoStepConfirm } from './ui-common.js';
 import { routeLabel } from './locations.js';
+import { notificationText } from './notif-text.js';
+import { pushVisible } from './push-access.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderBeheer } from './ui-beheer.js';
 import {
@@ -18,17 +20,9 @@ import {
   addMoment, allRides, createOffer, markNotificationsRead, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
 } from './ritbeurs-data.js';
 
-const NOTIF_TEXT = {
-  offerBackup: p => ({ title: t('ritbeurs.notif.offerBackup', p), body: t('ritbeurs.notif.offerBackupBody', p) }),
-  backupForRide: p => ({ title: t('ritbeurs.notif.backupForRide', p), body: t('ritbeurs.notif.backupForRideBody', p) }),
-  taken: p => ({ title: t('ritbeurs.notif.taken', p), body: t('ritbeurs.notif.takenBody', p) }),
-  takenDayCoordinator: p => ({ title: t('ritbeurs.notif.takenDayCoordinator', p), body: t('ritbeurs.notif.takenDayCoordinatorBody', p) }),
-  uncovered: p => ({ title: t('ritbeurs.notif.uncovered', p), body: t('ritbeurs.notif.uncoveredBody', p) }),
-};
 const dayLabel = k => (DAYS.find(([d]) => d === k) || [k, String(k || '')])[1];
 const famName = id => esc((S.families[id] && (S.families[id].parentName || S.families[id].girlName)) || t('ritbeurs.notif.onbekend'));
 const dirShort = d => t(d === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
-const whenText = (day, time) => `${dayLabel(day).toLowerCase()} ${time || ''}`.trim();
 
 // Is the Ritbeurs usable for this user? The switch is on and the user has a linked family.
 export function ritbeursAvailable(){ return !!(S.me && ritbeursOn() && myLinkedFamilyId()); }
@@ -158,19 +152,24 @@ export function momentPreview(d){
   return n ? t('ritbeurs.moment.raakt', { n }) : t('ritbeurs.moment.raaktGeen');
 }
 
-function notificationText(n){
-  const when = whenText(n.day, n.time);
-  const who = famName(n.fromFamilyId);
-  const dl = (DAYS.find(([k]) => weekKeyDayIso(n.weekKey || S.currentWeekKey, k) === n.date) || [0, n.date])[1].toLowerCase();
-  const p = { when, who, date: dl, from: n.momentFrom, to: n.momentTo };
-  return NOTIF_TEXT[n.kind] ? NOTIF_TEXT[n.kind](p) : null;
+function notificationLine(n){
+  return notificationText(n, { nameOf: id => (S.families[id] && (S.families[id].parentName || S.families[id].girlName)) || '', currentWeekKey: S.currentWeekKey });
+}
+// Test phase (coordinator only): in Testweergave as a family, the made-up notifications of that family are part of the inbox too, marked "test"
+// (never counted in the badge), so a tapped test push lands on the notification it was about. Held back by quiet hours like a real one.
+export function testNotificationsForView(nowMs = Date.now()){
+  if(!S.impersonateFamilyId || !pushVisible()) return {};
+  const out = {};
+  Object.entries(S.push.tests || {}).forEach(([id, n]) => { if(n && n.toFamilyId === S.impersonateFamilyId && !(n.deliverAt > nowMs) && !(n.expiresAt <= nowMs)) out[id] = n; });
+  return out;
 }
 function notificationsHtml(nowMs){
-  const list = sortedNotifications(visibleNotifications(nowMs)).map(n => ({ n, txt: notificationText(n) })).filter(x => x.txt);
+  const tests = sortedNotifications(testNotificationsForView(nowMs)).map(n => ({ ...n, isTest: true, read: true }));
+  const list = [...sortedNotifications(visibleNotifications(nowMs)), ...tests].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt);
   const unread = unreadCount(visibleNotifications(nowMs));
   const q = quietOf(myLinkedFamilyId());
   const hours = sel => { const o = []; for(let h = 0; h < 24; h++){ const v = `${String(h).padStart(2, '0')}:00`; o.push(`<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`); } return o.join(''); };
-  return `${list.length ? list.slice(0, 20).map(({ n, txt }) => `<div class="rbNotif${n.read === true ? '' : ' unread'}"><b>${esc(txt.title)}</b><span>${esc(txt.body)}</span></div>`).join('') : `<p class="muted">${t('ritbeurs.notif.leeg')}</p>`}
+  return `${list.length ? list.slice(0, 20).map(({ n, txt }) => `<div class="rbNotif${n.read === true ? '' : ' unread'}"><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b><span>${esc(txt.body)}</span></div>`).join('') : `<p class="muted">${t('ritbeurs.notif.leeg')}</p>`}
     ${unread ? `<button type="button" class="btn small secondary" id="rbReadAll">${t('ritbeurs.notif.gelezen')}</button>` : ''}
     <div class="rbQuiet"><b>${t('ritbeurs.quiet.title')}</b><p class="muted" style="margin:2px 0 8px">${t('ritbeurs.quiet.uitleg')}</p>
       <div class="rowflex" style="gap:10px;align-items:center"><label for="rbqFrom">${t('ritbeurs.quiet.van')}</label><select id="rbqFrom" class="rbSel">${hours(q.from)}</select>

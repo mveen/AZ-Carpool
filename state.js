@@ -57,6 +57,18 @@ export const S = {
   notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id
   notificationsFor: null,  // the family whose notifications are being listened to (null = none)
   notificationsUnsub: null,
+  pushSettings: null,      // settings/push { mode }: the master switch of the test pushes (null = not loaded, which means off); every member reads it
+  push: {                  // Beheer, "Meldingen testen" (coordinator only; see push-data.js)
+    unsubs: [],            // the open listeners (settings/pushKey, settings/pushStatus, pushDevices, pushQueue, testNotifications)
+    key: null, status: null, devices: {}, queue: {}, tests: {},
+    personaId: '',         // the family whose notifications the coordinator experiences ("Ouder van Saar")
+    personaNotifs: {}, personaFor: null, personaUnsub: null,   // that family's real notifications (families/<id>/notifications)
+    timeChoice: 'nu',      // scenarios: pretend it is now, or the middle of the night
+    last: null,            // the last scenario that was played { id, rows, explain, ride, simMs }
+    thisDeviceId: '',      // the id of this browser's own device document, when it is subscribed
+    pendingOpen: '',       // a family id from a tapped push, to open in Testweergave as soon as the app is ready
+    pendingView: false,    // ...and then to show the Ritten-ruilen screen as soon as the app knows that Ritten ruilen is on
+  },
   rbView: 'wijzigen',      // Wijzigen tab: 'wijzigen' (the ride cards) or 'ritbeurs'
   rbConfirm: null,         // Ritbeurs: id of the offer whose "Neem over" confirmation is open (null = none)
   rbOffering: null,        // Ritbeurs: the own ride whose "Aanbieden" form is open, 'Do|heen' (null = none)

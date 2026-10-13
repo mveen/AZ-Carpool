@@ -558,6 +558,25 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .rbNotif.unread b::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:var(--space-2)}
 .rbQuiet{border-top:1px solid var(--line);margin-top:var(--space-5);padding-top:var(--space-5)}
 
+/* ---------- Meldingen testen (Beheer, coordinator only; ui-push.js) ---------- */
+.pushStatus{flex-wrap:wrap;justify-content:flex-start;margin:var(--space-3) 0}
+.pushDevice{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4) 0;border-top:1px solid var(--line)}
+.pushDevice__main{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);font:var(--type-body)}
+.pushDevice__main .muted{flex-basis:100%}
+.pushHint{margin:var(--space-3) 0}
+.pushSel{max-width:100%}
+.pushTime{justify-content:flex-start;margin-bottom:var(--space-3)}
+.pushScen{display:flex;flex-direction:column;align-items:stretch;gap:var(--space-3)}
+.pushPreview{display:flex;flex-direction:column;gap:var(--space-4);padding:var(--space-4);border-radius:var(--radius-card);background:var(--surface-soft);border:1px solid var(--line)}
+.pushNotif{display:flex;flex-direction:column;gap:var(--space-2);padding:var(--space-4);border-radius:var(--radius-panel);background:var(--surface-card);border:1px solid var(--line);font:var(--type-body);color:var(--text-1)}
+.pushNotif.is-wait{border-style:dashed}
+.pushNotif__app{display:flex;align-items:center;gap:var(--space-3);font:var(--type-caption);color:var(--text-muted)}
+.pushNotif__icon{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:6px;background:var(--action-bg);color:var(--action-ink)}
+.pushNotif__time{margin-left:auto}
+.pushNotif__body{font:var(--type-small);color:var(--text-muted)}
+.pushNotif__meta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-2)}
+.pushWho{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);font:var(--type-body)}
+
 .matchCard{border-radius:var(--radius-hero);padding:var(--space-7)}
 .matchInfo{padding:var(--space-1) 0}
 .matchHead{display:flex;align-items:center;gap:var(--space-3)}

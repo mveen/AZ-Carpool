@@ -4,7 +4,7 @@
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v80';
+const CACHE_NAME = 'az-carpool-v81';
 const ASSETS = [
   './',
   './index.html',
@@ -49,6 +49,12 @@ const ASSETS = [
   './ritbeurs.js',
   './ritbeurs-data.js',
   './ui-ritbeurs.js',
+  './notif-text.js',
+  './push.js',
+  './push-access.js',
+  './push-scenarios.js',
+  './push-data.js',
+  './ui-push.js',
   './maintenance.js',
   './ui-maintenance.js',
   './ui-ride-log.js',
@@ -96,6 +102,42 @@ self.addEventListener('activate', (event) => {
     )
   );
   self.clients.claim();
+});
+
+// ---------- Push (test phase: only the coordinator's devices get one, see push.js) ----------
+// Every push is shown as a system notification (browsers, iPhone especially, take back the permission when a push shows nothing).
+// A broken or empty message still shows a plain "AZ Carpool" notification instead of failing.
+self.addEventListener('push', (event) => {
+  let data = {};
+  try { data = event.data ? event.data.json() : {}; } catch (e) { data = {}; }
+  if (!data || typeof data !== 'object') data = {};
+  const text = (v, max) => typeof v === 'string' ? v.slice(0, max) : '';
+  const title = text(data.title, 120) || 'AZ Carpool';
+  const options = {
+    body: text(data.body, 500), icon: './icon-192.png', badge: './icon-192.png',
+    tag: text(data.tag, 200) || undefined,
+    data: { url: text(data.url, 300) || './', forFamilyId: text(data.forFamilyId, 64) },
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// A tap opens the app (or brings the open one forward). A test push carries the family it was meant for: the app opens in Testweergave as that family.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const data = event.notification.data || {};
+  const scope = self.registration.scope;
+  let target = scope;
+  try { const u = new URL(typeof data.url === 'string' ? data.url : './', scope); if (u.origin === new URL(scope).origin) target = u.href; } catch (e) { /* the start page it is */ }
+  event.waitUntil((async () => {
+    const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const mine = open.find((c) => c.url && c.url.startsWith(scope));
+    if (mine) {
+      try { await mine.focus(); } catch (e) { /* focus can be refused; the message below still goes */ }
+      mine.postMessage({ type: 'push-open', forFamilyId: typeof data.forFamilyId === 'string' ? data.forFamilyId : '' });
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
 });
 
 // Only the app's own files and the Firebase SDK are worth keeping for offline use. Everything else (Firestore, Google Calendar,

@@ -10,6 +10,7 @@ import { deviationExpiryMs, deviationKey, refreshWeekKey, weekKeyDayIso } from '
 import { dayCoordinatorFor, isRealCoordinator, myLinkedFamilyId } from './coordinator.js';
 import { effectiveCars, fam, seats } from './rides.js';
 import { keepOv } from './ov.js';
+import { normalizePush, queueDoc, queueKey } from './push.js';
 import { showToast } from './ui-common.js';
 import { cleanCars, currentDeviationDoc, db, recordLastUpdate } from './data.js';
 import {
@@ -61,16 +62,31 @@ export function warningsFor(offer, takerId){
 
 export function quietOf(familyId){ return normalizeQuiet(S.families[familyId] && S.families[familyId].ritbeursQuiet); }
 
-// Writes a notification into a batch for each recipient (nothing when the switch is off).
-function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fromFamilyId, nowMs }){
+// Writes a notification into a batch for each recipient (nothing when the switch is off). With `queue` (an array) it also notes which
+// notifications were written, so flushPushQueue can hand them to the push server after the batch was saved.
+function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fromFamilyId, nowMs }, queue){
   if(!ritbeursOn()) return 0;
   const done = new Set();
   recipients.forEach(to => {
     if(!to || done.has(to) || !S.families[to]) return;
     done.add(to);
-    batch.set(`families/${to}/notifications/${notificationId(kind, sourceId, to)}`, notificationDoc({ kind, to, offer, moment, sourceId, fromFamilyId, nowMs, quiet: quietOf(to) }));
+    const doc = notificationDoc({ kind, to, offer, moment, sourceId, fromFamilyId, nowMs, quiet: quietOf(to) });
+    const path = `families/${to}/notifications/${notificationId(kind, sourceId, to)}`;
+    batch.set(path, doc);
+    if(queue) queue.push({ path, toFamilyId: to, kind, deliverAt: doc.deliverAt, expiresAt: doc.expiresAt, nowMs });
   });
   return done.size;
+}
+// Test phase: while settings/push is on 'test' every saved notification is also put in the push queue, so the server can send the
+// coordinator a copy (see push.js). Done AFTER the real batch and best effort: it never makes offering or taking over fail, and
+// while the switch is off nothing extra is written at all.
+export async function flushPushQueue(queue){
+  if(!db || !queue || !queue.length || normalizePush(S.pushSettings).mode !== 'test') return;
+  try{
+    const batch = db.batch();
+    queue.forEach(q => batch.set('pushQueue/' + queueKey(q.path), queueDoc({ ...q, test: false })));
+    await batch.commit();
+  }catch(e){ /* the notification itself is saved; only the test copy is missing */ }
 }
 
 // ---------- offering, withdrawing, taking over ----------
@@ -87,11 +103,12 @@ export async function createOffer(day, direction, message){
   const offer = buildOffer({ weekKey: S.currentWeekKey, day, direction, date: ride.date, time: ride.time, familyId: me, message, nowMs });
   const id = offerId({ weekKey: S.currentWeekKey, day, direction, familyId: me, nowMs });
   try{
-    const batch = db.batch();
+    const batch = db.batch(), queue = [];
     batch.set('offers/' + id, offer);
     const recipients = backupRecipients({ offer, moments: S.moments, busy: fid => busyAround(fid, offer.date, offer.time) });
-    const n = addNotifications(batch, { kind: 'offerBackup', recipients, offer, sourceId: id, fromFamilyId: me, nowMs });
+    const n = addNotifications(batch, { kind: 'offerBackup', recipients, offer, sourceId: id, fromFamilyId: me, nowMs }, queue);
     await batch.commit();
+    await flushPushQueue(queue);
     S.offers[id] = offer;
     showToast(t(n ? 'ritbeurs.toast.aangebodenBackups' : 'ritbeurs.toast.aangeboden', { n }));
     return true;
@@ -122,14 +139,15 @@ export async function takeOffer(id){
   if(!newCars){ showToast(t('ritbeurs.err.geenRit')); return false; }
   const nowMs = Date.now();
   try{
-    const batch = db.batch();
+    const batch = db.batch(), queue = [];
     batch.update('offers/' + id, { status: 'taken', takenBy: me, takenAt: nowMs });
     const extra = keepOv(currentDeviationDoc(o.day, o.direction), newCars);
     batch.set('deviations/' + deviationKey(o.day, o.direction), { day: o.day, direction: o.direction, weekKey: S.currentWeekKey, expiresAt: deviationExpiryMs(), cars: cleanCars(newCars), ...(extra || {}) });
-    addNotifications(batch, { kind: 'taken', recipients: [o.offeredBy], offer: o, sourceId: id, fromFamilyId: me, nowMs });
+    addNotifications(batch, { kind: 'taken', recipients: [o.offeredBy], offer: o, sourceId: id, fromFamilyId: me, nowMs }, queue);
     const dc = dayCoordinatorFor(S, o.day);
-    if(dc && dc.familyId !== o.offeredBy && dc.familyId !== me) addNotifications(batch, { kind: 'takenDayCoordinator', recipients: [dc.familyId], offer: o, sourceId: id, fromFamilyId: me, nowMs });
+    if(dc && dc.familyId !== o.offeredBy && dc.familyId !== me) addNotifications(batch, { kind: 'takenDayCoordinator', recipients: [dc.familyId], offer: o, sourceId: id, fromFamilyId: me, nowMs }, queue);
     await batch.commit();
+    await flushPushQueue(queue);
     S.rbConfirm = null;
     S.lastDeviationEditDay = o.day;
     recordLastUpdate('Deviation');
@@ -153,11 +171,12 @@ export async function addMoment(raw){
   if(rideStartMs(moment.date, moment.to) <= nowMs){ showToast(t('ritbeurs.err.alGeweest')); return false; }
   const id = momentId({ familyId: me, date: moment.date, from: moment.from, nowMs });
   try{
-    const batch = db.batch();
+    const batch = db.batch(), queue = [];
     batch.set('backupMoments/' + id, moment);
     const riders = ridersToWarn({ moment, rides: allRides() });
-    const n = addNotifications(batch, { kind: 'backupForRide', recipients: riders, moment, sourceId: id, fromFamilyId: me, nowMs });
+    const n = addNotifications(batch, { kind: 'backupForRide', recipients: riders, moment, sourceId: id, fromFamilyId: me, nowMs }, queue);
     await batch.commit();
+    await flushPushQueue(queue);
     S.moments[id] = moment; S.rbMomentDraft = null;
     showToast(t(n ? 'ritbeurs.toast.momentRijders' : 'ritbeurs.toast.moment', { n }));
     return true;
@@ -209,11 +228,12 @@ export async function checkRitbeurs(){
       if(!o || o.status !== 'open' || o.weekKey !== S.currentWeekKey || o.uncoveredAt) continue;
       if(urgency(o.date, nowMs) !== 'late' || rideStartMs(o.date, o.time) <= nowMs) continue;
       try{
-        const batch = db.batch();
+        const batch = db.batch(), queue = [];
         batch.update('offers/' + id, { uncoveredAt: nowMs });
         const dc = dayCoordinatorFor(S, o.day);
-        addNotifications(batch, { kind: 'uncovered', recipients: [o.offeredBy, dc && dc.familyId], offer: o, sourceId: id, fromFamilyId: '', nowMs });
+        addNotifications(batch, { kind: 'uncovered', recipients: [o.offeredBy, dc && dc.familyId], offer: o, sourceId: id, fromFamilyId: '', nowMs }, queue);
         await batch.commit();
+        await flushPushQueue(queue);
         S.offers[id] = { ...o, uncoveredAt: nowMs };
       }catch(e){ /* another app was first: fine */ }
     }
