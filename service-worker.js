@@ -4,7 +4,7 @@
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v85';
+const CACHE_NAME = 'az-carpool-v86';
 const ASSETS = [
   './',
   './index.html',
@@ -129,6 +129,11 @@ self.addEventListener('notificationclick', (event) => {
   const scope = self.registration.scope;
   let target = scope;
   try { const u = new URL(typeof data.url === 'string' ? data.url : './', scope); if (u.origin === new URL(scope).origin) target = u.href; } catch (e) { /* the start page it is */ }
+  // Firefox (Gecko) only lets a worker open a window in the first moments after the tap, and an installed web app there is not a window
+  // the worker can bring forward. So there the app is opened at once, as the very first thing, without looking for open windows first
+  // (the new page reads ?pushas= by itself). Elsewhere (Chrome, Safari) an open window is brought forward instead.
+  const firefox = /Firefox\//.test((self.navigator && self.navigator.userAgent) || '');
+  if (firefox) { event.waitUntil(self.clients.openWindow(target).catch(() => {})); return; }
   event.waitUntil((async () => {
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const mine = open.find((c) => c.url && c.url.startsWith(scope));
