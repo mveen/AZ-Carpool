@@ -20,6 +20,7 @@ import { refreshMatchesIfStale } from './matches.js';
 import { closeHelp } from './ui-help.js';
 import { initShell, updateHeader } from './ui-shell.js';
 import { initSwipeTabs } from './swipe-tabs.js';
+import { maybeShowInstallPrompt } from './ui-install-prompt.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
 S.currentWeekKey = getISOWeekKey(effectivePlanningDate());
@@ -84,6 +85,7 @@ export function afterLinksChanged(){
   recordSession();
   chooseDefaultTab();
   renderAll();
+  maybeShowInstallPrompt();   // feature toggle inside: does nothing while it is off
 }
 
 export function renderAll(){ syncCoordinatorNav(); renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); updateHeader(); renderMaintenance(); adjustMainPadding(); }
@@ -159,7 +161,7 @@ export function bootstrap(){
       .catch(()=>{});
   }
 
-  window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); S.deferredInstallPrompt=e; renderProfile(); });
+  window.addEventListener('beforeinstallprompt', (e)=>{ e.preventDefault(); S.deferredInstallPrompt=e; renderProfile(); maybeShowInstallPrompt(); });
 
   window.addEventListener('appinstalled', ()=>{ S.appIsInstalled=true; S.deferredInstallPrompt=null; renderProfile(); });
 
