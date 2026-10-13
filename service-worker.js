@@ -4,7 +4,7 @@
 // when there's genuinely no connection — it must never mask a real update.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v83';
+const CACHE_NAME = 'az-carpool-v85';
 const ASSETS = [
   './',
   './index.html',
@@ -133,9 +133,12 @@ self.addEventListener('notificationclick', (event) => {
     const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const mine = open.find((c) => c.url && c.url.startsWith(scope));
     if (mine) {
-      try { await mine.focus(); } catch (e) { /* focus can be refused; the message below still goes */ }
+      let shown = null;
+      try { shown = await mine.focus(); } catch (e) { /* focus can be refused; the fallback below opens the app */ }
       mine.postMessage({ type: 'push-open', forFamilyId: typeof data.forFamilyId === 'string' ? data.forFamilyId : '' });
-      return;
+      // Chrome brings the open tab forward. Firefox on Android only brings the BROWSER forward, on whatever tab was last used (the tap then
+      // seems to open "just the browser"). Only when the app really is in front is the job done; otherwise open the app itself.
+      if (shown && (shown.focused === true || shown.visibilityState === 'visible')) return;
     }
     await self.clients.openWindow(target);
   })());
