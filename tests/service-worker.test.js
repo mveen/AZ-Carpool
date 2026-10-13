@@ -9,12 +9,13 @@ async function test(name, fn) {
 }
 
 const handlers = {}, store = new Map();
-const shown = [], opened = []; let openClients = [];
+const shown = [], opened = [], order = []; let openClients = [];
 const SCOPE = 'https://mveen.github.io/AZ-Carpool/';
 globalThis.self = {
   location: { origin: 'https://mveen.github.io' }, addEventListener: (type, fn) => { handlers[type] = fn; }, skipWaiting() {},
+  navigator: { userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/126.0 Mobile Safari/537.36' },
   registration: { scope: SCOPE, showNotification: async (title, options) => { shown.push({ title, options }); } },
-  clients: { claim() {}, matchAll: async () => openClients, openWindow: async url => { opened.push(url); } },
+  clients: { claim() {}, matchAll: async () => { order.push('matchAll'); return openClients; }, openWindow: async url => { order.push('openWindow'); opened.push(url); } },
 };
 globalThis.caches = {
   open: async () => ({ addAll: async () => {}, put: async (req, res) => { store.set(req.url, res); } }),
@@ -83,7 +84,7 @@ async function click(data, notification = {}) {
   await p;
   return { closed };
 }
-const reset2 = () => { shown.length = 0; opened.length = 0; openClients = []; };
+const reset2 = () => { shown.length = 0; opened.length = 0; order.length = 0; openClients = []; globalThis.self.navigator.userAgent = 'Mozilla/5.0 (Linux; Android 14) Chrome/126.0 Mobile Safari/537.36'; };
 await test('a push shows a notification with the title, text, icon, tag and the family it was meant for', async () => {
   reset2();
   await push({ title: 'Test · Ouder van Saar', body: 'Rit vrij: donderdag 16:15\nJan biedt een rit aan.', tag: 'q1', url: './?pushas=f6', forFamilyId: 'f6' });
@@ -126,6 +127,19 @@ await test('Firefox on Android: focus() only brings the browser forward, not the
 await test('a tab that really came to the front (visible, even when not reported as focused) is enough: no second window', async () => {
   reset2(); openClients = [{ url: SCOPE, focus: async () => ({ focused: false, visibilityState: 'visible' }), postMessage: () => {} }];
   await click({ url: './?pushas=f6', forFamilyId: 'f6' }); assert.deepEqual(opened, []);
+});
+await test('Firefox: the app is opened at once, as the first thing, without looking at open windows first; the open window is not asked to focus', async () => {
+  reset2(); globalThis.self.navigator.userAgent = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0';
+  openClients = [{ url: SCOPE, focus: async () => assert.fail('no focus on Firefox'), postMessage: () => assert.fail('no message on Firefox') }];
+  const r = await click({ url: './?pushas=f6', forFamilyId: 'f6' });
+  assert.equal(r.closed, true); assert.deepEqual(order, ['openWindow']); assert.deepEqual(opened, [SCOPE + '?pushas=f6']);
+  reset2(); globalThis.self.navigator.userAgent = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0';
+  await click({ url: 'https://evil.example/x' }); assert.deepEqual(opened, [SCOPE]);
+});
+await test('Firefox: a window that cannot be opened does not break the click', async () => {
+  reset2(); globalThis.self.navigator.userAgent = 'Mozilla/5.0 (Android 14; Mobile; rv:131.0) Gecko/131.0 Firefox/131.0';
+  const real = self.clients.openWindow; self.clients.openWindow = async () => { throw new Error('popup blocked'); };
+  try { await click({ url: './?pushas=f6' }); } finally { self.clients.openWindow = real; }
 });
 await test('the push files are part of the offline copy (ASSETS)', async () => {
   const fs = await import('node:fs');
