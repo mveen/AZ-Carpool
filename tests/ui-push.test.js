@@ -98,6 +98,21 @@ await test('no device yet: a button to enable, and a hint to switch the test on 
   S.push.key = { publicKey: 'K' };
   withBrowser({ Notification: { permission: 'default' } }, () => { const h = card(); assert.match(h, /id="pushEnable"/); assert.doesNotMatch(text(h), /wacht een minuut/); });
 });
+await test('the test is on but the server has not reported: the hint says the cron job is the problem, not "wait a minute"', () => {
+  coordinator(); S.pushSettings = { mode: 'test' };
+  withBrowser({ Notification: { permission: 'default' } }, () => { const t = text(card()); assert.match(t, /heeft zich nog niet gemeld/); assert.match(t, /cron-taak/); assert.doesNotMatch(t, /wacht een minuut/); });
+  S.push.status = { lastRunAt: NOWMS - 60000 };
+  withBrowser({ Notification: { permission: 'default' } }, () => assert.match(text(card()), /wacht een minuut/));
+});
+await test('tapping the button without a server key says why in a message; so do the other refusals', async () => {
+  coordinator(); S.pushSettings = { mode: 'test' };
+  await withBrowser({ Notification: { permission: 'default' } }, async () => { const r = await enableThisDevice(); assert.equal(r.reason, 'geenSleutel'); });
+  assert.match(toast(), /geen sleutel klaargezet.*cron-taak/);
+  await withBrowser({ navigator: { userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1', standalone: false } }, async () => { S.push.key = { publicKey: 'K' }; await enableThisDevice(); });
+  assert.match(toast(), /beginscherm/);
+  await withBrowser({ navigator: { serviceWorker: undefined } }, async () => { delete globalThis.navigator.serviceWorker; await enableThisDevice(); });
+  assert.match(toast(), /ondersteunt geen pushmeldingen/);
+});
 await test('blocked notifications, an iPhone without the app on the home screen and a browser without push each get their own explanation, and no button', () => {
   coordinator({ key: { publicKey: 'K' } });
   withBrowser({ Notification: { permission: 'denied' } }, () => { const h = card(); assert.match(text(h), /blokkeert meldingen/); assert.doesNotMatch(h, /id="pushEnable"/); });

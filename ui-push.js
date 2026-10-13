@@ -4,7 +4,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { activateTab } from './app.js';
-import { esc, hapticTap, phIcon, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { startImpersonate } from './ui-profile.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { ritbeursAvailable } from './ui-ritbeurs.js';
@@ -69,7 +69,7 @@ function devicesHtml(nowMs){
   if(support === 'iosInstalleren') hint = t('push.hint.ios');
   else if(support === 'geenSupport') hint = t('push.hint.geenSupport');
   else if(perm === 'denied') hint = t('push.hint.geweigerd');
-  else if(!(S.push.key && S.push.key.publicKey)) hint = t('push.hint.geenSleutel');
+  else if(!(S.push.key && S.push.key.publicKey)) hint = t(pushMode() === 'test' && serverState(S.push.status, nowMs) !== 'ok' ? 'push.hint.serverStil' : 'push.hint.geenSleutel');
   const canEnable = support === 'ok' && perm !== 'denied' && !S.push.thisDeviceId;
   return `<div class="sectionLabel">${t('push.toestellen.title')}</div>
     ${rows || `<p class="muted">${t('push.toestellen.leeg')}</p>`}
@@ -149,9 +149,13 @@ export function refreshPushCard(force = false){
 
 // ---------- actions (also used by the tests) ----------
 export async function togglePushTest(on){ const ok = await setPushMode(on ? 'test' : 'uit'); refreshPushCard(true); return ok; }
+// Why enabling did nothing, said out loud (a tap that seems to do nothing is the worst answer). 'mislukt' and 'ongeldig' already told themselves.
+const ENABLE_REFUSED = {
+  geenSleutel: 'push.err.geenSleutel', geweigerd: 'push.hint.geweigerd', iosInstalleren: 'push.hint.ios', geenSupport: 'push.hint.geenSupport', ongeldig: 'push.err.ongeldig',
+};
 export async function enableThisDevice(){
   const res = await enablePush();
-  if(!res.ok && res.reason === 'geweigerd') { /* the hint under the button explains it */ }
+  if(!res.ok && ENABLE_REFUSED[res.reason]) showToast(t(ENABLE_REFUSED[res.reason]));
   refreshPushCard(true);
   return res;
 }

@@ -234,7 +234,7 @@ test('the push test texts exist and fill their placeholders', () => {
 test('every state the push screen can be in has a text', () => {
   for (const k of ['push.server.ok', 'push.server.stil', 'push.server.onbekend', 'push.preview.state.bezorgd', 'push.preview.state.verlopen', 'push.preview.push.verstuurd', 'push.preview.push.wachtrij', 'push.preview.push.geen',
     'push.preview.bron.test', 'push.preview.bron.echt', 'push.wie.echt', 'push.wie.gekozen', 'push.wie.reden.ok', 'push.wie.reden.niet-gedekt', 'push.wie.reden.eigen-rit', 'push.wie.reden.bezig', 'push.wie.reden.dubbel',
-    'push.err.timeout', 'push.err.alleenCoordinator', 'push.err.kiesGezin', 'push.err.geenAnder', 'push.err.zetTestAan', 'push.err.meldingWeg', 'push.scen.rijVrij', 'push.scen.overgenomen', 'push.scen.backup', 'push.scen.nietGedekt', 'push.scen.dagcoordinator']) assert.ok(hasKey(k), k);
+    'push.hint.serverStil', 'push.err.geenSleutel', 'push.err.ongeldig', 'push.err.timeout', 'push.err.alleenCoordinator', 'push.err.kiesGezin', 'push.err.geenAnder', 'push.err.zetTestAan', 'push.err.meldingWeg', 'push.scen.rijVrij', 'push.scen.overgenomen', 'push.scen.backup', 'push.scen.nietGedekt', 'push.scen.dagcoordinator']) assert.ok(hasKey(k), k);
 });
 
 test('the home-screen sheet has all its texts (iOS steps, Firefox steps, buttons)', () => {
