@@ -102,7 +102,7 @@ await test('a huge push is cut to a sensible size', async () => {
   const o = shown[0].options; assert.equal(shown[0].title.length, 120); assert.equal(o.body.length, 500); assert.equal(o.tag.length, 200); assert.equal(o.data.url.length, 300); assert.equal(o.data.forFamilyId.length, 64);
 });
 await test('tapping closes the notification; an app that is open comes forward and is told which family to open (no new window)', async () => {
-  reset2(); const events = []; openClients = [{ url: SCOPE + '?x=1', focus: async () => { events.push('focus'); }, postMessage: m => events.push(m) }];
+  reset2(); const events = []; openClients = [{ url: SCOPE + '?x=1', focus: async () => { events.push('focus'); return { focused: true }; }, postMessage: m => events.push(m) }];
   const r = await click({ url: './?pushas=f6', forFamilyId: 'f6' });
   assert.equal(r.closed, true); assert.deepEqual(events, ['focus', { type: 'push-open', forFamilyId: 'f6' }]); assert.deepEqual(opened, []);
 });
@@ -114,9 +114,18 @@ await test('a window of another site is not used; without an open app a new wind
 await test('an address on another site, or no address at all, opens the start page of the app instead', async () => {
   for (const data of [{ url: 'https://evil.example/phish' }, { url: '//evil.example/x' }, {}, undefined, { url: 5 }, null]) { reset2(); await click(data); assert.deepEqual(opened, [SCOPE], JSON.stringify(data)); }
 });
-await test('a refused focus does not stop the message to the open app', async () => {
+await test('a refused focus does not stop the message to the open app, and the app is opened as a fallback', async () => {
   reset2(); const events = []; openClients = [{ url: SCOPE, focus: async () => { throw new Error('refused'); }, postMessage: m => events.push(m) }];
-  await click({ forFamilyId: 'f6' }); assert.deepEqual(events, [{ type: 'push-open', forFamilyId: 'f6' }]);
+  await click({ url: './?pushas=f6', forFamilyId: 'f6' }); assert.deepEqual(events, [{ type: 'push-open', forFamilyId: 'f6' }]); assert.deepEqual(opened, [SCOPE + '?pushas=f6']);
+});
+await test('Firefox on Android: focus() only brings the browser forward, not the tab (it stays hidden): the app is opened as well', async () => {
+  reset2(); const events = []; openClients = [{ url: SCOPE, focus: async () => ({ focused: false, visibilityState: 'hidden' }), postMessage: m => events.push(m) }];
+  await click({ url: './?pushas=f6', forFamilyId: 'f6' });
+  assert.deepEqual(opened, [SCOPE + '?pushas=f6']); assert.equal(events.length, 1);
+});
+await test('a tab that really came to the front (visible, even when not reported as focused) is enough: no second window', async () => {
+  reset2(); openClients = [{ url: SCOPE, focus: async () => ({ focused: false, visibilityState: 'visible' }), postMessage: () => {} }];
+  await click({ url: './?pushas=f6', forFamilyId: 'f6' }); assert.deepEqual(opened, []);
 });
 await test('the push files are part of the offline copy (ASSETS)', async () => {
   const fs = await import('node:fs');
