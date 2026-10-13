@@ -49,6 +49,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ui-beheer.js` | Beheer tab (coordinator only) | `ui-beheer.test.js` |
 | `ui-profile.js` | Gate, first-run claim, Mijn gezin, test view as a parent | `ui-profile.test.js` |
 | `ui-agenda.js` | Mijn gezin → Agenda: the family's calendar link (make once, copy, add to calendar) | `ui-agenda.test.js` |
+| `ui-install-prompt.js` | One-time "put the app on your home screen" sheet, behind a feature toggle that is off at deployment (remove the toggle after the rollout, see the top of the file) | `ui-install-prompt.test.js` |
 | `calendar-feed.js` | The rides of one family for the next 3 weeks as calendar events and as an `.ics` file (also used by `cron/agenda.mjs`) | `calendar-feed.test.js` |
 | `push-access.js` | **Meldingen (testfase), temporary:** who sees the notification test features (`COORDINATOR_ONLY`, one flag) | `push-access.test.js` |
 | `push.js` | Meldingen (testfase), pure rules: the master switch (`uit` / `test`, no live mode), which devices are accepted, the queue, what is still to send, what a message says | `push.test.js` |

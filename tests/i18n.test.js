@@ -82,7 +82,7 @@ test('the texts of the shell, the contact sheet and the ride rows exist and fill
   assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });
 test('the texts of the settings sheet and the Mijn gezin drill-down exist', () => {
-  assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
+  assert.equal(t('agenda.toevoegen_google'), 'Zet in Google Agenda'); assert.match(t('agenda.android_uitleg'), /Android.*ICSx⁵/); assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
   assert.equal(t('shell.parent_of', { name: 'Noor' }), 'Ouder van Noor'); assert.equal(t('shell.saved_instantly'), 'Wordt direct opgeslagen');
   assert.equal(t('profile.plekken_in_je_auto'), 'Plekken in je auto'); assert.equal(t('profile.kan_jij_deze_dag_rijden'), 'Kun je zelf rijden?');
 });
@@ -236,6 +236,14 @@ test('every state the push screen can be in has a text', () => {
     'push.preview.bron.test', 'push.preview.bron.echt', 'push.wie.echt', 'push.wie.gekozen', 'push.wie.reden.ok', 'push.wie.reden.niet-gedekt', 'push.wie.reden.eigen-rit', 'push.wie.reden.bezig', 'push.wie.reden.dubbel',
     'push.err.timeout', 'push.err.alleenCoordinator', 'push.err.kiesGezin', 'push.err.geenAnder', 'push.err.zetTestAan', 'push.err.meldingWeg', 'push.scen.rijVrij', 'push.scen.overgenomen', 'push.scen.backup', 'push.scen.nietGedekt', 'push.scen.dagcoordinator']) assert.ok(hasKey(k), k);
 });
+
+test('the home-screen sheet has all its texts (iOS steps, Firefox steps, buttons)', () => {
+  for (const k of ['title', 'sub', 'sub_native', 'stap1', 'stap2', 'stap3', 'ff_stap1', 'ff_stap2', 'later', 'begrepen']) {
+    assert.ok(hasKey('installprompt.' + k), k); assert.notEqual(t('installprompt.' + k), '');
+  }
+});
+
+test('the Firefox menu step is short enough for one line', () => { assert.equal(t('installprompt.ff_stap1'), 'Tik op het menu (drie puntjes)'); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
