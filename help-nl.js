@@ -80,6 +80,7 @@ export default [
       'Je kunt de ritten van je dochter voor de komende 3 weken in je eigen agenda zetten. De agenda is alleen om te lezen: wijzigen kan alleen in de app.',
       'Tik rechtsboven op je avatar en kies Agenda. Wat je daarna doet, hangt af van je agenda-app:',
       '• iPhone, iPad en Mac: tik op Zet in mijn agenda en bevestig het abonneren.',
+      '• Android: tik op Zet in Google Agenda. Google Agenda opent in je browser; log in en bevestig. Lukt dat niet, of gebruik je een andere agenda-app? Tik dan op Kopieer link en voeg die toe als internetagenda, bijvoorbeeld met de gratis app ICSx⁵.',
       '• Google Agenda: tik op Kopieer link. In de Google Agenda-app op de telefoon kan dit niet. Open Google Agenda op een computer, kies Andere agenda\'s toevoegen, dan Via URL, en plak de link. De agenda komt daarna ook op je telefoon.',
       '• Outlook: kies Agenda toevoegen, dan Abonneren via internet, en plak de link.',
       'Je stelt dit één keer in. Een nieuwe link doet het binnen een half uur. Wijzigingen in de ritten komen daarna vanzelf in je agenda; bij Google kan dat tot een dag duren. De app blijft altijd leidend.',
