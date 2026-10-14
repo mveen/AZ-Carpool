@@ -358,7 +358,7 @@ export function renderClaimCoordinator(){
 }
 
 export function renderGateOrApp(){
-  const nav=document.querySelector('nav');
+  const nav=document.getElementById('bottomnav');
   const gateDiv=document.getElementById('tab-gate');
   if(!gateDiv) return;
   if(!S.appReady || !S.linksLoaded){

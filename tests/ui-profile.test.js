@@ -58,13 +58,23 @@ test('a linked parent gets the tabs, not the gate', () => {
 });
 
 test('the tab bar is hidden for the gate and comes back WITHOUT a forced layout (the stylesheet decides: a grid)', () => {
-  const nav = { style: {} }; const realQuery = dom.doc.querySelector;
-  dom.doc.querySelector = sel => (sel === 'nav' ? nav : realQuery(sel));
+  const nav = dom.el('bottomnav'); nav.style.display = '';
+  useFakeDb({}); resetState({ me: 'u1', appReady: true, linksLoaded: true, coordinatorExists: true, canEdit: false, links: {} });
+  renderGateOrApp(); assert.equal(nav.style.display, 'none');
+  sampleParentState({ linksLoaded: true, coordinatorExists: true });
+  renderGateOrApp(); assert.equal(nav.style.display, '');   // never 'flex': that broke the grid of the tab bar
+});
+
+test('the bottom bar is restored even when Beheer\'s begChips <nav> comes first in the DOM', () => {
+  const chips = { style: {} }; const realQuery = dom.doc.querySelector;
+  dom.doc.querySelector = sel => (sel === 'nav' ? chips : realQuery(sel));   // what the old code found first
   try {
-    useFakeDb({}); resetState({ me: 'u1', appReady: true, linksLoaded: true, coordinatorExists: true, canEdit: false, links: {} });
+    const nav = dom.el('bottomnav'); nav.style.display = '';
+    useFakeDb({}); resetState({ me: 'u1', appReady: true, linksLoaded: false, coordinatorExists: true, canEdit: true, links: {} });
     renderGateOrApp(); assert.equal(nav.style.display, 'none');
     sampleParentState({ linksLoaded: true, coordinatorExists: true });
-    renderGateOrApp(); assert.equal(nav.style.display, '');   // never 'flex': that broke the grid of the tab bar
+    renderGateOrApp(); assert.equal(nav.style.display, '');
+    assert.equal(chips.style.display, undefined);
   } finally { dom.doc.querySelector = realQuery; }
 });
 

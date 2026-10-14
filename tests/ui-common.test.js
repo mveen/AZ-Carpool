@@ -116,6 +116,17 @@ test('openSheet builds a dialog with one button per item, and closeSheet removes
 test('hapticTap never throws, with or without vibration support', () => { hapticTap(); });
 
 console.log('\n=== connection error and static texts ===');
+test('showConnectionError hides the bottom bar (#bottomnav), not the first <nav> in the DOM', () => {
+  const chips = { style: {} }; const realQuery = dom.doc.querySelector;
+  dom.doc.querySelector = sel => (sel === 'nav' ? chips : realQuery(sel));
+  try {
+    const nav = dom.el('bottomnav'); nav.style.display = '';
+    showConnectionError(new Error('offline'));
+    assert.equal(nav.style.display, 'none');
+    assert.equal(chips.style.display, undefined);
+  } finally { dom.doc.querySelector = realQuery; }
+});
+
 test('showConnectionError replaces the app by an explanation with the error message', () => {
   showConnectionError(new Error('offline'));
   assert.equal(dom.el('tab-gate').style.display, 'block'); assert.match(dom.html('tab-gate'), /Geen verbinding/); assert.match(dom.html('tab-gate'), /offline/);

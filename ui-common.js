@@ -218,7 +218,7 @@ export function twoStepConfirm(btn, confirmLabel, action){
 // ---------- Mijn gezin tab ----------
 // ---------- Firebase connection failed (bad config, offline, etc.) ----------
 export function showConnectionError(err){
-  const nav=document.querySelector('nav');
+  const nav=document.getElementById('bottomnav');
   if(nav) nav.style.display='none';
   ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
   const gateDiv=document.getElementById('tab-gate');
