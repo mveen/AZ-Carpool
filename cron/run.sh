@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# cron/run.sh <backup|matches|purge|agenda|selftest> — what the cron jobs on the host call.
+# cron/run.sh <backup|matches|purge|agenda|push|selftest> — what the cron jobs on the host call.
 # Finds a Node.js 20+ (the host has several places for it), then runs the job.
 # Prints one line on success; problems go to stderr with exit code 1 (DirectAdmin mails them).
 set -euo pipefail
 here="${BASH_SOURCE[0]%/*}"; [ "$here" = "${BASH_SOURCE[0]}" ] && here="."
 here="$(cd "$here" && pwd)"
 
-case "${1:-}" in backup|matches|purge|agenda|selftest) ;; *) echo "usage: run.sh backup|matches|purge|agenda|selftest" >&2; exit 2 ;; esac
+case "${1:-}" in backup|matches|purge|agenda|push|selftest) ;; *) echo "usage: run.sh backup|matches|purge|agenda|push|selftest" >&2; exit 2 ;; esac
 
 best=""; bestv=0
 for c in "$(command -v node 2>/dev/null || true)" "$HOME"/nodevenv/*/*/bin/node /opt/alt/alt-nodejs*/root/usr/bin/node /usr/local/bin/node /usr/bin/node; do
@@ -22,5 +22,6 @@ case "${1:-}" in
   matches)  exec "$best" "$here/match-calendars.mjs" ;;
   purge)    exec "$best" "$here/purge.mjs" ;;
   agenda)   exec "$best" "$here/agenda.mjs" ;;
+  push)     exec "$best" "$here/push.mjs" ;;
   selftest) echo "node: $best (v$bestv)"; exec "$best" "$here/selftest.mjs" ;;
 esac

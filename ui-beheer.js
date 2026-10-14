@@ -7,6 +7,7 @@ import { availableDrivers, driverNameHtml, isStandaardDriver, fam, girlName, sea
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
+import { pushCardHtml, wirePushCard } from './ui-push.js';
 import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
 import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
@@ -630,6 +631,7 @@ export function renderBeheer(){
     ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
       ic('wrench', maintenanceCardHtml()),
       ic('car', ritbeursCardHtml()),
+      ic('bell', pushCardHtml()),
       ic('info', noticeCardHtml()),
       ic('bell', `<div class="card" id="notifCard">
         <h2>${t('beheer.meldingen_bij_gewijzigde_tijden')}</h2>
@@ -704,6 +706,7 @@ export function renderBeheer(){
     wireRideLogCard();
     wireMaintenanceCard();
     wireRitbeursCard();
+    wirePushCard();
     document.querySelectorAll('.periodInput').forEach(el=>el.oninput=rememberPeriodDraft);
     const perSave=document.getElementById('periodDraftSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); return savePeriod(); };
     const perCancel=document.getElementById('periodDraftCancel'); if(perCancel) perCancel.onclick=()=>cancelPeriodEdit();

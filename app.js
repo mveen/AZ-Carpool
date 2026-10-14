@@ -20,6 +20,7 @@ import { refreshMatchesIfStale } from './matches.js';
 import { closeHelp } from './ui-help.js';
 import { initShell, updateHeader } from './ui-shell.js';
 import { initSwipeTabs } from './swipe-tabs.js';
+import { applyPendingPushOpen, queuePushOpen, queuePushOpenFromUrl } from './ui-push.js';
 import { maybeShowInstallPrompt } from './ui-install-prompt.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
@@ -42,6 +43,7 @@ export function checkMatchRefresh(){
 
 export async function init(){
   applyStaticTexts();
+  queuePushOpenFromUrl(location.search);   // a tapped test push brings the coordinator here with ?pushas=<family>
   renderAll();
   setStatus(t('app.verbinden'));
   try{
@@ -88,7 +90,7 @@ export function afterLinksChanged(){
   maybeShowInstallPrompt();   // feature toggle inside: does nothing while it is off
 }
 
-export function renderAll(){ syncCoordinatorNav(); renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); updateHeader(); renderMaintenance(); adjustMainPadding(); }
+export function renderAll(){ syncCoordinatorNav(); renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); updateHeader(); renderMaintenance(); adjustMainPadding(); applyPendingPushOpen(); }
 
 // The Beheer tab belongs to the coordinator view only ("Bekijk als: Ouder" hides it too).
 export function syncCoordinatorNav(){
@@ -155,6 +157,10 @@ export function bootstrap(){
       if(!hadController || reloaded) return;
       reloaded = true;
       location.reload();
+    });
+    navigator.serviceWorker.addEventListener('message', e=>{
+      const d = e && e.data;
+      if(d && d.type === 'push-open') queuePushOpen(d.forFamilyId);   // the app was already open when a test push was tapped
     });
     navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js')
       .then(reg=>{ swReg = reg; checkForAppUpdate(); })

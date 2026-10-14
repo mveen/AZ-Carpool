@@ -37,6 +37,10 @@ export function encodeFields(obj) {
   return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined).map(([k, v]) => [k, encodeValue(v)]));
 }
 
+// A field name as the "update mask" of a write wants it: plain names as they are, anything else in backticks.
+const maskPath = k => /^[A-Za-z_][A-Za-z_0-9]*$/.test(k) ? k : '`' + k.replace(/\\/g, '\\\\').replace(/`/g, '\\`') + '`';
+const PRECONDITION_CODES = new Set(['FAILED_PRECONDITION', 'NOT_FOUND', 'ALREADY_EXISTS', 'ABORTED']);
+
 const segments = path => path.split('/').map(encodeURIComponent).join('/');
 const sleepMs = ms => new Promise(r => setTimeout(r, ms));
 
@@ -107,6 +111,22 @@ export function createFirestore({ projectId, getToken, fetchFn = fetch, sleep = 
       const q = updateTime ? '?' + new URLSearchParams({ 'currentDocument.updateTime': updateTime }) : '';
       try { await call('DELETE', `${base}/${segments(path)}${q}`); return true; }
       catch (e) { if (updateTime && (e.status === 404 || e.status === 412 || e.code === 'FAILED_PRECONDITION')) return false; throw e; }
+    },
+    // Several writes in ONE atomic commit; all of them happen or none. Each write is one of
+    //   { update: path, fields, updateTime }   change only these fields of an existing document, and only in the version that was read
+    //   { create: path, data }                 make a new document; fails when it already exists
+    //   { delete: path }                       remove a document
+    // Returns true when committed, false when a precondition failed (changed or already exists: someone else was first). Other errors throw.
+    async commit(writes) {
+      const body = { writes: writes.map(w => {
+        if (w.update) return { update: { name: `${root}/${w.update}`, fields: encodeFields(w.fields) }, updateMask: { fieldPaths: Object.keys(w.fields).filter(k => w.fields[k] !== undefined).map(maskPath) },
+          currentDocument: w.updateTime ? { updateTime: w.updateTime } : { exists: true } };
+        if (w.create) return { update: { name: `${root}/${w.create}`, fields: encodeFields(w.data) }, currentDocument: { exists: false } };
+        if (w.delete) return { delete: `${root}/${w.delete}` };
+        throw new Error('commit: unknown write');
+      }) };
+      try { await call('POST', `${HOST}/projects/${projectId}/databases/(default)/documents:commit`, body); return true; }
+      catch (e) { if (e.status === 412 || e.status === 409 || e.status === 404 || PRECONDITION_CODES.has(e.code)) return false; throw e; }
     },
     // Walks the whole database: yields { path, doc, missing } for every document, sub-collections included.
     async *walk() {

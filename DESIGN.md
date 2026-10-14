@@ -67,6 +67,10 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 
 Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
+## Components added for "Meldingen testen" (Beheer, coordinator only, temporary)
+
+`.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushTime`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`, `.is-wait` for a notification held back by quiet hours) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
+
 ## Avatar choice
 
 - Default = initials (ink circle). A parent can pick one of 10 Phosphor icons (`avatars.js`, `AVATARS`); the id is stored as the optional field `avatar` on `families/<id>` ('' or missing = initials). Never rename an id: they live in Firestore.
