@@ -79,7 +79,7 @@ test('what the card says: the daughter, 3 weeks, read only, one time, how to add
   useFakeDb(sampleDbSeed()); sampleParentState({ calendarLink: { familyId: 'f2', token: SECRET, status: 'ready' } });
   const html = agendaCardInnerHtml('f2'), s = text(html);
   assert.match(s, /ritten van Jahaimy voor de komende 3 weken/); assert.match(s, /alleen lezen/); assert.match(s, /één keer in/);
-  assert.match(s, /Zet in mijn agenda/); assert.match(s, /Kopieer link/); assert.match(s, /Google Agenda/); assert.match(s, /tot een dag/); assert.match(s, /alleen met wie de ritten mag zien/);
+  assert.match(s, /Zet in mijn agenda/); assert.match(s, /Kopieer link/); assert.match(s, /Google Agenda/); assert.match(s, /tot een dag/); assert.match(s, /Proton/); assert.match(s, /alleen met wie de ritten mag zien/);
 });
 test('no way to make a new link', () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ calendarLink: { familyId: 'f2', token: SECRET, status: 'ready' } });

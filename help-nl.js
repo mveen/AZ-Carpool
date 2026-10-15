@@ -75,7 +75,7 @@ export default [
   {
     id: 'agenda',
     title: 'Hoe zie ik de ritten van mijn dochter in mijn eigen agenda?',
-    keywords: 'agenda kalender ical ics webcal google apple iphone outlook abonneren abonnement link synchroniseren dochter ritten telefoon alleen lezen delen',
+    keywords: 'agenda kalender ical ics webcal google apple iphone outlook proton abonneren abonnement link synchroniseren dochter ritten telefoon alleen lezen delen',
     body: [
       'Je kunt de ritten van je dochter voor de komende 3 weken in je eigen agenda zetten. De agenda is alleen om te lezen: wijzigen kan alleen in de app.',
       'Tik rechtsboven op je avatar en kies Agenda. Wat je daarna doet, hangt af van je agenda-app:',
@@ -83,7 +83,8 @@ export default [
       '• Android: tik op Zet in Google Agenda. Google Agenda opent in je browser; log in en bevestig. Lukt dat niet, of gebruik je een andere agenda-app? Tik dan op Kopieer link en voeg die toe als internetagenda, bijvoorbeeld met de gratis app ICSx⁵.',
       '• Google Agenda: tik op Kopieer link. In de Google Agenda-app op de telefoon kan dit niet. Open Google Agenda op een computer, kies Andere agenda\'s toevoegen, dan Via URL, en plak de link. De agenda komt daarna ook op je telefoon.',
       '• Outlook: kies Agenda toevoegen, dan Abonneren via internet, en plak de link.',
-      'Je stelt dit één keer in. Een nieuwe link doet het binnen een half uur. Wijzigingen in de ritten komen daarna vanzelf in je agenda; bij Google kan dat tot een dag duren. De app blijft altijd leidend.',
+      '• Proton Calendar: tik op Kopieer link. Open Proton Calendar op een computer (calendar.proton.me), kies Instellingen, Alle instellingen, Calendars, Andere agenda\'s, dan Agenda toevoegen via URL, en plak de link. In de Proton-app op de telefoon kan dit niet; de agenda komt daarna wel in die app.',
+      'Je stelt dit één keer in. Een nieuwe link doet het binnen een half uur. Wijzigingen in de ritten komen daarna vanzelf in je agenda, maar niet meteen: je agenda-app haalt ze zelf op. Bij Apple duurt dat ongeveer een uur, bij Proton 4 tot 16 uur en bij Google tot een dag. Dat kun je niet versnellen. Wil je een wijziging direct zien, bijvoorbeeld een andere vertrekplaats, kijk dan in de app bij Mijn week. De app blijft altijd leidend.',
       'Wedstrijden staan er alleen in als je dochter in de carpool van die wedstrijd is ingedeeld.',
       'De link is persoonlijk. Deel hem alleen met wie de ritten mag zien, bijvoorbeeld je dochter. Wie de link heeft, ziet de voornaam van je dochter, de tijden, de plekken en de naam van de chauffeur. Er is geen knop om een nieuwe link te maken. Is de link bij de verkeerde persoon terechtgekomen, vraag het dan aan de coördinator.',
     ],

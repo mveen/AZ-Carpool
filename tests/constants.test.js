@@ -86,4 +86,5 @@ test('APP_VERSION is at least v88 (robust gate, error log) and always equals the
   const sw = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
   assert.equal(sw.match(/const CACHE_NAME = 'az-carpool-(v\d+)'/)[1], APP_VERSION);
 });
+test('APP_VERSION is at least v89 (Help: Proton Calendar and update times of the agenda)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 89); });
 test('APP_VERSION is at least v87 (bottom bar restored after Beheer rendered)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 87); });

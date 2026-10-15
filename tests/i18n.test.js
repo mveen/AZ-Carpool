@@ -304,3 +304,6 @@ test('the family-type buttons use short labels', () => {
   assert.equal(t('profile.gezinstype.vast'), 'Vast (volgens schema)');
   assert.equal(t('profile.gezinstype.flex'), 'Flex (zelf plannen)');
 });
+test('the agenda update text names Proton and points to Mijn week', () => {
+  assert.match(t('agenda.bijwerken'), /Google of Proton/); assert.match(t('agenda.bijwerken'), /Mijn week/);
+});

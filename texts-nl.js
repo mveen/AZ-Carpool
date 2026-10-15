@@ -1120,7 +1120,7 @@ export default {
   'agenda.gekopieerd': 'Link gekopieerd ✓',
   'agenda.kopieer_mislukt': 'Kopiëren lukt niet op dit apparaat.',
   'agenda.google_uitleg': 'Google Agenda: kies Andere agenda\'s → Via URL en plak de gekopieerde link.',
-  'agenda.bijwerken': 'Een nieuwe link doet het binnen een half uur. Wijzigingen komen daarna vanzelf in je agenda; bij Google kan dat tot een dag duren.',
+  'agenda.bijwerken': 'Een nieuwe link doet het binnen een half uur. Wijzigingen komen daarna vanzelf in je agenda; bij Google of Proton kan dat tot een dag duren. Direct zien? Kijk in de app bij Mijn week.',
   'agenda.geheim': 'Deel de link alleen met wie de ritten mag zien, bijvoorbeeld je dochter: wie de link heeft, kan de ritten lezen.',
   'agenda.laden': 'De link wordt klaargezet…',
   'agenda.laden_mislukt': 'De agenda-link kon niet geladen worden. Probeer het later opnieuw.',
