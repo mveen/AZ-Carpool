@@ -26,7 +26,7 @@ test('the agenda article: how to add the calendar, how fast it updates, who may 
   assert.ok(art, 'no agenda article'); assert.match(allText(art), /rechtsboven op je avatar en kies Agenda/);
   const all = allText(art);
   assert.match(all, /komende 3 weken/); assert.match(all, /alleen om te lezen/); assert.match(all, /Zet in mijn agenda/); assert.match(all, /Kopieer link/);
-  assert.match(all, /Zet in Google Agenda/); assert.match(all, /ICSx⁵/); assert.match(all, /Via URL/); assert.match(all, /één keer in/); assert.match(all, /tot een dag/); assert.match(all, /alleen met wie de ritten mag zien/);
+  assert.match(all, /Zet in Google Agenda/); assert.match(all, /ICSx⁵/); assert.match(all, /Via URL/); assert.match(all, /één keer in/); assert.match(all, /tot een dag/); assert.match(all, /Proton Calendar/); assert.match(all, /4 tot 16 uur/); assert.match(all, /Mijn week/); assert.match(all, /alleen met wie de ritten mag zien/);
   assert.match(all, /Er is geen knop om een nieuwe link te maken/); assert.match(all, /alleen in als je dochter in de carpool van die wedstrijd is ingedeeld/);
   assert.ok(searchHelp('agenda', { canEdit: false }).some(a => a.id === 'agenda'));
   assert.ok(searchHelp('kalender iphone', { canEdit: false }).some(a => a.id === 'agenda'));
