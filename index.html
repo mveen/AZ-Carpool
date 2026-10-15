@@ -65,7 +65,7 @@
 // file:///"). If this site's URL ever changes, the URLs in this script need to change with it.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import * as firestoreSdk from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getAuth, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 // Whole module on purpose: an older firebase-config.js must not break start-up. (The OpenRouteService key is not in this file: it is in the database, see settings/apiKeys.)
 import * as appConfig from "https://mveen.github.io/AZ-Carpool/firebase-config.js";
 import { initDb, createFirestoreDb } from "https://mveen.github.io/AZ-Carpool/data.js";
@@ -74,7 +74,7 @@ import { startApp } from "https://mveen.github.io/AZ-Carpool/app.js";
 const { firebaseConfig, googleCalendarApiKey } = appConfig;
 const fbApp = initializeApp(firebaseConfig);
 initDb(createFirestoreDb({
-  sdk: { ...firestoreSdk, signInAnonymously },
+  sdk: { ...firestoreSdk, signInAnonymously, signOut },
   firestoreDb: firestoreSdk.getFirestore(fbApp),
   auth: getAuth(fbApp),
   calendarApiKey: googleCalendarApiKey

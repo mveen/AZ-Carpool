@@ -25,6 +25,7 @@ import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDriv
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
+import { purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
 import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
@@ -71,6 +72,8 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
       return { set:(p,d,o)=>b.set(r(p),d,o), update:(p,d)=>b.update(r(p),d), delete:(p)=>b.delete(r(p)), commit:()=>b.commit() }; },
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
+    // Forgets this browser's anonymous account (a new one is made at the next start). Older index.html files don't pass signOut.
+    signOut: ()=> sdk.signOut? sdk.signOut(auth) : Promise.resolve(),
     calendarApiKey,
     setListenerSink: (a)=>{ listenerSink = a; }
   };
@@ -83,6 +86,7 @@ export const db = {
   batch: ()=>dbImpl.batch(),
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
+  signOut: ()=>dbImpl.signOut(),
   get calendarApiKey(){ return dbImpl.calendarApiKey; },
   setListenerSink: (a)=>dbImpl.setListenerSink(a)
 };
@@ -473,8 +477,17 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
+  if(coord && !S.errorLogUnsub){
+    S.errorLogUnsub = db.collection("errorLog").onSnapshot(snap=>{
+      S.errorLog={}; snap.docs.forEach(d=>S.errorLog[d.id]=d.data());
+      const first = !S.errorLogLoaded; S.errorLogLoaded = true;
+      if(first) purgeOldErrorLogs();   // safety net: the weekly job on the server normally does this
+      renderBeheer();
+    }, err=>{});
+  }
   syncPushListeners();
   if(!coord){
+    if(S.errorLogUnsub){ S.errorLogUnsub(); S.errorLogUnsub=null; S.errorLog={}; S.errorLogLoaded=false; }
     if(S.rideLogUnsub){ S.rideLogUnsub(); S.rideLogUnsub=null; S.rideLog={}; S.rideLogLoaded=false; }
     if(S.periodBackupsUnsub){ S.periodBackupsUnsub(); S.periodBackupsUnsub=null; S.periodBackups={}; }
     if(S.linksCollUnsub){ S.linksCollUnsub(); S.linksCollUnsub=null; const mine=S.links[S.me]; S.links={}; if(mine) S.links[S.me]=mine; }

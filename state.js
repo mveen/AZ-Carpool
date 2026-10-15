@@ -105,6 +105,9 @@ export const S = {
   sessionsUnsub: null,
   lastSeenByFamily: {},
   invitesUnsub: null,
+  errorLogUnsub: null,
+  errorLogLoaded: false,
+  errorLog: {},            // Beheer: the app's own error log (errorLog/<uid>_<slot>), coordinator only
   migratingSecrets: false,
   migrationFailed: false,
   hashTabApplied: false,

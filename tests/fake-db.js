@@ -5,7 +5,9 @@
 //   const fake = createFakeFirestore({ 'families/f1': {...} });
 //   const db = createFirestoreDb({ sdk: fake.sdk, firestoreDb: fake.firestoreDb, auth: fake.auth, calendarApiKey: 'k' });
 //   fake.store        Map path -> data      fake.writes  [['set','groups/x'], ...]
-//   fake.failWrites(prefix, message)        makes the next writes under that path prefix throw
+//   fake.failWrites(prefix, message, code)  makes the next writes under that path prefix throw (code defaults to 'permission-denied' for that message)
+//   fake.failReads(prefix, code)            makes the next getDoc under that path prefix throw an error with that code
+//   fake.signOutCount()                     how often signOut was called
 const DEL = { __deleteField: true };
 const clone = x => x === undefined ? undefined : JSON.parse(JSON.stringify(x));
 
@@ -13,7 +15,7 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
   const store = new Map(Object.entries(seed).map(([k, v]) => [k, clone(v)]));
   const listeners = [];
   const writes = [];
-  let failure = null;
+  let failure = null, readFailure = null, signOuts = 0;
   const seg = p => p.split('/');
 
   function fire(path) {
@@ -31,7 +33,10 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
     return { docs: [...store.keys()].filter(k => k.startsWith(path + '/') && seg(k).length === n).sort().map(docSnap) };
   }
   function checkFail(path) {
-    if (failure && path.startsWith(failure.prefix)) { const f = failure; failure = null; throw new Error(f.message); }
+    if (failure && path.startsWith(failure.prefix)) { const f = failure; failure = null; throw Object.assign(new Error(f.message), f.code ? { code: f.code } : {}); }
+  }
+  function checkReadFail(path) {
+    if (readFailure && path.startsWith(readFailure.prefix)) { const f = readFailure; readFailure = null; throw Object.assign(new Error('Missing or insufficient permissions.'), { code: f.code }); }
   }
   function setDeep(o, key, val) {
     const parts = key.split('.'); let c = o;
@@ -41,7 +46,7 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
   const api = {
     collection: (db, p) => ({ kind: 'coll', path: p }),
     doc: (db, ...s) => ({ kind: 'doc', path: s.join('/') }),
-    getDoc: async r => docSnap(r.path),
+    getDoc: async r => { checkReadFail(r.path); return docSnap(r.path); },
     getDocs: async r => collSnap(r.path),
     setDoc: async (r, data, opts) => {
       checkFail(r.path);
@@ -73,11 +78,14 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
       return () => { const i = listeners.indexOf(l); if (i >= 0) listeners.splice(i, 1); };
     },
     signInAnonymously: async () => ({ user: { uid } }),
+    signOut: async () => { signOuts++; },
   };
   return {
     sdk: api, firestoreDb: {}, auth: {}, store, writes,
     listenerCount: () => listeners.length,
-    failWrites: (prefix, message = 'permission-denied') => { failure = { prefix, message }; },
+    failWrites: (prefix, message = 'permission-denied', code = message === 'permission-denied' ? 'permission-denied' : undefined) => { failure = { prefix, message, code }; },
+    failReads: (prefix, code = 'permission-denied') => { readFailure = { prefix, code }; },   // the next getDoc under that prefix throws, like Firestore does
+    signOutCount: () => signOuts,
     get: p => clone(store.get(p)),
     collection: prefix => [...store.keys()].filter(k => k.startsWith(prefix + '/')).sort().map(k => [k.slice(prefix.length + 1), clone(store.get(k))]),
   };

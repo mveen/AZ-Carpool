@@ -141,7 +141,7 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 18);   // 17 + "Meldingen testen" (coordinator only, push-access.js)
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 19);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen"
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
   assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
@@ -167,7 +167,55 @@ test('the attention strip is absent when everything is in order', () => {
   assert.doesNotMatch(dom.html('tab-beheer'), /begAttn/);
 });
 
-import { dayCoordinatorsCardHtml, saveDayCoordinator } from '../ui-beheer.js';
+import { dayCoordinatorsCardHtml, saveDayCoordinator, errorLogCardHtml, errorLogEntries, wireErrorLogCard } from '../ui-beheer.js';
+
+console.log('\n=== Gemelde problemen (error log) ===');
+const logRow = (at, extra = {}) => ({ at, where: 'gate', code: 'link-denied', msg: 'phone digits 10', v: 'v88', ua: 'iOS Safari 17', ...extra });
+test('the card says there are no problems when the log is empty, and has no clear button', () => {
+  useFakeDb({}); sampleCoordinatorState({ errorLog: {} });
+  const html = errorLogCardHtml();
+  assert.match(text(html), /Gemelde problemen/); assert.match(text(html), /Geen problemen gemeld/); assert.match(text(html), /30 dagen/); assert.doesNotMatch(html, /errorLogClear/);
+});
+test('entries are listed newest first with where, code, version and browser; text from the log is escaped', () => {
+  useFakeDb({}); sampleCoordinatorState({ errorLog: { a: logRow(1000), b: logRow(3000, { where: 'start', code: 'signin-x', msg: '<img src=x onerror=alert(1)>' }), c: logRow(2000) } });
+  const html = errorLogCardHtml();
+  assert.deepEqual(errorLogEntries().map(e => e.id), ['b', 'c', 'a']);
+  assert.ok(html.indexOf('start · signin-x') < html.indexOf('gate · link-denied'));
+  assert.match(html, /v88 · iOS Safari 17/); assert.doesNotMatch(html, /<img src=x/); assert.match(html, /&lt;img/);
+  assert.match(html, /id="errorLogClear"/);
+});
+test('only the 20 newest are shown, with a line for the rest', () => {
+  useFakeDb({}); const log = {}; for (let i = 0; i < 25; i++) log['u_' + i] = logRow(i + 1, { code: 'c' + i });
+  sampleCoordinatorState({ errorLog: log });
+  const html = errorLogCardHtml();
+  assert.equal((html.match(/class="errRow"/g) || []).length, 20); assert.match(text(html), /En nog 5 oudere meldingen/); assert.match(html, /c24/); assert.doesNotMatch(html, /c0</);
+});
+test('entries without a time stamp are ignored', () => {
+  useFakeDb({}); sampleCoordinatorState({ errorLog: { a: { where: 'x' }, b: logRow(5) } });
+  assert.deepEqual(errorLogEntries().map(e => e.id), ['b']);
+});
+test('the card sits in Beheer (Koppelingen), and problems of the last 24 hours show in the attention strip', () => {
+  const nowMs = Date.now();
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ errorLog: { a: logRow(nowMs - 1000), b: logRow(nowMs - 3600 * 1000, { code: 'x' }), c: logRow(nowMs - 3 * 24 * 3600 * 1000, { code: 'y' }) } });
+  renderBeheer();
+  const html = dom.html('tab-beheer');
+  assert.ok(html.indexOf('id="errorLogCard"') > html.indexOf('id="begSec-koppelingen"'));
+  assert.match(html, /data-goto="errorLogCard"/); assert.match(text(html), /2 problemen gemeld in de afgelopen 24 uur/);
+});
+test('without recent problems there is no line in the attention strip', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ errorLog: { c: logRow(1) } });
+  renderBeheer();
+  assert.doesNotMatch(dom.html('tab-beheer'), /data-goto="errorLogCard"/);
+});
+await testAsync('Wis alles asks twice, then deletes every entry', async () => {
+  const fake = useFakeDb({ 'errorLog/a_0': logRow(1), 'errorLog/b_1': logRow(2) }); sampleCoordinatorState({ errorLog: { a_0: logRow(1), b_1: logRow(2) } });
+  dom.doc.getElementById('tab-beheer').innerHTML = errorLogCardHtml();
+  const btn = dom.el('errorLogClear'); btn.dataset = {}; btn.innerHTML = 'Wis alles'; wireErrorLogCard();
+  btn.onclick(); assert.equal(fake.collection('errorLog').length, 2);   // first tap: only asks
+  assert.match(btn.textContent, /Zeker/);
+  btn.onclick(); await new Promise(r => setImmediate(r)); await new Promise(r => setImmediate(r));
+  assert.equal(fake.collection('errorLog').length, 0); assert.deepEqual(S.errorLog, {});
+});
 
 console.log('\n=== Dagcoördinatoren (US-02) ===');
 test('Beheer has a card with one family choice per weekday, names taken from the families', () => {

@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import {
   isRealCoordinatorFor, canEditFor, canSwitchViewFor, hasOwnFamilyFor, isMemberFor, needsGateFor, myFamilyIdFor, isValidInviteCode,
   isRealCoordinator, isMemberNow, recomputeCanEdit, myFamilyId, needsGate, myLinkedFamilyId, myDisplayInfo,
-  normalizePhone, genCode, slugify,
+  normalizePhone, genCode, slugify, cleanCode,
 } from '../coordinator.js';
 
 installFakeDom();
@@ -111,6 +111,15 @@ test('normalizePhone treats 06 / +316 / 00316 and stray spaces or dashes as the 
   ['0612345678', '06 12 34 56 78', '06-12345678', '+31612345678', '+31 6 1234 5678', '0031612345678'].forEach(p =>
     assert.equal(normalizePhone(p), '0612345678', p));
 });
+test('normalizePhone reads full-width digits too', () => { assert.equal(normalizePhone('０６１２３４５６７８'), '0612345678'); });
+test('cleanCode removes spaces, non-breaking spaces and invisible characters from a pasted code', () => {
+  assert.equal(cleanCode(' 2863 061108 '), '2863061108');
+  assert.equal(cleanCode('2863\u00a0061108\u200b'), '2863061108');
+  assert.equal(cleanCode('\ufeff2863061108\u200e'), '2863061108');
+  assert.equal(cleanCode('２８６３０６１１０８'), '2863061108');   // full-width digits
+  assert.equal(cleanCode(null), ''); assert.equal(cleanCode(undefined), '');
+});
+test('cleanCode does not change the letters of a code (case stays)', () => { assert.equal(cleanCode('Ab-12 cD'), 'Ab-12cD'); });
 test('normalizePhone copes with empty input', () => { assert.equal(normalizePhone(''), ''); assert.equal(normalizePhone(null), ''); });
 test('slugify makes safe ids (no accents, no spaces)', () => {
   assert.equal(slugify('Loïs'), 'lois'); assert.equal(slugify('Van der Berg'), 'van-der-berg');

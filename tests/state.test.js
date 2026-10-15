@@ -101,6 +101,7 @@ test('the coordinator view starts as "coordinator" (viewAsParent is off until ch
   assert.equal(S.viewAsParent, false);
 });
 
+test('the error log starts empty and its listener off', () => { assert.deepEqual(S.errorLog, {}); assert.equal(S.errorLogUnsub, null); assert.equal(S.errorLogLoaded, false); });
 test('"+ Passagier toevoegen" lists start closed (devPick)', () => { assert.deepEqual(S.devPick, {}); });
 
 test('S.periodSwap starts empty', () => { assert.equal(S.periodSwap, null); });

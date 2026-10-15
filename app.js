@@ -22,6 +22,7 @@ import { initShell, updateHeader } from './ui-shell.js';
 import { initSwipeTabs } from './swipe-tabs.js';
 import { applyPendingPushOpen, queuePushOpen, queuePushOpenFromUrl } from './ui-push.js';
 import { maybeShowInstallPrompt } from './ui-install-prompt.js';
+import { flushErrorLog, installGlobalErrorLogging, loadQueuedErrors, logError } from './error-log.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
 S.currentWeekKey = getISOWeekKey(effectivePlanningDate());
@@ -49,7 +50,9 @@ export async function init(){
   try{
     const cred = await db.signIn();
     S.me = cred.user.uid;
+    flushErrorLog();   // problems that could not be sent last time (no session yet)
   }catch(e){
+    logError({ where:'start', code:'signin-'+((e&&e.code)||'error'), message:e && e.message });   // kept on this phone and sent at the next start
     setStatus(t('app.niet_verbonden'), true);
     showConnectionError(e);
     return;
@@ -60,6 +63,7 @@ export async function init(){
     S.coordinatorConfig = coordSnap.exists? coordSnap.data() : null;
     S.appReady = true;
   }catch(e){
+    logError({ where:'start', code:'coordinator-'+((e&&e.code)||'error'), message:e && e.message });
     setStatus(t('app.niet_verbonden'), true);
     showConnectionError(e);
     return;
@@ -74,7 +78,7 @@ export async function init(){
       if(s.exists && s.pending) return; // wait until the server has accepted a new link (rules check the code)
       if(s.exists) S.links[S.me]=s.data(); else delete S.links[S.me];
       afterLinksChanged();
-    }, err=>{ S.linksLoaded=true; setStatus(t('app.fout_bij_laden_koppeling')+(err&&err.message||err), true); renderAll(); });
+    }, err=>{ logError({ where:'start', code:'links-'+((err&&err.code)||'error'), message:err && err.message }); S.linksLoaded=true; setStatus(t('app.fout_bij_laden_koppeling')+(err&&err.message||err), true); renderAll(); });
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   adjustMainPadding();
 }
@@ -127,6 +131,8 @@ export function chooseDefaultTab(){
 // service worker. It lives in a function (not at the top of the file) so importing app.js — for tests —
 // has no side effects and needs no browser.
 export function bootstrap(){
+  loadQueuedErrors();                 // problems from an earlier start that never reached the log
+  installGlobalErrorLogging(window);  // errors nobody caught end up in the log too (Beheer > Gemelde problemen)
 
   
   document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeSheet(); closeHelp(); } });

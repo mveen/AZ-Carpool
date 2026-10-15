@@ -45,6 +45,12 @@ export function myFamilyIdFor(state){ return state.impersonateFamilyId || (state
 
 export function isValidInviteCode(c){ return /^[A-Za-z0-9-]{4,32}$/.test(c||''); }
 
+// What a parent typed or pasted (e.g. from WhatsApp) made ready for the code check: full-width characters become plain ones,
+// and spaces, non-breaking spaces and invisible characters (zero-width, direction marks) are removed.
+export function cleanCode(raw){
+  return String(raw==null? '' : raw).normalize('NFKC').replace(/[\s\u00a0\u200b-\u200f\u202a-\u202e\u2060\ufeff]/g,'');
+}
+
 // ---------- wrappers over the shared app state ----------
 export function isRealCoordinator(){ return isRealCoordinatorFor(S); }
 export function isMemberNow(){ return isMemberFor(S); }
@@ -62,7 +68,7 @@ export function needsGate(){ return needsGateFor(S); }
 
 // Compares Dutch numbers regardless of 06.../ +316.../ 00316... formatting or stray spaces/dashes.
 export function normalizePhone(p){
-  let digits=(p||'').replace(/[^\d]/g,'');
+  let digits=String(p||'').normalize('NFKC').replace(/[^\d]/g,'');   // NFKC: full-width digits count as digits too
   if(digits.startsWith('0031')) digits='0'+digits.slice(4);
   else if(digits.startsWith('31') && digits.length>=11) digits='0'+digits.slice(2);
   return digits;

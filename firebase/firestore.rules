@@ -97,6 +97,27 @@ service cloud.firestore {
       allow delete: if signedIn() && (request.auth.uid == uid || isCoordinator());
     }
 
+    // ---- Error log: what went wrong in someone's browser (see error-log.js) ---------------
+    // Anyone with a session may write, but only into their OWN 10 slots (<uid>_0 ... <uid>_9, so one browser can never fill the
+    // database), only these fields and only short values. Only the coordinator can read or delete the log; the weekly purge job
+    // on the server deletes entries after 30 days. The app never puts names, phone numbers or codes in it.
+    function validErrorEntry() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['at', 'where', 'code', 'msg', 'v', 'ua'])
+        && d.keys().hasAll(['at', 'where', 'code', 'msg', 'v', 'ua'])
+        && d.at is number
+        && d.where is string && d.where.size() <= 40
+        && d.code is string && d.code.size() <= 60
+        && d.msg is string && d.msg.size() <= 200
+        && d.v is string && d.v.size() <= 20
+        && d.ua is string && d.ua.size() <= 60;
+    }
+    match /errorLog/{entryId} {
+      allow get, list: if isCoordinator();
+      allow create, update: if signedIn() && entryId.matches(request.auth.uid + '_[0-9]') && validErrorEntry();
+      allow delete: if isCoordinator();
+    }
+
     // ---- Families ------------------------------------------------------------------
     // Readable by members only (the Rooster needs names, times and — for the WhatsApp
     // links — phone numbers). Parents may only edit their OWN family.

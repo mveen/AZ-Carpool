@@ -237,6 +237,25 @@ await testAsync('syncListeners: only the coordinator listens to all links and in
   assert.deepEqual(S.invitesByCode, { CODE1234: 'f3' }); assert.deepEqual(S.inviteByFamily, { f3: 'CODE1234' }); assert.ok('p1' in S.links);
   stopDataListeners();
 });
+await testAsync('syncListeners: only the coordinator listens to the error log, and entries older than 30 days are removed at the first load', async () => {
+  const now = Date.now(), DAY = 24 * 60 * 60 * 1000;
+  const fake = useFakeDb({ ...sampleDbSeed(), 'errorLog/u1_0': { at: now - DAY, where: 'gate', code: 'link-denied', msg: '', v: 'v88', ua: 'iOS Safari 17' }, 'errorLog/u2_0': { at: now - 40 * DAY, where: 'gate', code: 'old', msg: '', v: 'v80', ua: '?' } });
+  sampleCoordinatorState({ links: {}, families: {} });
+  syncListeners(); await tick(); await tick(); await tick();
+  assert.deepEqual(Object.keys(S.errorLog), ['u1_0']); assert.equal(S.errorLogLoaded, true);
+  assert.deepEqual(fake.collection('errorLog').map(r => r[0]), ['u1_0']);
+  stopDataListeners();
+});
+await testAsync('syncListeners: a parent never listens to the error log', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'errorLog/u1_0': { at: Date.now() } });
+  sampleParentState({ families: {}, groups: {} });
+  syncListeners(); await tick(); await tick();
+  assert.equal(S.errorLogUnsub, null); assert.deepEqual(S.errorLog, {});
+});
+await testAsync('db.signOut forgets the anonymous account; an older SDK without signOut does not break it', async () => {
+  let fake = useFakeDb({}); await db.signOut(); assert.equal(fake.signOutCount(), 1);
+  fake = useFakeDb({}); delete fake.sdk.signOut; await db.signOut();
+});
 await testAsync('recordSession: a linked browser stores its family and time, at most once per 15 minutes', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState({}); resetSessionThrottle();
   await recordSession(1e12);
