@@ -271,7 +271,8 @@ test('the avatar article quotes names that exist in the app', () => {
 test('help reflects the server jobs, the new host and the "Aanwezig om" texts', () => {
   assert.match(allText(findArticle('mijn-week')), /Aanwezig om/); assert.ok(Object.values(nl).includes('Aanwezig om'));
   assert.match(allText(findArticle('over-privacy')), /mijn\.host[\s\S]*Back-ups[\s\S]*30 dagen/);
-  assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*zaterdag/);
+  assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*vrijdag kort na 19:00/);
+  assert.match(allText(findArticle('wijzigen')), /Op vrijdag om 19:00 zijn alle wijzigingen vanzelf weer weg/);
   assert.match(allText(findArticle('beheer-kalenders', { canEdit: true })), /elke ochtend vroeg/);
   assert.doesNotMatch(allText(findArticle('over-privacy')) + allText(findArticle('over-diensten')), /GitHub/);
 });

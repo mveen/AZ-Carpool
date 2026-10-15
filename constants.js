@@ -96,13 +96,18 @@ export const PH_PATHS = {
 export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 
 // Shown in the Instellingen sheet. Bump together with CACHE_NAME in service-worker.js (a test checks they match).
-export const APP_VERSION = 'v89';
+export const APP_VERSION = 'v90';
+
+// The week is over on Friday evening at this hour (local time), not at midnight: from then on the app shows the coming week,
+// the one-off changes (Wijzigen) of the week expire and the server job (cron/purge.mjs) removes them.
+export const WEEK_END_HOUR = 19;
+export function weekHasEnded(now = new Date()){ const d = now.getDay(); return d === 6 || d === 0 || (d === 5 && now.getHours() >= WEEK_END_HOUR); }
 
 // Today's DAYS-key, if it's a weekday — used to default Rooster's day-carousel and to mark "today".
-// True weekday-or-null: null on Sat/Sun means "no day is actually today" — used ONLY for
+// True weekday-or-null: null in the weekend (Friday from WEEK_END_HOUR on, Saturday, Sunday) means "no day is actually today" — used ONLY for
 // real "is this today" indicators (green dot, VANDAAG badge). Never falls back to a weekday.
 // Today as a weekday key ("Ma".."Vr", null in the weekend). A function, so a phone that stays open past midnight (and the tests) get the real "today".
-export function todayKeyNow(){ const map=[null,"Ma","Di","Wo","Do","Vr",null]; return map[new Date().getDay()]; }
+export function todayKeyNow(){ const now = new Date(); if(weekHasEnded(now)) return null; return [null,"Ma","Di","Wo","Do","Vr",null][now.getDay()]; }
 export const todayKey = todayKeyNow();   // value at start-up: only for code that must not change while the app is open
 
 // ---------- Address of the app, put at the end of the WhatsApp messages ----------

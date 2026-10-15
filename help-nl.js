@@ -105,7 +105,7 @@ export default [
     title: 'Mijn dochter is ziek of ik wil een rit ruilen (eenmalig wijzigen)',
     keywords: 'wijzigen ziek ruilen rit aanpassen eenmalig afmelden niet mee meerijden andere chauffeur tijd veranderen deze week',
     body: [
-      'Ga naar Wijzigen. Daar pas je de ritten van alleen deze week aan. Het vaste rooster blijft zoals het was. Aan het weekend zijn alle wijzigingen vanzelf weer weg.',
+      'Ga naar Wijzigen. Daar pas je de ritten van alleen deze week aan. Het vaste rooster blijft zoals het was. Op vrijdag om 19:00 zijn alle wijzigingen vanzelf weer weg.',
       '1. Kies de dag bovenaan. Dagen met een wijziging hebben een stip.',
       '2. Elke rit is één regel: tijd, chauffeur en route, met daaronder de meisjes die meerijden. Tik op Wijzig om de rit open te klappen.',
       '3. Pas aan wat nodig is: vertrektijd, chauffeur, ophaalplek en aankomst (AFC \'34 of ATC). Bij Kinderen tik je op de drie puntjes om een meisje naar een andere auto te verplaatsen of uit de auto te halen. Een wijziging wordt meteen opgeslagen.',
@@ -122,7 +122,7 @@ export default [
     keywords: 'dagcoordinator dagcoördinator coördinator morgen wie regelt',
     body: [
       'Elke dag heeft één ouder als dagcoördinator. Die regelt de wijzigingen voor die dag.',
-      'Op Rooster en Mijn week staat wie dat morgen is. Op vrijdag staat er niets. In het weekend staat wie het maandag is.',
+      'Op Rooster en Mijn week staat wie dat morgen is. Op vrijdag staat er tot 19:00 niets. Vanaf vrijdag 19:00 en in het weekend staat wie het maandag is.',
       'Staat er niemand, dan heeft de coördinator nog niemand ingesteld.',
     ],
   },
@@ -524,7 +524,7 @@ export default [
       '• Agenda van je dochter: een agenda-bestand per gezin (Mijn gezin → Agenda) dat je agenda-app zelf ophaalt. Het wordt elk half uur bijgewerkt door een taak op de webserver van mijn.host.',
       '• Berichten: via WhatsApp. De app verstuurt zelf geen berichten.',
       '• Opslag en hosting: Google Firebase (database), mijn.host in Nederland (hosting, back-ups en geplande taken).',
-      '• Opschonen: elke zaterdag kort na middernacht worden de eenmalige wijzigingen van de afgelopen week door een taak op de webserver verwijderd. Daarvoor worden de gereden ritten eerst vastgelegd.',
+      '• Opschonen: elke vrijdag kort na 19:00 worden de eenmalige wijzigingen van de afgelopen week door een taak op de webserver verwijderd. Daarvoor worden de gereden ritten eerst vastgelegd.',
     ],
   },
   {

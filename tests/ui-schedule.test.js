@@ -161,10 +161,16 @@ test('Monday to Thursday: the coordinator of the NEXT day ("morgen")', () => {
   assert.deepEqual(dayCoordinatorTarget(at('2026-09-30T10:00:00+02:00')), { day: 'Do', when: 'morgen' });
   assert.deepEqual(dayCoordinatorTarget(at('2026-10-01T10:00:00+02:00')), { day: 'Vr', when: 'morgen' });
 });
-test('Friday: no coordinator is mentioned (changes are purged at midnight)', () => {
+test('Friday until 19:00: no coordinator is mentioned (changes are purged at 19:00)', () => {
   assert.equal(dayCoordinatorTarget(at('2026-10-02T10:00:00+02:00')), null);
+  assert.equal(dayCoordinatorTarget(at('2026-10-02T18:59:00+02:00')), null);
   sampleParentState({ dayCoordinators: { Ma: 'f3', Vr: 'f3', Di: 'f3' } });
   assert.equal(withFakeNow('2026-10-02T10:00:00+02:00', () => dayCoordinatorHtml()), '');
+});
+test('Friday from 19:00: the coordinator of Monday ("maandag"), like the weekend', () => {
+  assert.deepEqual(dayCoordinatorTarget(at('2026-10-02T19:00:00+02:00')), { day: 'Ma', when: 'maandag' });
+  sampleParentState({ dayCoordinators: { Ma: 'f3', Vr: 'f1' } });
+  assert.match(text(withFakeNow('2026-10-02T21:00:00+02:00', () => dayCoordinatorHtml())), /^Dagcoördinator maandag: Kees de Vries/);
 });
 test('Saturday and Sunday: the coordinator of Monday ("maandag")', () => {
   assert.deepEqual(dayCoordinatorTarget(at('2026-10-03T10:00:00+02:00')), { day: 'Ma', when: 'maandag' });

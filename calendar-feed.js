@@ -4,7 +4,7 @@
 //   rides in      -> feedEvents(familyId, state, nowMs)  -> [{ uid, startMs, endMs, summary, description, location }]
 //   .ics text out -> buildIcs({ name, events, nowMs })
 import { t } from './i18n.js';
-import { DAYS } from './constants.js';
+import { DAYS, WEEK_END_HOUR } from './constants.js';
 import { effectiveCars, fam, isFlex, ovGirlsFor, plainDriverName, rideTime } from './rides.js';
 import { freeText, normalizeLocations, placeFor, placeName, routeLabel } from './locations.js';
 import { getISOWeekKey, weekKeyDayIso } from './dates.js';
@@ -39,11 +39,12 @@ export function amsterdamToMs(iso, hhmm) {
 const validTime = s => /^\d{1,2}:\d{2}$/.test(String(s || ''));
 const clock = s => { const [h, m] = String(s).split(':'); return h.padStart(2, '0') + ':' + m; };
 
-// The ISO week keys the calendar covers: the planning week (from Saturday on: the coming week) and the two after it.
+// The ISO week keys the calendar covers: the planning week (from Friday 19:00 Amsterdam time on: the coming week) and the two after it.
 export function feedWeekKeys(nowMs) {
   const [y, m, d] = amsterdamDate(nowMs).split('-').map(Number);
   const day = new Date(Date.UTC(y, m - 1, d)), dow = day.getUTCDay();   // 0 = Sunday
-  day.setUTCDate(day.getUTCDate() + (dow === 6 ? 2 : dow === 0 ? 1 : 0));
+  const weekOver = dow === 5 && Number(amsterdamClock(nowMs).slice(0, 2)) >= WEEK_END_HOUR;
+  day.setUTCDate(day.getUTCDate() + (dow === 6 ? 2 : dow === 0 ? 1 : weekOver ? 3 : 0));
   const keys = [];
   for (let i = 0; i < FEED_WEEKS; i++) {
     const x = new Date(day); x.setUTCDate(day.getUTCDate() + 7 * i);

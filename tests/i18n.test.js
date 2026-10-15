@@ -304,6 +304,11 @@ test('the family-type buttons use short labels', () => {
   assert.equal(t('profile.gezinstype.vast'), 'Vast (volgens schema)');
   assert.equal(t('profile.gezinstype.flex'), 'Flex (zelf plannen)');
 });
+test('the texts about one-off changes say they disappear on Friday at 19:00', () => {
+  assert.match(t('deviation.eenmalige_ritaanpassing_voor_deze_week'), /elke vrijdag om 19:00/);
+  assert.match(t('deviation.deze_week_en_verdwijnen_dit'), /vrijdag om 19:00/);
+  assert.doesNotMatch(t('deviation.deze_week_en_verdwijnen_dit') + t('deviation.eenmalige_ritaanpassing_voor_deze_week'), /weekend/);
+});
 test('the agenda update text names Proton and points to Mijn week', () => {
   assert.match(t('agenda.bijwerken'), /Google of Proton/); assert.match(t('agenda.bijwerken'), /Mijn week/);
 });

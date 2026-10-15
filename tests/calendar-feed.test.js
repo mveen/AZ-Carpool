@@ -66,6 +66,10 @@ test('from Saturday the coming week is the first (the week that ended is over)',
   assert.deepEqual(feedWeekKeys(new Date('2026-10-04T12:00:00+02:00').getTime()), ['2026-W41', '2026-W42', '2026-W43']);
   assert.deepEqual(feedWeekKeys(new Date('2026-10-05T00:00:00+02:00').getTime()), ['2026-W41', '2026-W42', '2026-W43']);
 });
+test('the turn is Friday 19:00 Amsterdam time, not before', () => {
+  assert.deepEqual(feedWeekKeys(new Date('2026-10-02T18:59:00+02:00').getTime()), ['2026-W40', '2026-W41', '2026-W42']);
+  assert.deepEqual(feedWeekKeys(new Date('2026-10-02T19:00:00+02:00').getTime()), ['2026-W41', '2026-W42', '2026-W43']);
+});
 test('over the year change: 2026 has 53 weeks', () => {
   assert.deepEqual(feedWeekKeys(new Date('2026-12-28T09:00:00+01:00').getTime()), ['2026-W53', '2027-W01', '2027-W02']);
 });
