@@ -13,6 +13,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot } from './test-support.js';
 import { S } from '../state.js';
+import { _resetErrorLogForTests } from '../error-log.js';
 import {
   renderImpersonateBanner, startImpersonate, stopImpersonate, familyFormHtml, readFamilyForm, renderClaimCoordinator,
   renderGateOrApp, renderGate, submitGate, introWaHref, renderProfile, saveProfile, weekschemaWarningHtml, weekschemaWarningInnerHtml, isWeekschemaField,
@@ -113,6 +114,70 @@ await testAsync('without a session (no uid) nothing is written and the user is t
   await submitGate();
   assert.match(toast(), /Geen verbinding/);
   assert.equal(fake.writes.length, 0);
+});
+
+console.log('\n=== the gate: robust against a broken session, pasted codes and a real mismatch ===');
+const settle = () => new Promise(r => setImmediate(r));
+const makeStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k), has: k => m.has(k) }; };
+const gateSetup = (extraSeed = {}) => {
+  _resetErrorLogForTests(); globalThis.sessionStorage = makeStore();
+  const fake = useFakeDb({ 'invites/CODE1234': { familyId: 'f2' }, ...extraSeed });
+  resetState({ me: 'u1', appReady: true, coordinatorExists: true, families: sampleParentState().families });
+  return fake;
+};
+const logged = fake => fake.collection('errorLog').map(r => r[1]);
+await testAsync('a pasted code with spaces and invisible characters still works', async () => {
+  const fake = gateSetup(); fillGate('0611111111', ' CODE 1234​ ');
+  await submitGate();
+  assert.equal(fake.get('links/u1').code, 'CODE1234'); assert.match(toast(), /Toegang verleend/);
+});
+await testAsync('a refused code lookup (broken session) restarts the app ONCE by itself: sign out, then reload', async () => {
+  const fake = gateSetup(); fake.failReads('invites/'); fillGate('0611111111', 'CODE1234');
+  await submitGate(); await settle();
+  assert.match(dom.el('gateMsg').textContent, /Even opnieuw verbinden/);
+  assert.equal(fake.signOutCount(), 1); assert.equal(sessionStorage.has('az-auto-reset'), true);
+  assert.equal(fake.get('links/u1'), undefined);
+  assert.ok(logged(fake).some(e => e.where === 'gate' && e.code === 'lookup-permission-denied'));
+});
+await testAsync('the second time (after the restart) it explains instead of restarting again, and says nothing about the phone number', async () => {
+  const fake = gateSetup(); sessionStorage.setItem('az-auto-reset', '1'); fake.failReads('invites/'); fillGate('0611111111', 'CODE1234');
+  await submitGate();
+  const m = dom.el('gateMsg').textContent;
+  assert.match(m, /verbinding met de app is niet in orde/); assert.match(m, /Opnieuw beginnen/); assert.doesNotMatch(m, /hoort niet bij deze code/);
+  assert.equal(fake.signOutCount(), 0);
+});
+await testAsync('no network: "Geen verbinding", no restart, no accusation about the number', async () => {
+  const fake = gateSetup(); fake.failReads('invites/', 'unavailable'); fillGate('0611111111', 'CODE1234');
+  await submitGate();
+  assert.match(dom.el('gateMsg').textContent, /Geen verbinding/); assert.equal(fake.signOutCount(), 0); assert.equal(sessionStorage.has('az-auto-reset'), false);
+});
+await testAsync('a number that does not belong to the code is still told so, and logged without the number', async () => {
+  const fake = gateSetup(); fake.failWrites('links/', 'permission-denied'); fillGate('0621708024', 'CODE1234');
+  await submitGate(); await settle();
+  assert.match(dom.el('gateMsg').textContent, /hoort niet bij deze code/); assert.equal(fake.signOutCount(), 0);
+  const e = logged(fake).find(x => x.code === 'link-denied'); assert.ok(e);
+  assert.match(e.msg, /phone digits 10/); assert.doesNotMatch(JSON.stringify(logged(fake)), /0621708024|CODE1234/);
+});
+await testAsync('another write error shows the error and is logged with its code', async () => {
+  const fake = gateSetup(); fake.failWrites('links/', 'quota exceeded', 'resource-exhausted'); fillGate('0611111111', 'CODE1234');
+  await submitGate(); await settle();
+  assert.match(dom.el('gateMsg').textContent, /quota exceeded/); assert.ok(logged(fake).some(x => x.code === 'link-resource-exhausted'));
+});
+await testAsync('without a session the problem is kept for later (nothing written, nothing lost)', async () => {
+  _resetErrorLogForTests(); const fake = useFakeDb({}); resetState({ me: null }); fillGate('0611111111', 'CODE1234');
+  await submitGate();
+  assert.equal(fake.writes.length, 0); assert.match(localStorage.getItem('az-error-queue') || '', /no-session/);
+});
+await testAsync('a successful gate clears the "restarted once" flag', async () => {
+  const fake = gateSetup(); sessionStorage.setItem('az-auto-reset', '1'); fillGate('0611111111', 'CODE1234');
+  await submitGate();
+  assert.ok(fake.get('links/u1')); assert.equal(sessionStorage.has('az-auto-reset'), false);
+});
+await testAsync('the gate has an "Opnieuw beginnen" button that resets this browser', async () => {
+  const fake = gateSetup(); renderGate();
+  assert.match(dom.html('tab-gate'), /id="gateReset"/); assert.match(text(dom.html('tab-gate')), /Lukt het inloggen niet\? Opnieuw beginnen/);
+  dom.el('gateReset').onclick(); await settle();
+  assert.match(dom.el('gateMsg').textContent, /Even opnieuw verbinden/); assert.equal(fake.signOutCount(), 1);
 });
 
 console.log('\n=== Mijn gezin ===');

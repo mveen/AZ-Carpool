@@ -11,7 +11,7 @@ import { S } from '../state.js';
 import { logPassedShifts } from '../data.js';
 import { encodeFields, decodeFields } from '../cron/lib/firestore-rest.mjs';
 import { buildCron } from '../scripts/build-cron.mjs';
-import { runPurge, staleDeviations, loadApp, APP_MODULES } from '../cron/purge.mjs';
+import { runPurge, staleDeviations, staleErrorLogs, LOG_KEEP_DAYS, loadApp, APP_MODULES } from '../cron/purge.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -158,6 +158,41 @@ await test('the copy that is uploaded to the host (cron folder + app/) does the 
     const r = JSON.parse(x.stdout.trim().split('\n').pop());
     assert.ok(r.logged >= 3); assert.deepEqual([r.deleted, r.skipped, r.kept], [3, 0, 1]);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
+});
+
+console.log('=== the error log (errorLog/): entries older than 30 days go ===');
+const DAY = 24 * 60 * 60 * 1000;
+const logDoc = (at, extra = {}) => ({ at, where: 'gate', code: 'link-denied', msg: '', v: 'v88', ua: 'iOS Safari 17', ...extra });
+await test('staleErrorLogs: older than 30 days, or without a usable time stamp; exactly 30 days stays', () => {
+  const l = (id, data) => ({ id, data });
+  const list = [l('old', { at: satMs - 31 * DAY }), l('edge', { at: satMs - 30 * DAY }), l('new', { at: satMs - DAY }), l('none', {}), l('text', { at: 'yesterday' })];
+  assert.deepEqual(staleErrorLogs(list, satMs).map(x => x.id), ['old', 'none', 'text']); assert.equal(LOG_KEEP_DAYS, 30);
+});
+await test('the weekly purge deletes old error-log entries, keeps recent ones and reports the number', async () => {
+  resetState();
+  const fs = fakeFirestore({ ...seed(), 'errorLog/u1_0': logDoc(satMs - 45 * DAY), 'errorLog/u1_1': logDoc(satMs - 2 * DAY), 'errorLog/u2_0': logDoc(satMs - 31 * DAY), 'errorLog/u3_5': { where: 'x' } });
+  const logs = []; const res = await run(fs, { log: m => logs.push(m) });
+  assert.deepEqual(fs.calls.del.filter(p => p.startsWith('errorLog/')).sort(), ['errorLog/u1_0', 'errorLog/u2_0', 'errorLog/u3_5']);
+  assert.ok(fs.data.has('errorLog/u1_1')); assert.equal(res.logsDeleted, 3);
+  assert.ok(logs.some(m => /Error log: 3 entries older than 30 days deleted/.test(m)));
+});
+await test('an entry that was rewritten while the job ran is left alone', async () => {
+  resetState();
+  const fs = fakeFirestore({ ...seed(), 'errorLog/u1_0': logDoc(satMs - 45 * DAY) });
+  const real = fs.listDocuments; fs.listDocuments = async c => { const r = await real(c); if (c === 'errorLog') fs.version.set('errorLog/u1_0', 'changed'); return r; };
+  const res = await run(fs);
+  assert.ok(fs.data.has('errorLog/u1_0')); assert.equal(res.logsDeleted, 0);
+});
+await test('no error log at all is fine, and a failing clean-up never stops the ride logging or the deviations purge', async () => {
+  resetState();
+  let fs = fakeFirestore(seed()); let res = await run(fs);
+  assert.equal(res.logsDeleted, 0); assert.deepEqual([res.deleted, res.skipped, res.kept], [3, 0, 1]);
+  resetState();
+  fs = fakeFirestore({ ...seed(), 'errorLog/u1_0': logDoc(1) });
+  const real = fs.listDocuments; fs.listDocuments = async c => { if (c === 'errorLog') throw new Error('Firestore GET failed: HTTP 503'); return real(c); };
+  const q = quiet(); res = await run(fs, q);
+  assert.ok(res.logged >= 3); assert.deepEqual([res.deleted, res.skipped, res.kept], [3, 0, 1]); assert.equal(res.logsDeleted, 0);
+  assert.ok(q.warnings.some(w => /could not clean the error log/.test(w)));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

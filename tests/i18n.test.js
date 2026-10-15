@@ -245,6 +245,18 @@ test('the home-screen sheet has all its texts (iOS steps, Firefox steps, buttons
 
 test('the Firefox menu step is short enough for one line', () => { assert.equal(t('installprompt.ff_stap1'), 'Tik op het menu (drie puntjes)'); });
 
+test('the gate texts for a broken session, no connection and the reset button exist (and do not blame the phone number)', () => {
+  assert.match(t('profile.sessie_probleem'), /Opnieuw beginnen/); assert.doesNotMatch(t('profile.sessie_probleem'), /telefoonnummer/);
+  assert.match(t('profile.geen_verbinding_probeer_opnieuw'), /Geen verbinding/);
+  assert.equal(t('profile.even_opnieuw_verbinden'), 'Even opnieuw verbinden…');
+  assert.match(t('profile.probleem_met_inloggen_opnieuw_beginnen'), /Opnieuw beginnen/);
+});
+test('the Beheer texts for the error log exist and promise the 30 days', () => {
+  assert.equal(t('beheer.fouten_titel'), 'Gemelde problemen'); assert.match(t('beheer.fouten_uitleg'), /30 dagen/);
+  assert.equal(t('beheer.attn_problemen', { p1: 3 }), '3 problemen gemeld in de afgelopen 24 uur');
+  assert.equal(t('beheer.fouten_meer', { p1: 4 }), 'En nog 4 oudere meldingen.');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

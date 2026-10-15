@@ -123,6 +123,19 @@ await testAsync('a failed sign-in shows a connection error and never marks the a
   assert.equal(S.appReady, false);
   assert.match(status(), /Niet verbonden/);
 });
+await testAsync('a failed sign-in is kept on the phone for the log, and sent at the next start when there is a session', async () => {
+  installNav(); localStorage.removeItem('az-error-queue'); (await import('../error-log.js'))._resetErrorLogForTests();
+  let fake = useFakeDb({}); resetState({ appReady: false });
+  const { initDb } = await import('../data.js');
+  initDb({ signIn: async () => { throw Object.assign(new Error('offline'), { code: 'auth/network-request-failed' }); }, doc: () => { throw new Error('unused'); } });
+  await withFakeNowAsync(NOW, () => init());
+  assert.match(localStorage.getItem('az-error-queue'), /signin-auth\/network-request-failed/);
+  // next start: the queue is loaded in bootstrap() and flushed right after the sign-in
+  const { loadQueuedErrors } = await import('../error-log.js'); loadQueuedErrors();
+  fake = useFakeDb(sampleDbSeed(), { uid: 'p7' }); resetState({ appReady: false });
+  await withFakeNowAsync(NOW, () => init()); await new Promise(r => setImmediate(r)); await new Promise(r => setImmediate(r));
+  const rows = fake.collection('errorLog'); assert.equal(rows.length, 1); assert.match(rows[0][0], /^p7_[0-9]$/); assert.equal(rows[0][1].where, 'start');
+});
 
 console.log('\n=== links and week rollover ===');
 test('afterLinksChanged marks links as loaded and re-renders', () => {

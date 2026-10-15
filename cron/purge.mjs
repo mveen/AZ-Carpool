@@ -3,6 +3,7 @@
 // What the app used to do by itself when the first member opened it (data.js: logPassedShifts + purgeStaleDeviations), now done by the host:
 //   1. log the rides that were driven (rideLog/<date>_<heen|terug>) with the SAME app code, so a ride that ran on a one-off change is counted;
 //   2. delete the deviations of an older week whose own `expiresAt` has passed.
+//   3. (first, on its own) delete error-log entries (errorLog/) older than 30 days.
 // Nothing is deleted when step 1 failed. A deviation that was changed after it was read is not deleted either.
 // Safe to run at any time and as often as you like: it only removes what has expired, and logs only what is not logged yet.
 // The app keeps its own purge as a safety net, for when this job is down.
@@ -36,6 +37,13 @@ export function staleDeviations(list, currentWeekKey, now) {
   });
 }
 
+// PURE. Error-log entries (errorLog/, see error-log.js) older than the keep period, or without a usable time stamp. 30 days, same as the app's own safety net.
+export const LOG_KEEP_DAYS = 30;
+export function staleErrorLogs(list, now, keepDays = LOG_KEEP_DAYS) {
+  const cutoff = now - keepDays * 24 * 60 * 60 * 1000;
+  return list.filter(({ data }) => typeof data.at !== 'number' || data.at < cutoff);
+}
+
 const lastPart = name => name.slice(name.lastIndexOf('/') + 1);
 async function readCollection(firestore, path) {
   const out = [];
@@ -49,6 +57,15 @@ const byId = list => Object.fromEntries(list.map(d => [d.id, d.data]));
 
 export async function runPurge({ firestore, app, now = Date.now(), log = console.log, warn = console.error }) {
   const { S } = app;
+
+  // 0. The error log: entries older than 30 days go. Independent of the rest: a problem here never stops the ride logging, nor the other way round.
+  let logsDeleted = 0;
+  try {
+    for (const d of staleErrorLogs(await readCollection(firestore, 'errorLog'), now)) {
+      if (await firestore.deleteDocument('errorLog/' + d.id, { updateTime: d.updateTime })) logsDeleted++;
+    }
+    if (logsDeleted) log(`Error log: ${logsDeleted} entries older than ${LOG_KEEP_DAYS} days deleted`);
+  } catch (e) { warn('WARNING: could not clean the error log: ' + e.message); }
   const [deviations, families, groups, periodsColl, periodCars, rideLog] = await Promise.all(
     ['deviations', 'families', 'groups', 'periods', 'periodCars', 'rideLog'].map(c => readCollection(firestore, c)));
   const legacy = await firestore.getDocument('settings/period');
@@ -73,7 +90,7 @@ export async function runPurge({ firestore, app, now = Date.now(), log = console
   for (const d of stale) { (await firestore.deleteDocument('deviations/' + d.id, { updateTime: d.updateTime })) ? deleted++ : skipped++; }
   if (skipped) warn(`WARNING: ${skipped} change(s) were changed or removed while the job ran and were left alone`);
   log(`Purge (planning week ${S.currentWeekKey}): ${docs.length} rides logged, ${deleted} of ${deviations.length} changes deleted`);
-  return { logged: docs.length, deleted, skipped, kept: deviations.length - stale.length };
+  return { logged: docs.length, deleted, skipped, kept: deviations.length - stale.length, logsDeleted };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

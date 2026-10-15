@@ -19,6 +19,7 @@ import { backupFileName, buildBackupCsv, parseBackup, planRestore } from './fami
 import { activeMatchFeeds, loadAllMatches } from './matches.js';
 import { familyFormHtml, startImpersonate, wireIntroWa, wireExclusiveAvailability, wireFamilyFormExtras } from './ui-profile.js';
 import { genCode } from './coordinator.js';
+import { clearErrorLog } from './error-log.js';
 import { PERIOD_MAX_WORKDAYS, PERIOD_NAME_MAX, normalizePeriod, periodList, periodPhase, periodProgress } from './period.js';
 import { collectPendingChanges, countPendingChanges, describeChange } from './schedule-changes.js';
 import { renderSchedule } from './ui-schedule.js';
@@ -178,6 +179,35 @@ export async function confirmRestore(){
 }
 
 export function cancelRestore(){ pendingBackup = null; renderBeheer(); }
+
+// Beheer > Gemelde problemen: the app's own error log (see error-log.js), newest first.
+export const ERROR_LOG_SHOWN = 20;
+export function errorLogEntries(){
+  return Object.entries(S.errorLog||{}).map(([id,d])=>({ id, ...d })).filter(e=>typeof e.at==='number').sort((a,b)=>b.at-a.at);
+}
+export function errorLogCardHtml(){
+  const list = errorLogEntries();
+  const rows = list.slice(0, ERROR_LOG_SHOWN).map(e=>`<div class="errRow">
+      <div class="errRow__what">${esc(e.where)} · ${esc(e.code)}</div>
+      <div class="errRow__meta">${esc(new Date(e.at).toLocaleString(locale(), {day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'}))} · ${esc(e.v)} · ${esc(e.ua)}</div>
+      ${e.msg? `<div class="errRow__msg">${esc(e.msg)}</div>` : ''}
+    </div>`).join('');
+  const more = list.length>ERROR_LOG_SHOWN? `<p class="muted">${t('beheer.fouten_meer',{p1:list.length-ERROR_LOG_SHOWN})}</p>` : '';
+  return `<div class="card" id="errorLogCard">
+      <h2>${t('beheer.fouten_titel')}</h2>
+      <p class="muted">${t('beheer.fouten_uitleg')}</p>
+      ${list.length? rows+more : `<p class="muted">${t('beheer.fouten_leeg')}</p>`}
+      ${list.length? `<div class="cardActions"><button type="button" class="btn small secondary" id="errorLogClear">${t('beheer.fouten_wis_alles')}</button></div>` : ''}
+    </div>`;
+}
+export function wireErrorLogCard(){
+  const b=document.getElementById('errorLogClear');
+  if(b) b.onclick=()=>twoStepConfirm(b, t('beheer.fouten_bevestig'), async ()=>{
+    try{ await clearErrorLog(); showToast(t('beheer.fouten_gewist')); }
+    catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
+    renderBeheer();
+  });
+}
 
 export function wireFamilyBackupCard(){
   const mk=document.getElementById('backupMake'); if(mk) mk.onclick=downloadBackup;
@@ -581,6 +611,8 @@ export function renderBeheer(){
   if(noPhone) attn.push(['familiesCard', t('beheer.attn_zonder_telefoon',{p1:noPhone})]);
   dupGroups.forEach(list=>attn.push(['familiesCard', t('beheer.attn_dubbel',{p1:esc(list[0][1].girlName),p2:list.length})]));
   (S.matchFetchFailedTeams||[]).forEach(f=>attn.push(['feedsCard', t('beheer.attn_kalender_mislukt',{p1:esc(f.label)})]));
+  const recentProblems = errorLogEntries().filter(e=>e.at > Date.now()-24*60*60*1000).length;
+  if(recentProblems) attn.push(['errorLogCard', t('beheer.attn_problemen',{p1:recentProblems})]);
   const attnHtml = attn.length? `<div class="begAttn" role="status">
       <div class="begAttnHead">${phIcon('warning')} ${t('beheer.attn_titel',{p1:attn.length})}</div>
       ${attn.map(([id,txt])=>`<button type="button" class="begAttnItem" data-goto="${id}"><span>${txt}</span>${phIcon('chevron-right')}</button>`).join('')}
@@ -666,6 +698,7 @@ export function renderBeheer(){
       ic('key', apiKeysCardHtml()),
       ic('download', familyBackupCardHtml()),
       ic('chart', impactCardHtml()),
+      ic('warning', errorLogCardHtml()),
     ]],
   ];
 
@@ -726,6 +759,7 @@ export function renderBeheer(){
     document.querySelectorAll('[data-locremove]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn, t('beheer.zeker_nogmaals_klikken'), ()=>removeLocationPlace(btn.dataset.locremove)));
     wireImpactCard(renderBeheer);
     wireFamilyBackupCard();
+    wireErrorLogCard();
     const atp=document.getElementById('addTogetherPref');
     if(atp) atp.onclick=async ()=>{
       const ids=[...document.querySelectorAll('.prefTogetherPick:checked')].map(c=>c.value);

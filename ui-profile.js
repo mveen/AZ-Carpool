@@ -3,7 +3,9 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { adjustMainPadding, esc, hapticTap, installCardHtml, phIcon, showToast, twoStepConfirm, updateStatusLine, wireInstallCard } from './ui-common.js';
 import { fam } from './rides.js';
-import { isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
+import { cleanCode, isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
+import { logError } from './error-log.js';
+import { clearAutoReset, resetSession, shouldAutoReset } from './session-reset.js';
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
 import { APP_URL, DAYS, WA_ICON_SMALL } from './constants.js';
 import { waPhone } from './ui-schedule.js';
@@ -409,38 +411,64 @@ export function renderGate(){
       <label>${t('profile.code')}</label>
       <input type="text" id="gateCode" inputmode="numeric" autocomplete="one-time-code" maxlength="32" placeholder="${t('profile.code_van_de_coordinator')}">
       <button type="button" class="btn" id="gateSubmit">${t('profile.toegang_aanvragen')}</button>
-      <p id="gateMsg" class="muted" style="margin-top:8px"></p>
+      <p id="gateMsg" class="muted" style="margin-top:8px" role="status"></p>
+      <p class="muted"><button type="button" class="linkbtn" id="gateReset">${t('profile.probleem_met_inloggen_opnieuw_beginnen')}</button></p>
     </div>
   </div>`;
   const btn=document.getElementById('gateSubmit');
   if(btn) btn.onclick=submitGate;
+  const reset=document.getElementById('gateReset');
+  if(reset) reset.onclick=()=>{ const m=document.getElementById('gateMsg'); if(m) m.textContent=t('profile.even_opnieuw_verbinden'); resetSession(); };
 }
 
 // The real check happens in the Firestore rules: a links/{uid} doc is only accepted when `code`
 // is an existing invite for `familyId` AND `phoneKey` is one of that family's phoneKeys.
+// Looking up the code only needs a session (the rules say: signedIn). If that is refused, the browser's session is broken, not the code or
+// the phone number: restart the app once by itself (new anonymous account, fresh files), and after that ask the parent to use the reset button.
+// Anything else (no network, a timeout) is a connection problem. The real "this number does not belong to this code" is decided below.
+async function gateLookupFailed(e, say){
+  const code = (e && e.code) || 'error';
+  logError({ where:'gate', code:'lookup-'+code, message:e && e.message });
+  if(code==='permission-denied' || code==='unauthenticated'){
+    let store=null; try{ store=sessionStorage; }catch(_){ }
+    if(shouldAutoReset(store)){ say(t('profile.even_opnieuw_verbinden')); await resetSession(); return; }
+    say(t('profile.sessie_probleem'));
+  } else say(t('profile.geen_verbinding_probeer_opnieuw'));
+}
+
 export async function submitGate(){
-  if(!db||!S.me){ showToast(t('profile.geen_verbinding_herlaad_de_pagina')); return; }
+  if(!db||!S.me){ logError({ where:'gate', code:'no-session' }); showToast(t('profile.geen_verbinding_herlaad_de_pagina')); return; }
   const phone=(document.getElementById('gatePhone').value||'').trim();
-  const code=(document.getElementById('gateCode').value||'').trim();
+  const code=cleanCode(document.getElementById('gateCode').value);   // pasted codes often carry spaces or invisible characters
   const msg=document.getElementById('gateMsg');
   const say=t=>{ if(msg) msg.textContent=t; };
   if(!phone||!code){ say(t('profile.vul_alle_velden_in')); return; }
   if(!isValidInviteCode(code)){ say(t('profile.code_klopt_niet_controleer_en')); return; }
   const btn=document.getElementById('gateSubmit'); if(btn) btn.disabled=true;
   try{
-    const inv = await db.doc("invites/"+code).get();
+    let inv;
+    try{ inv = await db.doc("invites/"+code).get(); }
+    catch(e){ await gateLookupFailed(e, say); return; }
     const familyId = inv.exists? inv.data().familyId : null;
     if(!familyId){ say(t('profile.code_klopt_niet_controleer_en')); return; }
     const link={familyId, code, phoneKey:normalizePhone(phone), linkedAt:Date.now()};
-    await db.doc("links/"+S.me).set(link);
+    try{
+      await db.doc("links/"+S.me).set(link);
+    }catch(e){
+      if(e && e.code==='permission-denied'){
+        logError({ where:'gate', code:'link-denied', message:'phone digits '+link.phoneKey.length });   // never the number itself
+        say(t('profile.dit_telefoonnummer_hoort_niet_bij'));
+      } else {
+        logError({ where:'gate', code:'link-'+((e&&e.code)||'error'), message:e && e.message });
+        say(t('data.mislukt')+(e&&e.message||e));
+      }
+      return;
+    }
     // The server accepted it. Firestore doesn't send a new snapshot for "pending -> confirmed",
     // so apply it here (the links/{me} listener deliberately ignores the pending version).
+    let store=null; try{ store=sessionStorage; }catch(_){ } clearAutoReset(store);
     S.links[S.me]=link; afterLinksChanged();
     showToast(t('profile.toegang_verleend'));
-  }catch(e){
-    say(e && e.code==='permission-denied'
-      ? t('profile.dit_telefoonnummer_hoort_niet_bij')
-      : t('data.mislukt')+(e&&e.message||e));
   }finally{ if(btn) btn.disabled=false; }
 }
 
