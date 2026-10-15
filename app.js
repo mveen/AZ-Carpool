@@ -30,7 +30,7 @@ S.scheduleDay = todayKey || "Ma";
 
 // ---------- PWA: service worker registration + install prompt (real on Android/Chrome,
 // manual instructions on iOS Safari since it has no install-prompt API at all) ----------
-// Long-lived tabs/PWAs: when the planning week rolls over (Saturday 00:00) while the app is
+// Long-lived tabs/PWAs: when the planning week rolls over (Friday 19:00) while the app is
 // open or resumed from the background, switch to the new week and purge the old one.
 export function checkWeekRollover(){
   if(refreshWeekKey() && S.appReady){ purgeStaleDeviations(); renderAll(); }

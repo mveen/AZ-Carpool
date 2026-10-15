@@ -83,8 +83,24 @@ test('over the weekend the key already moves to next week', () => {
 });
 
 console.log('\n=== deviationExpiryMs ===');
-test('deviations expire on Saturday 00:00 Amsterdam time of their week', () => {
-  withFakeNow(NOW, () => assert.equal(new Date(deviationExpiryMs()).toISOString(), '2026-10-02T22:00:00.000Z'));
+test('deviations expire on Friday 19:00 Amsterdam time of their week', () => {
+  withFakeNow(NOW, () => assert.equal(new Date(deviationExpiryMs()).toISOString(), '2026-10-02T17:00:00.000Z'));
+});
+test('from Friday 19:00 the planning week is the coming week, so new deviations expire a week later', () => {
+  withFakeNow('2026-10-02T18:59:00+02:00', () => {
+    assert.equal(ymd(effectivePlanningDate()), '2026-10-02'); assert.equal(new Date(deviationExpiryMs()).toISOString(), '2026-10-02T17:00:00.000Z');
+  });
+  withFakeNow('2026-10-02T19:00:00+02:00', () => {
+    assert.equal(ymd(effectivePlanningDate()), '2026-10-05'); assert.equal(ymd(dateForWeekday('Ma')), '2026-10-05');
+    assert.equal(new Date(deviationExpiryMs()).toISOString(), '2026-10-09T17:00:00.000Z');
+  });
+});
+test('refreshWeekKey switches to the coming week on Friday at 19:00, not before', () => {
+  resetState({ currentWeekKey: WEEK_KEY });
+  withFakeNow('2026-10-02T18:59:00+02:00', () => assert.equal(refreshWeekKey(), false));
+  assert.equal(S.currentWeekKey, '2026-W40');
+  withFakeNow('2026-10-02T19:00:00+02:00', () => assert.equal(refreshWeekKey(), true));
+  assert.equal(S.currentWeekKey, '2026-W41');
 });
 
 console.log('\n=== labels ===');

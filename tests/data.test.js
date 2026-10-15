@@ -95,7 +95,7 @@ await testAsync('writes the deviation with week key and expiry, and strips inter
   const ok = await withFakeNowAsync(NOW, () => saveDeviationCars('Ma', 'heen', [{ baseGroupId: 'g1', driverFamilyId: 'f1', girlIds: ['f1'], note: undefined, departureTime: '07:30' }]));
   assert.equal(ok, true);
   const d = fake.get('deviations/Ma_heen');
-  assert.deepEqual(d, { day: 'Ma', direction: 'heen', weekKey: WEEK_KEY, expiresAt: new Date('2026-10-02T22:00:00Z').getTime(), cars: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30' }] });
+  assert.deepEqual(d, { day: 'Ma', direction: 'heen', weekKey: WEEK_KEY, expiresAt: new Date('2026-10-02T17:00:00Z').getTime(), cars: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30' }] });
   assert.equal(S.lastDeviationEditDay, 'Ma');
 });
 await testAsync('a failed write shows a message and returns false', async () => {

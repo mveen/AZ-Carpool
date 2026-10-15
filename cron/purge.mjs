@@ -1,4 +1,4 @@
-// cron/purge.mjs — the weekly clean-up, on the server: Saturday 00:00 the changes (Wijzigen) of the week that just ended expire.
+// cron/purge.mjs — the weekly clean-up, on the server: Friday 19:00 the changes (Wijzigen) of the week that just ended expire.
 //   node purge.mjs
 // What the app used to do by itself when the first member opened it (data.js: logPassedShifts + purgeStaleDeviations), now done by the host:
 //   1. log the rides that were driven (rideLog/<date>_<heen|terug>) with the SAME app code, so a ride that ran on a one-off change is counted;
@@ -8,7 +8,7 @@
 // Safe to run at any time and as often as you like: it only removes what has expired, and logs only what is not logged yet.
 // The app keeps its own purge as a safety net, for when this job is down.
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json): reads the data, writes rideLog, deletes deviations.
-process.env.TZ = 'Europe/Amsterdam';   // the week, Saturday 00:00 and the shift times are Amsterdam time, whatever time zone the host is in
+process.env.TZ = 'Europe/Amsterdam';   // the week, Friday 19:00 and the shift times are Amsterdam time, whatever time zone the host is in
 import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -74,7 +74,7 @@ export async function runPurge({ firestore, app, now = Date.now(), log = console
     deviations: byId(deviations), families: byId(families), groups: byId(groups), periodCars: byId(periodCars), rideLog: byId(rideLog),
     periods: app.mergePeriods(byId(periodsColl), legacy ? decodeFields(legacy.fields) : null),
   });
-  app.refreshWeekKey();   // after Saturday 00:00 this is already the coming week
+  app.refreshWeekKey();   // from Friday 19:00 this is already the coming week
 
   // 1. Log the rides that were driven: last week and this planning week, like logPassedShifts. A failure stops everything: nothing is deleted.
   const planning = app.effectivePlanningDate(), lastWeek = new Date(planning); lastWeek.setDate(planning.getDate() - 7);

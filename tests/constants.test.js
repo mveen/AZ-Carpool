@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import fs from 'node:fs';
-import { APP_VERSION, PH_PATHS, DAYS, APP_URL, WA_ICON_SMALL, todayKey, todayKeyNow } from '../constants.js';
+import { APP_VERSION, PH_PATHS, DAYS, APP_URL, WA_ICON_SMALL, todayKey, todayKeyNow, WEEK_END_HOUR, weekHasEnded } from '../constants.js';
 
 console.log('=== constants.js ===');
 test('DAYS are Monday to Friday, with the stored key first and the Dutch name second', () => {
@@ -61,6 +61,24 @@ test('the megaphone (notice bar) and the eye (test bar) exist', () => { assert.o
 test('todayKeyNow follows the clock (a phone that stays open past midnight), todayKey is the value at start-up', () => {
   assert.equal(typeof todayKeyNow, 'function'); assert.ok(['Ma', 'Di', 'Wo', 'Do', 'Vr', null].includes(todayKeyNow())); assert.equal(todayKey, todayKeyNow());
   assert.ok(PH_PATHS['plus-circle']); assert.ok(PH_PATHS['minus-circle']);
+});
+// A local clock on purpose: test-support.js would fix the clock for the whole file, and the todayKey test above needs the real one.
+function withFakeNow(iso, fn) {
+  const Real = Date, fixed = new Real(iso).getTime();
+  globalThis.Date = class extends Real { constructor(...a) { if (a.length === 0) super(fixed); else super(...a); } static now() { return fixed; } };
+  try { return fn(); } finally { globalThis.Date = Real; }
+}
+test('the week is over on Friday at 19:00 (not at midnight), and then nothing is "today" any more', () => {
+  assert.equal(WEEK_END_HOUR, 19);
+  const at = iso => new Date(iso);
+  assert.equal(weekHasEnded(at('2026-10-01T23:30:00+02:00')), false);   // Thursday night
+  assert.equal(weekHasEnded(at('2026-10-02T18:59:00+02:00')), false);
+  assert.equal(weekHasEnded(at('2026-10-02T19:00:00+02:00')), true);
+  assert.equal(weekHasEnded(at('2026-10-03T00:00:00+02:00')), true);    // Saturday
+  assert.equal(weekHasEnded(at('2026-10-04T23:59:00+02:00')), true);    // Sunday
+  assert.equal(weekHasEnded(at('2026-10-05T00:00:00+02:00')), false);   // Monday
+  withFakeNow('2026-10-02T18:59:00+02:00', () => assert.equal(todayKeyNow(), 'Vr'));
+  withFakeNow('2026-10-02T19:00:00+02:00', () => assert.equal(todayKeyNow(), null));
 });
 test('the avatar library icons all exist in PH_PATHS', () => {
   for (const k of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);

@@ -90,11 +90,11 @@ await test('the changes of the ended week are deleted, the new week\'s change st
   assert.ok(fs.data.has('deviations/Wo_heen'));
   assert.deepEqual([res.deleted, res.skipped, res.kept], [3, 0, 1]);
 });
-await test('before Saturday 00:00 nothing is deleted (the week is still running)', async () => {
+await test('before Friday 19:00 nothing is deleted (the week is still running)', async () => {
   resetState();
   const fs = fakeFirestore(seed());
-  const friday = new Date('2026-10-02T23:55:00+02:00').getTime();
-  await withFakeNowAsync('2026-10-02T23:55:00+02:00', async () => runPurge({ firestore: fs, app: await loadApp(), now: friday, ...quiet() }));
+  const friday = new Date('2026-10-02T18:55:00+02:00').getTime();
+  await withFakeNowAsync('2026-10-02T18:55:00+02:00', async () => runPurge({ firestore: fs, app: await loadApp(), now: friday, ...quiet() }));
   assert.deepEqual(fs.calls.del, ['deviations/Vr_heen'], 'only the old one without a week goes');
   assert.ok(fs.data.has('deviations/Di_heen') && fs.data.has('deviations/Do_terug'));
 });
@@ -128,7 +128,43 @@ await test('a database without any changes is fine', async () => {
   assert.equal(res.deleted, 0);
 });
 
+console.log('=== Friday 19:00 ===');
+const FRI = '2026-10-02T19:05:00+02:00';
+const EXPIRES_FRI_W40 = new Date('2026-10-02T19:00:00+02:00').getTime(), EXPIRES_FRI_W41 = new Date('2026-10-09T19:00:00+02:00').getTime();
+function seedFriday() {
+  const s = seed();
+  s['deviations/Di_heen'].expiresAt = EXPIRES_FRI_W40;      // made after the change: expires Friday 19:00
+  s['deviations/Wo_heen'].expiresAt = EXPIRES_FRI_W41;
+  return s;                                                  // Do_terug keeps the old Saturday 00:00 expiry (made before the change)
+}
+await test('Friday 19:05: the changes of the ended week with the new expiry go, the coming week stays, an old Saturday expiry waits for the Saturday run', async () => {
+  resetState();
+  const fs = fakeFirestore(seedFriday());
+  const now = new Date(FRI).getTime();
+  const first = await withFakeNowAsync(FRI, async () => runPurge({ firestore: fs, app: await loadApp(), now, ...quiet() }));
+  assert.deepEqual(fs.calls.del.sort(), ['deviations/Di_heen', 'deviations/Vr_heen']);
+  assert.ok(fs.data.has('deviations/Do_terug') && fs.data.has('deviations/Wo_heen'));
+  assert.equal(first.kept, 2);
+  // the Saturday 00:05 run (kept as a catch-up) removes the one that still carried the old expiry
+  const sat = new Date(SAT).getTime();
+  await withFakeNowAsync(SAT, async () => runPurge({ firestore: fs, app: await loadApp(), now: sat, ...quiet() }));
+  assert.ok(!fs.data.has('deviations/Do_terug')); assert.ok(fs.data.has('deviations/Wo_heen'));
+});
+await test('Friday 18:59 the new expiry has not passed yet: nothing of the running week is deleted', async () => {
+  resetState();
+  const fs = fakeFirestore(seedFriday());
+  const now = new Date('2026-10-02T18:59:00+02:00').getTime();
+  await withFakeNowAsync('2026-10-02T18:59:00+02:00', async () => runPurge({ firestore: fs, app: await loadApp(), now, ...quiet() }));
+  assert.deepEqual(fs.calls.del, ['deviations/Vr_heen'], 'only the old one without a week goes');
+});
+
 console.log('=== the host ===');
+await test('a host in another time zone (UTC) still counts Friday 19:05 in Amsterdam time', () => {
+  const code = `await import(${JSON.stringify(new URL('../cron/purge.mjs', import.meta.url).href)});
+    const d = new Date('2026-10-02T17:05:00Z'); console.log(d.getDay(), d.getHours());`;
+  const x = spawnSync(process.execPath, ['--input-type=module', '-e', code], { encoding: 'utf8', env: { PATH: process.env.PATH, TZ: 'UTC' } });
+  assert.equal(x.stdout.trim(), '5 19', x.stdout + x.stderr);
+});
 await test('a host in another time zone (UTC) still counts Saturday 00:05 in Amsterdam time', () => {
   const code = `await import(${JSON.stringify(new URL('../cron/purge.mjs', import.meta.url).href)});
     console.log(new Date('2026-10-02T22:05:00Z').getDay(), process.env.TZ);`;

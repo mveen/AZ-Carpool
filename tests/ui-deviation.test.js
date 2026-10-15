@@ -97,7 +97,7 @@ test('while filling in is open the task card comes before the weekly changes; wi
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
   const s = text(renderOpen(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
-  assert.match(s, /Wijzigingen hier gelden alleen voor dinsdag deze week en verdwijnen dit weekend vanzelf\. = deze week gewijzigd Dinsdag Heen Heen · Aalsmeer/);
+  assert.match(s, /Wijzigingen hier gelden alleen voor dinsdag deze week en verdwijnen vrijdag om 19:00 vanzelf\. = deze week gewijzigd Dinsdag Heen Heen · Aalsmeer/);
   assert.doesNotMatch(s, /Andere dag/);   // no separate day picker screen any more
   assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
   assert.match(s, /Terug naar standaard rooster/);
