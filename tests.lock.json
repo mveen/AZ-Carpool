@@ -12,7 +12,7 @@
     "test": "b56112980a788bc469c9bf5ae7e4252460eb2dbd5c5d70437a919701540f2751"
   },
   "constants.js": {
-    "module": "7efc3d3062d1e597bf01f818ca534b70df86be021a38c1a815bf3288f86ecb13",
+    "module": "a4724adbf949c1a3bec59748ecee3d5e4e9689cfae1e8099782063f03c91cc0c",
     "test": "96c4cba8a38734727f21d2eeaccff92987996984a3ce670d10f88aa81d88cef4"
   },
   "coordinator.js": {
@@ -61,7 +61,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "b65cb5c3ed6c4aab5b8df18892e1b596980dc5ee04c376916b83e77ba67a9022"
+    "test": "a97989e222ea572fe0e53847fd15dde93ee9585ebe92ebcb0f9af79f7feefdf2"
   },
   "impact.js": {
     "module": "912921dde7a0c17acdc50d5497bc6a31b1da03613f5ae5c4cb7d379f3714957c",
@@ -156,12 +156,12 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "ad8655f3906780ce7e68900756e9655f470be68f94b01c63a5770d790bd466b2",
-    "test": "b65cb5c3ed6c4aab5b8df18892e1b596980dc5ee04c376916b83e77ba67a9022"
+    "module": "5dd77112a719b2fca1a810d4c5d7adb211401f29b52eaef6c920ed8d2e7f7595",
+    "test": "a97989e222ea572fe0e53847fd15dde93ee9585ebe92ebcb0f9af79f7feefdf2"
   },
   "ui-agenda.js": {
-    "module": "6bb80a9a235192a3b7fce4b1bba93693aae73f55d264f547648421b8eddb68b8",
-    "test": "0046267ea3825f13bd3bad919514947f7d7a5fba5ade2a2eb93528231a0ac96a"
+    "module": "ee982957264ca05cc86d03080229f16e9a09f4e40124257dca8f3ab28a73c35c",
+    "test": "8ebcc833f79b1e9be81edf71bf2af28b4993e8b53627b31d1644942ec38e2d08"
   },
   "ui-beheer.js": {
     "module": "6f24e8e85e50c898cf2ebed8c092a30f735894912f8f1dceb0aaff02eff3edb4",

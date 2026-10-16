@@ -88,7 +88,7 @@ test('the texts of the shell, the contact sheet and the ride rows exist and fill
   assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });
 test('the texts of the settings sheet and the Mijn gezin drill-down exist', () => {
-  assert.equal(t('agenda.toevoegen_google'), 'Zet in Google Agenda'); assert.match(t('agenda.android_uitleg'), /Android.*ICSx⁵/); assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
+  assert.equal(t('agenda.toevoegen_google'), 'Zet in Google Agenda'); assert.match(t('agenda.ios_uitleg'), /iPhone en iPad.*Desktopversie.*Via URL/); assert.match(t('agenda.android_uitleg'), /Android.*ICSx⁵/); assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
   assert.equal(t('shell.parent_of', { name: 'Noor' }), 'Ouder van Noor'); assert.equal(t('shell.saved_instantly'), 'Wordt direct opgeslagen');
   assert.equal(t('profile.plekken_in_je_auto'), 'Plekken in je auto'); assert.equal(t('profile.kan_jij_deze_dag_rijden'), 'Kun je zelf rijden?');
 });

@@ -1169,6 +1169,7 @@ export default {
   'agenda.toevoegen': 'Zet in mijn agenda',
   'agenda.toevoegen_google': 'Zet in Google Agenda',
   'agenda.android_uitleg': 'Op Android opent de knop Google Agenda in je browser; log in en bevestig daar. Gebruik je een andere agenda-app, kopieer dan de link en voeg die toe als internetagenda (bijvoorbeeld met de gratis app ICSx⁵).',
+  'agenda.ios_uitleg': 'Op iPhone en iPad opent de knop Google Agenda in Safari; log in en bevestig daar. Daarna staat de agenda ook in de Google Agenda-app. Lukt dat niet? Kopieer de link, open calendar.google.com in Safari (kies Desktopversie) en ga naar Andere agenda\'s → Via URL.',
   'agenda.kopieer': 'Kopieer link',
   'agenda.gekopieerd': 'Link gekopieerd ✓',
   'agenda.kopieer_mislukt': 'Kopiëren lukt niet op dit apparaat.',
