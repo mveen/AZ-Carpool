@@ -71,6 +71,8 @@ export default {
   "beheer.deze_ouder": "deze ouder",
   "beheer.nog_geen_gezinnen_toegevoegd": "Nog geen gezinnen toegevoegd.",
   "beheer.onderdelen": "Onderdelen",
+  "beheer.alles_open": "Alles openklappen",
+  "beheer.alles_dicht": "Alles dichtklappen",
   "beheer.chip_gezinnen": "Gezinnen",
   "beheer.chip_periodes": "Planning",
   "beheer.chip_berichten": "Berichten",

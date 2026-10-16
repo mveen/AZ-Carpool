@@ -92,7 +92,7 @@ test('APP_VERSION is at least v79 (the home-screen sheet behind its feature togg
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
 
-test('APP_VERSION is at least v93 (practice matches and "vertrek vanaf" in the match carpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 93); });
+test('APP_VERSION is at least v94 (practice matches and "vertrek vanaf" in the match carpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 94); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

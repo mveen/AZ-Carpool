@@ -38,6 +38,7 @@ details.group.fold>summary{font-size:14px}
 .begChips{position:sticky;top:calc(var(--space-6) * -1);z-index:5;display:flex;gap:var(--space-2);overflow-x:auto;scrollbar-width:none;margin:0 calc(var(--page-gutter) * -1) var(--space-2);padding:var(--space-4) var(--page-gutter);background:var(--surface-page)}
 .begChips::-webkit-scrollbar{display:none}
 .begChip{flex-shrink:0;white-space:nowrap;min-height:40px;padding:0 var(--space-6);border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface-card);color:var(--text-1);font:var(--type-button);font-size:13px;cursor:pointer}
+.begFoldAll{display:block;margin:0 0 var(--space-4) auto;min-height:40px;padding:0 var(--space-6);border-radius:var(--radius-pill);border:1px solid var(--line);background:var(--surface-card);color:var(--text-1);font:var(--type-button);font-size:13px;cursor:pointer}
 .begChip.on{background:var(--action-bg);color:var(--action-ink);border-color:var(--action-bg)}
 .begSec{scroll-margin-top:64px}
 .begSecTitle{font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--text-muted);padding:14px 4px 8px}
