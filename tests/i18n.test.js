@@ -26,6 +26,11 @@ test('a value of 0 is kept (not treated as missing)', () => {
   assert.equal(t('deviation.gekozen', { n: 0 }), '0 gekozen');
 });
 test('Beheer has texts for the open-all / close-all button', () => { assert.equal(t('beheer.alles_open'), 'Alles openklappen'); assert.equal(t('beheer.alles_dicht'), 'Alles dichtklappen'); });
+test('Wijzigen has texts for deleting a car (button, toast, confirmation naming the passengers)', () => {
+  assert.equal(t('deviation.verwijder_auto'), 'Verwijder auto');
+  assert.equal(t('deviation.auto_verwijderd', { p1: 'Jan' }), 'Auto van Jan verwijderd');
+  assert.match(t('deviation.auto_verwijderen_bevestig', { p1: 'Eline, Saar' }), /Eline, Saar worden niet ingedeeld\. Tik nogmaals/);
+});
 test('unknown key falls back to the key itself', () => { assert.equal(t('nope.nothing'), 'nope.nothing'); });
 test('locale() comes from the dictionary', () => { assert.equal(locale(), 'nl-NL'); });
 
