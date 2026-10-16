@@ -19,6 +19,10 @@ export const webcalUrl = token => calendarUrl(token).replace(/^https?:/, 'webcal
 // "add by link" page instead (it subscribes to the same file); the copied link and the text below work for any other calendar app.
 export const googleSubscribeUrl = token => 'https://calendar.google.com/calendar/r?cid=' + encodeURIComponent(webcalUrl(token));
 export const isAndroid = () => typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
+// iPhone and iPad (an iPad can report itself as a Mac, but then it has a touch screen). On these the webcal:// button made Apple Agenda
+// warn "De verbinding is niet veilig" and then fail, so they get the same Google Agenda button as Android.
+export const isIos = () => typeof navigator !== 'undefined' && (/iPhone|iPad|iPod/i.test(navigator.userAgent || '') || (/Macintosh/i.test(navigator.userAgent || '') && (navigator.maxTouchPoints || 0) > 1));
+const useGoogleButton = () => isAndroid() || isIos();
 
 const validToken = x => typeof x === 'string' && TOKEN_RE.test(x);
 
@@ -32,12 +36,12 @@ export function agendaCardInnerHtml(familyId) {
   return `${head}
     <div class="panel__sub">${esc(t('agenda.kaart_uitleg', { name: plainGirlName(familyId) }))}</div>
     <div class="formActions">
-      ${isAndroid()
+      ${useGoogleButton()
         ? `<a class="btn" id="agendaAdd" href="${esc(googleSubscribeUrl(link.token))}" target="_blank" rel="noopener">${t('agenda.toevoegen_google')}</a>`
         : `<a class="btn" id="agendaAdd" href="${esc(webcalUrl(link.token))}">${t('agenda.toevoegen')}</a>`}
       <button type="button" class="btn secondary" id="agendaCopy">${t('agenda.kopieer')}</button>
     </div>
-    <p class="muted">${t(isAndroid() ? 'agenda.android_uitleg' : 'agenda.google_uitleg')}</p>
+    <p class="muted">${t(isAndroid() ? 'agenda.android_uitleg' : isIos() ? 'agenda.ios_uitleg' : 'agenda.google_uitleg')}</p>
     <p class="muted">${t('agenda.bijwerken')}</p>
     <p class="muted">${t('agenda.geheim')}</p>`;
 }

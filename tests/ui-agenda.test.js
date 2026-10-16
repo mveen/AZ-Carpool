@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { TOKEN_RE } from '../calendar-feed.js';
-import { googleSubscribeUrl, hasAgenda, openAgendaSheet, agendaCardInnerHtml, calendarUrl, loadCalendarLink, webcalUrl, wireAgendaCard } from '../ui-agenda.js';
+import { googleSubscribeUrl, isIos, hasAgenda, openAgendaSheet, agendaCardInnerHtml, calendarUrl, loadCalendarLink, webcalUrl, wireAgendaCard } from '../ui-agenda.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -109,7 +109,7 @@ await testAsync('in the test view as another parent nothing is read or made', as
   assert.deepEqual(tokenDocs(fake), []); assert.deepEqual(fake.writes, []); assert.equal(S.calendarLink, null);
 });
 
-console.log('=== Android ===');
+console.log('=== Android, iPhone and iPad ===');
 const withUA = (ua, fn) => {
   const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   Object.defineProperty(globalThis, 'navigator', { value: { userAgent: ua }, configurable: true, writable: true });
@@ -125,9 +125,22 @@ test('on Android the button opens Google Agenda\'s add-by-link page with the web
   });
   assert.equal(googleSubscribeUrl(SECRET), `https://calendar.google.com/calendar/r?cid=${encodeURIComponent('webcal://azcarpool.nl/agenda/' + SECRET + '.ics')}`);
 });
-test('on an iPhone and without a known device the button stays the webcal link', () => {
+test('on an iPhone and an iPad the button opens Google Agenda too (the webcal:// button made Apple Agenda warn and fail)', () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ calendarLink: { familyId: 'f2', token: SECRET, status: 'ready' } });
-  withUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1', () => { assert.match(agendaCardInnerHtml('f2'), /href="webcal:\/\/azcarpool\.nl/); });
+  withUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1', () => {
+    const html = agendaCardInnerHtml('f2');
+    assert.equal(isIos(), true);
+    assert.ok(html.includes(`href="${googleSubscribeUrl(SECRET)}"`)); assert.doesNotMatch(html, /href="webcal:/);
+    assert.match(text(html), /Zet in Google Agenda/); assert.match(text(html), /Op iPhone en iPad.*Desktopversie.*Via URL/); assert.doesNotMatch(text(html), /ICSx/);
+    assert.deepEqual([...html.matchAll(/<(?:button|a)\b[^>]*id="([^"]+)"/g)].map(m => m[1]), ['agendaAdd', 'agendaCopy']);
+  });
+  const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+  Object.defineProperty(globalThis, 'navigator', { value: { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', maxTouchPoints: 5 }, configurable: true, writable: true });
+  try { assert.equal(isIos(), true, 'an iPad that reports itself as a Mac'); } finally { if (had) Object.defineProperty(globalThis, 'navigator', had); else delete globalThis.navigator; }
+});
+test('on a Mac (no touch screen) and without a known device the button stays the webcal link', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ calendarLink: { familyId: 'f2', token: SECRET, status: 'ready' } });
+  withUA('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15', () => { assert.equal(isIos(), false); assert.match(agendaCardInnerHtml('f2'), /href="webcal:\/\/azcarpool\.nl/); });
   assert.match(agendaCardInnerHtml('f2'), /href="webcal:\/\/azcarpool\.nl/);
 });
 

@@ -96,7 +96,7 @@ export const PH_PATHS = {
 export const DAYS=[["Ma","Maandag"],["Di","Dinsdag"],["Wo","Woensdag"],["Do","Donderdag"],["Vr","Vrijdag"]];
 
 // Shown in the Instellingen sheet. Bump together with CACHE_NAME in service-worker.js (a test checks they match).
-export const APP_VERSION = 'v99';
+export const APP_VERSION = 'v100';
 
 // The week is over on Friday evening at this hour (local time), not at midnight: from then on the app shows the coming week,
 // the one-off changes (Wijzigen) of the week expire and the server job (cron/purge.mjs) removes them.
