@@ -91,6 +91,7 @@
   --shadow-seg:0 1px 3px rgba(0,0,0,.12);
   --hit-min:44px;           /* every tap target */
   --tabbar-h:72px;
+  --app-h:100dvh;   /* visible app height; ui-shell.js overwrites it with the measured height (Brave on Android gets 100dvh wrong now and then) */
   --motion-fast:.15s ease;
   --content-max:520px;      /* phone column; wider screens centre it */
 

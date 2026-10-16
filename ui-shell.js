@@ -200,12 +200,24 @@ async function pickAvatar(fid, next, onNavigate, onViewChange){
   openSettings(onNavigate, onViewChange);
 }
 
+// Brave on Android now and then computes 100dvh too tall (after coming back to the app, or while the address bar moves),
+// which pushes the tab bar off the screen until the browser is restarted. So the visible height is measured here and kept in
+// --app-h (tokens.css); when this cannot measure, the stylesheet's own 100dvh stays in charge.
+export function syncAppHeight(){
+  const h = Math.round(Number(window.innerHeight) || 0);
+  if(h > 0 && document.documentElement && document.documentElement.style && document.documentElement.style.setProperty) document.documentElement.style.setProperty('--app-h', h + 'px');
+}
+
 // Called once from app.js bootstrap: wires the avatar, the share button, the contact names and the "back to Instellingen" links.
 export function initShell(onNavigate, onViewChange){
   const av = document.getElementById('avatarBtn');
   if(av) av.onclick = () => openSettings(onNavigate, onViewChange);
   const sh = document.getElementById('shareToggle'); if(sh) sh.onclick = openShare;
   initContact();
+  syncAppHeight();
+  for(const ev of ['resize', 'orientationchange', 'pageshow']) window.addEventListener(ev, syncAppHeight);
+  document.addEventListener('visibilitychange', () => { if(!document.hidden) syncAppHeight(); });
+  if(window.visualViewport && window.visualViewport.addEventListener) window.visualViewport.addEventListener('resize', syncAppHeight);
   document.addEventListener('click', e => {
     const b = e.target && e.target.closest ? e.target.closest('[data-opensettings]') : null;
     if(b) openSettings(onNavigate, onViewChange);

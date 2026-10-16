@@ -12,8 +12,8 @@
     "test": "b899623a77a638404718fcd584402a35874105fc48b01c85ccd1fa735f5e8fbc"
   },
   "constants.js": {
-    "module": "b978efd6830b4727aee7822e2d283be61c68197926a6ab6b46eb25a67b05deaf",
-    "test": "f3f44cb6e0f58fdb37d5b8f277b112ce4e5ee2b93cd481b3d8e805cc56c57d99"
+    "module": "163e5d9b25f33fad5fa3462d1257d9b983907cac05601ac4ee644a151626028f",
+    "test": "96902df80dcdff6f1097c406feb333329b121707d8c30eff476223b109ba1597"
   },
   "coordinator.js": {
     "module": "62d7fbb54ca8e3ee1d51c8aee9fc23e7af844c4cc9fafbc1a805faae8d107c95",
@@ -236,7 +236,7 @@
     "test": "c811404b5c3bca595977bd6528e0593a4f5d91cd1dde6a10e454b97f11bb4307"
   },
   "ui-shell.js": {
-    "module": "8919f6e20dfa4726206352a947b27da4e581b57b1724f7fb0787c526a242c8c9",
-    "test": "17c14ad8859fef4f2733602d2d4bfbafa8bc6360654448ae33f604908dcff354"
+    "module": "5d88d7fdf63bd95a9e615f1d948627636431f99dcac92abd465be2485e918424",
+    "test": "e420b25310993ba99d710f7eedcf81a85508fb2bb8316f4dff6fcc7200485306"
   }
 }

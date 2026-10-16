@@ -10,7 +10,7 @@ import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, 
 import { S } from '../state.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
-import { initials, updateHeader, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, TAB_TITLE_KEY } from '../ui-shell.js';
+import { initials, updateHeader, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -224,6 +224,28 @@ await (async () => {
     assert.equal(fake.get('families/f2').avatar, 'car'); assert.doesNotMatch(dom.doc.getElementById('toast').innerHTML || '', /Avatar opgeslagen/);
   });
 })();
+
+console.log('\n=== app height (Brave 100dvh) ===');
+test('syncAppHeight keeps --app-h at the measured window height, and does nothing when it cannot measure', () => {
+  const calls = []; const root = dom.doc.documentElement; const before = root.style; const beforeH = globalThis.innerHeight;
+  root.style = { setProperty: (k, v) => calls.push([k, v]) };
+  try {
+    globalThis.innerHeight = 733.4; syncAppHeight(); assert.deepEqual(calls, [['--app-h', '733px']]);
+    calls.length = 0; globalThis.innerHeight = 0; syncAppHeight(); assert.deepEqual(calls, []);
+    globalThis.innerHeight = undefined; syncAppHeight(); assert.deepEqual(calls, []);
+  } finally { root.style = before; globalThis.innerHeight = beforeH; }
+});
+test('the stylesheet falls back to 100dvh: body uses --app-h after a plain 100dvh, and tokens.css defines it as 100dvh', () => {
+  const css = fs.readFileSync(new URL('../components.css', import.meta.url), 'utf8'), tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  assert.match(css, /height:100dvh;height:var\(--app-h\);display:flex;flex-direction:column/);
+  assert.match(tokens, /--app-h:100dvh;/);
+});
+test('initShell measures right away and listens for resize, orientation change, page show and coming back to the app', () => {
+  const win = []; const docEv = []; const origW = window.addEventListener; const origD = dom.doc.addEventListener;
+  window.addEventListener = ev => { win.push(ev); }; dom.doc.addEventListener = ev => { docEv.push(ev); };
+  try { initShell(() => {}, () => {}); } finally { window.addEventListener = origW; dom.doc.addEventListener = origD; }
+  assert.deepEqual(win.sort(), ['orientationchange', 'pageshow', 'resize']); assert.ok(docEv.includes('visibilitychange'));
+});
 
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-shell.js imports nothing it does not use', () => assertNoUnusedImports('ui-shell.js'));
