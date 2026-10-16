@@ -175,6 +175,20 @@ test('the section bar is one row of four icon buttons, and only one section is s
   ['periodes', 'berichten', 'koppelingen'].forEach(id => assert.match(html, new RegExp('<section class="begSec" id="begSec-' + id + '" hidden>')));
   assert.doesNotMatch(html, /begSecTitle/);
 });
+test('the menus inside each Beheer section are in the order the coordinator chose', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  const order = id => {
+    const start = html.indexOf('id="begSec-' + id + '"');
+    const end = html.indexOf('</section>', start);
+    return [...html.slice(start, end).matchAll(/<div data-icon="[\w-]+" class="card[^"]*" id="(\w+)"/g)].map(m => m[1]);
+  };
+  assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard']);
+  assert.deepEqual(order('periodes'), ['locationsCard', 'planningCard', 'periodCard']);
+  assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'maintenanceCard', 'notifCard']);
+  assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'impactCard', 'errorLogCard']);
+});
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
@@ -564,12 +578,12 @@ test('Beheer shows the notice card, and the WhatsApp intro icon wiring is still 
   assert.match(text(dom.html('tab-beheer')), /Melding voor iedereen/);
 });
 
-test('Beheer shows the onderhoudsmodus card above the notice card', () => {
+test('Beheer shows the onderhoudsmodus card below the notice card', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
   const html = dom.html('tab-beheer');
   assert.match(text(html), /Onderhoudsmodus aan/);
-  assert.ok(html.indexOf('id="maintenanceCard"') > -1 && html.indexOf('id="maintenanceCard"') < html.indexOf('id="noticeCard"'));
+  assert.ok(html.indexOf('id="maintenanceCard"') > -1 && html.indexOf('id="maintenanceCard"') > html.indexOf('id="noticeCard"'));
 });
 
 test('families and the travel-preference checkboxes are listed A-Z by daughter name', () => {
@@ -665,12 +679,12 @@ test('Selectievolgorde: a back-up driver is marked "back-up", a standard driver 
   assert.match(rows, /Sanne Smit \(Lois, 3 pl\., back-up\)/); assert.match(rows, /Jan Jansen \(Eline, 3 pl\.\)/);
 });
 
-test('the Gereden shifts card sits in the Gezinnen section, after the dag-coördinatoren', () => {
+test('the Gereden shifts card is the last one in the Gezinnen section', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
   const html = dom.html('tab-beheer');
   const sec = html.slice(html.indexOf('id="begSec-gezinnen"'), html.indexOf('id="begSec-periodes"'));
-  assert.ok(sec.indexOf('id="rideLogCard"') > 0 && sec.indexOf('id="priorityCard"') > sec.indexOf('id="rideLogCard"'));
+  assert.ok(sec.indexOf('id="rideLogCard"') > 0 && sec.indexOf('id="rideLogCard"') > sec.indexOf('id="availabilityCard"'));
 });
 
 test('design v2: ui-beheer.js only uses variables from tokens.css in its inline styles', async () => {

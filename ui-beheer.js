@@ -631,24 +631,24 @@ export function renderBeheer(){
         <button type="button" class="btn secondary" id="coordNew">${t('beheer.nieuw_gezin_toevoegen')}</button>
         <div id="coordEditArea"></div>
       </div>`),
-      ic('user', dayCoordinatorsCardHtml()),
-      ic('chart', rideLogCardHtml()),
-      ic('list', `<div class="card" id="priorityCard">
-        <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
-        ${renderPriorityCard()}
-      </div>`),
       ic('heart', `<div class="card" id="prefsCard">
         <h2>${t('beheer.reisvoorkeuren')}</h2>
         <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
         ${renderPrefsCard()}
       </div>`),
+      ic('list', `<div class="card" id="priorityCard">
+        <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
+        ${renderPriorityCard()}
+      </div>`),
+      ic('user', dayCoordinatorsCardHtml()),
       ic('calendar', `<div class="card" id="availabilityCard">
         <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
         ${renderAvailabilityTable()}
       </div>`),
+      ic('chart', rideLogCardHtml()),
     ]],
     ['periodes', 'beheer.chip_periodes', 'beheer.sec_periodes', [
-      ic('clock', periodsCardHtml()),
+      ic('map-pin', locationsCardHtml()),
       ic('gear', `<div class="card" id="planningCard">
         <h2>${t('beheer.planning_instellingen')}</h2>
         <p class="muted">${t('beheer.deze_regels_bepalen_hoe_combinaties')}</p>
@@ -659,13 +659,13 @@ export function renderBeheer(){
           <div><label>${t('beheer.max_wachttijd_om_met_eigen')}</label><input type="number" id="setParentPrefWindow" min="0" step="5" value="${S.settings.parentPrefWindowMinutes}"></div>
         </div>
       </div>`),
-      ic('map-pin', locationsCardHtml()),
+      ic('clock', periodsCardHtml()),
     ]],
     ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
-      ic('wrench', maintenanceCardHtml()),
       ic('car', ritbeursCardHtml()),
       ic('bell', pushCardHtml()),
       ic('info', noticeCardHtml()),
+      ic('wrench', maintenanceCardHtml()),
       ic('bell', `<div class="card" id="notifCard">
         <h2>${t('beheer.meldingen_bij_gewijzigde_tijden')}</h2>
         <p class="muted">${t('beheer.als_een_ouder_de_aankomst')}</p>
