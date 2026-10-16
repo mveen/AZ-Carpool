@@ -1,6 +1,7 @@
 // Run with: node cron-agenda.test.js
 // cron/agenda.mjs: the job that writes one .ics file per family with a link. It must write exactly the rides the app shows, only for valid
 // links of existing families, never rewrite an unchanged file, remove the file of a link that is gone, and never touch anything else.
+// A family has two links: the daughter's calendar (calendarTokens) and the parents' calendar with the rides the family drives (driverCalendarTokens).
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
@@ -10,7 +11,7 @@ import { installFakeDom, resetState, sampleDbSeed } from './test-support.js';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { buildCron } from '../scripts/build-cron.mjs';
 import { runAgenda, loadAgendaApp, HTACCESS, AGENDA_APP_MODULES } from '../cron/agenda.mjs';
-import { feedEvents, buildIcs } from '../calendar-feed.js';
+import { feedEvents, driverFeedEvents, buildIcs } from '../calendar-feed.js';
 import { S } from '../state.js';
 
 let passed = 0, failed = 0;
@@ -154,6 +155,88 @@ await test('no links yet: only the folder and its .htaccess', async () => {
     const s = seed(); delete s['calendarTokens/f1']; delete s['calendarTokens/f2'];
     const res = await run(s, out);
     assert.equal(res.calendars, 0); assert.deepEqual(readdirSync(out), ['.htaccess']);
+  } finally { cleanup(out); }
+});
+
+console.log('=== the parents\' links ===');
+const T4 = 'D'.repeat(32), T5 = 'E'.repeat(32);
+const withDrivers = (extra = {}) => seed({ 'driverCalendarTokens/f1': { token: T4, createdAt: 1 }, 'driverCalendarTokens/f2': { token: T5, createdAt: 1 }, ...extra });
+await test('a parents\' link gets its own file with the rides that family drives, next to the daughter\'s file', async () => {
+  const out = tmpOut();
+  try {
+    const res = await run(withDrivers(), out);
+    assert.deepEqual(calendars(out), [T1 + '.ics', T2 + '.ics', T4 + '.ics', T5 + '.ics'].sort());
+    assert.deepEqual([res.calendars, res.written], [4, 4]);
+    const f1 = readFileSync(join(out, T4 + '.ics'), 'utf8'), f2 = readFileSync(join(out, T5 + '.ics'), 'utf8');
+    assert.match(f1, /X-WR-CALNAME:Carpool rijden Jan Jansen/); assert.match(f2, /X-WR-CALNAME:Carpool rijden Piet Pieters/);
+    assert.ok(f1.includes('UID:2026-W41-Ma-heen-drive-f1@azcarpool.nl')); assert.ok(!f1.includes('-terug-drive-'), 'Jan drives heen only');
+    assert.ok(f2.includes('UID:2026-W41-Ma-terug-drive-f2@azcarpool.nl')); assert.ok(!f2.includes('-heen-drive-'));
+    assert.match(f1, /Ophalen: Eline\\, Jahaimy/);
+    assert.ok(!readFileSync(join(out, T1 + '.ics'), 'utf8').includes('-drive-'), 'the daughter\'s file is the daughter\'s file');
+  } finally { cleanup(out); }
+});
+await test('the parents\' file has the same content as the app code builds (nothing of its own)', async () => {
+  const out = tmpOut();
+  try {
+    await run(withDrivers(), out);
+    resetState();
+    const fams = Object.fromEntries(Object.entries(sampleDbSeed()).filter(([k]) => k.startsWith('families/')).map(([k, v]) => [k.slice(9), v]));
+    const groups = Object.fromEntries(Object.entries(sampleDbSeed()).filter(([k]) => k.startsWith('groups/')).map(([k, v]) => [k.slice(7), v]));
+    const devs = Object.fromEntries(Object.entries(sampleDbSeed()).filter(([k]) => k.startsWith('deviations/')).map(([k, v]) => [k.slice(11), v]));
+    Object.assign(S, { families: fams, groups, deviations: devs, periods: {}, periodEntries: {}, periodCars: {}, matchCarpools: {}, locationsDoc: null, currentWeekKey: '2026-W40' });
+    const expected = buildIcs({ name: 'Carpool rijden Jan Jansen', events: driverFeedEvents('f1', S, NOW), nowMs: NOW });
+    assert.equal(readFileSync(join(out, T4 + '.ics'), 'utf8'), expected);
+  } finally { cleanup(out); }
+});
+await test('a family with only the old link keeps working: no parents\' file is made until it has a parents\' link', async () => {
+  const out = tmpOut();
+  try { const res = await run(seed(), out); assert.deepEqual(calendars(out), [T1 + '.ics', T2 + '.ics']); assert.equal(res.calendars, 2); } finally { cleanup(out); }
+});
+await test('a ride that changes updates the parents\' file of the driver and the daughter\'s files of the girls in the car, nobody else\'s', async () => {
+  const out = tmpOut();
+  try {
+    await run(withDrivers(), out);
+    const s = withDrivers(); s['groups/Ma_heen_1'] = { ...s['groups/Ma_heen_1'], departureTime: '07:45' };
+    const res = await run(s, out);
+    assert.equal(res.written, 3, 'f1 and f2 daughters (both in that car) and Jan\'s drive file; Piet drives terug only');
+    assert.match(readFileSync(join(out, T4 + '.ics'), 'utf8'), /DTSTART:20261005T054500Z/);
+  } finally { cleanup(out); }
+});
+await test('a removed parents\' link: its file is deleted, the daughter\'s file stays', async () => {
+  const out = tmpOut();
+  try {
+    await run(withDrivers(), out);
+    const s = withDrivers(); delete s['driverCalendarTokens/f1'];
+    const res = await run(s, out);
+    assert.equal(res.removed, 1); assert.deepEqual(calendars(out), [T1 + '.ics', T2 + '.ics', T5 + '.ics'].sort());
+  } finally { cleanup(out); }
+});
+await test('a family that no longer exists loses both of its files', async () => {
+  const out = tmpOut();
+  try {
+    await run(withDrivers(), out);
+    const s = withDrivers(); delete s['families/f2'];
+    await run(s, out);
+    assert.deepEqual(calendars(out), [T1 + '.ics', T4 + '.ics'].sort());
+  } finally { cleanup(out); }
+});
+await test('the same secret in a daughter\'s and a parents\' link: both are ignored, with a warning (a secret is a file name)', async () => {
+  const out = tmpOut();
+  try {
+    const q = quiet();
+    await run(withDrivers({ 'driverCalendarTokens/f1': { token: T1, createdAt: 1 } }), out, { q });
+    assert.deepEqual(calendars(out), [T2 + '.ics', T5 + '.ics'].sort());
+    assert.match(q.warnings.join(), /same secret/);
+  } finally { cleanup(out); }
+});
+await test('an invalid parents\' secret is ignored, with a warning (no path tricks)', async () => {
+  const out = tmpOut();
+  try {
+    const q = quiet();
+    await run(withDrivers({ 'driverCalendarTokens/f3': { token: '../../../etc/passwd' }, 'driverCalendarTokens/f4': { token: 5 } }), out, { q });
+    assert.deepEqual(calendars(out), [T1 + '.ics', T2 + '.ics', T4 + '.ics', T5 + '.ics'].sort());
+    assert.equal(q.warnings.length, 2); assert.match(q.warnings[0], /driver link of f3/);
+    assert.deepEqual(readdirSync(join(out, '..')), ['agenda'], 'nothing written outside the folder');
   } finally { cleanup(out); }
 });
 

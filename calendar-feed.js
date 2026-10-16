@@ -1,11 +1,13 @@
 // calendar-feed.js — the calendar subscription ("agenda") of one family: the next 3 weeks of rides of their daughter as an .ics file.
 // PURE (no screen, no database): the server job cron/agenda.mjs, the Profiel card and the tests use it. It asks the SAME rooster code as
 // Mijn week (rides.js: effectiveCars, rideTime), so the calendar cannot disagree with the app.
-//   rides in      -> feedEvents(familyId, state, nowMs)  -> [{ uid, startMs, endMs, summary, description, location }]
+//   rides in      -> feedEvents(familyId, state, nowMs)        -> the rides the daughter sits in
+//                 -> driverFeedEvents(familyId, state, nowMs)  -> the rides the family drives itself (the parents' calendar)
+//                    both give [{ uid, startMs, endMs, summary, description, location }]
 //   .ics text out -> buildIcs({ name, events, nowMs })
 import { t } from './i18n.js';
 import { DAYS, WEEK_END_HOUR } from './constants.js';
-import { effectiveCars, fam, isFlex, ovGirlsFor, plainDriverName, rideTime } from './rides.js';
+import { effectiveCars, fam, isFlex, ovGirlsFor, plainDriverName, plainGirlName, rideTime } from './rides.js';
 import { freeText, matchFromName, normalizeLocations, placeFor, placeName, routeLabel } from './locations.js';
 import { getISOWeekKey, weekKeyDayIso } from './dates.js';
 
@@ -86,20 +88,56 @@ function rideEvent(familyId, st, weekKey, day, direction, cfg) {
   };
 }
 
-// A match carpool the daughter rides in (only then: a match she is in no car for is none of the calendar's business).
-function matchEvents(familyId, st, fromMs, toMs, cfg) {
+// ---------- the rides the family drives ----------
+// One ride the family DRIVES on one shift. The girls in the car are named, the family's own daughter too; null when nobody is left in the car
+// ("Rijdt niet mee" takes a girl out) or when the family does not drive on that shift.
+function driveEvent(familyId, st, weekKey, day, direction, cfg) {
+  const iso = weekKeyDayIso(weekKey, day);
+  if (!iso) return null;
+  const off = ovGirlsFor(day, st, direction);
+  const car = effectiveCars(day, direction, st).find(c => c.driverFamilyId === familyId && (c.girlIds || []).some(g => !off.includes(g)));
+  if (!car) return null;
+  const girls = car.girlIds.filter(g => !off.includes(g));
+  const times = girls.map(g => rideTime(g, day, direction, st)).filter(validTime).map(clock).sort();
+  const dep = validTime(car.departureTime) ? car.departureTime : (direction === 'heen' ? times[0] : times[times.length - 1]) || '';
+  if (!dep) return null;
+
+  const startMs = amsterdamToMs(iso, dep);
+  const arriveMs = direction === 'heen' && times[0] ? amsterdamToMs(iso, times[0]) : 0;
+  const endMs = arriveMs > startMs ? arriveMs : startMs + RETURN_MINUTES * 60000;   // heen: until the first girl has to be there
+
+  const place = placeFor(car, direction, cfg, day);
+  const names = girls.map(g => plainGirlName(g, st)).join(', ');
+  return {
+    uid: `${weekKey}-${day}-${direction}-drive-${familyId}@azcarpool.nl`,
+    startMs, endMs,
+    summary: t('agenda.titel_rijden', { dir: (direction === 'heen' ? t('dir.heenShort') : t('dir.terugShort')).toLowerCase(), route: routeLabel(car, direction, cfg, day) }),
+    description: [
+      t(direction === 'heen' ? 'agenda.ophalen' : 'agenda.mee_terug', { names }),
+      direction === 'heen' && times[0] ? t('agenda.aanwezig', { time: times[0] }) : '',
+      t('agenda.indicatief'),
+    ].filter(Boolean).join('\n'),
+    location: !freeText(car) && place.address ? `${place.name}, ${place.address}` : placeName(car, direction, cfg, day),
+  };
+}
+
+// A match carpool car, for the family that sits in it (role 'girl': only then, a match she is in no car for is none of the calendar's
+// business) or that drives it (role 'driver').
+function matchEvents(familyId, st, fromMs, toMs, cfg, role = 'girl') {
   const out = [];
   Object.entries(st.matchCarpools || {}).forEach(([slug, d]) => {
     if (!d || !d.startMs || d.startMs < fromMs || d.startMs >= toMs) return;
     (d.cars || []).forEach((c, i) => {
-      if (!(c.girlIds || []).includes(familyId) || !validTime(c.departureTime)) return;
+      const mine = role === 'driver' ? c.driverFamilyId === familyId && (c.girlIds || []).length : (c.girlIds || []).includes(familyId);
+      if (!mine || !validTime(c.departureTime)) return;
       const startMs = amsterdamToMs(amsterdamDate(d.startMs), c.departureTime);
       const driver = c.driverFamilyId === familyId ? t('agenda.zelf_rijden') : plainDriverName(c.driverFamilyId, st);
+      const who = role === 'driver' ? t('agenda.mee', { names: c.girlIds.map(g => plainGirlName(g, st)).join(', ') }) : t('agenda.chauffeur', { name: driver });
       out.push({
-        uid: `match-${slug}-${i}-${familyId}@azcarpool.nl`,
+        uid: `match-${slug}-${i}-${role === 'driver' ? 'drive-' : ''}${familyId}@azcarpool.nl`,
         startMs, endMs: d.startMs > startMs ? d.startMs : startMs + 2 * 3600000,
-        summary: t('agenda.titel_wedstrijd', { match: String(d.summary || '').trim() || t('agenda.wedstrijd') }),
-        description: [t('agenda.chauffeur', { name: driver }), t('agenda.vertrek_vanaf', { place: matchFromName(c, cfg) }), t('agenda.aftrap', { time: amsterdamClock(d.startMs) }), t('agenda.indicatief')].join('\n'),
+        summary: t(role === 'driver' ? 'agenda.titel_wedstrijd_rijden' : 'agenda.titel_wedstrijd', { match: String(d.summary || '').trim() || t('agenda.wedstrijd') }),
+        description: [who, t('agenda.vertrek_vanaf', { place: matchFromName(c, cfg) }), t('agenda.aftrap', { time: amsterdamClock(d.startMs) }), t('agenda.indicatief')].join('\n'),
         location: String(d.location || ''),
       });
     });
@@ -108,21 +146,25 @@ function matchEvents(familyId, st, fromMs, toMs, cfg) {
 }
 
 // All events of one family for the next 3 weeks, in time order. `st` is the database as the app holds it (S).
-export function feedEvents(familyId, st, nowMs) {
+function collectEvents(familyId, st, nowMs, rideFn, role) {
   const cfg = normalizeLocations(st.locationsDoc);
   const weekKeys = feedWeekKeys(nowMs), events = [];
   for (const weekKey of weekKeys) {
     const weekState = { ...st, currentWeekKey: weekKey };   // the trick the weekly purge uses: ask the rooster code about another week
     for (const [day] of DAYS) for (const direction of ['heen', 'terug']) {
-      const e = rideEvent(familyId, weekState, weekKey, day, direction, cfg);
+      const e = rideFn(familyId, weekState, weekKey, day, direction, cfg);
       if (e) events.push(e);
     }
   }
   const from = amsterdamToMs(weekKeyDayIso(weekKeys[0], 'Ma'), '00:00');
   const to = amsterdamToMs(weekKeyDayIso(weekKeys[weekKeys.length - 1], 'Vr'), '23:59') + 2 * 86400000;   // matches also on the weekend after the last Friday
-  events.push(...matchEvents(familyId, st, from, to, cfg));
+  events.push(...matchEvents(familyId, st, from, to, cfg, role));
   return events.sort((a, b) => a.startMs - b.startMs || a.uid.localeCompare(b.uid));
 }
+// The rides of the family's daughter (the daughter's calendar).
+export function feedEvents(familyId, st, nowMs) { return collectEvents(familyId, st, nowMs, rideEvent, 'girl'); }
+// The rides the family drives (the parents' calendar), own daughter included.
+export function driverFeedEvents(familyId, st, nowMs) { return collectEvents(familyId, st, nowMs, driveEvent, 'driver'); }
 
 // ---------- the .ics file (RFC 5545) ----------
 const icsText = s => String(s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');

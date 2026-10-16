@@ -11,7 +11,7 @@ function test(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleFamilies } from './test-support.js';
 import { S } from '../state.js';
 import {
-  FEED_WEEKS, TOKEN_RE, amsterdamClock, amsterdamDate, amsterdamToMs, buildIcs, feedEvents, feedWeekKeys, newCalendarToken,
+  FEED_WEEKS, TOKEN_RE, amsterdamClock, amsterdamDate, amsterdamToMs, buildIcs, driverFeedEvents, feedEvents, feedWeekKeys, newCalendarToken,
 } from '../calendar-feed.js';
 
 installFakeDom();
@@ -164,6 +164,85 @@ test('a match she is in no car for, or only drives in, is not in her calendar', 
 test('a match outside the 3 weeks is left out', () => {
   stateWith({ matchCarpools: { far: MATCH({ startMs: new Date('2026-11-14T14:30:00+01:00').getTime() }) } });
   assert.ok(!feedEvents('f1', S, NOW).some(e => e.uid.startsWith('match-')));
+});
+
+console.log('=== the parents\' calendar (the rides the family drives) ===');
+test('Jan (f1) drives Monday heen with Eline and Jahaimy: one event a week, naming the girls and when the first must be there', () => {
+  stateWith();
+  const evs = driverFeedEvents('f1', S, NOW);
+  assert.deepEqual(ids(evs), ['2026-W40-Ma-heen-drive-f1', '2026-W41-Ma-heen-drive-f1', '2026-W42-Ma-heen-drive-f1'], 'no event for the rides Piet or Kees drive');
+  const e = evs[0];
+  assert.equal(e.summary, "Rijden heen: Busstation → AFC '34");
+  assert.equal(new Date(e.startMs).toISOString(), '2026-09-28T05:30:00.000Z');   // 07:30 leaves, summer time
+  assert.equal(new Date(e.endMs).toISOString(), '2026-09-28T06:30:00.000Z');     // 08:30: both girls have to be there
+  assert.match(e.description, /Ophalen: Eline, Jahaimy/); assert.match(e.description, /Aanwezig om 08:30/); assert.doesNotMatch(e.description, /Chauffeur/);
+});
+test('Piet (f2) drives Monday terug with three girls: 45 minutes, "Mee terug", no arrival time', () => {
+  stateWith();
+  const evs = driverFeedEvents('f2', S, NOW);
+  assert.deepEqual(ids(evs), ['2026-W40-Ma-terug-drive-f2', '2026-W41-Ma-terug-drive-f2', '2026-W42-Ma-terug-drive-f2']);
+  assert.equal(evs[0].summary, "Rijden terug: AFC '34 → Busstation"); assert.equal(evs[0].endMs - evs[0].startMs, 45 * 60000);
+  assert.match(evs[0].description, /Mee terug: Eline, Jahaimy, Saar/); assert.doesNotMatch(evs[0].description, /Aanwezig/);
+});
+test('a one-off change counts in its own week only, and the driver of the change gets the ride', () => {
+  stateWith();
+  const kees = driverFeedEvents('f3', S, NOW);
+  assert.deepEqual(ids(kees), ['2026-W40-Di-heen-drive-f3']);
+  assert.equal(new Date(kees[0].startMs).toISOString(), '2026-09-29T07:15:00.000Z');   // 09:15
+  assert.match(kees[0].description, /Ophalen: Eline, Evi/); assert.match(kees[0].description, /Aanwezig om 10:15/);
+  assert.ok(!driverFeedEvents('f1', S, NOW).some(e => e.uid.includes('-Di-')), 'Jan does not drive on Tuesday');
+});
+test('the family\'s own daughter is in both calendars, and the two calendars never share an id', () => {
+  stateWith();
+  const girl = feedEvents('f1', S, NOW), drive = driverFeedEvents('f1', S, NOW);
+  assert.ok(girl.some(e => e.uid.startsWith('2026-W40-Ma-heen')) && drive.some(e => e.uid.startsWith('2026-W40-Ma-heen')));
+  const all = [...girl, ...drive].map(e => e.uid);
+  assert.equal(new Set(all).size, all.length);
+  assert.ok(!girl.some(e => e.uid.includes('-drive-')));
+});
+test('a family that drives nothing, or does not exist, has an empty calendar and no error', () => {
+  stateWith();
+  assert.deepEqual(driverFeedEvents('f5', S, NOW), []); assert.deepEqual(driverFeedEvents('nobody', S, NOW), []);
+});
+test('"Rijdt niet mee": the girl is left out of the names; when nobody is left there is no ride to drive', () => {
+  const dev = ovGirlIds => ({ Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1, cars: [car('f1', ['f1', 'f2'], '07:30')], ovGirlIds } });
+  stateWith({ deviations: dev(['f2']) });
+  const one = driverFeedEvents('f1', S, NOW).find(e => e.uid.startsWith('2026-W40-Ma-heen'));
+  assert.match(one.description, /Ophalen: Eline\n/); assert.doesNotMatch(one.description, /Jahaimy/);
+  stateWith({ deviations: dev(['f1', 'f2']) });
+  assert.ok(!driverFeedEvents('f1', S, NOW).some(e => e.uid.startsWith('2026-W40-Ma-heen')));
+  assert.ok(driverFeedEvents('f1', S, NOW).some(e => e.uid.startsWith('2026-W41-Ma-heen')), 'the next weeks keep their ride');
+});
+test('a car without a departure time falls back on the first girl\'s time instead of vanishing', () => {
+  stateWith({ groups: { Ma_heen_1: { ...car('f1', ['f1', 'f2'], ''), day: 'Ma', direction: 'heen' } }, deviations: {} });
+  const e = driverFeedEvents('f1', S, NOW).find(x => x.uid.startsWith('2026-W41-Ma-heen'));
+  assert.equal(new Date(e.startMs).toISOString(), '2026-10-05T06:30:00.000Z');   // 08:30
+});
+test('the arrival place and a free pickup place come from the car, as in the daughter\'s calendar', () => {
+  stateWith({ groups: { Ma_heen_1: { ...car('f1', ['f1'], '07:30'), day: 'Ma', direction: 'heen', destination: 'ATC', locationText: 'Station Heemstede' } }, deviations: {} });
+  const e = driverFeedEvents('f1', S, NOW).find(x => x.uid.startsWith('2026-W41-Ma-heen'));
+  assert.equal(e.summary, 'Rijden heen: Station Heemstede → ATC'); assert.equal(e.location, 'Station Heemstede');
+});
+test('a match car the family drives: names the girls, says where it leaves from, and is none of the other parents\' business', () => {
+  stateWith({ matchCarpools: { 'az-ajax': MATCH() } });
+  const f2 = driverFeedEvents('f2', S, NOW).filter(e => e.uid.startsWith('match-'));
+  assert.equal(f2.length, 1); assert.equal(f2[0].uid, 'match-az-ajax-0-drive-f2@azcarpool.nl');
+  assert.equal(f2[0].summary, 'Wedstrijd rijden: AZ O15 - Ajax O15');
+  assert.equal(new Date(f2[0].startMs).toISOString(), '2026-10-04T10:30:00.000Z'); assert.equal(new Date(f2[0].endMs).toISOString(), '2026-10-04T12:30:00.000Z');
+  assert.match(f2[0].description, /Mee: Eline, Anouk/); assert.match(f2[0].description, /Vertrek vanaf: Busstation/); assert.match(f2[0].description, /Aftrap 14:30/); assert.equal(f2[0].location, 'AFAS Trainingscomplex, Wijdewormer');
+  assert.ok(driverFeedEvents('f4', S, NOW).some(e => e.uid === 'match-az-ajax-1-drive-f4@azcarpool.nl'), 'a parent who drives only her own daughter drives too');
+  assert.ok(!driverFeedEvents('f1', S, NOW).some(e => e.uid.startsWith('match-')), 'f1 only sits in a car: that is the daughter\'s calendar');
+  assert.ok(!driverFeedEvents('f3', S, NOW).some(e => e.uid.startsWith('match-')));
+});
+test('a match car with a driver but no girls, and a match outside the 3 weeks, are left out', () => {
+  stateWith({ matchCarpools: { a: MATCH({ cars: [car('f2', [], '12:30')] }), far: MATCH({ startMs: new Date('2026-11-14T14:30:00+01:00').getTime() }) } });
+  assert.ok(!driverFeedEvents('f2', S, NOW).some(e => e.uid.startsWith('match-')));
+});
+test('the parents\' calendar is a valid .ics file under its own name', () => {
+  stateWith({ matchCarpools: { 'az-ajax': MATCH() } });
+  const ics = buildIcs({ name: 'Carpool rijden Piet Pieters', events: driverFeedEvents('f2', S, NOW), nowMs: NOW });
+  assert.ok(ics.startsWith('BEGIN:VCALENDAR\r\n') && ics.endsWith('END:VCALENDAR\r\n')); assert.match(ics, /X-WR-CALNAME:Carpool rijden Piet Pieters/);
+  assert.equal((ics.match(/BEGIN:VEVENT/g) || []).length, (ics.match(/END:VEVENT/g) || []).length);
 });
 
 console.log('=== the .ics file ===');

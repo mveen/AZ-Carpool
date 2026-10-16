@@ -75,7 +75,11 @@ test('static page texts (data-i18n in index.html) all exist', () => {
 
 test('the agenda texts exist and fill their placeholders (card in Profiel and the .ics file)', () => {
   assert.equal(t('agenda.kaart_titel'), 'Agenda'); assert.equal(t('agenda.toevoegen'), 'Zet in mijn agenda'); assert.equal(t('agenda.kopieer'), 'Kopieer link');
-  assert.match(t('agenda.kaart_uitleg', { name: 'Noor' }), /ritten van Noor voor de komende 3 weken/);
+  assert.match(t('agenda.kaart_uitleg'), /Zet de ritten in je eigen agenda, alleen lezen/);
+  assert.equal(t('agenda.rijden_titel'), 'Mijn agenda'); assert.equal(t('agenda.dochter_titel', { name: 'Noor' }), 'Agenda van Noor'); assert.match(t('agenda.dochter_uitleg', { name: 'Noor' }), /ritten waar Noor in zit.*Deel deze link met haar/);
+  assert.equal(t('agenda.delen', { name: 'Noor' }), 'Deel met Noor'); assert.match(t('agenda.deel_tekst', { name: 'Noor' }), /carpoolritten van Noor/);
+  assert.equal(t('agenda.titel_rijden', { dir: 'heen', route: "Busstation → AFC '34" }), "Rijden heen: Busstation → AFC '34"); assert.equal(t('agenda.titel_wedstrijd_rijden', { match: 'A - B' }), 'Wedstrijd rijden: A - B');
+  assert.equal(t('agenda.ophalen', { names: 'Noor, Eva' }), 'Ophalen: Noor, Eva'); assert.equal(t('agenda.mee_terug', { names: 'Noor' }), 'Mee terug: Noor'); assert.equal(t('agenda.mee', { names: 'Noor' }), 'Mee: Noor'); assert.equal(t('agenda.kalendernaam_rijden', { name: 'Piet' }), 'Carpool rijden Piet');
   assert.equal(t('agenda.titel_rit', { dir: 'Heen', route: "Busstation → AFC '34" }), "Carpool Heen: Busstation → AFC '34");
   assert.equal(t('agenda.chauffeur', { name: 'Piet' }), 'Chauffeur: Piet'); assert.equal(t('agenda.aanwezig', { time: '08:30' }), 'Aanwezig om 08:30');
   assert.equal(t('agenda.klaar', { time: '17:00' }), 'Klaar om 17:00'); assert.equal(t('agenda.kalendernaam', { name: 'Noor' }), 'Carpool Noor');

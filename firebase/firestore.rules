@@ -357,6 +357,19 @@ service cloud.firestore {
       allow delete: if isCoordinator();
     }
 
+    // driverCalendarTokens/<familyId> = { token, createdAt }: the secret in the link of the calendar with the rides this family DRIVES
+    // (the parents' agenda). Exactly the same rules as calendarTokens above: that family and the coordinator read it, it is made once, never
+    // replaced, and only the coordinator can remove it. The server job treats both kinds of secret as file names, so they never overlap.
+    match /driverCalendarTokens/{familyId} {
+      allow get: if isCoordinator() || (isLinked() && linkedFamilyId() == familyId);
+      allow create: if (isCoordinator() || (isLinked() && linkedFamilyId() == familyId))
+        && request.resource.data.keys().hasOnly(['token', 'createdAt'])
+        && request.resource.data.token is string
+        && request.resource.data.token.matches('^[A-Za-z0-9_-]{32}$')
+        && request.resource.data.createdAt is number;
+      allow delete: if isCoordinator();
+    }
+
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();
     }
