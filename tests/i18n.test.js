@@ -25,6 +25,7 @@ test('a placeholder without a value is left visible, not replaced by "undefined"
 test('a value of 0 is kept (not treated as missing)', () => {
   assert.equal(t('deviation.gekozen', { n: 0 }), '0 gekozen');
 });
+test('Beheer has texts for the open-all / close-all button', () => { assert.equal(t('beheer.alles_open'), 'Alles openklappen'); assert.equal(t('beheer.alles_dicht'), 'Alles dichtklappen'); });
 test('unknown key falls back to the key itself', () => { assert.equal(t('nope.nothing'), 'nope.nothing'); });
 test('locale() comes from the dictionary', () => { assert.equal(locale(), 'nl-NL'); });
 
