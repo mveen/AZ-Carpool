@@ -26,10 +26,10 @@ export function matchLabel(m){ return feedLabel(m && m.calendarId) || (m && m.te
 // specifically the hyphen immediately followed by a LETTER (the start of the next team's
 // name) — a same-team numbering hyphen is always followed by a digit, never a letter.
 export function analyzeMatch(summary){
-  const sep = summary.match(/-(?=[A-Za-z])/);
+  const sep = summary.match(/-\u200B/) || summary.match(/-(?=[A-Za-z])/);   // a practice match marks its separator with an invisible character (practiceSummary)
   if(!sep) return {opponent:summary, isHome:null, home:summary, away:''};
   const home = summary.slice(0, sep.index).trim();
-  const away = summary.slice(sep.index+1).trim();
+  const away = summary.slice(sep.index+sep[0].length).replace(/\u200B/g,'').trim();
   const homeIsAZ = /az/i.test(home), awayIsAZ = /az/i.test(away);
   if(homeIsAZ && !awayIsAZ) return {opponent:away, isHome:true, home, away};
   if(!homeIsAZ && awayIsAZ) return {opponent:home, isHome:false, home, away};
@@ -175,9 +175,55 @@ export async function loadAllMatches(){
   calculateMatchDistances(combined);
 }
 
+// ---------- Practice matches (oefenwedstrijden) ----------
+// Parents add them in the Wedstrijden tab; they live in practiceMatches/<id> = {calendarId, teamLabel, opponent, isHome, location, startMs, createdAt}.
+// calendarId is the calendar of the chosen AZ team (so the team name always follows Beheer). A practice match is turned into the same
+// shape as a calendar match, with an event id 'practice_<id>': from there on the carpool, distances, Mijn week and the agenda treat it as any match.
+export const PRACTICE_PREFIX = 'practice_';
+export const PRACTICE_OPPONENT_MAX = 60;
+export const PRACTICE_LOCATION_MAX = 120;
+export function isPracticeMatch(m){ return !!m && String(m.eventId||'').startsWith(PRACTICE_PREFIX); }
+export function practiceIdOf(m){ return isPracticeMatch(m)? String(m.eventId).slice(PRACTICE_PREFIX.length) : ''; }
+
+// "Team-Opponent" (home) or "Opponent-Team" (away), the shape of a calendar summary. The separator carries an invisible marker, so an
+// opponent with a hyphen or starting with a digit ("1. FC Köln") is still split in the right place (analyzeMatch).
+export function practiceSummary(label, opponent, isHome){
+  const opp = String(opponent||'').trim();
+  return isHome? `${label}-\u200B${opp}` : `${opp}-\u200B${label}`;
+}
+export function practiceToMatch(id, d){
+  const label = feedLabel(d.calendarId) || d.teamLabel || '';
+  return { calendarId:d.calendarId||'', eventId:PRACTICE_PREFIX+id, teamLabel:d.teamLabel||'', summary:practiceSummary(label, d.opponent, d.isHome!==false), location:d.location||'', start:new Date(d.startMs) };
+}
+export function practiceMatchList(){
+  return Object.entries(S.practiceMatches||{}).filter(([,d])=>d && Number.isFinite(d.startMs)).map(([id,d])=>practiceToMatch(id,d));
+}
+
+// Checks the form of a practice match and turns it into the document to store. input: {calendarId, opponent, isHome, location, date:'YYYY-MM-DD', time:'HH:MM'}.
+// Returns {ok:true, doc} or {ok:false, errors:{team?, opponent?, location?, date?}}. A match must start in the future.
+export function buildPracticeDoc(input, feeds, nowMs){
+  const inp = input||{}, errors = {};
+  const feed = (feeds||[]).find(f=>f && f.calendarId && f.calendarId===inp.calendarId);
+  if(!feed) errors.team = true;
+  const opponent = String(inp.opponent||'').replace(/\s+/g,' ').trim().slice(0,PRACTICE_OPPONENT_MAX);
+  if(!opponent) errors.opponent = true;
+  const location = String(inp.location||'').replace(/\s+/g,' ').trim().slice(0,PRACTICE_LOCATION_MAX);
+  if(!location) errors.location = true;
+  const dm = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(inp.date||'')), tm = /^(\d{1,2}):(\d{2})$/.exec(String(inp.time||''));
+  let startMs = NaN;
+  if(dm && tm){
+    const d = new Date(+dm[1], +dm[2]-1, +dm[3], +tm[1], +tm[2]);
+    if(d.getFullYear()===+dm[1] && d.getMonth()===+dm[2]-1 && d.getDate()===+dm[3] && +tm[1]<24 && +tm[2]<60) startMs = d.getTime();
+  }
+  if(!Number.isFinite(startMs) || startMs<=nowMs) errors.date = true;
+  if(Object.keys(errors).length) return {ok:false, errors};
+  return {ok:true, doc:{calendarId:feed.calendarId, teamLabel:feed.label||'', opponent, isHome:!!inp.isHome, location, startMs}};
+}
+
 export function currentMatchList(){
-  if(S.matches.length || S.matchesSource==='live') return S.matches;
-  return S.cachedMatches;
+  const base = (S.matches.length || S.matchesSource==='live')? S.matches : S.cachedMatches;
+  const practice = practiceMatchList();
+  return practice.length? [...base, ...practice] : base;
 }
 
 // ---------- Shared match-carpool rendering (Afwijking, Mijn week, Dagafwijking) ----------

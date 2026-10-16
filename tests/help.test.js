@@ -155,7 +155,7 @@ import nl from '../texts-nl.js';
 // Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
 const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
   'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Ander adres…', 'Plek toevoegen',
-  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', '+ Auto toevoegen', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen'];
+  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen'];
 const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
 const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
 test('every quoted name exists in the app texts', () => {
@@ -275,6 +275,14 @@ test('help reflects the server jobs, the new host and the "Aanwezig om" texts', 
   assert.match(allText(findArticle('wijzigen')), /Op vrijdag om 19:00 zijn alle wijzigingen vanzelf weer weg/);
   assert.match(allText(findArticle('beheer-kalenders', { canEdit: true })), /elke ochtend vroeg/);
   assert.doesNotMatch(allText(findArticle('over-privacy')) + allText(findArticle('over-diensten')), /GitHub/);
+});
+
+test('help explains how to add a practice match and where a car leaves from', () => {
+  assert.equal(top('oefenwedstrijd toevoegen'), 'oefenwedstrijd'); assert.equal(top('hoe voeg ik een oefenwedstrijd toe'), 'oefenwedstrijd');
+  const o = allText(findArticle('oefenwedstrijd'));
+  assert.match(o, /Iedereen kan dat/); assert.match(o, /Thuis of Uit/); assert.match(o, /Ongedaan/); assert.match(o, /geen melding/);
+  assert.equal(findArticle('oefenwedstrijd').tab, 'matches'); assert.ok(!findArticle('oefenwedstrijd').coordinatorOnly);
+  assert.match(allText(findArticle('wedstrijden')), /Vertrek vanaf staat standaard op het busstation/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -3,6 +3,7 @@
 // the "this week" windows, and fetching from Google Calendar (fetch is replaced by a stub; the database is
 // the in-memory fake — nothing here touches the network).
 import assert from 'node:assert/strict';
+import { isPracticeMatch, practiceIdOf, practiceSummary, practiceToMatch, practiceMatchList, buildPracticeDoc } from '../matches.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -222,6 +223,56 @@ await testAsync('when the distance cannot be stored (rules not published) the sc
   forgetAttempts(); const fake = dbWithKey({}); stubOrs(); resetState(member); fake.failWrites('settings/matchDistances', 'permission-denied');
   await calculateMatchDistances([awayMatch]);
   assert.equal(S.matchDistances.ev_cal1__e9.km, 25.4);
+});
+
+console.log('\n=== practice matches ===');
+test('a practice summary is split at its own marker: a hyphen in the opponent or a digit at its start is no problem', () => {
+  const away = analyzeMatch(practiceSummary('AZ O15-1', 'Spa-Rotterdam O15', false));
+  assert.deepEqual([away.opponent, away.isHome, away.home, away.away], ['Spa-Rotterdam O15', false, 'Spa-Rotterdam O15', 'AZ O15-1']);
+  const home = analyzeMatch(practiceSummary('AZ O15-1', '1. FC Köln', true));
+  assert.deepEqual([home.opponent, home.isHome], ['1. FC Köln', true]);
+  assert.doesNotMatch(home.opponent + home.away, /\u200B/);
+});
+test('practiceToMatch: the shape of a calendar match, event id practice_<id>, team name from Beheer, own carpool id', () => {
+  resetState({ matchFeeds: feeds });
+  const x = practiceToMatch('abc', { calendarId: feeds[0].calendarId, teamLabel: 'oude naam', opponent: 'FC Volendam O15', isHome: true, location: "AFC '34, Alkmaar", startMs: 1790000000000 });
+  assert.equal(x.eventId, 'practice_abc'); assert.equal(isPracticeMatch(x), true); assert.equal(practiceIdOf(x), 'abc');
+  assert.equal(matchLabel(x), 'AZ O15-1'); assert.equal(analyzeMatch(x.summary).opponent, 'FC Volendam O15'); assert.equal(analyzeMatch(x.summary).isHome, true);
+  assert.equal(matchSlug(x), 'ev_cal1_group_calendar_google_com__practice_abc'); assert.equal(x.start.getTime(), 1790000000000);
+  assert.equal(practiceToMatch('d', { calendarId: feeds[0].calendarId, opponent: 'X', isHome: false, startMs: 1 }).summary.endsWith('AZ O15-1'), true);
+  assert.equal(isPracticeMatch(m()), false); assert.equal(practiceIdOf(m()), '');
+});
+test('currentMatchList adds the practice matches to the calendar matches, live or cached; broken documents are left out', () => {
+  const p = { calendarId: feeds[0].calendarId, teamLabel: 'AZ O15-1', opponent: 'X', isHome: true, location: 'Y', startMs: 1790000000000 };
+  resetState({ matchFeeds: feeds, matches: [m()], matchesSource: 'live', practiceMatches: { p1: p } });
+  assert.deepEqual(currentMatchList().map(x => x.eventId), ['e1', 'practice_p1']);
+  resetState({ matchFeeds: feeds, matches: [], matchesSource: 'cache', cachedMatches: [m({ eventId: 'c1' })], practiceMatches: { p1: p } });
+  assert.deepEqual(currentMatchList().map(x => x.eventId), ['c1', 'practice_p1']);
+  resetState({ matchFeeds: feeds, practiceMatches: { kapot: { opponent: 'X' } } });
+  assert.deepEqual(currentMatchList(), []); assert.deepEqual(practiceMatchList(), []);
+});
+const PNOW = new Date('2026-09-30T10:00:00+02:00').getTime();
+const pin = (over = {}) => ({ calendarId: feeds[0].calendarId, opponent: '  FC   Volendam O15 ', isHome: true, location: " AFC '34, Alkmaar ", date: '2026-10-03', time: '11:00', ...over });
+test('buildPracticeDoc: a valid form becomes the document to store (trimmed, team name from the calendar list, start in local time)', () => {
+  const r = buildPracticeDoc(pin(), feeds, PNOW);
+  assert.equal(r.ok, true);
+  assert.deepEqual(r.doc, { calendarId: feeds[0].calendarId, teamLabel: 'AZ O15-1', opponent: 'FC Volendam O15', isHome: true, location: "AFC '34, Alkmaar", startMs: new Date('2026-10-03T11:00:00+02:00').getTime() });
+  assert.equal(buildPracticeDoc(pin({ isHome: false }), feeds, PNOW).doc.isHome, false);
+});
+test('buildPracticeDoc: every missing or wrong field is reported, nothing is made', () => {
+  assert.deepEqual(buildPracticeDoc({}, feeds, PNOW), { ok: false, errors: { team: true, opponent: true, location: true, date: true } });
+  assert.deepEqual(buildPracticeDoc(pin({ calendarId: 'weg' }), feeds, PNOW).errors, { team: true });
+  assert.deepEqual(buildPracticeDoc(pin({ opponent: '   ' }), feeds, PNOW).errors, { opponent: true });
+  assert.deepEqual(buildPracticeDoc(pin({ location: '' }), feeds, PNOW).errors, { location: true });
+});
+test('buildPracticeDoc: the date must exist and the kick-off must be in the future', () => {
+  for (const bad of [{ date: '2026-09-29' }, { date: '2026-09-30', time: '09:59' }, { date: '2026-02-30' }, { time: '25:00' }, { time: '11:75' }, { date: '' }, { time: '' }, { date: '03-10-2026' }])
+    assert.deepEqual(buildPracticeDoc(pin(bad), feeds, PNOW).errors, { date: true }, JSON.stringify(bad));
+  assert.equal(buildPracticeDoc(pin({ date: '2026-09-30', time: '10:01' }), feeds, PNOW).ok, true);
+});
+test('buildPracticeDoc: very long texts are cut to their maximum', () => {
+  const d = buildPracticeDoc(pin({ opponent: 'x'.repeat(200), location: 'y'.repeat(500) }), feeds, PNOW).doc;
+  assert.equal(d.opponent.length, 60); assert.equal(d.location.length, 120);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

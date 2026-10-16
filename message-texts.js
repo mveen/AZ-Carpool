@@ -4,7 +4,7 @@
 // only collect the current app state into a ctx and call them.
 import { APP_URL, DAYS } from './constants.js';
 import { S } from './state.js';
-import { arrivalPlaces, destinationFor, normalizeLocations } from './locations.js';
+import { arrivalPlaces, destinationFor, matchFromName, normalizeLocations } from './locations.js';
 import { t, locale } from './i18n.js';
 import { activeDeviation, baseCars, effectiveCars, fam, plainDriverName, plainGirlName, rideTime } from './rides.js';
 import { dateForWeekday, dayUp, waDayDate } from './dates.js';
@@ -51,7 +51,7 @@ export function buildMyWeekMessageFrom(ctx){
     const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
     // Plain text only (no emoji): WhatsApp's share link doesn't reliably carry them.
     entries.push({sort:dayStart.getTime(), order:1+r.doc.startMs/1e13,
-      text:t('wa.my.match', { day: dl, team: ctx.matchLabel(r.doc), opponent: a.opponent, time: r.car.departureTime||'?', driver: ctx.driverName(r.car.driverFamilyId) })});
+      text:t(ctx.locCfg? 'wa.my.match_van' : 'wa.my.match', { day: dl, team: ctx.matchLabel(r.doc), opponent: a.opponent, time: r.car.departureTime||'?', driver: ctx.driverName(r.car.driverFamilyId), place: ctx.locCfg? matchFromName(r.car, ctx.locCfg) : '' })});
   });
   entries.sort((x,y)=>x.sort-y.sort || x.order-y.order);
   const lines = entries.map(e=>e.text);

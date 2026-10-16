@@ -6,7 +6,7 @@
 import { t } from './i18n.js';
 import { DAYS, WEEK_END_HOUR } from './constants.js';
 import { effectiveCars, fam, isFlex, ovGirlsFor, plainDriverName, rideTime } from './rides.js';
-import { freeText, normalizeLocations, placeFor, placeName, routeLabel } from './locations.js';
+import { freeText, matchFromName, normalizeLocations, placeFor, placeName, routeLabel } from './locations.js';
 import { getISOWeekKey, weekKeyDayIso } from './dates.js';
 
 export const FEED_WEEKS = 3;                  // the planning week plus the two after it
@@ -87,7 +87,7 @@ function rideEvent(familyId, st, weekKey, day, direction, cfg) {
 }
 
 // A match carpool the daughter rides in (only then: a match she is in no car for is none of the calendar's business).
-function matchEvents(familyId, st, fromMs, toMs) {
+function matchEvents(familyId, st, fromMs, toMs, cfg) {
   const out = [];
   Object.entries(st.matchCarpools || {}).forEach(([slug, d]) => {
     if (!d || !d.startMs || d.startMs < fromMs || d.startMs >= toMs) return;
@@ -99,7 +99,7 @@ function matchEvents(familyId, st, fromMs, toMs) {
         uid: `match-${slug}-${i}-${familyId}@azcarpool.nl`,
         startMs, endMs: d.startMs > startMs ? d.startMs : startMs + 2 * 3600000,
         summary: t('agenda.titel_wedstrijd', { match: String(d.summary || '').trim() || t('agenda.wedstrijd') }),
-        description: [t('agenda.chauffeur', { name: driver }), t('agenda.aftrap', { time: amsterdamClock(d.startMs) }), t('agenda.indicatief')].join('\n'),
+        description: [t('agenda.chauffeur', { name: driver }), t('agenda.vertrek_vanaf', { place: matchFromName(c, cfg) }), t('agenda.aftrap', { time: amsterdamClock(d.startMs) }), t('agenda.indicatief')].join('\n'),
         location: String(d.location || ''),
       });
     });
@@ -120,7 +120,7 @@ export function feedEvents(familyId, st, nowMs) {
   }
   const from = amsterdamToMs(weekKeyDayIso(weekKeys[0], 'Ma'), '00:00');
   const to = amsterdamToMs(weekKeyDayIso(weekKeys[weekKeys.length - 1], 'Vr'), '23:59') + 2 * 86400000;   // matches also on the weekend after the last Friday
-  events.push(...matchEvents(familyId, st, from, to));
+  events.push(...matchEvents(familyId, st, from, to, cfg));
   return events.sort((a, b) => a.startMs - b.startMs || a.uid.localeCompare(b.uid));
 }
 

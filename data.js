@@ -101,6 +101,14 @@ export async function purgeStaleMatchCarpools(){
   }
 }
 
+// A practice match disappears one day after it was played, like its carpool.
+export async function purgeStalePracticeMatches(){
+  const cutoff = Date.now() - 24*60*60*1000;
+  for(const [id,d] of Object.entries(S.practiceMatches||{})){
+    if((d.startMs||0) < cutoff){ try{ await db.doc("practiceMatches/"+id).delete(); }catch(e){} }
+  }
+}
+
 // Rides that have taken place are logged for the solidarity overview in Beheer (see ride-log.js). Only the coordinator's app does it,
 // and only once the log and the deviations have been read; it runs before old deviations are purged, so a one-off change is counted too.
 export async function logPassedShifts(){
@@ -554,6 +562,11 @@ export function startDataListeners(){
       purgeStaleMatchCarpools();
       renderMatchesTab(); renderMyWeek();
     }, err=>{});
+    db.collection("practiceMatches").onSnapshot(snap=>{
+      S.practiceMatches={}; snap.docs.forEach(d=>S.practiceMatches[d.id]=d.data());
+      purgeStalePracticeMatches();
+      renderMatchesTab(); renderMyWeek(); calculateMatchDistances(currentMatchList());
+    }, err=>{});
     db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ S.lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
       err=>{});
     db.doc("settings/lastUpdateDeviation").onSnapshot(snap=>{ S.lastUpdateDeviation = snap.exists? snap.data() : null; renderDeviationTab(); renderMyWeek(); },
@@ -594,7 +607,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   stopPushListeners();
   renderNoticeBanner();

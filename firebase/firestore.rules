@@ -338,5 +338,19 @@ service cloud.firestore {
     match /matchCarpools/{matchSlug} {
       allow read, write: if isMember();
     }
+
+    // Practice matches (oefenwedstrijden): every linked parent (and the coordinator) can add, change and remove them.
+    // The shape is checked so a bad write cannot break the Wedstrijden tab for everyone.
+    match /practiceMatches/{practiceId} {
+      allow read, delete: if isMember();
+      allow create, update: if isMember()
+        && request.resource.data.keys().hasOnly(['calendarId', 'teamLabel', 'opponent', 'isHome', 'location', 'startMs', 'createdAt'])
+        && request.resource.data.calendarId is string
+        && request.resource.data.teamLabel is string
+        && request.resource.data.opponent is string && request.resource.data.opponent.size() > 0 && request.resource.data.opponent.size() <= 60
+        && request.resource.data.isHome is bool
+        && request.resource.data.location is string && request.resource.data.location.size() > 0 && request.resource.data.location.size() <= 120
+        && request.resource.data.startMs is number;
+    }
   }
 }

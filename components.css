@@ -724,3 +724,23 @@ div.settingsRow{cursor:default}
 .avatarTile__disc.avatar--icon{background:var(--accent-soft);color:var(--accent-ink)}
 .avatarTile[aria-pressed="true"] .avatarTile__disc{outline:3px solid var(--action-bg);outline-offset:2px}
 .avatarTile__label{font:var(--type-caption);color:var(--text-2);text-align:center}
+
+/* ---------- Wedstrijden: practice matches, one row of buttons, "vertrek vanaf" ---------- */
+.matchCard__top{display:flex;align-items:flex-start;gap:var(--space-3)}
+.matchCard__top .matchInfo{flex:1;min-width:0}
+.matchTools{display:flex;gap:var(--space-3);flex:none}
+.matchTools .iconbtn{width:var(--hit-min);height:var(--hit-min);padding:0;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-card);color:var(--text-1);cursor:pointer}
+.matchTools .iconbtn.danger{color:var(--accent-ink)}
+.matchActions .btn{flex:1;min-width:0;white-space:nowrap}
+.matchCarWho{flex:1;min-width:0}
+.matchCarWho .fitbad{white-space:nowrap}
+.matchCarFrom{display:flex;align-items:center;gap:var(--space-2);margin-top:var(--space-1);color:var(--text-muted)}
+.matchCard .dayFormCard{margin-top:var(--space-3)}
+.dayFormCard>label:first-child{margin-top:0}
+.formRow{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}
+.formErr{margin:var(--space-2) 0 0;font:var(--type-caption);font-weight:700;color:var(--warn-ink)}
+.formHint{margin:var(--space-2) 0 0;font:var(--type-caption);color:var(--text-muted)}
+input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(--warn-soft)}
+.sheet .segmented{margin:var(--space-1) 0 0}
+.sheet__submit{width:100%;margin-top:var(--space-6)}
+.matchFromTxt{margin-top:var(--space-3)}

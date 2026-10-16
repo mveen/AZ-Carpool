@@ -39,6 +39,7 @@ export const S = {
   matchLastAttempt: null,          // {at, sig}: last automatic fetch in this session (limits retries)
   orsApiKey: '',                   // OpenRouteService key, read from settings/apiKeys (members only)
   matchCarpools: {},
+  practiceMatches: {},             // practiceMatches/<id>: practice matches added by the parents (see matches.js practiceToMatch)
   weekendMatchBySlug: {},
   openMatchCarpoolForm: null,
   editMatchCarIdx: null,   // index of the car being edited in the open match form (null = adding a new car)

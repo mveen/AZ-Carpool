@@ -191,3 +191,36 @@ export function fixedVenue(location) {
   if (/\bAFC\b|Jan\s+Ory|Robonsbosweg|1816\s?MK/i.test(l)) return 'AFC';
   return null;
 }
+
+// ---------- Wedstrijdcarpool: vertrek vanaf ----------
+// Every car of a match carpool says where it leaves from. Stored on the car (matchCarpools/<id>.cars[i]), both fields optional:
+//   fromText  free input ("Andere locatie"; an address or a point of interest; never becomes a standard place)
+//   fromId    a place id from Beheer (up to 6), or 'AFC' / 'ATC'
+// Nothing stored (every carpool made before this existed) means Busstation, the default.
+export const MATCH_FROM_OTHER = '__other';
+
+// All known places a match car can leave from: the places of Beheer, then AFC '34 and ATC.
+export function matchFromOptions(cfg) {
+  return [...cfg.places.map(p => ({ id: p.id, name: p.name })), { id: 'AFC', name: cfg.destination.name }, { id: 'ATC', name: ATC_NAME }];
+}
+// What the form shows for a car: { id, text }. id is MATCH_FROM_OTHER when there is a free input.
+export function matchFromChoice(car, cfg) {
+  const text = car ? str(car.fromText).slice(0, FREE_TEXT_MAX) : '';
+  if (text) return { id: MATCH_FROM_OTHER, text };
+  const id = car && matchFromOptions(cfg).some(o => o.id === car.fromId) ? car.fromId : BUSSTATION_ID;
+  return { id: cfg.places.some(p => p.id === id) || id === 'AFC' || id === 'ATC' ? id : cfg.places[0].id, text: '' };
+}
+// The name to show: the free input, otherwise the name of the chosen place, otherwise Busstation.
+export function matchFromName(car, cfg) {
+  const c = matchFromChoice(car, cfg);
+  if (c.id === MATCH_FROM_OTHER) return c.text;
+  const o = matchFromOptions(cfg).find(x => x.id === c.id);
+  return o ? o.name : cfg.places[0].name;
+}
+// The two fields to store for what the form chose ('' for the one that does not apply).
+export function matchFromFields(choiceId, text, cfg) {
+  const free = str(text).slice(0, FREE_TEXT_MAX);
+  if (choiceId === MATCH_FROM_OTHER) return free ? { fromId: '', fromText: free } : null;   // null: a free input without text is not valid
+  const id = matchFromOptions(cfg).some(o => o.id === choiceId) ? choiceId : BUSSTATION_ID;
+  return { fromId: id, fromText: '' };
+}

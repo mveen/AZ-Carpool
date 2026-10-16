@@ -1,6 +1,7 @@
 // Run with: node locations.test.js
 // Pickup / drop-off places per shift, one-off overrides, map links and fixed venues (US-15, US-21, US-22).
 import assert from 'node:assert/strict';
+import { MATCH_FROM_OTHER, matchFromChoice, matchFromFields, matchFromName, matchFromOptions } from '../locations.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -137,6 +138,41 @@ test('the route and the shift label follow the arrival place, heen and terug', (
   assert.equal(routeLabel({ destination: 'ATC' }, 'terug', cfg), 'ATC → Busstation');
   assert.equal(shiftLabel({ departureTime: '07:05', destination: 'ATC' }, 'heen', cfg), '07:05 Busstation → ATC');
 });
+console.log('\n=== match carpool: vertrek vanaf ===');
+test('the places a match car can leave from: the places of Beheer, then AFC and ATC', () => {
+  const cfg = normalizeLocations(null);
+  assert.deepEqual(matchFromOptions(cfg).map(o => o.name), ['Busstation', 'A4-De Hoek', 'De Parel', "AFC '34", 'ATC']);
+  assert.deepEqual(matchFromOptions(cfg).map(o => o.id), ['busstation', 'a4-de-hoek', 'de-parel', 'AFC', 'ATC']);
+});
+test('nothing stored (every older carpool) means Busstation', () => {
+  const cfg = normalizeLocations(null);
+  assert.equal(matchFromName({}, cfg), 'Busstation'); assert.equal(matchFromName(null, cfg), 'Busstation');
+  assert.deepEqual(matchFromChoice({ departureTime: '09:00' }, cfg), { id: 'busstation', text: '' });
+});
+test('a chosen place shows its name; Beheer renaming a place shows everywhere', () => {
+  const cfg = normalizeLocations({ places: [{ id: 'busstation', name: 'Station Aalsmeer' }, { id: 'p-1', name: 'Dorpsplein' }] });
+  assert.equal(matchFromName({ fromId: 'p-1' }, cfg), 'Dorpsplein'); assert.equal(matchFromName({ fromId: 'busstation' }, cfg), 'Station Aalsmeer');
+  assert.equal(matchFromName({ fromId: 'AFC' }, cfg), "AFC '34"); assert.equal(matchFromName({ fromId: 'ATC' }, cfg), 'ATC');
+});
+test('a place that was removed in Beheer falls back to Busstation instead of showing nothing', () => {
+  assert.equal(matchFromName({ fromId: 'weg' }, normalizeLocations(null)), 'Busstation');
+});
+test('a free input wins over the place, is trimmed and never becomes a standard place', () => {
+  const cfg = normalizeLocations(null);
+  assert.equal(matchFromName({ fromId: 'ATC', fromText: '  Zwaag, Dorpsstraat 12 ' }, cfg), 'Zwaag, Dorpsstraat 12');
+  assert.deepEqual(matchFromChoice({ fromText: 'Zwaag' }, cfg), { id: MATCH_FROM_OTHER, text: 'Zwaag' });
+  assert.equal(matchFromChoice({ fromText: 'x'.repeat(300) }, cfg).text.length, 120);
+  assert.equal(cfg.places.length, 3);
+});
+test('matchFromFields: what the form stores', () => {
+  const cfg = normalizeLocations(null);
+  assert.deepEqual(matchFromFields('ATC', 'weggooien', cfg), { fromId: 'ATC', fromText: '' });
+  assert.deepEqual(matchFromFields(MATCH_FROM_OTHER, ' Zwaag ', cfg), { fromId: '', fromText: 'Zwaag' });
+  assert.equal(matchFromFields(MATCH_FROM_OTHER, '   ', cfg), null, 'a free input needs text');
+  assert.deepEqual(matchFromFields('', '', cfg), { fromId: 'busstation', fromText: '' }, 'nothing chosen: the default');
+  assert.deepEqual(matchFromFields('onbekend', '', cfg), { fromId: 'busstation', fromText: '' });
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 
