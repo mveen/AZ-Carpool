@@ -17,7 +17,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { ensureVapidFile, sendPush } from './lib/webpush.mjs';
-import { dataDir, loadConfig, secretsDir, codeDir } from './lib/setup.mjs';
+import { dataDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const PUSH_APP_MODULES = ['push.js', 'notif-text.js', 'ritbeurs.js', 'dates.js', 'state.js'];
@@ -168,7 +168,7 @@ export async function withLock(file, fn, { now = Date.now(), staleMs = 5 * 60 * 
   finally { if (fd != null) { try { closeSync(fd); } catch (e) { /* closed */ } } try { unlinkSync(file); } catch (e) { /* gone */ } }
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   try {
     const { projectId, referer } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));

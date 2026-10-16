@@ -8,7 +8,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
-import { loadConfig, secretsDir } from './lib/setup.mjs';
+import { loadConfig, secretsDir, isMainModule } from './lib/setup.mjs';
 
 export const MATCH_HORIZON_DAYS = 29;   // same as matches.js
 
@@ -73,7 +73,7 @@ export async function runMatches({ firestore, apiKey, referer, now = Date.now(),
   return built;
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   try {
     const { projectId, calendarApiKey, referer } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));

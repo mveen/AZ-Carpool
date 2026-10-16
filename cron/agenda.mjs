@@ -11,7 +11,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
-import { agendaDir, loadConfig, secretsDir, codeDir } from './lib/setup.mjs';
+import { agendaDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const AGENDA_APP_MODULES = ['calendar-feed.js', 'rides.js', 'period.js', 'state.js', 'i18n.js'];
@@ -103,7 +103,7 @@ export async function runAgenda({ firestore, app, outDir, now = Date.now(), log 
   return { calendars: wanted.size, written, unchanged, removed };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   try {
     const { projectId } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));
