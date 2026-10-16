@@ -234,7 +234,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
         <div class="devDestRow">${destBtn('AFC', locCfg.destination.name, CITY_AFC)}${destBtn('ATC', ATC_NAME, CITY_ATC)}</div>
       </div>
       <div class="devField"><span>${t('deviation.kinderen')}</span><div class="devKidList">${kidRows}</div></div>
-      ${addPassengerHtml(key, c, girls, ctx.unassigned, day, direction)}
+      ${addPassengerHtml(key, c, girls, ctx.unassigned, day, direction)}${cars.length>1? `<button type="button" class="btn danger devDeleteCar" data-devdelcar="1" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${phIcon('trash')} ${t('deviation.verwijder_auto')}</button>` : ''}
     </div>`;
   }
   const toast = undo? `<div class="devToast" role="status"><span>${esc(undo.text)}</span><button type="button" class="devToastUndo" data-devundo="1">${t('deviation.ongedaan')}</button></div>` : '';
@@ -360,6 +360,31 @@ export function attachDeviationHandlers(){
       afterChange(day,direction,fromIdx,prev, girlName(girl)+t('deviation.verplaatst'));
       if(overfull) showToast(t('deviation.deze_auto_zit_nu_vol', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
     }
+  });
+  // Remove a whole car (one-off, this shift only). An empty car goes at once (with "Ongedaan"); a car with passengers asks a second tap first,
+  // because they end up in "Niet ingedeeld". The last car of a shift cannot be removed: an empty list means "back to the standard rooster".
+  document.querySelectorAll('.devDeleteCar').forEach(btn=>{
+    const {day,direction,caridx}=btn.dataset; const idx=+caridx;
+    const run = async ()=>{
+      const prev=snapshotCars(day,direction);
+      const cars=effectiveCars(day,direction);
+      if(cars.length<2 || !cars[idx]) return;
+      const gone=cars[idx];
+      cars.splice(idx,1);
+      const driver=(gone.driverFamilyId && fam(gone.driverFamilyId).parentName) || t('deviation.geen_chauffeur');
+      // Card numbers shift after a removal: forget which cards were open so the wrong one does not stay unfolded.
+      Object.keys(S.devOpen).filter(k=>k.startsWith(`${day}|${direction}|`)).forEach(k=>{ delete S.devOpen[k]; });
+      Object.keys(S.devPick).filter(k=>k.startsWith(`${day}|${direction}|`)).forEach(k=>{ delete S.devPick[k]; });
+      S.devKid=null;
+      await saveWithUndo(day,direction,prev,cars,t('deviation.auto_verwijderd',{p1:driver}));
+      renderDeviationTab();
+    };
+    btn.onclick=()=>{
+      const car=effectiveCars(day,direction)[idx]; if(!car) return;
+      const ids=car.girlIds||[];
+      if(!ids.length) return run();
+      twoStepConfirm(btn, t('deviation.auto_verwijderen_bevestig',{p1:sortGirlIds(ids).map(id=>girlName(id)).join(', ')}), run);
+    };
   });
   document.querySelectorAll('[data-devundo]').forEach(btn=>btn.onclick=async ()=>{
     const u=S.devUndo; if(!u) return;
