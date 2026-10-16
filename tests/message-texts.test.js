@@ -3,6 +3,7 @@
 // group tests the pure builders with hand-made input; the second group tests the wrappers against the
 // state of the running app (the expected strings are what the live app produced before the refactor).
 import assert from 'node:assert/strict';
+import { normalizeLocations } from '../locations.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -287,6 +288,15 @@ test('the conclusie compares with the temporary rooster, not with the standard r
   sampleParentState({ ...period40(), deviations: {} });
   // no one-off changes: the temporary rooster IS the plan, so there is nothing to report
   assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Di')), 'Dinsdag: volgens schema. Zie Mijn week: https://azcarpool.nl/');
+});
+
+test('a match ride says where the car leaves from (with the place settings; without them the old wording stays)', () => {
+  const kick = new Date(2026, 9, 3, 10, 30).getTime();
+  const rides = fromId => [{ doc: { startMs: kick, summary: 'AZ O15-1-Hoorn O15-2', teamLabel: 'AZ O15-1' }, car: { departureTime: '09:15', driverFamilyId: 'f1', fromId } }];
+  const last3 = c => buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, cars: () => [], matchRides: rides(c.fromId), ...c.over })).split('\n').slice(-3)[0];
+  assert.equal(last3({ over: { locCfg: normalizeLocations(null) } }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 vanaf Busstation met Jan');
+  assert.equal(last3({ fromId: 'ATC', over: { locCfg: normalizeLocations(null) } }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 vanaf ATC met Jan');
+  assert.equal(last3({}), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 met Jan');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

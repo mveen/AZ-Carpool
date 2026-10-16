@@ -257,6 +257,13 @@ test('the Beheer texts for the error log exist and promise the 30 days', () => {
   assert.equal(t('beheer.fouten_meer', { p1: 4 }), 'En nog 4 oudere meldingen.');
 });
 
+test('the practice match and "vertrek vanaf" texts exist', () => {
+  assert.equal(t('matches.vertrek_vanaf', { place: 'Busstation' }), 'Vertrek vanaf Busstation');
+  assert.equal(t('matches.oefen_titel'), 'Oefenwedstrijd toevoegen'); assert.equal(t('matches.auto_toevoegen'), 'Auto toevoegen');
+  assert.equal(t('agenda.vertrek_vanaf', { place: 'ATC' }), 'Vertrek vanaf: ATC');
+  assert.match(t('wa.my.match_van', { day: 'ZA 3', team: 'AZ', opponent: 'X', time: '09:15', place: 'ATC', driver: 'Jan' }), /vertrek 09:15 vanaf ATC met Jan/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

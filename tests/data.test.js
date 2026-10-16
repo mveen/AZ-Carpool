@@ -15,7 +15,7 @@ import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY,
 import { createFakeFirestore } from './fake-db.js';
 import { S } from '../state.js';
 import {
-  createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, saveDeviationCars, saveInviteCode,
+  createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, purgeStalePracticeMatches, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
@@ -961,6 +961,14 @@ await testAsync('saveAvatar says so when the database refuses', async () => {
 
 import { assertNoUnusedImports } from './test-support.js';
 test('data.js imports nothing it does not use', () => assertNoUnusedImports('data.js'));
+
+ 
+await testAsync('purgeStalePracticeMatches removes practice matches more than a day in the past', async () => {
+  const fake = useFakeDb({ 'practiceMatches/old': {}, 'practiceMatches/recent': {}, 'practiceMatches/future': {} });
+  resetState({ practiceMatches: { old: { startMs: new Date('2026-09-25').getTime() }, recent: { startMs: new Date('2026-09-29T20:00:00+02:00').getTime() }, future: { startMs: new Date('2026-10-03').getTime() } } });
+  await withFakeNowAsync(NOW, () => purgeStalePracticeMatches());
+  assert.deepEqual(fake.collection('practiceMatches').map(e => e[0]).sort(), ['future', 'recent']);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

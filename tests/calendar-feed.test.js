@@ -210,5 +210,11 @@ test('every event has an end after its start and a stable, unique id', () => {
   assert.ok(evs.every((e, i) => i === 0 || evs[i - 1].startMs <= e.startMs), 'in time order');
 });
 
+test('a match carpool event says where the car leaves from: Busstation by default, a chosen place or a free input otherwise', () => {
+  const via = extra => { stateWith({ matchCarpools: { 'az-ajax': MATCH({ cars: [{ ...car('f2', ['f1'], '12:30'), ...extra }] }) } }); return feedEvents('f1', S, NOW).find(e => e.uid.startsWith('match-')).description; };
+  assert.match(via({}), /Vertrek vanaf: Busstation/); assert.match(via({ fromId: 'ATC' }), /Vertrek vanaf: ATC/);
+  assert.match(via({ fromId: '', fromText: 'Zwaag, Dorpsstraat 12' }), /Vertrek vanaf: Zwaag, Dorpsstraat 12/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

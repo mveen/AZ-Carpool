@@ -10,9 +10,9 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleFamilies, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, NOW } from './test-support.js';
+import { installFakeDom, sampleFamilies, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
-import { matchCarRowHtml, matchesCardHtml, renderMatchesTab, updateMatchCarCapacityWarning, wireMatchCarpool } from '../ui-matches.js';
+import { deletePractice, matchCarRowHtml, matchesCardHtml, practiceSheetHtml, renderMatchesTab, savePractice, updateMatchCarCapacityWarning, wireMatchCarpool } from '../ui-matches.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -30,7 +30,7 @@ const state = (patch = {}) => sampleParentState({ matchFeeds: feeds, matches: [h
 let picks = [];
 function pageFrom(html) {
   const mk = attr => [...html.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map(m => ({ dataset: { [attr]: m[1] }, onclick: null, textContent: '' }));
-  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar') };
+  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar'), '[data-addpractice]': mk('addpractice'), '[data-editpractice]': mk('editpractice'), '[data-delpractice]': mk('delpractice') };
   picks = [...html.matchAll(/class="matchCarGirlPick" value="([^"]+)"/g)].map(m => ({ value: m[1], checked: false, onchange: null }));
   reg['.matchCarGirlPick'] = picks;
   dom.doc.querySelectorAll = sel => (sel === '.matchCarGirlPick:checked' ? picks.filter(p => p.checked) : (reg[sel] || []));
@@ -43,10 +43,10 @@ const render = () => { withFakeNow(NOW, () => renderMatchesTab()); return boxHtm
 const reg = () => dom.doc.querySelectorAll;
 
 console.log('=== which matches are listed ===');
-test('without any match in the next 29 days the tab is empty (no message)', () => {
+test('without any match in the next 29 days only the info line (with the practice match button) is shown', () => {
   state({ matches: [tooFar] });
-  assert.equal(render(), '');
-  state({ matches: [] }); assert.equal(render(), '');
+  assert.match(text(render()), /^Geen wedstrijden de komende 4 weken\./); assert.doesNotMatch(render(), /matchCard/);
+  state({ matches: [] }); assert.match(text(render()), /^Geen wedstrijden de komende 4 weken\./);
 });
 test('without an account nothing is shown', () => {
   resetState({ me: null, matchFeeds: feeds, matches: [home], matchesSource: 'live' });
@@ -63,7 +63,7 @@ test('a match within 8 days can get a carpool; the "set up a carpool" sentence s
   state({ matches: [home] });
   const s = text(render());
   assert.match(s, /za 3 okt.*aftrap 10:30.*AZ O15-1 \(Thuis\) vs Hoorn O15-2.*Sportpark Hoorn/);
-  assert.match(s, /Een carpool kun je in de komende 8 dagen regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rij ook \+ Auto toevoegen/);
+  assert.match(s, /Een carpool kun je in de komende 8 dagen regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rij ook Auto toevoegen/);
   state({ matches: [far] });
   assert.doesNotMatch(text(render()), /in de komende 8 dagen regelen/);
   assert.doesNotMatch(render(), /data-iride/);
@@ -154,7 +154,7 @@ await testAsync('a valid car is stored on the match document, with the match det
   const fake = useFakeDb(sampleDbSeed()); state(); const save = openForm();
   setForm('f1', '07:15', ['f2', 'f4']); await withFakeNow(NOW, () => save.onclick());
   const d = fake.get('matchCarpools/' + SLUG);
-  assert.deepEqual(d.cars, [{ driverFamilyId: 'f1', girlIds: ['f4', 'f2'], departureTime: '07:15' }]); // riders are picked from an A-Z list
+  assert.deepEqual(d.cars, [{ driverFamilyId: 'f1', girlIds: ['f4', 'f2'], departureTime: '07:15', fromId: 'busstation', fromText: '' }]); // riders are picked from an A-Z list
   assert.equal(d.matchSlug, SLUG); assert.equal(d.calendarId, 'cal1'); assert.equal(d.eventId, 'e1'); assert.equal(d.teamLabel, 'AZ O15-1');
   assert.equal(d.summary, home.summary); assert.equal(d.location, home.location); assert.equal(d.startMs, home.start.getTime());
   assert.equal(S.openMatchCarpoolForm, null); assert.equal(toast(), 'Carpool toegevoegd ✓');
@@ -243,7 +243,7 @@ await testAsync('saving an edit replaces only that car (also for someone who is 
   setForm('f3', '07:45', ['f5', 'f4']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
   const d = fake.get('matchCarpools/' + SLUG);
   assert.equal(d.cars.length, 2); assert.deepEqual(d.cars[0], twoCars.cars[0]);
-  assert.deepEqual(d.cars[1], { driverFamilyId: 'f3', girlIds: ['f4', 'f5'], departureTime: '07:45' });
+  assert.deepEqual(d.cars[1], { driverFamilyId: 'f3', girlIds: ['f4', 'f5'], departureTime: '07:45', fromId: 'busstation', fromText: '' });
   assert.equal(S.openMatchCarpoolForm, null); assert.equal(S.editMatchCarIdx, null); assert.equal(toast(), 'Carpool bijgewerkt ✓');
 });
 await testAsync('editing a car that has been removed meanwhile stores nothing', async () => {
@@ -264,6 +264,168 @@ test('riders are listed regular players A-Z first, then Flex players A-Z', () =>
   fams.f1.familyType = 'flex'; fams.f4.familyType = 'flex';   // Eline and Evi
   state({ families: fams }); render(); reg()('[data-addmatchcar]')[0].onclick();
   assert.deepEqual(picks.map(p => fams[p.value].girlName), ['Anouk', 'Jahaimy', 'Lois', 'Saar', 'Eline', 'Evi']);
+});
+
+console.log('\n=== one row of buttons, "vertrek vanaf" ===');
+test('"Ik rij ook" and "Auto toevoegen" sit together in one .matchActions row; Ik rij ook only while the own car is not in', () => {
+  state(); const html = render();
+  assert.match(html, /<div class="matchActions"><button[^>]*data-iride="[^"]+"[^>]*>[\s\S]*?<\/button><button[^>]*data-addmatchcar="[^"]+"[^>]*>[\s\S]*?<\/button><\/div>/);
+  assert.match(text(html), /Ik rij ook Auto toevoegen/);
+  state({ matchCarpools: { [SLUG]: { ...carpool, cars: [{ driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '09:15' }] } } });
+  const h2 = render(); assert.doesNotMatch(h2, /data-iride/); assert.match(h2, /<div class="matchActions"><button[^>]*data-addmatchcar/);
+});
+test('while the form is open the button row is hidden', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  assert.doesNotMatch(boxHtml, /matchActions/); assert.match(boxHtml, /matchCarDriver_/);
+});
+test('every car shows where it leaves from: Busstation by default, a chosen place, or a free input (escaped)', () => {
+  state();
+  assert.match(text(matchCarRowHtml(cars[0], {})), /Vertrek vanaf Busstation/);
+  assert.match(text(matchCarRowHtml({ ...cars[0], fromId: 'ATC' }, {})), /Vertrek vanaf ATC/);
+  const free = matchCarRowHtml({ ...cars[0], fromId: '', fromText: 'Zwaag <b>12</b>' }, {});
+  assert.match(free, /Zwaag &lt;b&gt;12&lt;\/b&gt;/); assert.doesNotMatch(free, /<b>/);
+});
+test('the form has "Vertrek vanaf" with all known places and "Andere locatie…"; the text field stays hidden until that is chosen', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  const sel = boxHtml.match(/<select id="matchCarFrom_ev_cal1__e1">([\s\S]*?)<\/select>/)[1];
+  assert.deepEqual([...sel.matchAll(/>([^<]+)<\/option>/g)].map(x => x[1].replace(/&#39;/g, "'")), ['Busstation', 'A4-De Hoek', 'De Parel', "AFC '34", 'ATC', 'Andere locatie…']);
+  assert.match(sel, /<option value="busstation" selected>/);
+  assert.match(boxHtml, /id="matchCarFromTxt_ev_cal1__e1"[^>]* hidden>/);
+});
+const setFrom = (id, txt = '') => { dom.el('matchCarFrom_' + SLUG).value = id; dom.el('matchCarFromTxt_' + SLUG).value = txt; };
+await testAsync('a car leaves from Busstation unless another place is chosen; the choice is stored on the car', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); let save = openForm();
+  setForm('f1', '07:15', ['f2']); setFrom('busstation'); await withFakeNow(NOW, () => save.onclick());
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars[0], { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:15', fromId: 'busstation', fromText: '' });
+  S.matchCarpools = { [SLUG]: fake.get('matchCarpools/' + SLUG) };   // the app would have read it back from the database
+  save = openForm(); setForm('f3', '07:30', ['f5']); setFrom('ATC'); await withFakeNow(NOW, () => save.onclick());
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars[1], { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '07:30', fromId: 'ATC', fromText: '' });
+});
+await testAsync('"Andere locatie" stores the free text (and no place id); without text nothing is stored', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); const save = openForm();
+  setForm('f1', '07:15', ['f2']); setFrom('__other', '   '); await withFakeNow(NOW, () => save.onclick());
+  assert.equal(fake.get('matchCarpools/' + SLUG), undefined); assert.equal(toast(), 'Vul de plek in waar de auto vertrekt.');
+  setFrom('__other', ' Zwaag, Dorpsstraat 12 '); await withFakeNow(NOW, () => save.onclick());
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars[0], { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:15', fromId: '', fromText: 'Zwaag, Dorpsstraat 12' });
+});
+test('editing a car starts with its place; a free input opens the text field', () => {
+  const doc = { ...carpool, cars: [{ ...cars[0], fromId: '', fromText: 'Zwaag' }, { ...cars[0], fromId: 'ATC' }] };
+  state({ matchCarpools: { [SLUG]: doc } }); render(); reg()('[data-editmatchcar]')[0].onclick();
+  assert.match(boxHtml, /<option value="__other" selected>/); assert.match(boxHtml, /id="matchCarFromTxt_ev_cal1__e1"[^>]*value="Zwaag"(?![^>]* hidden)/);
+  reg()('[data-editmatchcar]')[1].onclick(); assert.match(boxHtml, /<option value="ATC" selected>/);
+});
+await testAsync('Ik rij ook leaves from Busstation', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); render();
+  await withFakeNow(NOW, () => reg()('[data-iride]')[0].onclick());
+  const c = fake.get('matchCarpools/' + SLUG).cars[0]; assert.equal(c.fromId, 'busstation'); assert.equal(c.fromText, ''); assert.equal(c.driverFamilyId, 'f2');
+});
+
+console.log('\n=== practice matches ===');
+const CAL = 'cal1';
+const pdoc = (over = {}) => ({ calendarId: CAL, teamLabel: 'AZ O15-1', opponent: 'FC Volendam O15', isHome: true, location: "AFC '34, Alkmaar", startMs: at('2026-10-02T19:00:00+02:00').getTime(), createdAt: 1, ...over });
+const PSLUG = 'ev_cal1__practice_p1';
+test('the info line has the "Oefenwedstrijd" button, also when there is no match at all', () => {
+  state({ matches: [home] }); assert.match(render(), /<button[^>]*data-addpractice="1"[^>]*>[\s\S]*?Oefenwedstrijd<\/button>/);
+  state({ matches: [] }); const s = render();
+  assert.match(text(s), /Geen wedstrijden de komende 4 weken\. Oefenwedstrijd/); assert.match(s, /data-addpractice/);
+});
+test('a practice match is listed with the Oefen tag, a pencil and a trash button; calendar matches have neither', () => {
+  state({ practiceMatches: { p1: pdoc() } }); const html = render();
+  assert.match(text(html), /vr 2 okt Oefen aftrap 19:00 AZ O15-1 \(Thuis\) vs FC Volendam O15 AFC '34, Alkmaar/);
+  assert.match(html, /data-editpractice="p1"/); assert.match(html, /data-delpractice="p1"/);
+  assert.equal((html.match(/data-delpractice/g) || []).length, 1); assert.equal((html.match(/data-addmatchcar/g) || []).length, 2);
+  assert.match(html, /<div class="matchCard__top">[\s\S]*?class="matchTools"/);
+});
+test('practice and calendar matches are listed together in order of date', () => {
+  state({ practiceMatches: { p1: pdoc({ startMs: at('2026-10-02T19:00:00+02:00').getTime() }) } });
+  const s = text(render()); assert.ok(s.indexOf('vr 2 okt') > -1 && s.indexOf('vr 2 okt') < s.indexOf('za 3 okt'));
+});
+test('a practice match gets a carpool like any match (its own carpool id), and an away one is called Uit', () => {
+  state({ practiceMatches: { p1: pdoc({ isHome: false, opponent: 'SV Hoogland', location: 'Sportpark De Hoef, Hoogland' }) } }); render();
+  assert.ok(S.weekendMatchBySlug[PSLUG]); assert.match(text(boxHtml), /AZ O15-1 \(Uit\) vs SV Hoogland Sportpark De Hoef, Hoogland/);
+  reg()('[data-addmatchcar]')[0].onclick(); assert.equal(S.openMatchCarpoolForm, PSLUG);
+});
+await testAsync('a car for a practice match is stored under the practice carpool, with the match details and where it leaves from', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state({ practiceMatches: { p1: pdoc() } }); render();
+  reg()('[data-addmatchcar]')[0].onclick();
+  dom.el('matchCarDriver_' + PSLUG).value = 'f1'; dom.el('matchCarTime_' + PSLUG).value = '17:30'; dom.el('matchCarFrom_' + PSLUG).value = 'busstation'; picks.forEach(p => { p.checked = p.value === 'f2'; });
+  await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  const d = fake.get('matchCarpools/' + PSLUG);
+  assert.equal(d.eventId, 'practice_p1'); assert.equal(d.teamLabel, 'AZ O15-1'); assert.equal(d.location, "AFC '34, Alkmaar"); assert.equal(d.startMs, pdoc().startMs);
+  assert.equal(d.cars[0].fromId, 'busstation'); assert.match(d.summary, /^AZ O15-1-.FC Volendam O15$/);
+});
+
+console.log('\n=== practice match sheet ===');
+test('the sheet has team (from Beheer), opponent, thuis/uit, location, date and kick-off; Thuis offers the fixed locations', () => {
+  state(); const h = practiceSheetHtml(null);
+  assert.match(text(h), /Oefenwedstrijd toevoegen/); assert.match(h, /<option value="cal1" selected>AZ O15-1<\/option>/);
+  assert.match(h, /id="practiceOpp"/); assert.match(h, /data-practicehome="1" class="active"/); assert.match(h, /type="date" id="practiceDate" value=""/); assert.match(h, /type="time" id="practiceTime" value=""/);
+  const sel = h.match(/<select id="practiceLocSel"[^>]*>([\s\S]*?)<\/select>/)[1];
+  assert.deepEqual([...sel.matchAll(/>([^<]+)<\/option>/g)].map(x => x[1].replace(/&#39;/g, "'")), ["AFC '34, Alkmaar", 'AZ Trainingscomplex, Wijdewormer', 'Andere locatie…']);
+  assert.match(h, /id="practiceLocTxt"[^>]* hidden>/); assert.doesNotMatch(h, /id="practiceLocSel" hidden/);
+  assert.doesNotMatch(h, /[^-]style="/, 'no inline styles');
+});
+test('the sheet never hard-codes team names: one option per calendar of Beheer', () => {
+  state({ matchFeeds: [{ calendarId: 'a', label: 'Team <A>' }, { calendarId: 'b', label: 'Team B' }] });
+  const opts = [...practiceSheetHtml(null).matchAll(/<option value="([ab])"[^>]*>([^<]+)</g)].map(x => x[1] + x[2]);
+  assert.deepEqual(opts, ['aTeam &lt;A&gt;', 'bTeam B']);
+});
+test('without any team the sheet explains where teams are added and has no form', () => {
+  state({ matchFeeds: [] }); const h = practiceSheetHtml(null);
+  assert.match(text(h), /Er zijn nog geen teams\. De coördinator voegt ze toe in Beheer/); assert.doesNotMatch(h, /practiceSave/);
+});
+test('changing starts with the stored values: an away match shows its free location text, a home match at ATC selects ATC', () => {
+  state({ practiceMatches: { away: pdoc({ isHome: false, opponent: 'SV Hoogland', location: 'Sportpark De Hoef' }), atc: pdoc({ location: 'AZ Trainingscomplex, Wijdewormer' }), own: pdoc({ location: 'Sportpark Oost' }) } });
+  const a = practiceSheetHtml('away'); assert.match(text(a), /Oefenwedstrijd wijzigen/); assert.match(a, /value="SV Hoogland"/); assert.match(a, /data-practicehome="0" class="active"/);
+  assert.match(a, /id="practiceLocTxt"[^>]*value="Sportpark De Hoef"(?![^>]* hidden)/); assert.match(a, /id="practiceLocSel" hidden/);
+  assert.match(a, /value="2026-10-02"/); assert.match(a, /value="19:00"/);
+  assert.match(practiceSheetHtml('atc'), /<option value="ATC" selected>/);
+  const o = practiceSheetHtml('own'); assert.match(o, /<option value="__other" selected>/); assert.match(o, /id="practiceLocTxt"[^>]*value="Sportpark Oost"(?![^>]* hidden)/);
+});
+test('HTML in the stored opponent is escaped', () => {
+  state({ practiceMatches: { p1: pdoc({ opponent: '"><img onerror=x>' }) } });
+  assert.doesNotMatch(practiceSheetHtml('p1'), /<img onerror/); assert.doesNotMatch(render(), /<img onerror/);
+});
+
+console.log('\n=== saving and removing a practice match ===');
+const pinput = (over = {}) => ({ calendarId: CAL, opponent: 'FC Volendam O15', isHome: true, location: "AFC '34, Alkmaar", date: '2026-10-02', time: '19:00', ...over });
+await testAsync('a valid practice match is stored (new id each time), a wrong one is refused with the fields that are wrong', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state();
+  const bad = await withFakeNowAsync(NOW, () => savePractice(pinput({ opponent: '', date: '2026-09-01' }), null));
+  assert.deepEqual(bad, { ok: false, errors: { opponent: true, date: true } }); assert.deepEqual(fake.collection('practiceMatches'), []);
+  const r = await withFakeNowAsync(NOW, () => savePractice(pinput(), null));
+  assert.equal(r.ok, true); assert.equal(r.old, null); assert.equal(r.beyond, false); assert.match(r.id, /^pm/);
+  const d = fake.get('practiceMatches/' + r.id);
+  assert.deepEqual({ ...d, createdAt: 0 }, { calendarId: CAL, teamLabel: 'AZ O15-1', opponent: 'FC Volendam O15', isHome: true, location: "AFC '34, Alkmaar", startMs: pdoc().startMs, createdAt: 0 });
+  assert.equal(r.slug, 'ev_cal1__practice_' + r.id);
+  const r2 = await withFakeNowAsync(NOW, () => savePractice(pinput(), null)); assert.notEqual(r2.id, r.id);
+});
+await testAsync('a practice match that is more than 4 weeks away is stored and says it is not in the list yet', async () => {
+  useFakeDb(sampleDbSeed()); state();
+  const r = await withFakeNowAsync(NOW, () => savePractice(pinput({ date: '2026-12-05' }), null)); assert.equal(r.ok, true); assert.equal(r.beyond, true);
+});
+await testAsync('changing a practice match keeps its id and creation time, and the carpool follows (date, place, name)', async () => {
+  const cp = { matchSlug: PSLUG, calendarId: CAL, eventId: 'practice_p1', teamLabel: 'AZ O15-1', summary: 'x', location: 'oud', startMs: 1, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '17:30', fromId: 'ATC', fromText: '' }] };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'practiceMatches/p1': pdoc(), ['matchCarpools/' + PSLUG]: cp }); state({ practiceMatches: { p1: pdoc() }, matchCarpools: { [PSLUG]: cp } });
+  const r = await withFakeNowAsync(NOW, () => savePractice(pinput({ opponent: 'Ajax O15', isHome: false, location: 'De Toekomst', time: '20:00' }), 'p1'));
+  assert.equal(r.ok, true); assert.equal(r.id, 'p1'); assert.deepEqual(r.old, pdoc()); assert.deepEqual(r.oldCarpool, cp);
+  const d = fake.get('practiceMatches/p1'); assert.equal(d.opponent, 'Ajax O15'); assert.equal(d.isHome, false); assert.equal(d.createdAt, 1); assert.equal(d.startMs, at('2026-10-02T20:00:00+02:00').getTime());
+  assert.equal(fake.collection('practiceMatches').length, 1);
+  const c = fake.get('matchCarpools/' + PSLUG); assert.equal(c.location, 'De Toekomst'); assert.equal(c.startMs, d.startMs); assert.match(c.summary, /Ajax O15-.AZ O15-1$/); assert.deepEqual(c.cars, cp.cars);
+});
+await testAsync('removing a practice match removes its carpool too, and hands back what is needed to put both back', async () => {
+  const cp = { cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '17:30' }], startMs: pdoc().startMs };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'practiceMatches/p1': pdoc(), ['matchCarpools/' + PSLUG]: cp, 'practiceMatches/p2': pdoc() });
+  state({ practiceMatches: { p1: pdoc(), p2: pdoc() }, matchCarpools: { [PSLUG]: cp } });
+  const r = await deletePractice('p1');
+  assert.deepEqual(fake.collection('practiceMatches').map(e => e[0]), ['p2']); assert.equal(fake.get('matchCarpools/' + PSLUG), undefined);
+  assert.deepEqual(r, { id: 'p1', old: pdoc(), slug: PSLUG, cp });
+  assert.equal(await deletePractice('weg'), null);
+});
+await testAsync('the trash button removes it and says so (with Ongedaan)', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'practiceMatches/p1': pdoc() }); state({ practiceMatches: { p1: pdoc() } }); render();
+  await reg()('[data-delpractice]')[0].onclick();
+  assert.deepEqual(fake.collection('practiceMatches'), []); assert.match(toast(), /Oefenwedstrijd verwijderd/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

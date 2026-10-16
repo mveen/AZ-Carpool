@@ -107,5 +107,7 @@ test('"+ Passagier toevoegen" lists start closed (devPick)', () => { assert.deep
 test('S.periodSwap starts empty', () => { assert.equal(S.periodSwap, null); });
 test('match carpool form: no form open and no car being edited at start', () => { assert.equal(S.openMatchCarpoolForm, null); assert.equal(S.editMatchCarIdx, null); });
 
+test('practice matches start empty', () => { assert.deepEqual(S.practiceMatches, {}); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

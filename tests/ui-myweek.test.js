@@ -62,7 +62,7 @@ test('the day cards are pinned as a snapshot', () => { expectSnapshot('ui-myweek
 console.log('\n=== a match carpool ===');
 test('a Saturday match carpool appears under its own day with the ride details', () => {
   const s = text(render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
-  assert.match(s, /Zaterdag 3 okt 09:15 vertrek Wedstrijd AZ O15-1 \(Thuis\) vs Hoorn O15-2 Jan Jansen Aftrap 10:30 · Sportpark Hoorn/);
+  assert.match(s, /Zaterdag 3 okt 09:15 vertrek Wedstrijd AZ O15-1 \(Thuis\) vs Hoorn O15-2 Jan Jansen Vertrek vanaf Busstation Aftrap 10:30 · Sportpark Hoorn/);
   expectSnapshot('ui-myweek', 'parent with match carpool', dom.html('tab-myweek'));
 });
 test('matchInfoHtml: team, home/away, opponent, date, time and location (HTML-escaped)', () => {
@@ -275,6 +275,19 @@ test('design v2: no "je dochter" any more; the alert names the daughter', () => 
 
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-myweek.js imports nothing it does not use', () => assertNoUnusedImports('ui-myweek.js'));
+
+test('a match ride says where the car leaves from (Busstation by default); a practice match is called Oefenwedstrijd', () => {
+  const doc = { ...matchCarpools.ev_cal1__e1, eventId: 'practice_p1', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '09:15', fromId: 'ATC' }] };
+  const s = text(render({ matchCarpools: { ev_cal1__practice_p1: doc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
+  assert.match(s, /Oefenwedstrijd AZ O15-1 \(Thuis\) vs Hoorn O15-2/); assert.match(s, /Vertrek vanaf ATC/);
+  assert.match(text(render({})) + text(render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] })), /Vertrek vanaf Busstation/);
+});
+test('matchInfoHtml: a practice match gets the Oefen tag, a calendar match does not', () => {
+  resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ O15-1' }] });
+  const base = { calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'X', start: new Date(kick) };
+  assert.match(text(matchInfoHtml({ ...base, eventId: 'practice_p1' })), /za 3 okt Oefen aftrap 10:30/);
+  assert.doesNotMatch(text(matchInfoHtml({ ...base, eventId: 'e1' })), /Oefen/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
