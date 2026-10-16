@@ -704,6 +704,7 @@ export function renderBeheer(){
 
   box.innerHTML = `${attnHtml}
     <nav class="begChips" aria-label="${t('beheer.onderdelen')}">${sections.map(([id,chip],i)=>`<button type="button" class="begChip${i===0?' on':''}" data-sec="${id}">${t(chip)}</button>`).join('')}</nav>
+    <button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button>
     ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"><div class="begSecTitle">${t(title)}</div>${cards.join('')}</section>`).join('')}`;
 
   foldCards(box);
@@ -713,6 +714,20 @@ export function renderBeheer(){
     document.querySelectorAll('.begChip').forEach(x=>x.classList.toggle('on', x===b));
     const sec=document.getElementById('begSec-'+b.dataset.sec); if(sec) sec.scrollIntoView({block:'start'});
   });
+  // One button opens every menu in Beheer, or closes them all when everything is already open.
+  const foldAllBtn = document.getElementById('begFoldAll');
+  if(foldAllBtn){
+    const folds = () => [...box.querySelectorAll('details.fold[data-fold]')];
+    const sync = () => { foldAllBtn.textContent = t(folds().every(d=>d.open) ? 'beheer.alles_dicht' : 'beheer.alles_open'); };
+    foldAllBtn.onclick = ()=>{
+      hapticTap();
+      const open = !folds().every(d=>d.open);
+      folds().forEach(d=>{ d.open = open; S.folds[d.dataset.fold] = open; });
+      sync();
+    };
+    box.addEventListener('toggle', sync, true);
+    sync();
+  }
   document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{
     hapticTap();
     const card=document.getElementById(b.dataset.goto); if(!card) return;

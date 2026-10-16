@@ -146,6 +146,24 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
   assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
 });
+test('one button opens every menu in Beheer, and closes them all again when all are open', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState(); S.folds = {};
+  withFakeNow(NOW, () => renderBeheer());
+  assert.match(dom.html('tab-beheer'), /<button type="button" class="begFoldAll" id="begFoldAll">Alles openklappen<\/button>/);
+  const box = dom.el('tab-beheer');
+  const cards = ['a', 'b', 'c'].map(k => ({ open: false, dataset: { fold: 'card|' + k } }));
+  box.querySelectorAll = () => cards;
+  const btn = dom.el('begFoldAll');
+  btn.onclick();
+  assert.ok(cards.every(c => c.open), 'all open'); assert.equal(S.folds['card|b'], true, 'remembered for a redraw');
+  assert.equal(btn.textContent, 'Alles dichtklappen');
+  btn.onclick();
+  assert.ok(cards.every(c => !c.open), 'all closed'); assert.equal(S.folds['card|b'], false);
+  assert.equal(btn.textContent, 'Alles openklappen');
+  cards[1].open = true; btn.onclick();
+  assert.ok(cards.every(c => c.open), 'one open, rest closed: opens all');
+  S.folds = {};
+});
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
