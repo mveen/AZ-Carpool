@@ -450,6 +450,31 @@ await testAsync('removing a child shows the result with "Ongedaan" in the card; 
   assert.ok(fake.get('deviations/Ma_heen').cars[0].girlIds.includes('f1'));
   assert.equal(S.devUndo, null); assert.doesNotMatch(dom.html('tab-deviation'), /devToast/);
 });
+const delBtn = idx => ({ dataset: { day: 'Ma', direction: 'heen', caridx: String(idx) }, innerHTML: 'Verwijder auto', textContent: '', classList: { add() {}, remove() {} } });
+const twoCars = () => [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }, { driverFamilyId: 'f3', girlIds: [], departureTime: '' }];
+await testAsync('delete car: an empty car is removed at once, with a toast', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(twoCars()).Ma_heen }); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(twoCars()) });
+  assert.match(dom.html('tab-deviation'), /data-devdelcar="1"/);
+  await fire('.devDeleteCar', delBtn(1));
+  const saved = fake.get('deviations/Ma_heen').cars;
+  assert.equal(saved.length, 1); assert.equal(saved[0].driverFamilyId, 'f1');
+  assert.match(toastText(), /Auto van .* verwijderd/);
+});
+await testAsync('delete car: a car with passengers asks to tap again first and names who becomes unassigned', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(twoCars()).Ma_heen }); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(twoCars()) });
+  const b = delBtn(0);
+  await fire('.devDeleteCar', b);
+  assert.equal(fake.get('deviations/Ma_heen').cars.length, 2);   // nothing deleted yet
+  assert.match(b.textContent, /Met passagiers: .* worden niet ingedeeld\. Tik nogmaals/);
+  await fire('.devDeleteCar', b);
+  const saved = fake.get('deviations/Ma_heen').cars;
+  assert.equal(saved.length, 1); assert.equal(saved[0].driverFamilyId, 'f3');
+});
+test('delete car: no button when it is the only car of the shift (an empty list would mean "back to standard")', () => {
+  const one = dev1([{ driverFamilyId: 'f1', girlIds: [], departureTime: '07:30' }]);
+  useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': one.Ma_heen });
+  assert.doesNotMatch(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: one }), /devdelcar/);
+});
 await testAsync('moving a child offers one button per other car and shows "Ongedaan" in the card she left', async () => {
   const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }, { driverFamilyId: 'f3', girlIds: ['f6'], departureTime: '07:30' }];
   const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen }); const d = { ...dev1(cars) };
