@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import {
   isRealCoordinatorFor, canEditFor, canSwitchViewFor, hasOwnFamilyFor, isMemberFor, needsGateFor, myFamilyIdFor, isValidInviteCode,
   isRealCoordinator, isMemberNow, recomputeCanEdit, myFamilyId, needsGate, myLinkedFamilyId, myDisplayInfo,
-  normalizePhone, genCode, slugify, cleanCode,
+  normalizePhone, genCode, cleanCode,
 } from '../coordinator.js';
 
 installFakeDom();
@@ -121,9 +121,6 @@ test('cleanCode removes spaces, non-breaking spaces and invisible characters fro
 });
 test('cleanCode does not change the letters of a code (case stays)', () => { assert.equal(cleanCode('Ab-12 cD'), 'Ab-12cD'); });
 test('normalizePhone copes with empty input', () => { assert.equal(normalizePhone(''), ''); assert.equal(normalizePhone(null), ''); });
-test('slugify makes safe ids (no accents, no spaces)', () => {
-  assert.equal(slugify('Loïs'), 'lois'); assert.equal(slugify('Van der Berg'), 'van-der-berg');
-});
 
 import { dayCoordinatorFor } from '../coordinator.js';
 

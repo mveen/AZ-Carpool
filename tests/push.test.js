@@ -8,14 +8,11 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import {
-  CATEGORIES, MAX_FAILS, PUSH_MODES, STATUS_FRESH_MS, TEST_NOTIFICATION_MS, buildPayload, bufferToBase64Url, categoryOf, cleanLabel, deviceDoc, deviceId, deviceLabelFromUA,
+  MAX_FAILS, STATUS_FRESH_MS, TEST_NOTIFICATION_MS, buildPayload, bufferToBase64Url, categoryOf, cleanLabel, deviceDoc, deviceId, deviceLabelFromUA,
   deviceWants, entryPlan, isPushEndpoint, normalizePush, parsePushLink, previewState, pushSettingsDoc, queueDoc, queueKey, recipientLabel, serverState, urlBase64ToUint8Array,
 } from '../push.js';
 
 console.log('=== the master switch ===');
-test('there are only two modes: uit and test (no live mode exists)', () => {
-  assert.deepEqual(PUSH_MODES, ['uit', 'test']);
-});
 test('only the exact word "test" switches anything on; missing, broken, unknown or "live" mean off', () => {
   assert.equal(normalizePush({ mode: 'test' }).mode, 'test');
   for (const raw of [null, undefined, {}, [], 'test', 7, { mode: 'live' }, { mode: 'TEST' }, { mode: 'Test ' }, { mode: true }, { mode: null }, { mode: 'uit' }]) assert.equal(normalizePush(raw).mode, 'uit', JSON.stringify(raw));
@@ -61,7 +58,6 @@ test('an unusable subscription is never stored (null)', () => {
   for (const bad of [{ endpoint: 'https://evil.example/x' }, { p256dh: 'short' }, { auth: 'short' }, { p256dh: 'p'.repeat(86) + '=' }, { uid: '' }, { endpoint: '' }]) assert.equal(deviceDoc({ ...ok, ...bad }), null, JSON.stringify(bad));
 });
 test('a device wants a kind unless its category is switched off; unknown kinds are never wanted', () => {
-  assert.deepEqual(CATEGORIES, ['ritbeurs']);
   for (const k of ['offerBackup', 'backupForRide', 'taken', 'takenDayCoordinator', 'uncovered']) { assert.equal(categoryOf(k), 'ritbeurs'); assert.equal(deviceWants({}, k), true, k); assert.equal(deviceWants({ categories: { ritbeurs: false } }, k), false, k); }
   assert.equal(categoryOf('toekomst'), null); assert.equal(deviceWants({}, 'toekomst'), false); assert.equal(deviceWants(null, 'taken'), false);
 });

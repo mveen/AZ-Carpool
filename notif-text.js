@@ -12,7 +12,6 @@ const TEXT = {
   takenDayCoordinator: p => ({ title: t('ritbeurs.notif.takenDayCoordinator', p), body: t('ritbeurs.notif.takenDayCoordinatorBody', p) }),
   uncovered: p => ({ title: t('ritbeurs.notif.uncovered', p), body: t('ritbeurs.notif.uncoveredBody', p) }),
 };
-export const NOTIFICATION_KINDS = Object.keys(TEXT);
 
 const dayLabel = k => (DAYS.find(([d]) => d === k) || [k, String(k || '')])[1];
 

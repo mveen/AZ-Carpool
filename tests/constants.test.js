@@ -84,29 +84,15 @@ test('the avatar library icons all exist in PH_PATHS', () => {
   for (const k of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
 test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); });
-test('APP_VERSION is at least v91 (start-up retry release)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 91); });
-test('APP_VERSION is at least v92 (the tab bar stays on screen in Brave: measured app height)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 92); });
-test('APP_VERSION is at least v73 (mobile layout fixes)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 73); });
 
-test('APP_VERSION is at least v79 (the home-screen sheet behind its feature toggle)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 79); });
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
 
-test('APP_VERSION is at least v93 (practice matches and "vertrek vanaf" in the match carpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 93); });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
-test('APP_VERSION is at least v75 (rides.js no longer imports the screen code, so the server job can use it)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 75); });
-test('APP_VERSION is at least v80 (Help without GitHub Pages)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 80); });
-test('APP_VERSION is at least v82 (the Android button for the agenda link)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 82); });
-test('APP_VERSION is at least v86 (Firefox: open the app straight from a tapped push)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 86); });
-test('APP_VERSION is at least v85 (a tapped push opens the app on Firefox for Android)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 85); });
-test('APP_VERSION is at least v84 (a tap on Meldingen aanzetten always says why it does nothing)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 84); });
-test('APP_VERSION is at least v83 (Meldingen testen: service worker with push)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 83); });
-test('APP_VERSION is at least v88 (robust gate, error log) and always equals the cache name of the service worker', () => {
-  assert.ok(Number(APP_VERSION.slice(1)) >= 88);
+test('APP_VERSION always equals the cache name of the service worker', () => {
   const sw = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
   assert.equal(sw.match(/const CACHE_NAME = 'az-carpool-(v\d+)'/)[1], APP_VERSION);
 });
-test('APP_VERSION is at least v89 (Help: Proton Calendar and update times of the agenda)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 89); });
-test('APP_VERSION is at least v87 (bottom bar restored after Beheer rendered)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 87); });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

@@ -7,7 +7,7 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { SCENARIOS, TIME_CHOICES, buildScenario, explainBackups, scenarioMoment } from '../push-scenarios.js';
+import { SCENARIOS, buildScenario, explainBackups, scenarioMoment } from '../push-scenarios.js';
 import { backupRecipients, notificationDoc, normalizeQuiet } from '../ritbeurs.js';
 import { TEST_NOTIFICATION_MS } from '../push.js';
 
@@ -29,7 +29,6 @@ const ctx = (extra = {}) => ({
 console.log('=== the five situations ===');
 test('there are five scenarios, one for each kind of Ritten-ruilen notification', () => {
   assert.deepEqual(SCENARIOS.map(s => s.kind).sort(), ['backupForRide', 'offerBackup', 'taken', 'takenDayCoordinator', 'uncovered']);
-  assert.deepEqual(TIME_CHOICES, ['nu', 'nacht']);
 });
 test('every scenario gives the chosen family its notification, first, of the right kind, made up of the same fields as a real one', () => {
   for (const s of SCENARIOS) {

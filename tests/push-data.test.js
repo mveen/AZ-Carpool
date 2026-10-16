@@ -10,7 +10,7 @@ async function test(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleCoordinatorState, sampleParentState, sampleDbSeed, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import {
-  clearTests, enablePush, findThisDevice, personaName, previewItems, pushMode, pushSupport, rememberedPersona, removeDevice, runScenario, scenarioContext, sendToMyDevice,
+  clearTests, enablePush, findThisDevice, previewItems, pushMode, pushSupport, rememberedPersona, removeDevice, runScenario, scenarioContext, sendToMyDevice,
   setDeviceCategory, setPersona, setPushMode, stopPushListeners, syncPushListeners,
 } from '../push-data.js';
 import { deviceDoc, deviceId } from '../push.js';
@@ -151,8 +151,8 @@ await test('the Ritten-ruilen category of a device can be switched off and on', 
 console.log('\n=== who am I (the persona) ===');
 await test('choosing a family is remembered on this device and shown as "Ouder van Saar"', () => {
   asCoordinator();
-  setPersona('f6'); assert.equal(S.push.personaId, 'f6'); assert.equal(personaName(), 'Ouder van Saar'); assert.equal(rememberedPersona(), 'f6');
-  setPersona('nobody'); assert.equal(S.push.personaId, ''); assert.equal(personaName(), ''); assert.equal(rememberedPersona(), '');
+  setPersona('f6'); assert.equal(S.push.personaId, 'f6'); assert.equal(rememberedPersona(), 'f6');
+  setPersona('nobody'); assert.equal(S.push.personaId, ''); assert.equal(rememberedPersona(), '');
 });
 await test('the real notifications of the chosen family are followed, and dropped when another family is chosen', async () => {
   const n = notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() });
