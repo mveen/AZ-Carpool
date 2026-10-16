@@ -17,7 +17,7 @@ import { installFakeDom, resetState, useFakeDb, withFakeNow, withFakeNowAsync, N
 import { S } from '../state.js';
 import {
   activeMatchFeeds, matchLabel, analyzeMatch, matchSlug, carpoolFor, matchesThisWeek, matchesNext8Days,
-  loadAllMatches, currentMatchList, docToMatch, matchCarpoolsOnDate, myMatchRides, suggestedMatchDeparture, matchCarCapacityState,
+  loadAllMatches, currentMatchList, docToMatch, myMatchRides, suggestedMatchDeparture, matchCarCapacityState,
 } from '../matches.js';
 
 const dom = installFakeDom();
@@ -98,10 +98,6 @@ test('docToMatch turns a stored carpool back into a match', () => {
   const d = docToMatch({ calendarId: 'c', eventId: 'e', teamLabel: 'T', summary: 'A-B', location: 'L', startMs: kick });
   assert.equal(d.start.getTime(), kick); assert.equal(d.location, 'L');
   assert.equal(docToMatch({ startMs: kick }).summary, '');
-});
-test('matchCarpoolsOnDate: only carpools with cars, on that calendar day, earliest first', () => {
-  resetState({ matchCarpools: { a: { startMs: kick, cars: [{}] }, b: { startMs: kick - 3600000, cars: [{}] }, c: { startMs: kick, cars: [] }, d: { startMs: kick + 86400000, cars: [{}] } } });
-  assert.deepEqual(matchCarpoolsOnDate(new Date(kick)).map(e => e[0]), ['b', 'a']);
 });
 test('myMatchRides: cars where my family drives or my daughter rides, this planning week only', () => {
   resetState({ matchCarpools: {

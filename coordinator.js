@@ -74,8 +74,6 @@ export function normalizePhone(p){
   return digits;
 }
 
-export function slugify(s){ return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-'); }
-
 // The logged-in parent's own family (null for a coordinator who isn't linked to a family).
 export function myLinkedFamilyId(){ const linked = !!S.impersonateFamilyId || !!(S.links[S.me] && S.links[S.me].familyId); return linked? myFamilyId() : null; }
 

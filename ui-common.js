@@ -6,7 +6,7 @@ import { esc } from './escape.js';
 import { renderProfile } from './ui-profile.js';
 import { fam } from './rides.js';
 import { myFamilyId } from './coordinator.js';
-import { isOverride, normalizeLocations, shiftLabel } from './locations.js';
+import { normalizeLocations } from './locations.js';
 
 // ============================================================
 
@@ -68,20 +68,7 @@ if(typeof document!=='undefined' && document.addEventListener){
 // The places (pickup / drop-off, destination) as set in Beheer, with defaults filled in.
 export function locationsCfg(){ return normalizeLocations(S.locationsDoc); }
 
-// US-15: "07:05 Busstation → AFC '34" for one ride (plain text, no button).
 export function isAndroidDevice(){ return /Android/i.test((typeof navigator!=='undefined' && navigator.userAgent) || ''); }
-
-// opts.day: the weekday of the ride (the standard place can differ per shift).
-// opts.edit + opts.gid: the coordinator's standaardrooster: the place is a button that opens the list of places for that one car (group gid).
-export function shiftLocationHtml(car, direction, opts){
-  const o = opts || {};
-  const cfg = locationsCfg();
-  const changed = isOverride(car, direction, cfg, o.day)? ` <span class="changedTag">${t('loc.changedTag')}</span>` : '';
-  const label = esc(shiftLabel(car, direction, cfg, o.day));
-  if(o.edit && o.gid) return `<div class="shiftLoc"><button type="button" class="shiftLocBtn" data-shiftloc="${esc(o.gid)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}"><span class="shiftLocText">${label}</span>${phIcon('pencil')}</button></div>`;
-  return `<div class="shiftLoc"><span class="shiftLocText">${label}${changed}</span></div>`;
-}
-
 
 // Small bottom sheet with a list of choices (used to move a passenger in Rooster).
 export function openSheet(title, subtitle, items){

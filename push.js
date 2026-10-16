@@ -11,11 +11,9 @@
 // See README, "Meldingen (testfase)".
 import { t } from './i18n.js';
 
-export const PUSH_MODES = ['uit', 'test'];
 export const MAX_FAILS = 5;                        // after this many failed tries a device is given up for that message
 export const STATUS_FRESH_MS = 10 * 60 * 1000;     // the server job counts as alive when it reported within this time
 export const TEST_NOTIFICATION_MS = 24 * 3600 * 1000;   // made-up notifications and their queue entries vanish after a day
-export const CATEGORIES = ['ritbeurs'];
 const CATEGORY_OF = { offerBackup: 'ritbeurs', backupForRide: 'ritbeurs', taken: 'ritbeurs', takenDayCoordinator: 'ritbeurs', uncovered: 'ritbeurs' };
 export const categoryOf = kind => CATEGORY_OF[kind] || null;
 

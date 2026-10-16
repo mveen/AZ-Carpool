@@ -149,28 +149,8 @@ test('applyStaticTexts fills data-i18n elements and aria-labels from the diction
 });
 
 console.log('\n=== shift location (US-15) ===');
-import { shiftLocationHtml, locationsCfg, foldCards } from '../ui-common.js';
+import { locationsCfg, foldCards } from '../ui-common.js';
 const flat = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
-test('a ride shows "time place → destination" and a no map button', () => {
-  resetState({ locationsDoc: { places: [{ id: 'busstation', address: 'Stationsweg 1, Aalsmeer' }] } });
-  const html = shiftLocationHtml({ departureTime: '07:05' }, 'heen');
-  assert.match(flat(html), /07:05 Busstation → AFC '34/);
-  assert.doesNotMatch(html, /<a |geo:|google|Kaart/i);
-});
-test('a terug ride goes from the destination to the drop-off place; a one-off change is marked', () => {
-  resetState({ locationsDoc: { defaults: { heen: 'busstation', terug: 'de-parel' } } });
-  const html = shiftLocationHtml({ departureTime: '17:30', locationId: 'a4-de-hoek' }, 'terug');
-  assert.match(flat(html), /17:30 AFC '34 → A4-De Hoek/); assert.match(html, /eenmalig gewijzigd/);
-  assert.doesNotMatch(shiftLocationHtml({ departureTime: '17:30' }, 'terug'), /eenmalig gewijzigd/);
-});
-test('in the standaardrooster the place is a button for ONE car (group id); a car\'s own standard place is not marked as changed', () => {
-  resetState({});
-  const html = shiftLocationHtml({ departureTime: '09:00', stdLocationId: 'de-parel', stdDestination: 'ATC' }, 'heen', { day: 'Ma', edit: true, gid: 'Ma_heen_2' });
-  assert.match(html, /data-shiftloc="Ma_heen_2"/); assert.match(flat(html), /09:00 De Parel → ATC/); assert.doesNotMatch(html, /eenmalig gewijzigd/);
-});
-test('without an address the shift still shows the place name and no link', () => {
-  resetState({}); assert.doesNotMatch(shiftLocationHtml({}, 'heen'), /<a /); assert.match(flat(shiftLocationHtml({}, 'heen')), /Busstation/);
-});
 test('locationsCfg fills in the defaults when nothing is stored', () => {
   resetState({}); assert.equal(locationsCfg().places.length, 3);
 });

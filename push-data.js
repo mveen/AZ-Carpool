@@ -19,7 +19,7 @@ import { quietOf, ridesOf } from './ritbeurs-data.js';
 import { CONFLICT_MINUTES, toMin } from './ritbeurs.js';
 import { notificationText } from './notif-text.js';
 import {
-  bufferToBase64Url, deviceDoc, deviceId, deviceLabelFromUA, normalizePush, previewState, pushSettingsDoc, queueDoc, queueKey, recipientLabel,
+  bufferToBase64Url, deviceDoc, deviceId, deviceLabelFromUA, normalizePush, previewState, pushSettingsDoc, queueDoc, queueKey,
   urlBase64ToUint8Array,
 } from './push.js';
 import { buildScenario, scenarioMoment } from './push-scenarios.js';
@@ -276,4 +276,3 @@ export function previewItems(nowMs = Date.now()){
     .slice(0, 12);
 }
 
-export function personaName(){ return S.push.personaId ? recipientLabel(S.families[S.push.personaId], S.push.personaId) : ''; }

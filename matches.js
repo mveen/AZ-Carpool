@@ -231,14 +231,6 @@ export function currentMatchList(){
 // same shape as a fetched match so matchInfoHtml() can render both identically.
 export function docToMatch(d){ return {calendarId:d.calendarId||'', eventId:d.eventId||'', teamLabel:d.teamLabel||'', summary:d.summary||'', location:d.location||'', start:new Date(d.startMs)}; }
 
-// Stored match carpools (with at least one car) whose match is on the given calendar date.
-export function matchCarpoolsOnDate(date){
-  const key = date.toDateString();
-  return Object.entries(S.matchCarpools)
-    .filter(([,d])=>d && d.startMs && d.cars && d.cars.length && new Date(d.startMs).toDateString()===key)
-    .sort((a,b)=>a[1].startMs-b[1].startMs);
-}
-
 // Every match-carpool car this family is involved in (as driver and/or via the daughter),
 // from the start of today up to the end of the current planning week.
 export function myMatchRides(myId){

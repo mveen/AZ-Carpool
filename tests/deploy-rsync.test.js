@@ -111,7 +111,8 @@ await test('the cron folder goes to azcarpool-cron/ only (and the website folder
     if (bad === 'kc1@host:azcarpool-cron') continue;   // a missing trailing slash is added, so this is the same folder
     assert.notEqual(r.status, 0, bad); assert.match(r.stderr, /refusing/, bad);
   }
-  const web = join(tmp, 'dist'); const r = run(web, 'kc1@host:azcarpool-cron/');
+  const web = join(tmp, 'dist-web'); mkdirSync(web); writeFileSync(join(web, 'index.html'), 'x'); writeFileSync(join(web, 'service-worker.js'), 'x');
+  const r = run(web, 'kc1@host:azcarpool-cron/');
   assert.match(r.stderr, /refusing/);
 });
 if (have('rsync') && have('bash')) {

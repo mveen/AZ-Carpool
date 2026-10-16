@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
-import { renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, waNameHtml, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
+import { renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -78,17 +78,6 @@ test('a parent sees the week view without the editing buttons', () => {
 console.log('\n=== small builders ===');
 test('waPhone turns a Dutch number into a wa.me number (31...)', () => {
   assert.equal(waPhone('06 12 34 56 78'), '31612345678'); assert.equal(waPhone('+31 6 12345678'), '31612345678'); assert.equal(waPhone(''), '');
-});
-test('waNameHtml is a tap-to-WhatsApp link when the family has a phone number, plain text otherwise', () => {
-  sampleCoordinatorState();
-  const link = waNameHtml('f2', 'Hi! Rijd je?');
-  assert.match(link, /href="https:\/\/wa\.me\/31622222222\?text=Hi!%20Rijd%20je%3F"/); assert.match(link, /Piet Pieters/);
-  S.families.f2.parentPhone1 = ''; S.families.f2.parentPhone2 = '';
-  assert.equal(text(waNameHtml('f2', 'x')), 'Piet Pieters'); assert.ok(!/wa\.me/.test(waNameHtml('f2', 'x')));
-});
-test('waNameHtml escapes names', () => {
-  sampleCoordinatorState(); S.families.f2.parentName = 'P<i>'; S.families.f2.parentPhone1 = '';
-  assert.ok(!/<i>/.test(waNameHtml('f2', 'x')));
 });
 test('neededTimesHtml: one time, or the range when times differ', () => {
   sampleCoordinatorState();

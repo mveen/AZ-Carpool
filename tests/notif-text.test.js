@@ -6,14 +6,13 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { NOTIFICATION_KINDS, notificationText, whenText } from '../notif-text.js';
+import { notificationText, whenText } from '../notif-text.js';
 
 const names = { f1: 'Ouder Saar', f2: 'Ouder Noor', f3: 'Mark & Els <b>' };
 const ctx = { nameOf: id => names[id] || '', currentWeekKey: '2026-W40' };
 const n = (extra = {}) => ({ kind: 'taken', toFamilyId: 'f1', fromFamilyId: 'f2', weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15', momentFrom: '', momentTo: '', ...extra });
 
 test('the five kinds each have a title and a body', () => {
-  assert.deepEqual(NOTIFICATION_KINDS.sort(), ['backupForRide', 'offerBackup', 'taken', 'takenDayCoordinator', 'uncovered']);
   const line = (kind, extra) => notificationText(n({ kind, ...extra }), ctx);
   assert.deepEqual(line('offerBackup'), { title: 'Rit vrij: donderdag 16:15', body: 'Ouder Noor biedt een rit aan. Je hebt je voor dit tijdvak beschikbaar gemeld. Tik om over te nemen.' });
   assert.deepEqual(line('taken'), { title: 'Ouder Noor neemt je rit over', body: 'donderdag 16:15 is geregeld.' });

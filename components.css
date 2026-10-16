@@ -109,11 +109,8 @@ input.switch:focus-visible{outline:2px solid var(--info);outline-offset:2px}
 .iconbtn:disabled{opacity:.35;cursor:default}
 /* Neutral direction label: "Heen · Aalsmeer → Alkmaar" */
 .dirLabel{display:inline-flex;align-items:center;gap:6px;background:var(--surface-soft);color:var(--text-2);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-pill)}
-.shiftLoc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:6px;font-size:14px;font-weight:700}
-.shiftLoc .shiftLocText{flex:1;min-width:0}
 .addrHint{margin:4px 0 0;font-size:12px;color:var(--text-muted)}
 a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
-.changedTag{display:inline-flex;align-items:center;gap:4px;background:var(--warn-soft);color:var(--warn-ink);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-pill)}
 .daypill.active{background:var(--accent);border-color:var(--accent)}
 .daypill.active .daypillTop{color:var(--on-accent)}
 .daypill.active .daypillSub{color:var(--on-accent)}

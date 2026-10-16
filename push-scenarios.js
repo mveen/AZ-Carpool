@@ -24,7 +24,6 @@ export const SCENARIOS = [
   { id: 'nietGedekt', kind: 'uncovered' },
   { id: 'dagcoordinator', kind: 'takenDayCoordinator' },
 ];
-export const TIME_CHOICES = ['nu', 'nacht'];
 
 // The moment the scenario pretends it is: now, or "in the middle of the night" (23:30, or now when it already is quiet).
 export function scenarioMoment(choice, nowMs, quiet){
