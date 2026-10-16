@@ -312,3 +312,7 @@ test('the texts about one-off changes say they disappear on Friday at 19:00', ()
 test('the agenda update text names Proton and points to Mijn week', () => {
   assert.match(t('agenda.bijwerken'), /Google of Proton/); assert.match(t('agenda.bijwerken'), /Mijn week/);
 });
+test('the connection error asks to check the internet and has a retry label, without developer talk about the Firebase config', () => {
+  assert.match(t('common.kan_geen_verbinding_maken_met'), /internetverbinding/); assert.doesNotMatch(t('common.kan_geen_verbinding_maken_met'), /Firebase/);
+  assert.equal(t('common.opnieuw_proberen'), 'Opnieuw proberen');
+});

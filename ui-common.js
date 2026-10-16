@@ -229,8 +229,11 @@ export function showConnectionError(err){
         <h2>${t('common.geen_verbinding')}</h2>
         <p class="muted">${t('common.kan_geen_verbinding_maken_met')}</p>
         <p class="muted" style="margin-top:8px">${t('common.foutmelding')} ${err&&err.message? err.message : String(err)}</p>
+        <button class="btn" id="retryConnection" type="button">${t('common.opnieuw_proberen')}</button>
       </div>
     </div>`;
+    const retry=document.getElementById('retryConnection');
+    if(retry) retry.onclick=()=>{ try{ window.location.reload(); }catch(e){ /* nothing to reload (tests) */ } };
   }
   adjustMainPadding();
 }

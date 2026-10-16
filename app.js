@@ -42,6 +42,20 @@ export function checkMatchRefresh(){
   if(S.appReady) refreshMatchesIfStale();
 }
 
+// The first read right after sign-in can fail with "client is offline" (code 'unavailable') while the live connection is
+// still being set up: seen on iPhones/Macs in Safari and Firefox. That is usually gone a moment later, so ask again a
+// couple of times before showing the connection error. Other errors (permission-denied, ...) are not retried.
+export const START_RETRY_DELAYS_MS = [1500, 4000];
+export async function getWithRetry(read, delays = START_RETRY_DELAYS_MS) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await read(); }
+    catch (e) {
+      if (!e || e.code !== 'unavailable' || attempt >= delays.length) throw e;
+      if (delays[attempt] > 0) await new Promise(r => setTimeout(r, delays[attempt]));
+    }
+  }
+}
+
 export async function init(){
   applyStaticTexts();
   queuePushOpenFromUrl(location.search);   // a tapped test push brings the coordinator here with ?pushas=<family>
@@ -58,7 +72,7 @@ export async function init(){
     return;
   }
   try{
-    const coordSnap = await db.doc("config/coordinator").get();
+    const coordSnap = await getWithRetry(() => db.doc("config/coordinator").get(), START_RETRY_DELAYS_MS);
     S.coordinatorExists = coordSnap.exists;
     S.coordinatorConfig = coordSnap.exists? coordSnap.data() : null;
     S.appReady = true;

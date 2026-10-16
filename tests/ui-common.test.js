@@ -132,6 +132,13 @@ test('showConnectionError replaces the app by an explanation with the error mess
   assert.equal(dom.el('tab-gate').style.display, 'block'); assert.match(dom.html('tab-gate'), /Geen verbinding/); assert.match(dom.html('tab-gate'), /offline/);
   assert.equal(dom.el('tab-myweek').style.display, 'none');
 });
+test('showConnectionError offers a retry button that reloads the page', () => {
+  showConnectionError(new Error('offline'));
+  assert.match(dom.html('tab-gate'), /id="retryConnection"/); assert.match(dom.html('tab-gate'), /Opnieuw proberen/);
+  let reloaded = 0; const realWindow = globalThis.window; globalThis.window = { ...realWindow, location: { reload: () => { reloaded++; } } };
+  try { dom.el('retryConnection').onclick(); } finally { globalThis.window = realWindow; }
+  assert.equal(reloaded, 1);
+});
 test('applyStaticTexts fills data-i18n elements and aria-labels from the dictionary', () => {
   const a = dom.doc.createElement('span'); a.setAttribute('data-i18n', 'nav.myweek');
   const b = dom.doc.createElement('nav'); b.setAttribute('data-i18n-aria-label', 'nav.main');
