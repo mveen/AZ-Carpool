@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import {
-  ritbeursOn, setRitbeurs, ridesOf, allRides, warningsFor, quietOf, createOffer, withdrawOffer, takeOffer, addMoment, removeMoment,
+  ritbeursOn, pushLiveOn, setPushLive, setRitbeurs, ridesOf, allRides, warningsFor, quietOf, createOffer, withdrawOffer, takeOffer, addMoment, removeMoment,
   markNotificationsRead, saveQuiet, checkRitbeurs,
 } from '../ritbeurs-data.js';
 
@@ -42,6 +42,30 @@ await testAsync('only the real coordinator can switch it, and it is stored with 
   assert.equal(await setRitbeurs(false), true);
   assert.equal(fake.get('settings/ritbeurs').on, false);
   assert.match(toast(), /Alle meldingen zijn gestopt/);
+});
+
+console.log('=== the push switch on the Ritten-ruilen card ===');
+await testAsync('the push switch is off when nothing is stored, and on only for a real true', async () => {
+  parent({}, null); assert.equal(pushLiveOn(), false);
+  for (const raw of [{}, { live: 'true' }, { live: 1 }, { live: false }, { mode: 'test' }]) { S.pushSettings = raw; assert.equal(pushLiveOn(), false, JSON.stringify(raw)); }
+  S.pushSettings = { live: true }; assert.equal(pushLiveOn(), true);
+});
+await testAsync('only the real coordinator can switch it; it is stored with the moment it went on, together with the test switch', async () => {
+  const fake = useFakeDb(seed());
+  parent();
+  assert.equal(await setPushLive(true), false); assert.match(toast(), /Alleen de coördinator/); assert.equal(fake.get('settings/push'), undefined);
+  sampleCoordinatorState({ pushSettings: { mode: 'test', live: false, liveSince: 0 } });
+  assert.equal(await run(() => setPushLive(true)), true);
+  const d = fake.get('settings/push');
+  assert.equal(d.live, true); assert.equal(d.mode, 'test', 'the test switch is not touched'); assert.equal(d.liveSince, new Date(NOW).getTime()); assert.equal(d.updatedAt, d.liveSince);
+  assert.equal(pushLiveOn(), true); assert.match(toast(), /Push-meldingen staan aan/);
+  assert.equal(await run(() => setPushLive(false)), true);
+  assert.equal(fake.get('settings/push').live, false); assert.equal(fake.get('settings/push').liveSince, 0); assert.equal(fake.get('settings/push').mode, 'test'); assert.equal(pushLiveOn(), false); assert.match(toast(), /Push-meldingen staan uit/);
+});
+await testAsync('a failing database shows the error and the switch stays as it was', async () => {
+  const fake = useFakeDb(seed()); sampleCoordinatorState({ pushSettings: null });
+  fake.failWrites('settings/push', 'permission-denied');
+  assert.equal(await setPushLive(true), false); assert.equal(pushLiveOn(), false); assert.match(toast(), /permission-denied/);
 });
 
 console.log('=== rides and warnings ===');
@@ -236,6 +260,19 @@ await testAsync('while the push switch is off or missing, nothing extra is writt
     assert.equal(await run(() => takeOffer('o1')), true);
     assert.equal(keys(fake, 'pushQueue/').length, 0); assert.equal(keys(fake, 'families/f2/notifications/').length, 1);
     assert.ok(fake.writes.every(([, p]) => !p.startsWith('pushQueue/')));
+  }
+});
+await testAsync('with only the live switch on (test off) every saved notification is queued too, so the server can send it to the family', async () => {
+  const fake = useFakeDb(seed({ 'offers/o1': openOffer, 'settings/dayCoordinators': { Do: 'f5' } }));
+  parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: openOffer }, dayCoordinators: { Do: 'f5' }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } });
+  assert.equal(await run(() => takeOffer('o1')), true);
+  assert.deepEqual(keys(fake, 'pushQueue/').map(k => fake.get(k).kind).sort(), ['taken', 'takenDayCoordinator']);
+  for (const k of keys(fake, 'pushQueue/')) { assert.equal(fake.get(k).test, false); assert.ok(!('manual' in fake.get(k)), 'a real entry is never marked as hand-sent'); }
+});
+await testAsync('live off and test off: nothing queued, also when live was stored as something else than true', async () => {
+  for (const pushSettings of [{ mode: 'uit', live: false }, { mode: 'uit', live: 'true' }]) {
+    const fake = useFakeDb(seed({ 'offers/o1': openOffer })); parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: openOffer }, pushSettings });
+    assert.equal(await run(() => takeOffer('o1')), true); assert.equal(keys(fake, 'pushQueue/').length, 0);
   }
 });
 await testAsync('a queue that cannot be written never makes offering or taking over fail (the real data is saved first)', async () => {

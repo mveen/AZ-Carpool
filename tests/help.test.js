@@ -256,6 +256,18 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   assert.match(a.title + b.title, /Ritten ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
 });
 
+test('the push messages: a parent article (how to switch on, per phone, iPhone, quiet hours), the Beheer article (default off, count, testing always works) and the privacy and services articles', () => {
+  const a = findArticle('push-meldingen'), ritb = allText(findArticle('ritbeurs')), beheer = allText(findArticle('beheer-ritbeurs', { canEdit: true }));
+  assert.ok(a && !a.coordinatorOnly); const t = allText(a);
+  assert.match(t, /rechtsboven op je avatar, kies Push-meldingen en zet Meldingen op deze telefoon aan/); assert.match(t, /per telefoon/); assert.match(t, /beginscherm/); assert.match(t, /22:00 tot 06:00/); assert.match(t, /Zie je Push-meldingen niet in Instellingen\? Dan staan ze uit/);
+  assert.ok(top('push meldingen telefoon') === 'push-meldingen' || ids('push meldingen telefoon').includes('push-meldingen')); assert.ok(ids('pushmelding').includes('push-meldingen'));
+  assert.match(ritb, /Heb je Push-meldingen aangezet \(zie Instellingen\)/);
+  assert.match(beheer, /twee schakelaars/); assert.match(beheer, /Push-meldingen aan, staat standaard uit/); assert.match(beheer, /hoeveel gezinnen een telefoon hebben aangemeld/); assert.match(beheer, /Testen kan altijd, ook als Push-meldingen uit staan/);
+  const privacy = allText(findArticle('over-privacy')), services = allText(findArticle('over-diensten'));
+  assert.match(privacy, /Push-meldingen: alleen als je die zelf aanzet, bewaart de app het push-adres van jouw telefoon/); assert.match(privacy, /Google \(Chrome en Android\), Mozilla \(Firefox\) of Apple \(Safari op iPhone\)/); assert.match(privacy, /inhoud is versleuteld/); assert.match(privacy, /verwijdert de app het adres/);
+  assert.match(privacy, /op één uitzondering na: het push-adres/); assert.match(services, /Push-meldingen: alleen bij Ritten ruilen en alleen als je ze zelf aanzet/);
+  assert.doesNotMatch([a, findArticle('ritbeurs'), findArticle('beheer-ritbeurs', { canEdit: true })].map(x => allText(x)).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
+});
 test('help explains the avatar choice, Ik rij ook, Gereden shifts and the impact preview', () => {
   assert.equal(top('avatar kiezen'), 'avatar'); assert.ok(!findArticle('avatar').coordinatorOnly);
   assert.match(allText(findArticle('wedstrijden')), /Ik rij ook[\s\S]*Mijn auto weghalen/);

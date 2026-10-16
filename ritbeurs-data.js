@@ -10,7 +10,7 @@ import { deviationExpiryMs, deviationKey, refreshWeekKey, weekKeyDayIso } from '
 import { dayCoordinatorFor, isRealCoordinator, myLinkedFamilyId } from './coordinator.js';
 import { effectiveCars, fam, seats } from './rides.js';
 import { keepOv } from './ov.js';
-import { normalizePush, queueDoc, queueKey } from './push.js';
+import { normalizePush, pushSettingsDoc, queueDoc, queueKey } from './push.js';
 import { showToast } from './ui-common.js';
 import { cleanCars, currentDeviationDoc, db, recordLastUpdate } from './data.js';
 import {
@@ -21,6 +21,8 @@ import {
 const DIRECTIONS = ['heen', 'terug'];
 
 export function ritbeursOn(){ return normalizeRitbeurs(S.ritbeurs).on; }
+// The push switch on the Ritten-ruilen card (settings/push.live): real pushes to the parents' own phones. Off unless it says true.
+export function pushLiveOn(){ return normalizePush(S.pushSettings).live; }
 const isPermissionError = e => /permission|insufficient|denied/i.test(String(e && (e.code || e.message) || e));
 
 // ---------- the feature switch (coordinator) ----------
@@ -31,6 +33,19 @@ export async function setRitbeurs(on){
     await db.doc('settings/ritbeurs').set(ritbeursDoc(on, Date.now()));
     S.ritbeurs = normalizeRitbeurs({ on });
     showToast(t(on ? 'ritbeurs.saved.on' : 'ritbeurs.saved.off'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return false; }
+}
+
+// The push switch (coordinator). Written together with the test switch (push.js, pushSettingsDoc), so neither wipes the other.
+export async function setPushLive(on){
+  if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
+  if(!isRealCoordinator()){ showToast(t('ritbeurs.err.coordinatorOnly')); return false; }
+  try{
+    const doc = pushSettingsDoc({ ...normalizePush(S.pushSettings), live: !!on }, Date.now());
+    await db.doc('settings/push').set(doc);
+    S.pushSettings = normalizePush(doc);
+    showToast(t(on ? 'push.toast.liveAan' : 'push.toast.liveUit'));
     return true;
   }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return false; }
 }
@@ -77,16 +92,17 @@ function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fr
   });
   return done.size;
 }
-// Test phase: while settings/push is on 'test' every saved notification is also put in the push queue, so the server can send the
-// coordinator a copy (see push.js). Done AFTER the real batch and best effort: it never makes offering or taking over fail, and
-// while the switch is off nothing extra is written at all.
+// While settings/push is on 'test' or live, every saved notification is also put in the push queue, so the server can send it (to the
+// family while live is on, otherwise a test copy to the coordinator; see routeEntry in push.js). Done AFTER the real batch and best
+// effort: it never makes offering or taking over fail, and while both switches are off nothing extra is written at all.
 export async function flushPushQueue(queue){
-  if(!db || !queue || !queue.length || normalizePush(S.pushSettings).mode !== 'test') return;
+  const sw = normalizePush(S.pushSettings);
+  if(!db || !queue || !queue.length || (sw.mode !== 'test' && !sw.live)) return;
   try{
     const batch = db.batch();
     queue.forEach(q => batch.set('pushQueue/' + queueKey(q.path), queueDoc({ ...q, test: false })));
     await batch.commit();
-  }catch(e){ /* the notification itself is saved; only the test copy is missing */ }
+  }catch(e){ /* the notification itself is saved; only its push is missing */ }
 }
 
 // ---------- offering, withdrawing, taking over ----------

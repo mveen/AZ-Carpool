@@ -284,7 +284,7 @@ await testAsync('init picks up ?pushas=<family> from the address and removes it 
 });
 test('the service worker message "push-open" (the app was already open) is wired to the same request', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-  assert.match(src, /navigator\.serviceWorker\.addEventListener\('message'/); assert.match(src, /d\.type === 'push-open'\) queuePushOpen\(d\.forFamilyId\)/);
+  assert.match(src, /navigator\.serviceWorker\.addEventListener\('message'/); assert.match(src, /d\.type === 'push-open'\) queuePushOpen\(d\.forFamilyId, d\.open\)/);
   assert.match(src, /applyPendingPushOpen\(\); \}/);
 });
 

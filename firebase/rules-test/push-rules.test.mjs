@@ -1,4 +1,4 @@
-// Firestore rules test for the push test phase (pushDevices, pushQueue, testNotifications, settings/push*).
+// Firestore rules test for the push features (pushDevices: the coordinator's test devices and a parent's own phones, pushQueue, testNotifications, settings/push*).
 // Needs the Firestore emulator on port 8089 and: npm i @firebase/rules-unit-testing firebase.
 // Start: firebase emulators:start --only firestore (rules = firebase/firestore.rules, port 8089), then: node push-rules.test.mjs
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
@@ -7,7 +7,7 @@ import fs from 'node:fs';
 const env = await initializeTestEnvironment({ projectId: 'demo-test', firestore: { host: '127.0.0.1', port: 8089, rules: fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8') } });
 let ok = 0, bad = 0;
 const check = async (name, p, expectOk = true) => { try { await (expectOk ? assertSucceeds(p) : assertFails(p)); ok++; console.log('  ✓', name); } catch (e) { bad++; console.log('  ✗', name, String(e.message).slice(0, 120)); } };
-const reset = async (ritbeurs = true) => {
+const reset = async (ritbeurs = true, live = false) => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async ctx => {
     const d = ctx.firestore();
@@ -19,6 +19,9 @@ const reset = async (ritbeurs = true) => {
     await setDoc(doc(d, 'pushQueue/q1'), queue());
     await setDoc(doc(d, 'testNotifications/t1'), { kind: 'taken', toFamilyId: 'f1' });
     await setDoc(doc(d, 'settings/pushKey'), { publicKey: 'K' });
+    await setDoc(doc(d, 'settings/push'), { mode: 'uit', live, liveSince: live ? 1 : 0, updatedAt: 1 });
+    await setDoc(doc(d, 'pushDevices/pf1'), device('u1', { owner: 'family', familyId: 'f1' }));
+    await setDoc(doc(d, 'pushDevices/pf2'), device('u2', { owner: 'family', familyId: 'f2' }));
   });
 };
 const as = u => env.authenticatedContext(u).firestore();
@@ -69,6 +72,52 @@ await reset(false);
 await check('with Ritten ruilen off a family cannot queue anything', setDoc(doc(as('u1'), 'pushQueue/a'), queue()), false);
 await check('with Ritten ruilen off the coordinator can still queue a made-up one', setDoc(doc(as('coord'), 'pushQueue/j'), queue({ path: 'testNotifications/t1', test: true })));
 
+console.log('--- pushDevices: a parent\'s own phone');
+const phone = (uid, familyId, extra = {}) => device(uid, { owner: 'family', familyId, ...extra });
+await reset(true, true);
+await check('a parent stores a phone for the own family while live is on', setDoc(doc(as('u1'), 'pushDevices/n1'), phone('u1', 'f1')));
+await check('a phone for another family is refused', setDoc(doc(as('u1'), 'pushDevices/n2'), phone('u1', 'f2')), false);
+await check('a phone without a family is refused', setDoc(doc(as('u1'), 'pushDevices/n3'), device('u1', { owner: 'family' })), false);
+await check('a parent cannot store a coordinator (test) device', setDoc(doc(as('u1'), 'pushDevices/n4'), device('u1', { familyId: 'f1' })), false);
+await check('a phone with another uid is refused', setDoc(doc(as('u1'), 'pushDevices/n5'), phone('someone-else', 'f1')), false);
+await check('a phone with an extra field is refused', setDoc(doc(as('u1'), 'pushDevices/n6'), phone('u1', 'f1', { extra: 1 })), false);
+await check('a non-https address is refused', setDoc(doc(as('u1'), 'pushDevices/n7'), phone('u1', 'f1', { endpoint: 'http://fcm.googleapis.com/x' })), false);
+await check('someone who is no member cannot store a phone', setDoc(doc(as('u9'), 'pushDevices/n8'), phone('u9', 'f1')), false);
+await check('a parent reads the own phone', getDoc(doc(as('u1'), 'pushDevices/pf1')));
+await check('a parent can look up a phone that does not exist yet (the switch asks first)', getDoc(doc(as('u1'), 'pushDevices/nothing-yet')));
+await check('a parent cannot read the phone of another family', getDoc(doc(as('u1'), 'pushDevices/pf2')), false);
+await check('a parent cannot read a coordinator test device', getDoc(doc(as('u1'), 'pushDevices/d1')), false);
+await check('a parent cannot list the phones', getDocs(collection(as('u1'), 'pushDevices')), false);
+await check('a parent changes the address and label of the own phone', updateDoc(doc(as('u1'), 'pushDevices/pf1'), { endpoint: 'https://fcm.googleapis.com/fcm/send/new', label: 'Nieuw' }));
+await check('a parent changes the uid of the own phone (a re-linked browser)', updateDoc(doc(as('u1'), 'pushDevices/pf1'), { uid: 'u1b' }));
+await check('a parent cannot move the own phone to another family', updateDoc(doc(as('u1'), 'pushDevices/pf1'), { familyId: 'f2' }), false);
+await check('a parent cannot change the kind of the own phone', updateDoc(doc(as('u1'), 'pushDevices/pf1'), { owner: 'coordinator' }), false);
+await check('a parent cannot change the creation time or the last success', updateDoc(doc(as('u1'), 'pushDevices/pf1'), { createdAt: 99 }), false);
+await check('a parent cannot change the phone of another family', updateDoc(doc(as('u1'), 'pushDevices/pf2'), { label: 'x' }), false);
+await check('a parent cannot take over a coordinator device', updateDoc(doc(as('u1'), 'pushDevices/d1'), { familyId: 'f1' }), false);
+await check('a parent removes the own phone', deleteDoc(doc(as('u1'), 'pushDevices/pf1')));
+await check('a parent cannot remove the phone of another family', deleteDoc(doc(as('u1'), 'pushDevices/pf2')), false);
+await check('a parent cannot remove a coordinator device', deleteDoc(doc(as('u1'), 'pushDevices/d1')), false);
+await reset(true, false);
+await check('with live off a parent cannot store a phone', setDoc(doc(as('u1'), 'pushDevices/n1'), phone('u1', 'f1')), false);
+await check('with live off a parent cannot change the own phone', updateDoc(doc(as('u1'), 'pushDevices/pf1'), { label: 'x' }), false);
+await check('with live off a parent can still remove the own phone (privacy)', deleteDoc(doc(as('u1'), 'pushDevices/pf1')));
+await reset(true, true);
+await check('the coordinator lists all phones', getDocs(collection(as('coord'), 'pushDevices')));
+await check('the coordinator reads the phone of a family', getDoc(doc(as('coord'), 'pushDevices/pf1')));
+await check('the coordinator gives a test device a family id (the same phone is also a family phone)', updateDoc(doc(as('coord'), 'pushDevices/d1'), { familyId: 'f1' }));
+await check('the coordinator switches that family id off again', updateDoc(doc(as('coord'), 'pushDevices/d1'), { familyId: '' }));
+await check('the coordinator stores a test device that also has a family id', setDoc(doc(as('coord'), 'pushDevices/n9'), device('coord', { familyId: 'f1' })));
+await check('the coordinator makes a phone of a family a test device', updateDoc(doc(as('coord'), 'pushDevices/pf1'), { owner: 'coordinator' }));
+await check('the coordinator cannot make a device of any other kind', updateDoc(doc(as('coord'), 'pushDevices/d1'), { owner: 'family' }), false);
+await check('the coordinator removes the phone of a family', deleteDoc(doc(as('coord'), 'pushDevices/pf2')));
+
+console.log('--- pushQueue: a hand-sent copy');
+await reset(true, true);
+await check('the coordinator queues a hand-sent copy (manual: true)', setDoc(doc(as('coord'), 'pushQueue/m1'), queue({ manual: true })));
+await check('a family cannot mark an entry as hand-sent (it would reach the test device)', setDoc(doc(as('u1'), 'pushQueue/m2'), queue({ manual: true })), false);
+await check('a family cannot send manual: false either (the field is not for families)', setDoc(doc(as('u1'), 'pushQueue/m3'), queue({ manual: false })), false);
+
 console.log('--- testNotifications and the settings');
 await reset();
 await check('coordinator reads and writes made-up notifications', setDoc(doc(as('coord'), 'testNotifications/t2'), { kind: 'taken' }));
@@ -77,8 +126,10 @@ await check('a parent cannot read them', getDoc(doc(as('u1'), 'testNotifications
 await check('a parent cannot write one', setDoc(doc(as('u1'), 'testNotifications/t3'), { kind: 'taken' }), false);
 await check('a parent cannot remove one', deleteDoc(doc(as('u1'), 'testNotifications/t1')), false);
 await check('coordinator switches the test on', setDoc(doc(as('coord'), 'settings/push'), { mode: 'test', updatedAt: 1 }));
+await check('coordinator switches live on, together with the test switch', setDoc(doc(as('coord'), 'settings/push'), { mode: 'test', live: true, liveSince: 5, updatedAt: 5 }));
 await check('every member reads the switch', getDoc(doc(as('u1'), 'settings/push')));
 await check('a parent cannot switch it', setDoc(doc(as('u1'), 'settings/push'), { mode: 'test', updatedAt: 1 }), false);
+await check('a parent cannot switch live on', setDoc(doc(as('u1'), 'settings/push'), { mode: 'uit', live: true, liveSince: 5, updatedAt: 5 }), false);
 await check('every member reads the public key', getDoc(doc(as('u1'), 'settings/pushKey')));
 await check('a parent cannot write the key', setDoc(doc(as('u1'), 'settings/pushKey'), { publicKey: 'evil' }), false);
 await check('a parent cannot write the status', setDoc(doc(as('u1'), 'settings/pushStatus'), { lastRunAt: 1 }), false);

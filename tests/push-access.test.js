@@ -1,5 +1,6 @@
 // Run with: node push-access.test.js
-// push-access.js: who sees the notification test features. During the test phase only the coordinator; the restriction is ONE flag in ONE file.
+// push-access.js: who sees the push TEST features ("Push-meldingen testen"). During the test phase only the coordinator; the restriction is ONE flag in ONE file.
+// (A parent's own switch in Instellingen is not decided here; see ui-push-device.test.js.)
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -53,6 +54,11 @@ await test('the restriction lives in this one file: no other module knows the fl
   assert.match(readFileSync(join(root, 'ui-push.js'), 'utf8').match(/export function refreshPushCard[\s\S]*?\n}/)[0], /pushVisible\(\)/);
   assert.match(readFileSync(join(root, 'ui-push.js'), 'utf8').match(/export function applyPendingPushOpen[\s\S]*?\n}/)[0], /pushVisible\(\)/);
   assert.match(readFileSync(join(root, 'push-data.js'), 'utf8'), /const allowed = \(\) => !!db && pushVisible\(\) && isRealCoordinator\(\);/);
+});
+
+await test('the parent\'s own switch does not depend on this flag: ui-push-device.js never asks pushVisible', () => {
+  const src = readFileSync(join(root, 'ui-push-device.js'), 'utf8');
+  assert.doesNotMatch(src, /push-access|pushVisible/); assert.match(src, /export function pushRowVisible\(\)\{ return pushLiveOn\(\) && ritbeursOn\(\) && !!ownPushFamilyId\(\); \}/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

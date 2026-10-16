@@ -1,5 +1,6 @@
 // Run with: node ui-push.test.js
-// ui-push.js: the Beheer card "Meldingen testen" and the way a tapped test push opens the app as the right family. Coordinator only.
+// ui-push.js: the Beheer card "Push-meldingen testen" (coordinator only, always works) and the way a tapped push opens the app: as the right family for a test
+// push, on Ritten ruilen for a real one.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 let passed = 0, failed = 0;
@@ -42,14 +43,14 @@ await test('the coordinator sees it in Beheer, in the Berichten section, as a fo
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
   const html = dom.html('tab-beheer');
-  assert.match(html, /<div data-icon="bell" class="card" id="pushCard"><h2>Meldingen testen<\/h2><div id="pushBody">/);
+  assert.match(html, /<div data-icon="bell" class="card" id="pushCard"><h2>Push-meldingen testen<\/h2><div id="pushBody">/);
   assert.ok(html.indexOf('id="ritbeursCard"') < html.indexOf('id="pushCard"') && html.indexOf('id="pushCard"') < html.indexOf('id="noticeCard"'));
 });
 await test('a parent gets no card, no heading and no text about it', () => {
   useFakeDb(sampleDbSeed()); sampleParentState();
   assert.equal(pushCardHtml(), '');
   withFakeNow(NOW, () => renderBeheer());
-  assert.doesNotMatch(dom.html('tab-beheer'), /pushCard|Meldingen testen/);
+  assert.doesNotMatch(dom.html('tab-beheer'), /pushCard|Push-meldingen testen/);
 });
 await test('also a coordinator who looks at the app as a parent sees no Beheer, so no card', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState({ viewAsParent: true, links: { coord: { familyId: 'f1' } }, canEdit: false });
@@ -239,6 +240,62 @@ await test('the controls are wired: switch, enable button, family, time and clea
   el('pushTime').value = 'rommel'; el('pushTime').onchange(); assert.equal(S.push.timeChoice, 'nu');
   el('pushPersona').value = 'f3'; el('pushPersona').onchange(); assert.equal(S.push.personaId, 'f3');
   await el('pushClear').onclick(); await tick(); assert.deepEqual(fake.collection('testNotifications'), []);
+});
+
+
+console.log('\n=== the test card is for test devices only, and works whatever the live switch says ===');
+await test('only the coordinator\'s test devices are listed, never the phones of parents', () => {
+  coordinator();
+  const html = card({ devices: { d1: { ...deviceDoc({ endpoint: ENDPOINT, ...KEYS, label: 'Chrome op Android', uid: 'coord', nowMs: 1 }) }, d2: { ...deviceDoc({ endpoint: 'https://fcm.googleapis.com/fcm/send/other', ...KEYS, label: 'Telefoon van ouder', uid: 'u2', nowMs: 1, familyId: 'f2' }) } } });
+  assert.match(text(html), /Chrome op Android/); assert.doesNotMatch(text(html), /Telefoon van ouder/);
+  assert.equal((html.match(/data-pushdevdel=/g) || []).length, 1);
+});
+await test('the card says that testing always works, also when Push-meldingen are off at Ritten ruilen', () => {
+  coordinator(); S.pushSettings = { mode: 'uit', live: false, liveSince: 0 };
+  assert.match(text(card()), /Testen kan altijd, ook als Push-meldingen bij Ritten ruilen uit staan/);
+  S.pushSettings = { mode: 'test', live: false, liveSince: 0 };
+  assert.match(text(card()), /Test aan/); assert.match(card(), /id="pushTestOn" checked/);
+});
+await test('switching the test on with live on keeps live on', async () => {
+  const fake = coordinator(); S.pushSettings = { mode: 'uit', live: true, liveSince: 7 };
+  assert.equal(await togglePushTest(true), true);
+  assert.deepEqual([fake.get('settings/push').mode, fake.get('settings/push').live, fake.get('settings/push').liveSince], ['test', true, 7]);
+});
+
+console.log('\n=== a tapped REAL push opens Ritten ruilen ===');
+const parentReady = (extra = {}) => { const f = useFakeDb(sampleDbSeed()); sampleParentState({ linksLoaded: true, ritbeurs: { on: true }, ...extra }); return f; };
+await test('a parent lands on Ritten ruilen, scrolled to the card Meldingen; no Testweergave', () => {
+  parentReady();
+  const card2 = dom.doc.getElementById('rbNotifCard'); const seen = []; card2.scrollIntoView = o => seen.push(o);
+  assert.equal(queuePushOpen('', 'ritbeurs'), true);
+  assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.pushMe.pendingOpen, 0); assert.equal(S.impersonateFamilyId, null); assert.equal(S.push.pendingOpen, '');
+  assert.ok(seen.length >= 1); assert.deepEqual(seen[0], { block: 'start' });
+});
+await test('anything but "ritbeurs" does nothing', () => {
+  parentReady();
+  for (const bad of ['', 'other', null, undefined, 5]) { assert.equal(queuePushOpen('', bad), false); assert.equal(S.pushMe.pendingOpen, 0); assert.equal(S.rbView, 'wijzigen'); }
+});
+await test('it waits until the app is ready, the links are known and Ritten ruilen is on, then does it once', () => {
+  parentReady({ appReady: false });
+  assert.equal(queuePushOpen('', 'ritbeurs'), false); assert.ok(S.pushMe.pendingOpen > 0);
+  S.appReady = true; S.ritbeurs = null; assert.equal(applyPendingPushOpen(), false); assert.equal(S.rbView, 'wijzigen');
+  S.ritbeurs = { on: true }; assert.equal(applyPendingPushOpen(), true); assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.pushMe.pendingOpen, 0);
+  S.rbView = 'wijzigen'; assert.equal(applyPendingPushOpen(), false); assert.equal(S.rbView, 'wijzigen', 'done once');
+  parentReady({ linksLoaded: false }); assert.equal(queuePushOpen('', 'ritbeurs'), false); assert.ok(S.pushMe.pendingOpen > 0);
+});
+await test('a parent without Ritten ruilen is not taken there much later: the request lives a minute', () => {
+  parentReady({ ritbeurs: null });
+  queuePushOpen('', 'ritbeurs'); S.pushMe.pendingOpen = Date.now() - 61000; S.ritbeurs = { on: true };
+  assert.equal(applyPendingPushOpen(), false); assert.equal(S.pushMe.pendingOpen, 0); assert.equal(S.rbView, 'wijzigen');
+});
+await test('from the address (?open=ritbeurs): picked up and the address is cleaned; a test link and a real link together both work', () => {
+  parentReady();
+  const calls = []; const had = globalThis.history; globalThis.history = { replaceState: (...a) => calls.push(a) }; globalThis.location = { pathname: '/', hash: '', search: '' };
+  try {
+    assert.equal(queuePushOpenFromUrl('?open=ritbeurs'), true); assert.equal(S.rbView, 'ritbeurs'); assert.deepEqual(calls, [[null, '', '/']]);
+    parentReady(); calls.length = 0; assert.equal(queuePushOpenFromUrl('?open=nee'), false); assert.deepEqual(calls, []); assert.equal(S.rbView, 'wijzigen');
+    useFakeDb(sampleDbSeed()); sampleCoordinatorState({ linksLoaded: true, ritbeurs: { on: true } }); assert.equal(queuePushOpenFromUrl('?pushas=f6&open=ritbeurs'), true); assert.equal(S.impersonateFamilyId, 'f6'); assert.equal(S.rbView, 'ritbeurs');
+  } finally { if (had === undefined) delete globalThis.history; else globalThis.history = had; }
 });
 
 console.log('\n=== a tapped push opens the app as that family ===');

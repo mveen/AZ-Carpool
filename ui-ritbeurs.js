@@ -13,11 +13,12 @@ import { notificationText } from './notif-text.js';
 import { pushVisible } from './push-access.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderBeheer } from './ui-beheer.js';
+import { familiesWithPush, serverState } from './push.js';
 import {
   RITBEURS_MESSAGE_MAX, activeMoments, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
 import {
-  addMoment, allRides, createOffer, markNotificationsRead, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
+  addMoment, allRides, createOffer, markNotificationsRead, pushLiveOn, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
 } from './ritbeurs-data.js';
 
 const dayLabel = k => (DAYS.find(([d]) => d === k) || [k, String(k || '')])[1];
@@ -234,8 +235,22 @@ export function wireRitbeursSegment(){
   document.querySelectorAll('[data-rbview]').forEach(b => b.onclick = () => { hapticTap(); setRbView(b.dataset.rbview); });
 }
 
-// ---------- Beheer: the feature switch (coordinator) ----------
-export function ritbeursCardHtml(){
+// ---------- Beheer: the feature switches (coordinator) ----------
+// The card has two switches: Ritten ruilen itself, and the push messages for the parents (default off). Testing the pushes always works,
+// whatever these two say: that is the card "Push-meldingen testen".
+function pushLiveHtml(nowMs){
+  const live = pushLiveOn();
+  const phones = familiesWithPush(S.push.devices), families = Object.keys(S.families || {}).length;
+  const server = serverState(S.push.status, nowMs);
+  return `<div class="sectionLabel">${t('ritbeurs.beheer.push.title')}</div>
+      <p class="muted">${t('ritbeurs.beheer.push.uitleg')}</p>
+      <label class="switchRow" for="pushLiveOn"><span>${t('ritbeurs.beheer.push.label')}</span>
+        <input type="checkbox" role="switch" class="switch" id="pushLiveOn"${live ? ' checked' : ''}></label>
+      <div class="rowflex"><span class="noticeChip ${live ? 'ok' : 'off'}">${t(live ? 'ritbeurs.beheer.status.on' : 'ritbeurs.beheer.status.off')}</span>
+      <span class="muted">${esc(live ? t('ritbeurs.beheer.push.statusAan', { n: phones, m: families }) : t('ritbeurs.beheer.push.statusUit'))}</span></div>
+      ${live && server !== 'ok' ? `<p class="muted">${t('ritbeurs.beheer.push.serverStil')}</p>` : ''}`;
+}
+export function ritbeursCardHtml(nowMs = Date.now()){
   const on = ritbeursOn();
   const open = on ? openOffers(S.offers, S.currentWeekKey, Date.now()).length : 0;
   const moments = on ? activeMoments(S.moments, Date.now()).length : 0;
@@ -247,16 +262,27 @@ export function ritbeursCardHtml(){
         <input type="checkbox" role="switch" class="switch" id="ritbeursOn"${on ? ' checked' : ''}></label>
       <div class="rowflex" style="gap:8px;margin-top:10px;align-items:center"><span class="noticeChip ${on ? 'ok' : 'off'}">${t(on ? 'ritbeurs.beheer.status.on' : 'ritbeurs.beheer.status.off')}</span>
       <span class="muted">${esc(on ? t('ritbeurs.beheer.statusAan', { n: open, m: moments }) : t('ritbeurs.beheer.statusUit'))}</span></div>
+      ${pushLiveHtml(nowMs)}
     </div>`;
 }
 export function wireRitbeursCard(){
   const sw = document.getElementById('ritbeursOn');
-  if(!sw) return;
-  sw.onchange = async () => {
-    hapticTap();
-    const want = !!sw.checked;
-    const ok = await setRitbeurs(want);
-    if(!ok) sw.checked = ritbeursOn();
-    renderBeheer(); renderDeviationTab();
-  };
+  if(sw){
+    sw.onchange = async () => {
+      hapticTap();
+      const want = !!sw.checked;
+      const ok = await setRitbeurs(want);
+      if(!ok) sw.checked = ritbeursOn();
+      renderBeheer(); renderDeviationTab();
+    };
+  }
+  const live = document.getElementById('pushLiveOn');
+  if(live){
+    live.onchange = async () => {
+      hapticTap();
+      const ok = await setPushLive(!!live.checked);
+      if(!ok) live.checked = pushLiveOn();
+      renderBeheer();
+    };
+  }
 }

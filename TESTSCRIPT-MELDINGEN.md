@@ -1,4 +1,4 @@
-# Testscript: Meldingen testen (Android en Mac)
+# Testscript: Push-meldingen testen (Android en Mac)
 
 Doel: met eigen ogen zien dat de meldingen aankomen, er goed uitzien en nooit bij andere ouders terechtkomen.
 Duur: ongeveer 30 minuten per toestel. Alles gebeurt met jouw coördinatoraccount; echte ouders merken niets.
@@ -6,7 +6,7 @@ Duur: ongeveer 30 minuten per toestel. Alles gebeurt met jouw coördinatoraccoun
 ## Voorbereiding (eenmalig)
 - [ ] De nieuwe regels staan in de Firebase-console (Rules) en de app is gedeployd (versie **v81** onder Instellingen).
 - [ ] De cron-regel staat in DirectAdmin: `* * * * * bash ~/azcarpool-cron/run.sh push > /dev/null`.
-- [ ] Je bent ingelogd als coördinator. Open **Beheer → Berichten → Meldingen testen** (tik op de kaart om hem open te klappen).
+- [ ] Je bent ingelogd als coördinator. Open **Beheer → Berichten → Push-meldingen testen** (tik op de kaart om hem open te klappen).
 - [ ] Zet **Test aan**. Wacht tot 1–2 minuten: er verschijnt **Server actief**. Blijft dat "Server nog niet gezien"? Stop hier en meld het (de cron draait dan niet).
 
 **Android:** gebruik Chrome. De app hoeft niet op het beginscherm.
@@ -64,9 +64,22 @@ Controleer ook:
 | E5 | Meld je toestel opnieuw aan (A1) | Werkt weer | |
 
 ## Deel F. Veiligheid: er mag niets naar anderen
-- [ ] Open Instellingen → **Bekijk als: Ouder** (of laat een bekende ouder de app openen): er is **geen** Beheer-tab en nergens het woord "Meldingen testen".
+- [ ] Open Instellingen → **Bekijk als: Ouder** (of laat een bekende ouder de app openen): er is **geen** Beheer-tab en nergens het woord "Push-meldingen testen".
 - [ ] Vraag aan één ouder of die vandaag iets heeft ontvangen: het antwoord moet **nee** zijn.
 - [ ] Zet na afloop **Test uit** (tenzij je nog verder test).
+
+## Deel G. Echte push-meldingen (live), met twee telefoons van twee gezinnen
+Doe dit pas als deel A t/m F goed zijn. Je hebt twee telefoons nodig van twee verschillende gezinnen (jouw gezin en een ander gezin dat meedoet).
+| # | Doe | Verwacht | ✔/✘ |
+|---|---|---|---|
+| G1 | Beheer → Berichten → kaart **Ritten ruilen**: zet **Push-meldingen aan** | Er staat "Aan: 0 van N gezinnen hebben een telefoon aangemeld" en geen waarschuwing over de server | |
+| G2 | Op beide telefoons: avatar → **Push-meldingen** → zet **Meldingen op deze telefoon** aan | De browser vraagt toestemming; na Toestaan staat de schakelaar aan | |
+| G3 | Kijk op de Ritten-ruilen-kaart in Beheer | "2 van N gezinnen hebben een telefoon aangemeld" | |
+| G4 | Gezin 1 biedt een rit aan waar gezin 2 back-up voor is | Gezin 2 krijgt een gewone melding (zonder "Test ·") binnen 2 minuten | |
+| G5 | Tik op die melding | De app opent op **Ritten ruilen**, onderaan bij Meldingen | |
+| G6 | Kijk op jouw testtoestel (als je niet gezin 2 bent) | Je krijgt **geen** extra kopie | |
+| G7 | Zet **Push-meldingen aan** uit en laat gezin 1 nog een rit aanbieden | Er komt niets binnen. De melding staat wel in de app | |
+| G8 | Zet live weer aan en zet op één telefoon de schakelaar uit (Instellingen → Push-meldingen) | Die telefoon krijgt niets meer; de andere wel | |
 
 ## Als iets niet werkt
 | Wat je ziet | Wat te doen |

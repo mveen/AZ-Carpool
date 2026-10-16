@@ -92,8 +92,9 @@ test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch i
   assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbBusy, false);
 });
 
-test('the push test phase state starts empty: the switch is off until read, nothing is listened to, no family chosen, nothing pending', () => {
+test('the push state starts empty: the switches are off until read, nothing is listened to, no family chosen, nothing pending; a parent\'s own phone is unknown', () => {
   assert.equal(S.pushSettings, null);
+  assert.deepEqual(S.pushMe, { status: 'idle', key: null, deviceId: '', on: false, pendingOpen: 0 });
   assert.deepEqual(S.push, { unsubs: [], key: null, status: null, devices: {}, queue: {}, tests: {}, personaId: '', personaNotifs: {}, personaFor: null, personaUnsub: null, timeChoice: 'nu', last: null, thisDeviceId: '', pendingOpen: '', pendingView: false });
 });
 

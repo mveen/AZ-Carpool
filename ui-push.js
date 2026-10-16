@@ -1,6 +1,8 @@
-// ui-push.js — Beheer card "Meldingen testen": the master switch, the coordinator's devices, "Ik ben Ouder van Saar", the scenarios and
+// ui-push.js — Beheer card "Push-meldingen testen": the test switch, the coordinator's devices, "Ik ben Ouder van Saar", the scenarios and
 // the phone-style preview. COORDINATOR ONLY and TEMPORARY (push-access.js). The rules are in push.js, the database in push-data.js.
-// A tapped push opens the app in Testweergave as the family the message was meant for (applyPendingPushOpen).
+// This card always works, also while the push switch on the Ritten-ruilen card is off.
+// A tapped test push opens the app in Testweergave as the family the message was meant for; a tapped real push opens Ritten ruilen
+// (applyPendingPushOpen).
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { activateTab } from './app.js';
@@ -10,7 +12,7 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { ritbeursAvailable } from './ui-ritbeurs.js';
 import { pushVisible } from './push-access.js';
 import { isRealCoordinator } from './coordinator.js';
-import { parsePushLink, recipientLabel, serverState } from './push.js';
+import { parseOpenLink, parsePushLink, recipientLabel, serverState } from './push.js';
 import { SCENARIOS } from './push-scenarios.js';
 import {
   clearTests, enablePush, permissionState, previewItems, pushMode, pushSupport, removeDevice, runScenario, sendToMyDevice, setDeviceCategory, setPersona, setPushMode,
@@ -55,7 +57,8 @@ function modeHtml(nowMs){
 }
 
 function devicesHtml(nowMs){
-  const list = Object.entries(S.push.devices || {}).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+  // Only the coordinator's own test devices (the parents' phones are in the same collection and are not listed here).
+  const list = Object.entries(S.push.devices || {}).filter(([, d]) => d && d.owner === 'coordinator').sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
   const rows = list.map(([id, d]) => `<div class="pushDevice">
       <div class="pushDevice__main"><b>${esc(d.label || t('push.toestel.browser'))}</b>${id === S.push.thisDeviceId ? ` <span class="noticeChip ok">${t('push.toestel.dit')}</span>` : ''}
         <span class="muted">${esc(d.lastOkAt ? t('push.toestel.laatst', { ago: agoText(d.lastOkAt, nowMs) }) : t('push.toestel.nooit'))}</span></div>
@@ -177,22 +180,42 @@ export function wirePushCard(){
 
 // ---------- a tapped push: open the app as the family the message was for ----------
 // From the address (?pushas=<familyId>) or from the service worker's message when the app was already open.
-export function queuePushOpen(familyId){
+export function queuePushOpen(familyId, open){
   const id = parsePushLink('?pushas=' + encodeURIComponent(String(familyId || '')));
   if(id) S.push.pendingOpen = id;
+  if(open === 'ritbeurs') S.pushMe.pendingOpen = Date.now();
   return applyPendingPushOpen();
 }
 export function queuePushOpenFromUrl(search){
   const id = parsePushLink(search);
-  if(id){ S.push.pendingOpen = id; try{ history.replaceState(null, '', location.pathname + (location.hash || '')); }catch(e){ /* the address stays; harmless */ } }
+  const open = parseOpenLink(search);
+  if(id) S.push.pendingOpen = id;
+  if(open) S.pushMe.pendingOpen = Date.now();
+  if(id || open){ try{ history.replaceState(null, '', location.pathname + (location.hash || '')); }catch(e){ /* the address stays; harmless */ } }
   return applyPendingPushOpen();
+}
+// A tapped REAL push (?open=ritbeurs): once the app knows who is using it and that Ritten ruilen is on, show Ritten ruilen scrolled to the
+// card Meldingen. The request only lives a minute: a parent for whom Ritten ruilen never shows up is not taken there much later.
+const LIVE_OPEN_MS = 60 * 1000;
+function applyLiveOpen(){
+  const at = S.pushMe.pendingOpen;
+  if(!at) return false;
+  if(Date.now() - at > LIVE_OPEN_MS){ S.pushMe.pendingOpen = 0; return false; }
+  if(!S.appReady || !S.linksLoaded || !ritbeursAvailable()) return false;
+  S.pushMe.pendingOpen = 0;
+  S.rbView = 'ritbeurs';
+  renderDeviationTab();
+  activateTab('deviation');
+  scrollToInbox();   // (activateTab scrolls to the top first)
+  return true;
 }
 // Called after every redraw: waits until the app knows who is using it and which families exist. Only the real coordinator is ever taken
 // into a Testweergave; for anybody else the request is dropped. The Ritten-ruilen screen is chosen as soon as the app knows that Ritten ruilen
 // is on (its switch arrives after the families), so a cold start from a tapped push still ends on that screen.
 export function applyPendingPushOpen(){
+  const live = applyLiveOpen();
   const id = S.push.pendingOpen;
-  if(!id){ applyPendingView(); return false; }
+  if(!id){ applyPendingView(); return live; }
   if(!S.appReady || !S.linksLoaded) return false;
   if(!pushVisible() || !isRealCoordinator()){ S.push.pendingOpen = ''; return false; }
   if(!S.families[id]){ if(Object.keys(S.families).length) S.push.pendingOpen = ''; return false; }

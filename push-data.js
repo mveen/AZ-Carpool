@@ -1,9 +1,12 @@
-// push-data.js — push notifications, TEST PHASE: everything that reads or writes the database or the browser's push service.
-// The rules are in push.js, the screens in ui-push.js, the server job in cron/push.mjs. Coordinator only (push-access.js).
+// push-data.js — push notifications: everything that reads or writes the database or the browser's push service.
+// The rules are in push.js, the test screens in ui-push.js, the parent's own switch in ui-push-device.js, the server job in cron/push.mjs.
+// The test part is coordinator only (push-access.js); the parent part (enableFamilyDevice and friends) works while the push switch on the
+// Ritten-ruilen card is on (settings/push.live, see ritbeurs-data.js).
 //
 // What happens here:
-//  - the master switch settings/push (uit | test),
+//  - the test switch settings/push.mode (uit | test),
 //  - this browser's device (pushDevices/<id>): subscribe to the push service and store the address for the server,
+//  - a parent's own phone: the same, with the family it belongs to,
 //  - the made-up scenarios: they store notifications in testNotifications/ and (switch on) put them in pushQueue/ for the server,
 //  - the listeners that feed the screen.
 // Nothing here writes to offers, backupMoments, deviations or a family's own notifications.
@@ -15,11 +18,11 @@ import { dayCoordinatorFor, isRealCoordinator } from './coordinator.js';
 import { db } from './data.js';
 import { showToast } from './ui-common.js';
 import { pushVisible } from './push-access.js';
-import { quietOf, ridesOf } from './ritbeurs-data.js';
+import { pushLiveOn, quietOf, ridesOf } from './ritbeurs-data.js';
 import { CONFLICT_MINUTES, toMin } from './ritbeurs.js';
 import { notificationText } from './notif-text.js';
 import {
-  bufferToBase64Url, deviceDoc, deviceId, deviceLabelFromUA, normalizePush, previewState, pushSettingsDoc, queueDoc, queueKey,
+  bufferToBase64Url, deviceDoc, deviceId, deviceLabelFromUA, isTestCopy, normalizePush, previewState, pushSettingsDoc, queueDoc, queueKey,
   urlBase64ToUint8Array,
 } from './push.js';
 import { buildScenario, scenarioMoment } from './push-scenarios.js';
@@ -43,8 +46,10 @@ export async function setPushMode(mode){
   if(!allowed()){ showToast(t('push.err.alleenCoordinator')); return false; }
   const want = mode === 'test' ? 'test' : 'uit';
   try{
-    await db.doc('settings/push').set(pushSettingsDoc(want, Date.now()));
-    S.pushSettings = normalizePush({ mode: want });
+    // Written together with the live switch of the Ritten-ruilen card: switching the test on or off never changes that one.
+    const doc = pushSettingsDoc({ ...normalizePush(S.pushSettings), mode: want }, Date.now());
+    await db.doc('settings/push').set(doc);
+    S.pushSettings = normalizePush(doc);
     showToast(t(want === 'test' ? 'push.toast.testAan' : 'push.toast.uit'));
     return true;
   }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return false; }
@@ -61,7 +66,22 @@ export function pushSupport(g = globalThis){
 }
 export const permissionState = (g = globalThis) => (g.Notification && g.Notification.permission) || 'unsupported';
 
-// Subscribes this browser and stores its address for the server. Returns { ok:true, id } or { ok:false, reason }.
+// Asks permission and subscribes this browser to its push service (also when it already is). { ok:true, keys:{endpoint,p256dh,auth} }
+// or { ok:false, reason } ('geweigerd'). A push service that fails throws; the callers show that.
+async function subscribeBrowser(g, publicKey, timeoutMs){
+  let perm = g.Notification.permission;
+  if(perm === 'default') perm = await g.Notification.requestPermission();
+  if(perm !== 'granted') return { ok: false, reason: 'geweigerd' };
+  const reg = await withTimeout(g.navigator.serviceWorker.ready, timeoutMs);
+  const options = { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) };
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub){ sub = await withTimeout(reg.pushManager.subscribe(options), timeoutMs); }
+  const json = sub.toJSON ? sub.toJSON() : {};
+  const keys = json.keys || { p256dh: bufferToBase64Url(sub.getKey && sub.getKey('p256dh')), auth: bufferToBase64Url(sub.getKey && sub.getKey('auth')) };
+  return { ok: true, keys: { endpoint: json.endpoint || sub.endpoint, p256dh: keys.p256dh, auth: keys.auth } };
+}
+
+// Subscribes this browser and stores its address for the server (a TEST device of the coordinator). Returns { ok:true, id } or { ok:false, reason }.
 // reason: 'niet-toegestaan' | 'geenSupport' | 'iosInstalleren' | 'geenSleutel' | 'geweigerd' | 'ongeldig' | 'mislukt'
 export async function enablePush(g = globalThis, { timeoutMs = SUBSCRIBE_TIMEOUT_MS } = {}){
   if(!allowed()) return { ok: false, reason: 'niet-toegestaan' };
@@ -70,26 +90,85 @@ export async function enablePush(g = globalThis, { timeoutMs = SUBSCRIBE_TIMEOUT
   const publicKey = S.push.key && S.push.key.publicKey;
   if(!publicKey) return { ok: false, reason: 'geenSleutel' };
   try{
-    let perm = g.Notification.permission;
-    if(perm === 'default') perm = await g.Notification.requestPermission();
-    if(perm !== 'granted') return { ok: false, reason: 'geweigerd' };
-    const reg = await withTimeout(g.navigator.serviceWorker.ready, timeoutMs);
-    const options = { userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) };
-    let sub = await reg.pushManager.getSubscription();
-    if(!sub){ sub = await withTimeout(reg.pushManager.subscribe(options), timeoutMs); }
-    const json = sub.toJSON ? sub.toJSON() : {};
-    const keys = json.keys || { p256dh: bufferToBase64Url(sub.getKey && sub.getKey('p256dh')), auth: bufferToBase64Url(sub.getKey && sub.getKey('auth')) };
-    const doc = deviceDoc({ endpoint: json.endpoint || sub.endpoint, p256dh: keys.p256dh, auth: keys.auth, label: deviceLabelFromUA(g.navigator.userAgent), uid: S.me, nowMs: Date.now() });
+    const res = await subscribeBrowser(g, publicKey, timeoutMs);
+    if(!res.ok) return res;
+    const doc = deviceDoc({ ...res.keys, label: deviceLabelFromUA(g.navigator.userAgent), uid: S.me, nowMs: Date.now() });
     if(!doc) return { ok: false, reason: 'ongeldig' };
     const id = deviceId(doc.endpoint);
     const ref = db.doc('pushDevices/' + id);
     const existing = await ref.get();
-    if(existing.exists){ const { endpoint, p256dh, auth, label, uid } = doc; await ref.update({ endpoint, p256dh, auth, label, uid }); }
+    // (a phone the parent switched on earlier becomes a test device too)
+    if(existing.exists){ const { owner, endpoint, p256dh, auth, label, uid } = doc; await ref.update({ owner, endpoint, p256dh, auth, label, uid }); }
     else await ref.set(doc);
     S.push.thisDeviceId = id;
     showToast(t('push.toast.toestelAan'));
     return { ok: true, id };
   }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return { ok: false, reason: 'mislukt' }; }
+}
+
+// ---------- a parent's own phone (real pushes, while the push switch on the Ritten-ruilen card is on) ----------
+// The family this browser really belongs to (not the one the coordinator looks at in Testweergave); '' for a coordinator without a family.
+export const ownPushFamilyId = () => (!S.impersonateFamilyId && S.me && S.links[S.me] && S.links[S.me].familyId) || '';
+// A phone is "on" for the family when its document names that family.
+const isMineDoc = (d, familyId) => !!(d && familyId && d.familyId === familyId);
+
+// Reads what this screen needs: the public key (members may read it) and whether THIS browser is already switched on for the family.
+export async function loadMyDevice(g = globalThis){
+  const me = S.pushMe;
+  me.status = 'loading';
+  try{
+    const key = await db.doc('settings/pushKey').get();
+    me.key = key.exists ? key.data() : null;
+    const id = await findThisDevice(g);
+    me.deviceId = id;
+    me.on = false;
+    if(id){ const snap = await db.doc('pushDevices/' + id).get(); me.on = !!(snap.exists && isMineDoc(snap.data(), ownPushFamilyId())); }
+    me.status = 'ready';
+  }catch(e){ me.status = 'error'; }
+  return me;
+}
+
+// Switches this phone on for the family. Returns { ok:true, id } or { ok:false, reason }.
+// reason: 'niet-toegestaan' | 'geenSupport' | 'iosInstalleren' | 'geenSleutel' | 'geweigerd' | 'ongeldig' | 'mislukt'
+export async function enableFamilyDevice(g = globalThis, { timeoutMs = SUBSCRIBE_TIMEOUT_MS } = {}){
+  const familyId = ownPushFamilyId();
+  if(!db || !familyId || !pushLiveOn()) return { ok: false, reason: 'niet-toegestaan' };
+  const support = pushSupport(g);
+  if(support !== 'ok') return { ok: false, reason: support };
+  const publicKey = S.pushMe.key && S.pushMe.key.publicKey;
+  if(!publicKey) return { ok: false, reason: 'geenSleutel' };
+  try{
+    const res = await subscribeBrowser(g, publicKey, timeoutMs);
+    if(!res.ok) return res;
+    const doc = deviceDoc({ ...res.keys, label: deviceLabelFromUA(g.navigator.userAgent), uid: S.me, nowMs: Date.now(), familyId });
+    if(!doc) return { ok: false, reason: 'ongeldig' };
+    const id = deviceId(doc.endpoint);
+    const ref = db.doc('pushDevices/' + id);
+    const existing = await ref.get();
+    if(existing.exists){ const { endpoint, p256dh, auth, label, uid } = doc; await ref.update({ endpoint, p256dh, auth, label, uid, familyId }); }
+    else await ref.set(doc);
+    S.pushMe.deviceId = id; S.pushMe.on = true;
+    showToast(t('push.toast.mijnAan'));
+    return { ok: true, id };
+  }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return { ok: false, reason: 'mislukt' }; }
+}
+
+// Switches this phone off for the family. A phone that is also a test device of the coordinator keeps its test role (and its subscription).
+export async function disableFamilyDevice(g = globalThis){
+  const id = S.pushMe.deviceId;
+  if(!db || !id) return false;
+  try{
+    const ref = db.doc('pushDevices/' + id);
+    const snap = await ref.get();
+    if(snap.exists && snap.data().owner === 'coordinator') await ref.update({ familyId: '' });
+    else{
+      try{ const reg = await g.navigator.serviceWorker.ready; const sub = await reg.pushManager.getSubscription(); if(sub) await sub.unsubscribe(); }catch(e){ /* the document goes anyway */ }
+      if(snap.exists) await ref.delete();
+    }
+    S.pushMe.on = false;
+    showToast(t('push.toast.mijnUit'));
+    return true;
+  }catch(e){ showToast(t('data.mislukt') + (e && e.message || e)); return false; }
 }
 
 // The device document of this browser, if it is subscribed (so the card can say "dit toestel").
@@ -232,7 +311,7 @@ export async function sendToMyDevice(path){
   if(!n){ showToast(t('push.err.meldingWeg')); return false; }
   const nowMs = Date.now();
   try{
-    const entry = { path, toFamilyId: n.toFamilyId, kind: n.kind, deliverAt: nowMs, expiresAt: Math.max(n.expiresAt || 0, nowMs + 3600 * 1000), createdAt: nowMs, test: path.startsWith('testNotifications/') };
+    const entry = { path, toFamilyId: n.toFamilyId, kind: n.kind, deliverAt: nowMs, expiresAt: Math.max(n.expiresAt || 0, nowMs + 3600 * 1000), createdAt: nowMs, test: path.startsWith('testNotifications/'), manual: true };
     await db.doc('pushQueue/' + queueKey(path, 'm' + nowMs)).set(entry);
     showToast(t('push.toast.verstuurd'));
     return true;
@@ -267,7 +346,7 @@ export function previewItems(nowMs = Date.now()){
   const entries = Object.values(p.queue || {});
   return list
     .map(x => {
-      const mine = entries.filter(q => q && q.path === x.path);
+      const mine = entries.filter(q => q && q.path === x.path && isTestCopy(q, S.pushSettings));   // (a real push to the family's own phones is not "to your device")
       const sent = mine.some(q => q.sentTo && Object.keys(q.sentTo).length);
       return { ...x, text: notificationText(x.n, { nameOf, currentWeekKey: S.currentWeekKey }), state: previewState(x.n, nowMs), push: sent ? 'verstuurd' : mine.length ? 'wachtrij' : 'geen' };
     })
