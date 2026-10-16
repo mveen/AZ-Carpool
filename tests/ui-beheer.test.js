@@ -164,6 +164,17 @@ test('one button opens every menu in Beheer, and closes them all again when all 
   assert.ok(cards.every(c => c.open), 'one open, rest closed: opens all');
   S.folds = {};
 });
+test('the section bar is one row of four icon buttons, and only one section is shown, under its own title', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  assert.equal((html.match(/<button type="button" class="begChip/g) || []).length, 4);
+  assert.equal((html.match(/class="begChip[^"]*" data-sec="\w+" aria-pressed="(true|false)"><svg/g) || []).length, 4, 'each button has an icon');
+  assert.match(html, /<h2 id="begTitle">Gezinnen<\/h2><button type="button" class="begFoldAll" id="begFoldAll">/);
+  assert.match(html, /<section class="begSec" id="begSec-gezinnen">/);
+  ['periodes', 'berichten', 'koppelingen'].forEach(id => assert.match(html, new RegExp('<section class="begSec" id="begSec-' + id + '" hidden>')));
+  assert.doesNotMatch(html, /begSecTitle/);
+});
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());

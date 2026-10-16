@@ -110,6 +110,7 @@ export async function movePriority(shiftKeyVal,ids,id,delta){
 // Back-up gezinnen: download all families as one CSV, or restore (overwrite) from such a file. The file is checked completely first;
 // what was read waits in `pendingBackup` (module variable, so a live update of the Beheer tab does not lose it) until the coordinator confirms.
 let pendingBackup = null;
+let begActive = 'gezinnen';   // the Beheer section on screen
 const MAX_SHOWN_ERRORS = 8;
 
 export function familyBackupCardHtml(){
@@ -702,22 +703,29 @@ export function renderBeheer(){
     ]],
   ];
 
+  // One section is shown at a time; the choice survives a redraw (data changes redraw Beheer).
+  const secIcons = { gezinnen:'users', periodes:'clock', berichten:'bell', koppelingen:'key' };
+  if(!sections.some(([id])=>id===begActive)) begActive = sections[0][0];
+  const secTitle = id => t((sections.find(x=>x[0]===id)||sections[0])[2]);
   box.innerHTML = `${attnHtml}
-    <nav class="begChips" aria-label="${t('beheer.onderdelen')}">${sections.map(([id,chip],i)=>`<button type="button" class="begChip${i===0?' on':''}" data-sec="${id}">${t(chip)}</button>`).join('')}</nav>
-    <button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button>
-    ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"><div class="begSecTitle">${t(title)}</div>${cards.join('')}</section>`).join('')}`;
+    <nav class="begChips" aria-label="${t('beheer.onderdelen')}"><div class="begSeg">${sections.map(([id,chip])=>`<button type="button" class="begChip${id===begActive?' on':''}" data-sec="${id}" aria-pressed="${id===begActive}">${phIcon(secIcons[id],{size:'1.8em'})}<span>${t(chip)}</span></button>`).join('')}</div></nav>
+    <div class="begHead"><h2 id="begTitle">${secTitle(begActive)}</h2><button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button></div>
+    ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"${id===begActive?'':' hidden'}>${cards.join('')}</section>`).join('')}`;
 
   foldCards(box);
 
-  document.querySelectorAll('.begChip').forEach(b=>b.onclick=()=>{
-    hapticTap();
-    document.querySelectorAll('.begChip').forEach(x=>x.classList.toggle('on', x===b));
-    const sec=document.getElementById('begSec-'+b.dataset.sec); if(sec) sec.scrollIntoView({block:'start'});
-  });
-  // One button opens every menu in Beheer, or closes them all when everything is already open.
+  const showSec = id => {
+    begActive = id;
+    document.querySelectorAll('.begChip').forEach(x=>{ const on = x.dataset.sec===id; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); });
+    sections.forEach(([sid])=>{ const el = document.getElementById('begSec-'+sid); if(el) el.hidden = sid!==id; });
+    const h = document.getElementById('begTitle'); if(h) h.textContent = secTitle(id);
+    box.dispatchEvent && box.dispatchEvent(new Event('toggle'));
+  };
+  document.querySelectorAll('.begChip').forEach(b=>b.onclick=()=>{ hapticTap(); showSec(b.dataset.sec); });
+  // One button opens every menu of the section on screen, or closes them all when everything is already open.
   const foldAllBtn = document.getElementById('begFoldAll');
   if(foldAllBtn){
-    const folds = () => [...box.querySelectorAll('details.fold[data-fold]')];
+    const folds = () => [...box.querySelectorAll('.begSec:not([hidden]) details.fold[data-fold]')];
     const sync = () => { foldAllBtn.textContent = t(folds().every(d=>d.open) ? 'beheer.alles_dicht' : 'beheer.alles_open'); };
     foldAllBtn.onclick = ()=>{
       hapticTap();
@@ -731,6 +739,7 @@ export function renderBeheer(){
   document.querySelectorAll('[data-goto]').forEach(b=>b.onclick=()=>{
     hapticTap();
     const card=document.getElementById(b.dataset.goto); if(!card) return;
+    const sec = card.closest && card.closest('.begSec'); if(sec) showSec(sec.id.replace('begSec-',''));
     card.open=true; if(card.dataset.fold) S.folds[card.dataset.fold]=true;
     card.scrollIntoView({block:'start'});
   });
