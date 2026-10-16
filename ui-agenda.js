@@ -1,6 +1,7 @@
-// ui-agenda.js — Instellingen > Agenda: the link to the calendar of the family's daughter (the next 3 weeks of rides, read only).
-// The link is https://azcarpool.nl/agenda/<secret>.ics. The secret is made here, once per family, and stored in calendarTokens/<familyId>
-// (readable by that family and the coordinator only). The file itself is made on the server by cron/agenda.mjs.
+// ui-agenda.js — Instellingen > Agenda: the two calendar links of a family (the next 3 weeks of rides, read only):
+//   - the rides the family DRIVES (for the parents), secret in driverCalendarTokens/<familyId>
+//   - the rides the daughter sits in (to share with her), secret in calendarTokens/<familyId>
+// A link is https://azcarpool.nl/agenda/<secret>.ics. Each secret is made here, once per family, and stored (readable by that family and the coordinator only). The file itself is made on the server by cron/agenda.mjs.
 // There is no "new link": the link stays the same, so a calendar that was set up once keeps working.
 import { t } from './i18n.js';
 import { S } from './state.js';
@@ -26,20 +27,35 @@ const useGoogleButton = () => isAndroid() || isIos();
 
 const validToken = x => typeof x === 'string' && TOKEN_RE.test(x);
 
-// The inside of the Agenda sheet, for the family whose link it is. S.calendarLink = { familyId, token, status: 'loading' | 'ready' | 'error' }.
-// The sheet has its own title, so the text starts straight away.
+// The inside of the Agenda sheet, for the family whose links they are: two blocks. "Mijn agenda" holds the rides the family drives (for the
+// parents), "Agenda van {daughter}" the rides she sits in (to share with her).
+// S.calendarLink = { familyId, token (daughter), driverToken (parents), status: 'loading' | 'ready' | 'error' }. The sheet has its own title.
+export const canShare = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+
 export function agendaCardInnerHtml(familyId) {
   const link = S.calendarLink && S.calendarLink.familyId === familyId ? S.calendarLink : null;
-  const head = '';
-  if (!link || link.status === 'loading') return `${head}<div class="panel__sub">${t('agenda.laden')}</div>`;
-  if (link.status === 'error' || !validToken(link.token)) return `${head}<div class="panel__sub">${t('agenda.laden_mislukt')}</div>`;
-  return `${head}
-    <div class="panel__sub">${esc(t('agenda.kaart_uitleg', { name: plainGirlName(familyId) }))}</div>
-    <div class="formActions">
-      ${useGoogleButton()
-        ? `<a class="btn" id="agendaAdd" href="${esc(googleSubscribeUrl(link.token))}" target="_blank" rel="noopener">${t('agenda.toevoegen_google')}</a>`
-        : `<a class="btn" id="agendaAdd" href="${esc(webcalUrl(link.token))}">${t('agenda.toevoegen')}</a>`}
-      <button type="button" class="btn secondary" id="agendaCopy">${t('agenda.kopieer')}</button>
+  if (!link || link.status === 'loading') return `<div class="panel__sub">${t('agenda.laden')}</div>`;
+  if (link.status === 'error' || !validToken(link.token) || !validToken(link.driverToken)) return `<div class="panel__sub">${t('agenda.laden_mislukt')}</div>`;
+  const name = plainGirlName(familyId);
+  return `
+    <div class="panel__sub">${t('agenda.kaart_uitleg')}</div>
+    <div class="panel agendaBlock">
+      <div class="panel__title">${esc(t('agenda.rijden_titel'))}</div>
+      <div class="panel__sub">${esc(t('agenda.rijden_uitleg'))}</div>
+      <div class="formActions">
+        ${useGoogleButton()
+          ? `<a class="btn" id="agendaAddDriver" href="${esc(googleSubscribeUrl(link.driverToken))}" target="_blank" rel="noopener">${t('agenda.toevoegen_google')}</a>`
+          : `<a class="btn" id="agendaAddDriver" href="${esc(webcalUrl(link.driverToken))}">${t('agenda.toevoegen')}</a>`}
+        <button type="button" class="btn secondary" id="agendaCopyDriver">${t('agenda.kopieer')}</button>
+      </div>
+    </div>
+    <div class="panel agendaBlock">
+      <div class="panel__title">${esc(t('agenda.dochter_titel', { name }))}</div>
+      <div class="panel__sub">${esc(t('agenda.dochter_uitleg', { name }))}</div>
+      <div class="formActions">
+        ${canShare() ? `<button type="button" class="btn" id="agendaShare">${esc(t('agenda.delen', { name }))}</button>` : ''}
+        <button type="button" class="btn secondary" id="agendaCopy">${t('agenda.kopieer')}</button>
+      </div>
     </div>
     <p class="muted">${t(isAndroid() ? 'agenda.android_uitleg' : isIos() ? 'agenda.ios_uitleg' : 'agenda.google_uitleg')}</p>
     <p class="muted">${t('agenda.bijwerken')}</p>
@@ -73,13 +89,21 @@ export function openAgendaSheet() {
 }
 
 export function wireAgendaCard() {
-  const copy = document.getElementById('agendaCopy');
-  if (!copy) return;
-  copy.onclick = async () => {
+  const copyOf = key => async () => {
+    const link = S.calendarLink;
+    if (!link || !validToken(link[key])) return;
+    try { await navigator.clipboard.writeText(calendarUrl(link[key])); showToast(t('agenda.gekopieerd')); }
+    catch (e) { showToast(t('agenda.kopieer_mislukt')); }
+  };
+  const copyGirl = document.getElementById('agendaCopy'), copyDriver = document.getElementById('agendaCopyDriver'), share = document.getElementById('agendaShare');
+  if (copyGirl) copyGirl.onclick = copyOf('token');
+  if (copyDriver) copyDriver.onclick = copyOf('driverToken');
+  if (share) share.onclick = async () => {
     const link = S.calendarLink;
     if (!link || !validToken(link.token)) return;
-    try { await navigator.clipboard.writeText(calendarUrl(link.token)); showToast(t('agenda.gekopieerd')); }
-    catch (e) { showToast(t('agenda.kopieer_mislukt')); }
+    const name = plainGirlName(link.familyId);
+    try { await navigator.share({ title: t('agenda.kalendernaam', { name }), text: t('agenda.deel_tekst', { name }), url: calendarUrl(link.token) }); }
+    catch (e) { /* the sheet was closed, or sharing is not possible: nothing to say, the copy button is right there */ }
   };
 }
 
@@ -91,23 +115,27 @@ function redrawAgendaCard() {
   wireAgendaCard();
 }
 
-// Reads the family's secret, or makes it the first time. Runs once per family per session (again after an error).
+// Reads the family's two secrets (daughter and parents), or makes what is missing the first time. Runs once per family per session (again after an error).
 export async function loadCalendarLink() {
   const familyId = ownFamilyId();
   if (!db || !familyId) return;
   const cur = S.calendarLink;
   if (cur && cur.familyId === familyId && cur.status !== 'error') return;
-  S.calendarLink = { familyId, token: '', status: 'loading' };
-  const ref = db.doc('calendarTokens/' + familyId);
-  const read = async () => { const snap = await ref.get(); const d = snap.exists && snap.data(); return d && validToken(d.token) ? d.token : ''; };
-  try {
+  S.calendarLink = { familyId, token: '', driverToken: '', status: 'loading' };
+  const getOrMake = async path => {
+    const ref = db.doc(path + '/' + familyId);
+    const read = async () => { const snap = await ref.get(); const d = snap.exists && snap.data(); return d && validToken(d.token) ? d.token : ''; };
     let token = await read();
     if (!token) {
       try { await ref.set({ token: newCalendarToken(), createdAt: Date.now() }); }
       catch (e) { /* another device of this family was a moment earlier: the rules do not allow a second one, so read theirs */ }
       token = await read();
     }
-    S.calendarLink = { familyId, token, status: token ? 'ready' : 'error' };
-  } catch (e) { S.calendarLink = { familyId, token: '', status: 'error' }; }
+    return token;
+  };
+  try {
+    const [token, driverToken] = [await getOrMake('calendarTokens'), await getOrMake('driverCalendarTokens')];
+    S.calendarLink = { familyId, token, driverToken, status: token && driverToken ? 'ready' : 'error' };
+  } catch (e) { S.calendarLink = { familyId, token: '', driverToken: '', status: 'error' }; }
   redrawAgendaCard();
 }

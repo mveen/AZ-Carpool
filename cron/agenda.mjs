@@ -1,6 +1,7 @@
-// cron/agenda.mjs — the calendar subscriptions: for every family with a link, one .ics file with the next 3 weeks of rides of their daughter.
+// cron/agenda.mjs — the calendar subscriptions: for every family with a link, two .ics files with the next 3 weeks of rides: the rides the family drives and the rides their daughter sits in.
 //   node agenda.mjs
-// The family's link (Profiel) is https://azcarpool.nl/agenda/<secret>.ics. The secret is in calendarTokens/<familyId>, made by the app.
+// The family's links (Instellingen > Agenda) are https://azcarpool.nl/agenda/<secret>.ics. The secrets are in calendarTokens/<familyId> (daughter)
+// and driverCalendarTokens/<familyId> (parents), made by the app.
 // This job reads the database, asks the SAME app code as Mijn week what the rides are (calendar-feed.js + rides.js), and writes
 // <web folder>/agenda/<secret>.ics. Calendar apps fetch that file by themselves (Google about once a day, Apple more often).
 // Safe to run at any time and as often as you like: a file whose content did not change is not rewritten; a file whose link was removed is deleted.
@@ -58,8 +59,8 @@ function writeAtomic(file, text) { const tmp = file + '.tmp'; writeFileSync(tmp,
 
 export async function runAgenda({ firestore, app, outDir, now = Date.now(), log = console.log, warn = console.error }) {
   const { S } = app;
-  const [families, groups, deviations, periodsColl, periodEntries, periodCars, matchCarpools, tokens] = await Promise.all(
-    ['families', 'groups', 'deviations', 'periods', 'periodEntries', 'periodCars', 'matchCarpools', 'calendarTokens'].map(c => readCollection(firestore, c)));
+  const [families, groups, deviations, periodsColl, periodEntries, periodCars, matchCarpools, tokens, driverTokens] = await Promise.all(
+    ['families', 'groups', 'deviations', 'periods', 'periodEntries', 'periodCars', 'matchCarpools', 'calendarTokens', 'driverCalendarTokens'].map(c => readCollection(firestore, c)));
   const [legacy, locations, planning] = await Promise.all(['settings/period', 'settings/locations', 'settings/planning'].map(p => readDoc(firestore, p)));
   Object.assign(S, {
     families, groups, deviations, periodEntries, periodCars, matchCarpools, locationsDoc: locations,
@@ -67,15 +68,18 @@ export async function runAgenda({ firestore, app, outDir, now = Date.now(), log 
     settings: { ...S.settings, ...(planning || {}) },
   });
 
-  // Which links are valid: a well-formed secret, of a family that exists, used by one family only.
-  const wanted = new Map();   // secret -> familyId
+  // Which links are valid: a well-formed secret, of a family that exists, used once only (over both kinds of link: a secret is a file name).
+  // 'girl' = the calendar with the rides the daughter sits in, 'driver' = the calendar with the rides the family drives.
+  const wanted = new Map();   // secret -> { familyId, role }
   const seen = new Map();
-  for (const [familyId, doc] of Object.entries(tokens)) {
-    const token = doc && doc.token;
-    if (typeof token !== 'string' || !app.TOKEN_RE.test(token)) { warn(`WARNING: the link of ${familyId} is not a valid secret and is ignored`); continue; }
-    if (!families[familyId]) continue;   // a family that was removed: its file goes away below
-    if (seen.has(token)) { warn(`WARNING: two families have the same secret (${seen.get(token)} and ${familyId}); both are ignored`); wanted.delete(token); continue; }
-    seen.set(token, familyId); wanted.set(token, familyId);
+  for (const [role, docs] of [['girl', tokens], ['driver', driverTokens]]) {
+    for (const [familyId, doc] of Object.entries(docs)) {
+      const token = doc && doc.token;
+      if (typeof token !== 'string' || !app.TOKEN_RE.test(token)) { warn(`WARNING: the ${role} link of ${familyId} is not a valid secret and is ignored`); continue; }
+      if (!families[familyId]) continue;   // a family that was removed: its file goes away below
+      if (seen.has(token)) { warn(`WARNING: two links have the same secret (${seen.get(token)} and ${role} ${familyId}); both are ignored`); wanted.delete(token); continue; }
+      seen.set(token, `${role} ${familyId}`); wanted.set(token, { familyId, role });
+    }
   }
 
   mkdirSync(outDir, { recursive: true, mode: 0o755 });
@@ -83,10 +87,13 @@ export async function runAgenda({ firestore, app, outDir, now = Date.now(), log 
   if (!existsSync(ht) || readFileSync(ht, 'utf8') !== HTACCESS) writeAtomic(ht, HTACCESS);
 
   let written = 0, unchanged = 0, removed = 0;
-  for (const [token, familyId] of wanted) {
+  for (const [token, { familyId, role }] of wanted) {
     const f = families[familyId];
-    const name = app.t('agenda.kalendernaam', { name: f.girlName || f.parentName || familyId });
-    const text = app.buildIcs({ name, events: app.feedEvents(familyId, S, now), nowMs: now });
+    const name = role === 'driver'
+      ? app.t('agenda.kalendernaam_rijden', { name: f.parentName || f.girlName || familyId })
+      : app.t('agenda.kalendernaam', { name: f.girlName || f.parentName || familyId });
+    const events = role === 'driver' ? app.driverFeedEvents(familyId, S, now) : app.feedEvents(familyId, S, now);
+    const text = app.buildIcs({ name, events, nowMs: now });
     const file = join(outDir, token + '.ics');
     if (existsSync(file) && sameCalendar(readFileSync(file, 'utf8'), text)) { unchanged++; continue; }
     writeAtomic(file, text); written++;
