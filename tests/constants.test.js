@@ -85,6 +85,7 @@ test('the avatar library icons all exist in PH_PATHS', () => {
 });
 test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); });
 test('APP_VERSION is at least v91 (start-up retry release)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 91); });
+test('APP_VERSION is at least v92 (the tab bar stays on screen in Brave: measured app height)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 92); });
 test('APP_VERSION is at least v73 (mobile layout fixes)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 73); });
 
 test('APP_VERSION is at least v79 (the home-screen sheet behind its feature toggle)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 79); });
