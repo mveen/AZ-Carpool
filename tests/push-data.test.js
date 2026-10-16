@@ -1,6 +1,7 @@
 // Run with: node push-data.test.js
-// push-data.js: everything of the push test phase that reads or writes the database or the browser's push service. Coordinator only.
-// The point of these tests: nothing is stored or sent for anyone else, made-up scenarios never touch real data, and the switch decides what is queued.
+// push-data.js: everything of the push features that reads or writes the database or the browser's push service: the coordinator's test part and
+// a parent's own phone. The point of these tests: nothing is stored or sent for anyone else, made-up scenarios never touch real data, the switches
+// decide what is queued, and a parent can only ever store, read or remove a phone of the own family.
 import assert from 'node:assert/strict';
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -10,8 +11,8 @@ async function test(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleCoordinatorState, sampleParentState, sampleDbSeed, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import {
-  clearTests, enablePush, findThisDevice, previewItems, pushMode, pushSupport, rememberedPersona, removeDevice, runScenario, scenarioContext, sendToMyDevice,
-  setDeviceCategory, setPersona, setPushMode, stopPushListeners, syncPushListeners,
+  clearTests, disableFamilyDevice, enableFamilyDevice, enablePush, findThisDevice, loadMyDevice, ownPushFamilyId, previewItems, pushMode, pushSupport, rememberedPersona, removeDevice,
+  runScenario, scenarioContext, sendToMyDevice, setDeviceCategory, setPersona, setPushMode, stopPushListeners, syncPushListeners,
 } from '../push-data.js';
 import { deviceDoc, deviceId } from '../push.js';
 import { notificationDoc, normalizeQuiet } from '../ritbeurs.js';
@@ -44,7 +45,7 @@ function browser({ permission = 'default', answer = 'granted', sub = null, subsc
   return { calls, g: { navigator: { userAgent, standalone, serviceWorker: { ready: Promise.resolve({ pushManager }) } }, PushManager: function PushManager() {}, Notification, matchMedia: () => ({ matches: false }) } };
 }
 
-console.log('=== the master switch ===');
+console.log('=== the test switch ===');
 await test('the coordinator switches the test on and off; the choice is stored and shown at once', async () => {
   const fake = asCoordinator();
   assert.equal(pushMode(), 'uit');
@@ -64,6 +65,119 @@ await test('a parent cannot switch it: nothing is written', async () => {
 await test('a failing database shows the error and does not pretend it worked', async () => {
   const fake = asCoordinator(); fake.failWrites('settings/push', 'permission-denied');
   assert.equal(await setPushMode('test'), false); assert.equal(pushMode(), 'uit'); assert.match(toast(), /permission-denied/);
+});
+
+await test('switching the test on or off never changes the live switch (both are stored together), and liveSince stays', async () => {
+  const fake = asCoordinator(); S.pushSettings = { mode: 'uit', live: true, liveSince: 5 };
+  assert.equal(await setPushMode('test'), true);
+  const d = fake.get('settings/push'); assert.equal(d.mode, 'test'); assert.equal(d.live, true); assert.equal(d.liveSince, 5);
+  assert.deepEqual(S.pushSettings, { mode: 'test', live: true, liveSince: 5 });
+  assert.equal(await setPushMode('uit'), true); assert.equal(fake.get('settings/push').live, true);
+});
+
+console.log('\n=== a parent\'s own phone ===');
+const KEY = { publicKey: 'BAAA' + 'A'.repeat(83) };
+// A parent (family f2) with the push switch on. `patch` can change the state.
+function asParent(seed = {}, patch = {}) {
+  const fake = useFakeDb({ ...sampleDbSeed(), ...seed });
+  sampleParentState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 }, ...patch });
+  S.pushMe.key = KEY;
+  return fake;
+}
+await test('a parent switches the phone on: permission, subscription with the server key, and a device document for the OWN family', async () => {
+  const fake = asParent(), b = browser();
+  assert.equal(ownPushFamilyId(), 'f2');
+  const r = await enableFamilyDevice(b.g);
+  const id = deviceId(ENDPOINT);
+  assert.deepEqual(r, { ok: true, id }); assert.equal(b.calls.request, 1); assert.equal(b.calls.subscribe.length, 1); assert.equal(b.calls.subscribe[0].applicationServerKey.length, 65);
+  const d = fake.get('pushDevices/' + id);
+  assert.equal(d.owner, 'family'); assert.equal(d.familyId, 'f2'); assert.equal(d.uid, 'p1'); assert.equal(d.endpoint, ENDPOINT); assert.equal(d.label, 'Chrome op Android'); assert.deepEqual(d.categories, { ritbeurs: true });
+  assert.equal(S.pushMe.on, true); assert.equal(S.pushMe.deviceId, id); assert.match(toast(), /Deze telefoon krijgt push-meldingen/);
+  assert.deepEqual(fake.writes.map(([, p]) => p), ['pushDevices/' + id], 'nothing else is written');
+});
+await test('it needs the live switch: with it off, nothing is asked and nothing stored', async () => {
+  const fake = asParent({}, { pushSettings: { mode: 'test', live: false, liveSince: 0 } }), b = browser();
+  assert.deepEqual(await enableFamilyDevice(b.g), { ok: false, reason: 'niet-toegestaan' }); assert.equal(b.calls.request, 0); assert.deepEqual(fake.collection('pushDevices'), []);
+  S.pushSettings = null; assert.deepEqual(await enableFamilyDevice(b.g), { ok: false, reason: 'niet-toegestaan' });
+});
+await test('without a family of its own (a coordinator without a family, a coordinator in Testweergave, an unlinked browser) nothing happens', async () => {
+  for (const patch of [{ links: {} }, { links: { p1: { familyId: 'f2' } }, impersonateFamilyId: 'f6' }, { me: '' }]) {
+    const fake = asParent({}, patch), b = browser();
+    assert.equal(ownPushFamilyId(), ''); assert.deepEqual(await enableFamilyDevice(b.g), { ok: false, reason: 'niet-toegestaan' }); assert.deepEqual(fake.collection('pushDevices'), []);
+  }
+});
+await test('every way it can go wrong gives a clear reason and stores nothing', async () => {
+  let fake = asParent(); S.pushMe.key = null;
+  assert.deepEqual(await enableFamilyDevice(browser().g), { ok: false, reason: 'geenSleutel' });
+  asParent();
+  assert.deepEqual(await enableFamilyDevice(browser({ answer: 'denied' }).g), { ok: false, reason: 'geweigerd' });
+  assert.deepEqual(await enableFamilyDevice({ navigator: {}, matchMedia: () => ({ matches: false }) }), { ok: false, reason: 'geenSupport' });
+  assert.deepEqual(await enableFamilyDevice(browser({ userAgent: 'iPhone Safari', standalone: false }).g), { ok: false, reason: 'iosInstalleren' });
+  assert.deepEqual(await enableFamilyDevice(browser({ subscribeFails: true }).g), { ok: false, reason: 'mislukt' }); assert.match(toast(), /push service down/);
+  fake = asParent();
+  const bad = browser(); const badSub = { endpoint: 'https://evil.example/x', toJSON: () => ({ endpoint: 'https://evil.example/x', keys: KEYS }) };
+  bad.g.navigator.serviceWorker = { ready: Promise.resolve({ pushManager: { getSubscription: async () => badSub, subscribe: async () => badSub } }) };
+  assert.deepEqual(await enableFamilyDevice(bad.g), { ok: false, reason: 'ongeldig' });
+  fake = asParent(); fake.failWrites('pushDevices', 'permission-denied');
+  assert.deepEqual(await enableFamilyDevice(browser().g), { ok: false, reason: 'mislukt' }); assert.equal(S.pushMe.on, false); assert.deepEqual(fake.collection('pushDevices'), []);
+});
+await test('switching on again keeps the creation time and the choices; the family id is set', async () => {
+  const id = deviceId(ENDPOINT);
+  const old = { ...deviceDoc({ endpoint: ENDPOINT, ...KEYS, label: 'Oud', uid: 'p1', nowMs: 5, familyId: 'f2' }), categories: { ritbeurs: false } };
+  const fake = asParent({ ['pushDevices/' + id]: old });
+  assert.equal((await enableFamilyDevice(browser({ permission: 'granted' }).g)).ok, true);
+  const d = fake.get('pushDevices/' + id); assert.equal(d.createdAt, 5); assert.deepEqual(d.categories, { ritbeurs: false }); assert.equal(d.label, 'Chrome op Android'); assert.equal(fake.collection('pushDevices').length, 1);
+});
+await test('a phone that is also a test device of the coordinator keeps its test role and gets the family id', async () => {
+  const id = deviceId(ENDPOINT), test1 = deviceDoc({ endpoint: ENDPOINT, ...KEYS, uid: 'coord', nowMs: 5 });
+  const fake = asParent({ ['pushDevices/' + id]: test1 }, { me: 'coord', links: { coord: { familyId: 'f1' } }, canEdit: true, coordinatorConfig: { uid: 'coord', familyId: 'f1' }, coordinatorExists: true });
+  assert.equal(ownPushFamilyId(), 'f1');
+  assert.equal((await enableFamilyDevice(browser({ permission: 'granted' }).g)).ok, true);
+  const d = fake.get('pushDevices/' + id); assert.equal(d.owner, 'coordinator'); assert.equal(d.familyId, 'f1');
+  assert.equal(await disableFamilyDevice(browser({ sub: { endpoint: ENDPOINT } }).g), true);
+  const e = fake.get('pushDevices/' + id); assert.equal(e.owner, 'coordinator'); assert.equal(e.familyId, ''); assert.equal(S.pushMe.on, false);
+});
+await test('the coordinator enabling the same phone as a test device makes it a test device (kind changed, family id kept)', async () => {
+  const id = deviceId(ENDPOINT), fam = deviceDoc({ endpoint: ENDPOINT, ...KEYS, uid: 'coord', nowMs: 5, familyId: 'f1' });
+  const fake = asCoordinator({ ['pushDevices/' + id]: fam }, { key: KEY });
+  assert.equal((await enablePush(browser({ permission: 'granted' }).g)).ok, true);
+  const d = fake.get('pushDevices/' + id); assert.equal(d.owner, 'coordinator'); assert.equal(d.familyId, 'f1'); assert.equal(d.createdAt, 5);
+});
+await test('switching off removes the document and cancels the subscription; with no document or no subscription it still works', async () => {
+  const id = deviceId(ENDPOINT);
+  const fake = asParent({ ['pushDevices/' + id]: deviceDoc({ endpoint: ENDPOINT, ...KEYS, uid: 'p1', nowMs: 1, familyId: 'f2' }) });
+  S.pushMe.deviceId = id; S.pushMe.on = true;
+  const b = browser({ sub: { endpoint: ENDPOINT, unsubscribe: async () => { b.calls.unsubscribe++; return true; } } });
+  assert.equal(await disableFamilyDevice(b.g), true); assert.equal(b.calls.unsubscribe, 1); assert.equal(fake.get('pushDevices/' + id), undefined); assert.equal(S.pushMe.on, false); assert.match(toast(), /geen push-meldingen meer/);
+  assert.equal(await disableFamilyDevice(b.g), true, 'already gone: fine');
+  S.pushMe.deviceId = ''; assert.equal(await disableFamilyDevice(b.g), false, 'no device known: nothing to do');
+  const f2 = asParent({ ['pushDevices/' + id]: deviceDoc({ endpoint: ENDPOINT, ...KEYS, uid: 'p1', nowMs: 1, familyId: 'f2' }) }); S.pushMe.deviceId = id; f2.failWrites('pushDevices', 'permission-denied');
+  assert.equal(await disableFamilyDevice(browser().g), false); assert.match(toast(), /permission-denied/);
+});
+await test('loading the screen: the key, whether this browser is subscribed, and whether its document names the own family', async () => {
+  const id = deviceId(ENDPOINT);
+  asParent({ 'settings/pushKey': KEY, ['pushDevices/' + id]: deviceDoc({ endpoint: ENDPOINT, ...KEYS, uid: 'p1', nowMs: 1, familyId: 'f2' }) });
+  S.pushMe.key = null;
+  let me = await loadMyDevice(browser({ sub: { endpoint: ENDPOINT } }).g);
+  assert.equal(me.status, 'ready'); assert.deepEqual(me.key, KEY); assert.equal(me.deviceId, id); assert.equal(me.on, true);
+  me = await loadMyDevice(browser().g); assert.equal(me.on, false); assert.equal(me.deviceId, '', 'no subscription: off');
+  asParent({ 'settings/pushKey': KEY, ['pushDevices/' + id]: deviceDoc({ endpoint: ENDPOINT, ...KEYS, uid: 'u9', nowMs: 1, familyId: 'f1' }) });
+  me = await loadMyDevice(browser({ sub: { endpoint: ENDPOINT } }).g); assert.equal(me.on, false, 'a phone of another family is not mine');
+  asParent({}); me = await loadMyDevice(browser({ sub: { endpoint: ENDPOINT } }).g); assert.equal(me.status, 'ready'); assert.equal(me.key, null); assert.equal(me.on, false);
+});
+await test('while live is on, a real notification\'s push to a family phone is not shown as "to your device"; test copies still are', async () => {
+  asCoordinator(); setPersona('f6'); await tick();
+  S.pushSettings = { mode: 'test', live: true, liveSince: NOWMS - 10000 };
+  const mk = extra => notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() });
+  S.push.personaNotifs = { r1: mk() }; S.push.tests = { t1: mk() };
+  S.push.queue = {
+    q1: { path: 'families/f6/notifications/r1', createdAt: NOWMS, test: false, sentTo: { phone: 5 } },
+    q2: { path: 'testNotifications/t1', createdAt: NOWMS, test: true, sentTo: { dev1: 5 } },
+  };
+  const items = previewItems(NOWMS);
+  assert.deepEqual(items.map(i => [i.id, i.push]).sort(), [['r1', 'geen'], ['t1', 'verstuurd']]);
+  S.pushSettings = { mode: 'test', live: false, liveSince: 0 };
+  assert.equal(previewItems(NOWMS).find(i => i.id === 'r1').push, 'verstuurd', 'with live off, the real copy was a test copy for the coordinator');
 });
 
 console.log('\n=== this browser ===');
@@ -253,7 +367,7 @@ await test('a made-up or real notification is queued again for the server right 
   assert.equal(await withFakeNowAsync(NOW, () => sendToMyDevice('families/f6/notifications/r1')), true);
   const q = Object.fromEntries(fake.collection('pushQueue'));
   const a = q[`testNotifications__t1__m${NOWMS}`], b = q[`families__f6__notifications__r1__m${NOWMS}`];
-  assert.equal(a.deliverAt, NOWMS); assert.equal(a.test, true); assert.equal(b.test, false); assert.equal(b.path, 'families/f6/notifications/r1'); assert.equal(b.toFamilyId, 'f6');
+  assert.equal(a.deliverAt, NOWMS); assert.equal(a.test, true); assert.equal(b.test, false); assert.equal(a.manual, true); assert.equal(b.manual, true, 'a hand-sent copy is marked: the server sends it to the test device, never to the family'); assert.equal(b.path, 'families/f6/notifications/r1'); assert.equal(b.toFamilyId, 'f6');
 });
 await test('it needs the switch on test, and a notification that still exists', async () => {
   const fake = asCoordinator(); setPersona('f6'); S.push.tests = { t1: { kind: 'taken', toFamilyId: 'f6' } };

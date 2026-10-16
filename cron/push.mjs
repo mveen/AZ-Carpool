@@ -1,11 +1,15 @@
-// cron/push.mjs — the push server, TEST PHASE. Run it every minute while testing (afterwards every 5 minutes):
+// cron/push.mjs — the push server. Run it every minute while testing (afterwards every 5 minutes):
 //   node push.mjs
-// What it does, only while settings/push.mode is 'test' (anything else: it does nothing at all, and says so):
+// What it does, only while the test switch (settings/push.mode = 'test') or the push switch of Ritten ruilen (settings/push.live = true) is on
+// (otherwise it does nothing at all, and says so):
 //   1. makes the push key pair once (secrets folder, push-vapid.json) and publishes the PUBLIC half in settings/pushKey, so the app can subscribe;
 //   2. runs the check that the app only does while someone has it open: a Ritten-ruilen offer still open at 18:00 the day before is announced
 //      once to the offerer and the day coordinator (same rules as checkRitbeurs in ritbeurs-data.js; the first one to write wins);
-//   3. sends every due entry of pushQueue/ to the coordinator's devices (pushDevices/), and notes per device what was sent (sentTo/failedTo),
-//      so nothing goes out twice. A message says whom it was meant for ("Test · Ouder van Saar"); NOBODY ELSE ever gets a push;
+//   3. sends every due entry of pushQueue/ and notes per device what was sent (sentTo/failedTo), so nothing goes out twice. Where it goes is
+//      decided by routeEntry (push.js): a REAL notification goes to the devices of the family it is for, as a plain message, while live is on
+//      (only notifications made after live was switched on, and only to phones switched on before that notification); made-up scenarios, the
+//      "Stuur naar mijn toestel" button and (while live is off) copies of real ones go to the coordinator's test devices only, labelled
+//      "Test · Ouder van Saar", while the test switch is on;
 //   4. removes devices the push service says are gone, expired queue entries and expired made-up notifications;
 //   5. reports itself in settings/pushStatus, so Beheer can show that the server is alive.
 // Safe to run at any time and as often as you like; a lock keeps two runs from overlapping.
@@ -89,16 +93,18 @@ export async function runUncovered({ firestore, app, now = Date.now(), log = con
 // ---------- the sending ----------
 export async function runPush({ firestore, app, send = sendPush, vapidFile, subject, now = Date.now(), log = console.log, warn = console.error }) {
   const settings = await readDoc(firestore, 'settings/push');
-  const mode = app.normalizePush(settings && settings.data).mode;
-  if (mode !== 'test') { log('Push: mode is uit, nothing done'); return { mode, sent: 0, pending: 0, failed: 0, removed: 0 }; }
+  const switches = app.normalizePush(settings && settings.data);
+  const mode = switches.mode, live = switches.live;
+  if (mode !== 'test' && !live) { log('Push: test and push switch are both off, nothing done'); return { mode, live, sent: 0, pending: 0, failed: 0, removed: 0 }; }
 
   const vapid = await ensureVapid({ firestore, file: vapidFile, subject, now, log });
   const announced = await runUncovered({ firestore, app, now, log });
 
   const [deviceDocs, queue, familyDocs] = await Promise.all([readCollection(firestore, 'pushDevices'), readCollection(firestore, 'pushQueue'), readCollection(firestore, 'families')]);
   const fams = Object.fromEntries(familyDocs.map(f => [f.id, f.data]));
-  // Only devices the coordinator stored (the database rules allow nobody else) and only real push addresses.
-  const devices = Object.fromEntries(deviceDocs.filter(d => d.data.owner === 'coordinator' && app.isPushEndpoint(d.data.endpoint)).map(d => [d.id, d.data]));
+  // Only real push addresses. The database rules decide who may store one: the coordinator (a test device, owner 'coordinator') and a member
+  // for the own family (familyId, only while live is on). devicesFor picks the ones an entry may go to.
+  const devices = Object.fromEntries(deviceDocs.filter(d => app.isPushEndpoint(d.data.endpoint)).map(d => [d.id, d.data]));
   app.refreshWeekKey();
   const nameOf = id => (fams[id] && (fams[id].parentName || fams[id].girlName)) || '';
 
@@ -107,14 +113,18 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
   const targetOf = async path => { if (!targetCache.has(path)) targetCache.set(path, await readDoc(firestore, path)); return targetCache.get(path); };
 
   for (const { id: key, data: entry, updateTime } of queue.sort((a, b) => (a.data.createdAt || 0) - (b.data.createdAt || 0))) {
-    const plan = app.entryPlan({ entry, devices, nowMs: now });
-    if (plan.state === 'verlopen') {
+    if (!entry || typeof entry !== 'object' || !(entry.expiresAt > now)) {
       // Expired: the entry goes, and a made-up notification with it (real ones are removed by their own family's app).
       if (await firestore.commit([{ delete: 'pushQueue/' + key }])) removed++;
       if (entry && typeof entry.path === 'string' && entry.path.startsWith('testNotifications/')) await firestore.deleteDocument(entry.path);
       continue;
     }
-    if (plan.state === 'wacht' || plan.state === 'geen-toestel') { pending++; continue; }
+    const route = app.routeEntry(entry, settings && settings.data);
+    if (route === 'none') continue;   // its switch is off (or it is a test copy and only live is on): leave it, it expires by itself
+    const pool = app.devicesFor(route, entry, devices);
+    const plan = app.entryPlan({ entry, devices: pool, nowMs: now });
+    if (plan.state === 'wacht') { pending++; continue; }
+    if (plan.state === 'geen-toestel') { if (route === 'coordinator') pending++; continue; }   // a family without a phone simply gets no push
     if (plan.state === 'klaar') continue;
     // state 'open': there are devices that still have to get it.
     const target = await targetOf(entry.path);
@@ -126,16 +136,18 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
       await firestore.commit([{ update: 'pushQueue/' + key, fields: { failedTo: Object.fromEntries(plan.targets.map(id => [id, app.MAX_FAILS])) }, updateTime }]);
       continue;
     }
-    const payload = JSON.stringify(app.buildPayload({ text, who: app.recipientLabel(fams[entry.toFamilyId], entry.toFamilyId), key, forFamilyId: entry.toFamilyId }));
+    const payload = JSON.stringify(route === 'family'
+      ? app.buildLivePayload({ text, key })
+      : app.buildPayload({ text, who: app.recipientLabel(fams[entry.toFamilyId], entry.toFamilyId), key, forFamilyId: entry.toFamilyId }));
     const sentTo = { ...(entry.sentTo || {}) }, failedTo = { ...(entry.failedTo || {}) };
     for (const deviceId of plan.targets) {
-      const d = devices[deviceId];
+      const d = pool[deviceId];
       const res = await send({ subscription: { endpoint: d.endpoint, p256dh: d.p256dh, auth: d.auth }, payload, vapid, topic: key, now });
       if (res.ok) {
         sentTo[deviceId] = now; sent++;
         await firestore.commit([{ update: 'pushDevices/' + deviceId, fields: { lastOkAt: now } }]);
       } else if (res.gone) {
-        await firestore.deleteDocument('pushDevices/' + deviceId); delete devices[deviceId]; removed++;
+        await firestore.deleteDocument('pushDevices/' + deviceId); delete devices[deviceId]; delete pool[deviceId]; removed++;
         warn(`Push: device ${deviceId} is gone (HTTP ${res.status}); removed`);
       } else {
         failedTo[deviceId] = (failedTo[deviceId] || 0) + 1; failed++;
@@ -146,9 +158,11 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
     await firestore.commit([{ update: 'pushQueue/' + key, fields: { sentTo, failedTo }, updateTime }]);
   }
 
-  await firestore.setDocument('settings/pushStatus', { lastRunAt: now, mode, sent, failed, pending, devices: Object.keys(devices).length, announced });
-  log(`Push (test): ${sent} sent, ${failed} failed, ${pending} waiting, ${removed} removed, ${announced} offer(s) announced, ${Object.keys(devices).length} device(s)`);
-  return { mode, sent, failed, pending, removed, announced };
+  const testDevices = Object.values(devices).filter(d => d.owner === 'coordinator').length;
+  const familyDevices = Object.values(devices).filter(d => typeof d.familyId === 'string' && d.familyId).length;
+  await firestore.setDocument('settings/pushStatus', { lastRunAt: now, mode, live, sent, failed, pending, devices: testDevices, familyDevices, announced });
+  log(`Push (test ${mode === 'test' ? 'on' : 'off'}, live ${live ? 'on' : 'off'}): ${sent} sent, ${failed} failed, ${pending} waiting, ${removed} removed, ${announced} offer(s) announced, ${testDevices} test device(s), ${familyDevices} family device(s)`);
+  return { mode, live, sent, failed, pending, removed, announced };
 }
 
 // ---------- a lock, so two runs never overlap ----------

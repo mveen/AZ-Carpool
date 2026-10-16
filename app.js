@@ -58,7 +58,7 @@ export async function getWithRetry(read, delays = START_RETRY_DELAYS_MS) {
 
 export async function init(){
   applyStaticTexts();
-  queuePushOpenFromUrl(location.search);   // a tapped test push brings the coordinator here with ?pushas=<family>
+  queuePushOpenFromUrl(location.search);   // a tapped push brings the person here with ?pushas=<family> (a test push, coordinator) or ?open=ritbeurs (a real push)
   renderAll();
   setStatus(t('app.verbinden'));
   try{
@@ -180,7 +180,7 @@ export function bootstrap(){
     });
     navigator.serviceWorker.addEventListener('message', e=>{
       const d = e && e.data;
-      if(d && d.type === 'push-open') queuePushOpen(d.forFamilyId);   // the app was already open when a test push was tapped
+      if(d && d.type === 'push-open') queuePushOpen(d.forFamilyId, d.open);   // the app was already open when a push was tapped
     });
     navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js')
       .then(reg=>{ swReg = reg; checkForAppUpdate(); })

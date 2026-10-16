@@ -527,7 +527,7 @@ export function startDataListeners(){
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
     db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; applyPendingPushOpen(); renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
-    // Push test phase: every member reads the master switch (so no queue entry is written while it is off); the screens are coordinator-only.
+    // Push: every member reads the switches (test and live), so no queue entry is written while both are off and the parent's Push-meldingen row knows whether it shows.
     db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
       err=>{});
     db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); checkRitbeurs(); },

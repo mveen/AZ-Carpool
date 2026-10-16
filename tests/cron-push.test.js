@@ -80,7 +80,7 @@ for (const [label, db] of [['missing', base({}, { mode: null })], ['uit', base({
     const fs = fakeFirestore(db), send = sender();
     const r = await run(fs, send);
     assert.equal(send.sent.length, 0); assert.deepEqual(fs.calls.set, []); assert.deepEqual(fs.calls.commits, []); assert.deepEqual(fs.calls.del, []);
-    assert.equal(r.mode, 'uit'); assert.match(r.log[0], /mode is uit/); assert.equal(existsSync(vapidFile), false);
+    assert.equal(r.mode, 'uit'); assert.match(r.log[0], /both off/); assert.equal(existsSync(vapidFile), false);
   });
 }
 
@@ -209,13 +209,105 @@ await test('the key pair is made once and its public half is published for the a
 await test('each run reports itself in settings/pushStatus', async () => {
   const fs = fakeFirestore(base()), send = sender();
   await run(fs, send);
-  assert.deepEqual(fs.data.get('settings/pushStatus'), { lastRunAt: T10, mode: 'test', sent: 1, failed: 0, pending: 0, devices: 1, announced: 0 });
+  assert.deepEqual(fs.data.get('settings/pushStatus'), { lastRunAt: T10, mode: 'test', live: false, sent: 1, failed: 0, pending: 0, devices: 1, familyDevices: 0, announced: 0 });
 });
 await test('the whole job only reads from the database what it needs and writes only its own documents', async () => {
   const fs = fakeFirestore(base()), send = sender();
   await run(fs, send);
   const touched = new Set([...fs.calls.set, ...fs.calls.commits.flat()]);
   for (const p of touched) assert.match(p, /^(settings\/(pushKey|pushStatus)|pushQueue\/|pushDevices\/|offers\/|families\/[^/]+\/notifications\/)/, p);
+});
+
+console.log('\n=== live: real pushes to the families ===');
+const phone = (fid, extra = {}) => ({ owner: 'family', uid: 'u-' + fid, familyId: fid, endpoint: 'https://fcm.googleapis.com/fcm/send/phone-' + fid, p256dh: 'p'.repeat(87), auth: 'a'.repeat(22), label: 'Chrome op Android', categories: { ritbeurs: true }, createdAt: 1, lastOkAt: 0, ...extra });
+const REAL_PATH = 'families/f1/notifications/' + app.notificationId('taken', 's1', 'f1');
+// Live on (from a moment before the notification), test off; a real notification for f1 in the queue; one phone of f1 and one of f2.
+function liveBase(extra = {}, sw = { mode: 'uit', live: true, liveSince: T10 - 1000, updatedAt: 1 }, entryExtra = {}) {
+  const n = notif('f1');
+  return { ...seedFamilies(), 'settings/push': sw, 'pushDevices/phone1': phone('f1'), 'pushDevices/phone2': phone('f2'), [REAL_PATH]: n,
+    ['pushQueue/' + app.queueKey(REAL_PATH)]: { ...app.queueDoc({ path: REAL_PATH, toFamilyId: 'f1', kind: n.kind, deliverAt: n.deliverAt, expiresAt: n.expiresAt, nowMs: T10 - 500, test: false }), ...entryExtra }, ...extra };
+}
+await test('live on, test off: a real notification goes to the phones of its own family only, as the plain text that opens Ritten ruilen', async () => {
+  const fs = fakeFirestore(liveBase()), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.sent, 1); assert.equal(send.sent.length, 1);
+  assert.equal(send.sent[0].subscription.endpoint, 'https://fcm.googleapis.com/fcm/send/phone-f1');
+  const p = JSON.parse(send.sent[0].payload);
+  assert.equal(p.title, 'Ouder Noor neemt je rit over'); assert.equal(p.body, 'donderdag 16:15 is geregeld.');
+  assert.equal(p.test, false); assert.equal(p.forFamilyId, ''); assert.equal(p.open, 'ritbeurs'); assert.equal(p.url, './?open=ritbeurs'); assert.ok(!/Test/.test(p.title));
+  assert.deepEqual(Object.keys(fs.data.get('pushQueue/' + app.queueKey(REAL_PATH)).sentTo), ['phone1']);
+  assert.equal(fs.data.get('pushDevices/phone1').lastOkAt, T10); assert.equal(fs.data.get('pushDevices/phone2').lastOkAt, 0);
+});
+await test('a family with two phones: both get it, once; a second run sends nothing again', async () => {
+  const fs = fakeFirestore(liveBase({ 'pushDevices/phone1b': phone('f1', { endpoint: 'https://updates.push.services.mozilla.com/wpush/v2/second' }) })), send = sender();
+  assert.equal((await run(fs, send)).sent, 2);
+  assert.equal((await run(fs, send)).sent, 0); assert.equal(send.sent.length, 2);
+});
+await test('live and test both on: the coordinator gets NO test copy of a real notification (only the family does)', async () => {
+  const fs = fakeFirestore(liveBase({ 'pushDevices/dev1': device() }, { mode: 'test', live: true, liveSince: T10 - 1000, updatedAt: 1 })), send = sender();
+  await run(fs, send);
+  assert.deepEqual(send.sent.map(a => a.subscription.endpoint), ['https://fcm.googleapis.com/fcm/send/phone-f1']);
+});
+await test('a coordinator phone that is also the coordinator\'s own family phone gets the real push as a family phone', async () => {
+  const fs = fakeFirestore(liveBase({ 'pushDevices/phone1': device({ familyId: 'f1' }) }, { mode: 'test', live: true, liveSince: T10 - 1000, updatedAt: 1 })), send = sender();
+  await run(fs, send);
+  assert.equal(send.sent.length, 1); assert.equal(JSON.parse(send.sent[0].payload).test, false);
+});
+await test('a real notification made before live was switched on is not sent to the family (no old news)', async () => {
+  const fs = fakeFirestore(liveBase({}, { mode: 'uit', live: true, liveSince: T10, updatedAt: 1 })), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.sent, 0); assert.equal(send.sent.length, 0); assert.ok(fs.data.has('pushQueue/' + app.queueKey(REAL_PATH)), 'left alone, it expires by itself');
+});
+await test('a phone switched on long after the notification was made does not get it', async () => {
+  const fs = fakeFirestore(liveBase({ 'pushDevices/phone1': phone('f1', { createdAt: T10 + 3600000 }) })), send = sender();
+  assert.equal((await run(fs, send)).sent, 0);
+});
+await test('a family without a phone gets no push and the entry is not counted as waiting', async () => {
+  const db = liveBase(); delete db['pushDevices/phone1'];
+  const fs = fakeFirestore(db), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.sent, 0); assert.equal(r.pending, 0); assert.equal(send.sent.length, 0);
+});
+await test('a phone whose family id is emptied (switched off but kept as a test device) gets nothing', async () => {
+  const db = liveBase({ 'pushDevices/phone1': device({ familyId: '' }) });
+  const fs = fakeFirestore(db), send = sender();
+  assert.equal((await run(fs, send)).sent, 0);
+});
+await test('quiet hours also hold a real push back: it stays pending until 06:00', async () => {
+  const db = liveBase(); const e = db['pushQueue/' + app.queueKey(REAL_PATH)]; e.deliverAt = T10 + 3600000;
+  const fs = fakeFirestore(db), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.sent, 0); assert.equal(r.pending, 1);
+});
+await test('live only: made-up situations and hand-sent entries are not sent (they need the test switch); with test on as well they go to the coordinator, labelled', async () => {
+  const n1 = notif('f1');
+  const seed = { ...liveBase(), 'pushDevices/dev1': device(), 'testNotifications/n1': n1, 'pushQueue/testNotifications__n1': queueEntry('testNotifications/n1', 'f1', n1) };
+  delete seed['pushQueue/' + app.queueKey(REAL_PATH)];
+  const fs1 = fakeFirestore(seed), send1 = sender();
+  assert.equal((await run(fs1, send1)).sent, 0);
+  const fs2 = fakeFirestore({ ...seed, 'settings/push': { mode: 'test', live: true, liveSince: T10 - 1000, updatedAt: 1 } }), send2 = sender();
+  assert.equal((await run(fs2, send2)).sent, 1);
+  assert.equal(send2.sent[0].subscription.endpoint, ENDPOINT); assert.equal(JSON.parse(send2.sent[0].payload).title, 'Test · Ouder van Saar');
+  const fs3 = fakeFirestore({ ...liveBase({ 'pushDevices/dev1': device() }, { mode: 'test', live: true, liveSince: T10 - 1000, updatedAt: 1 }, { manual: true }) }), send3 = sender();
+  await run(fs3, send3);
+  assert.deepEqual(send3.sent.map(a => a.subscription.endpoint), [ENDPOINT], 'a hand-sent copy of a real notification goes to the test device, never to the family');
+});
+await test('a gone phone of a family is removed and the other phones still get the message', async () => {
+  const fs = fakeFirestore(liveBase({ 'pushDevices/phone1b': phone('f1', { endpoint: 'https://updates.push.services.mozilla.com/wpush/v2/second' }) })), calls = [];
+  const send = sender(a => { calls.push(a.subscription.endpoint); return a.subscription.endpoint.includes('phone-f1') ? { ok: false, status: 410, gone: true } : { ok: true, status: 201, gone: false }; });
+  const r = await run(fs, send);
+  assert.equal(r.sent, 1); assert.equal(fs.data.has('pushDevices/phone1'), false); assert.equal(fs.data.has('pushDevices/phone1b'), true);
+});
+await test('the status says live is on and counts the phones of families apart from the test devices', async () => {
+  const fs = fakeFirestore(liveBase({ 'pushDevices/dev1': device() }, { mode: 'test', live: true, liveSince: T10 - 1000, updatedAt: 1 })), send = sender();
+  await run(fs, send);
+  const st = fs.data.get('settings/pushStatus');
+  assert.equal(st.live, true); assert.equal(st.mode, 'test'); assert.equal(st.devices, 1); assert.equal(st.familyDevices, 2);
+});
+await test('live on alone: the job runs (key published, status written) even though the test switch is off', async () => {
+  const fs = fakeFirestore(liveBase()), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.mode, 'uit'); assert.equal(r.live, true); assert.ok(fs.data.get('settings/pushKey').publicKey); assert.equal(fs.data.get('settings/pushStatus').live, true);
 });
 
 console.log('\n=== niet gedekt (18:00 the day before) ===');

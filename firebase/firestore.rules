@@ -287,26 +287,48 @@ service cloud.firestore {
       allow delete: if isCoordinator() || (isLinked() && linkedFamilyId() == familyId);
     }
 
-    // ---- Push test phase (TEMPORARY; see README "Meldingen (testfase)") ----------------
-    // Nobody but the coordinator stores a device, reads the queue or touches the made-up notifications. A family may only put an entry in the
-    // queue for a REAL notification it just wrote itself (never a made-up one), and only while Ritten ruilen is on. The server job reads and
-    // writes with its own service account (it does not go through these rules).
+    // ---- Push (see README "Push-meldingen (test en live)") ----------------
+    // A device is a browser that wants pushes. Two kinds, both in pushDevices/:
+    //  - a TEST device of the coordinator (owner 'coordinator'): only the coordinator creates, reads or changes it;
+    //  - a parent's own phone (owner 'family', with the familyId of that parent): a member creates it only for the OWN family and only while the
+    //    push switch on the Ritten-ruilen card is on (settings/push.live == true), and may read, change or remove it only for the own family.
+    //    Nobody lists the collection but the coordinator, so a parent never sees another family's phones.
+    // The server job reads and writes with its own service account (it does not go through these rules).
+    function pushLiveOn() {
+      let p = /databases/$(database)/documents/settings/push;
+      return exists(p) && get(p).data.live == true;
+    }
+    function ownDevice() { return isLinked() && ('familyId' in resource.data) && resource.data.familyId == linkedFamilyId(); }
     match /pushDevices/{deviceId} {
-      allow read, delete: if isCoordinator();
-      allow create: if isCoordinator()
-        && request.resource.data.keys().hasOnly(['owner', 'uid', 'endpoint', 'p256dh', 'auth', 'label', 'categories', 'createdAt', 'lastOkAt'])
-        && request.resource.data.owner == 'coordinator'
-        && request.resource.data.uid == request.auth.uid
-        && request.resource.data.endpoint.matches('^https://[a-z0-9.-]+/.+$');
-      allow update: if isCoordinator()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid', 'endpoint', 'p256dh', 'auth', 'label', 'categories', 'lastOkAt'])
-        && request.resource.data.endpoint.matches('^https://[a-z0-9.-]+/.+$');
+      allow list: if isCoordinator();
+      allow get: if isCoordinator() || (isLinked() && (resource == null || ownDevice()));
+      allow delete: if isCoordinator() || ownDevice();
+      allow create: if (isCoordinator()
+          && request.resource.data.keys().hasOnly(['owner', 'uid', 'endpoint', 'p256dh', 'auth', 'label', 'categories', 'createdAt', 'lastOkAt', 'familyId'])
+          && request.resource.data.owner == 'coordinator'
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.endpoint.matches('^https://[a-z0-9.-]+/.+$'))
+        || (isLinked() && pushLiveOn()
+          && request.resource.data.keys().hasOnly(['owner', 'uid', 'endpoint', 'p256dh', 'auth', 'label', 'categories', 'createdAt', 'lastOkAt', 'familyId'])
+          && request.resource.data.owner == 'family'
+          && request.resource.data.familyId == linkedFamilyId()
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.endpoint.matches('^https://[a-z0-9.-]+/.+$'));
+      // The coordinator may change any field of a device and makes it (or keeps it) a test device; a parent only the address and the label of
+      // a phone of the own family, never its kind or its family.
+      allow update: if (isCoordinator()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['owner', 'uid', 'endpoint', 'p256dh', 'auth', 'label', 'categories', 'lastOkAt', 'familyId'])
+          && request.resource.data.owner == 'coordinator'
+          && request.resource.data.endpoint.matches('^https://[a-z0-9.-]+/.+$'))
+        || (ownDevice() && pushLiveOn()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['uid', 'endpoint', 'p256dh', 'auth', 'label'])
+          && request.resource.data.endpoint.matches('^https://[a-z0-9.-]+/.+$'));
     }
     match /pushQueue/{entryKey} {
       allow read, delete: if isCoordinator();
-      allow create: if request.resource.data.keys().hasOnly(['path', 'toFamilyId', 'kind', 'deliverAt', 'expiresAt', 'createdAt', 'test'])
+      allow create: if request.resource.data.keys().hasOnly(['path', 'toFamilyId', 'kind', 'deliverAt', 'expiresAt', 'createdAt', 'test', 'manual'])
         && (isCoordinator()
-          || (ritbeursOn() && isMember() && request.resource.data.test == false
+          || (ritbeursOn() && isMember() && request.resource.data.test == false && !('manual' in request.resource.data)
             && request.resource.data.path.matches('^families/[^/]+/notifications/[^/]+$')
             && request.resource.data.path.split('/')[1] == request.resource.data.toFamilyId));
     }

@@ -15,6 +15,7 @@ import { saveAvatar } from './data.js';
 import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { initContact } from './ui-contact.js';
 import { hasAgenda, openAgendaSheet } from './ui-agenda.js';
+import { openPushSheet, pushRowVisible } from './ui-push-device.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
@@ -114,7 +115,7 @@ function markSegments(){
   });
 }
 
-// The Instellingen sheet: who you are, then one row per setting (Mijn gezin, Thema, Bekijk als [coordinator only], Agenda, Help) and the version.
+// The Instellingen sheet: who you are, then one row per setting (Mijn gezin, Thema, Bekijk als [coordinator only], Agenda, Push-meldingen, Help) and the version.
 export function openSettings(onNavigate, onViewChange){
   closeSheet();
   const name = parentName();
@@ -138,6 +139,7 @@ export function openSettings(onNavigate, onViewChange){
       <div class="segmented segmented--inline" role="group" aria-label="${esc(t('shell.theme'))}"><button type="button" id="themeLight">${esc(t('shell.theme_light'))}</button><button type="button" id="themeDark">${esc(t('shell.theme_dark'))}</button></div></div>
     ${viewRow}
     ${hasAgenda() ? row('setAgenda', 'calendar', t('agenda.kaart_titel')) : ''}
+    ${pushRowVisible() ? row('setPush', 'bell', t('push.me.title')) : ''}
     ${row('setHelp', 'question', t('help.title'))}
     <div class="settingsRow settingsRow--info">${phIcon('info')}<span class="settingsRow__label">${esc(t('shell.app_name'))}</span><span class="settingsRow__hint">${esc(APP_VERSION)}</span></div>
   </div>`;
@@ -146,6 +148,7 @@ export function openSettings(onNavigate, onViewChange){
   ov.querySelector('#setProfile').onclick = () => { closeSheet(); go('profile'); };
   const setAv = ov.querySelector('#setAvatar'); if(setAv) setAv.onclick = () => openAvatarPicker(onNavigate, onViewChange);
   const setAgenda = ov.querySelector('#setAgenda'); if(setAgenda) setAgenda.onclick = () => openAgendaSheet();
+  const setPush = ov.querySelector('#setPush'); if(setPush) setPush.onclick = () => openPushSheet();
   ov.querySelector('#setHelp').onclick = () => { closeSheet(); openHelp(document.getElementById('avatarBtn')); };
   ov.querySelector('#themeLight').onclick = () => setTheme('light');
   ov.querySelector('#themeDark').onclick = () => setTheme('dark');

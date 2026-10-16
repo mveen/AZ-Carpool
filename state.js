@@ -58,8 +58,8 @@ export const S = {
   notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id
   notificationsFor: null,  // the family whose notifications are being listened to (null = none)
   notificationsUnsub: null,
-  pushSettings: null,      // settings/push { mode }: the master switch of the test pushes (null = not loaded, which means off); every member reads it
-  push: {                  // Beheer, "Meldingen testen" (coordinator only; see push-data.js)
+  pushSettings: null,      // settings/push { mode, live }: the test switch and the live switch (null = not loaded, which means both off); every member reads it
+  push: {                  // Beheer, "Push-meldingen testen" (coordinator only; see push-data.js)
     unsubs: [],            // the open listeners (settings/pushKey, settings/pushStatus, pushDevices, pushQueue, testNotifications)
     key: null, status: null, devices: {}, queue: {}, tests: {},
     personaId: '',         // the family whose notifications the coordinator experiences ("Ouder van Saar")
@@ -69,6 +69,13 @@ export const S = {
     thisDeviceId: '',      // the id of this browser's own device document, when it is subscribed
     pendingOpen: '',       // a family id from a tapped push, to open in Testweergave as soon as the app is ready
     pendingView: false,    // ...and then to show the Ritten-ruilen screen as soon as the app knows that Ritten ruilen is on
+  },
+  pushMe: {                // Instellingen > Push-meldingen: this phone as a parent's own device (see push-data.js, ui-push-device.js)
+    status: 'idle',        // 'idle' | 'loading' | 'ready' | 'error'
+    key: null,             // settings/pushKey (the public key the phone subscribes with), read when the sheet opens
+    deviceId: '',          // the id of this browser's device document, when it is subscribed
+    on: false,             // this phone is switched on for the family
+    pendingOpen: 0,        // a tapped real push (the moment it was tapped, ms): show Ritten ruilen as soon as the app knows that it is on
   },
   rbView: 'wijzigen',      // Wijzigen tab: 'wijzigen' (the ride cards) or 'ritbeurs'
   rbConfirm: null,         // Ritbeurs: id of the offer whose "Neem over" confirmation is open (null = none)

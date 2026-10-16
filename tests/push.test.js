@@ -1,6 +1,6 @@
 // Run with: node push.test.js
-// push.js: the pure rules of the push test phase: the master switch (there is no live mode), which devices are accepted, what is still to be sent
-// for a queue entry, what a message says, and how a tapped message finds its family.
+// push.js: the pure rules of the push features: the two switches (test and live), which devices are accepted, who a queue entry goes to,
+// what is still to be sent for it, what a message says, and how a tapped message finds its family (test) or Ritten ruilen (real).
 import assert from 'node:assert/strict';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -8,20 +8,33 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import {
-  MAX_FAILS, STATUS_FRESH_MS, TEST_NOTIFICATION_MS, buildPayload, bufferToBase64Url, categoryOf, cleanLabel, deviceDoc, deviceId, deviceLabelFromUA,
-  deviceWants, entryPlan, isPushEndpoint, normalizePush, parsePushLink, previewState, pushSettingsDoc, queueDoc, queueKey, recipientLabel, serverState, urlBase64ToUint8Array,
+  DEVICE_GRACE_MS, MAX_FAILS, STATUS_FRESH_MS, TEST_NOTIFICATION_MS, buildLivePayload, buildPayload, bufferToBase64Url, categoryOf, cleanLabel, deviceDoc, deviceId, deviceLabelFromUA,
+  deviceWants, devicesFor, entryPlan, familiesWithPush, isPushEndpoint, isTestCopy, normalizePush, parseOpenLink, parsePushLink, previewState, pushSettingsDoc, queueDoc, queueKey, recipientLabel,
+  routeEntry, serverState, urlBase64ToUint8Array,
 } from '../push.js';
 
-console.log('=== the master switch ===');
+console.log('=== the switches ===');
 test('only the exact word "test" switches anything on; missing, broken, unknown or "live" mean off', () => {
   assert.equal(normalizePush({ mode: 'test' }).mode, 'test');
   for (const raw of [null, undefined, {}, [], 'test', 7, { mode: 'live' }, { mode: 'TEST' }, { mode: 'Test ' }, { mode: true }, { mode: null }, { mode: 'uit' }]) assert.equal(normalizePush(raw).mode, 'uit', JSON.stringify(raw));
 });
-test('the stored document has the mode and the time, and anything but test is stored as uit', () => {
-  assert.deepEqual(pushSettingsDoc('test', 5), { mode: 'test', updatedAt: 5 });
-  assert.deepEqual(pushSettingsDoc('live', 5), { mode: 'uit', updatedAt: 5 });
-  assert.deepEqual(pushSettingsDoc(undefined, 5), { mode: 'uit', updatedAt: 5 });
+test('the live switch is on only for exactly true; liveSince is a number (0 when missing)', () => {
+  assert.equal(normalizePush({ live: true }).live, true);
+  for (const raw of [null, undefined, {}, [], 'true', 1, { live: 'true' }, { live: 1 }, { live: null }, { live: false }]) assert.equal(normalizePush(raw).live, false, JSON.stringify(raw));
+  assert.equal(normalizePush({ live: true, liveSince: 5 }).liveSince, 5); assert.equal(normalizePush({ live: true, liveSince: 'x' }).liveSince, 0); assert.equal(normalizePush({}).liveSince, 0);
+  assert.deepEqual(normalizePush(null), { mode: 'uit', live: false, liveSince: 0 });
 });
+test('the stored document holds both switches and the time; anything but test is stored as uit, anything but true as not live', () => {
+  assert.deepEqual(pushSettingsDoc({ mode: 'test', live: false }, 5), { mode: 'test', live: false, liveSince: 0, updatedAt: 5 });
+  assert.deepEqual(pushSettingsDoc({ mode: 'live', live: 'yes' }, 5), { mode: 'uit', live: false, liveSince: 0, updatedAt: 5 });
+  assert.deepEqual(pushSettingsDoc({}, 5), { mode: 'uit', live: false, liveSince: 0, updatedAt: 5 });
+});
+test('switching live on stamps liveSince with now; it keeps it while live stays on; switching off clears it; the test switch is never touched', () => {
+  assert.deepEqual(pushSettingsDoc({ mode: 'uit', live: true, liveSince: 0 }, 50), { mode: 'uit', live: true, liveSince: 50, updatedAt: 50 });
+  assert.deepEqual(pushSettingsDoc({ mode: 'test', live: true, liveSince: 20 }, 50), { mode: 'test', live: true, liveSince: 20, updatedAt: 50 });
+  assert.deepEqual(pushSettingsDoc({ mode: 'test', live: false, liveSince: 20 }, 50), { mode: 'test', live: false, liveSince: 0, updatedAt: 50 });
+});
+
 test('the server counts as alive when it reported within 10 minutes', () => {
   assert.equal(serverState(null, 1e9), 'onbekend'); assert.equal(serverState({}, 1e9), 'onbekend'); assert.equal(serverState({ lastRunAt: 'x' }, 1e9), 'onbekend');
   assert.equal(serverState({ lastRunAt: 1e9 - 60000 }, 1e9), 'ok'); assert.equal(serverState({ lastRunAt: 1e9 - STATUS_FRESH_MS }, 1e9), 'ok');
@@ -119,6 +132,84 @@ test('the public key and the subscription keys convert both ways', () => {
   const text = bufferToBase64Url(bytes.buffer);
   assert.match(text, /^[A-Za-z0-9_-]{87}$/); assert.deepEqual([...urlBase64ToUint8Array(text)], [...bytes]);
   assert.deepEqual([...urlBase64ToUint8Array('AQID')], [1, 2, 3]); assert.equal(bufferToBase64Url(null), '');
+});
+
+console.log('\n=== a parent phone, and who an entry goes to ===');
+test('a family device holds owner family and the family id; without a family it is a test device of the coordinator', () => {
+  const base = { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', ...keys, label: 'Chrome op Android', uid: 'u1', nowMs: 9 };
+  assert.deepEqual(deviceDoc({ ...base, familyId: 'f2' }), { owner: 'family', familyId: 'f2', uid: 'u1', endpoint: base.endpoint, ...keys, label: 'Chrome op Android', categories: { ritbeurs: true }, createdAt: 9, lastOkAt: 0 });
+  assert.equal(deviceDoc(base).owner, 'coordinator'); assert.ok(!('familyId' in deviceDoc(base)));
+});
+test('familiesWithPush counts each family once, whatever its number of phones; test devices and an emptied familyId do not count', () => {
+  assert.equal(familiesWithPush(null), 0);
+  assert.equal(familiesWithPush({ a: { familyId: 'f1' }, b: { familyId: 'f1' }, c: { familyId: 'f2' }, d: { owner: 'coordinator' }, e: { owner: 'coordinator', familyId: '' }, f: null }), 2);
+});
+test('queueDoc: manual is only written when true', () => {
+  const q = { path: 'p', toFamilyId: 'f1', kind: 'taken', deliverAt: 1, expiresAt: 2, nowMs: 3 };
+  assert.deepEqual(queueDoc(q), { path: 'p', toFamilyId: 'f1', kind: 'taken', deliverAt: 1, expiresAt: 2, createdAt: 3, test: false });
+  assert.deepEqual(queueDoc({ ...q, manual: true, test: true }), { path: 'p', toFamilyId: 'f1', kind: 'taken', deliverAt: 1, expiresAt: 2, createdAt: 3, test: true, manual: true });
+  assert.ok(!('manual' in queueDoc({ ...q, manual: 'yes' })));
+});
+const real = { test: false, createdAt: 100 }, made = { test: true, createdAt: 100 }, hand = { test: false, manual: true, createdAt: 100 };
+const sw = (mode, live, liveSince = 0) => ({ mode, live, liveSince });
+test('routeEntry: with both switches off nothing goes anywhere', () => {
+  for (const e of [real, made, hand]) assert.equal(routeEntry(e, sw('uit', false)), 'none');
+  for (const bad of [null, undefined, 'x', 5]) assert.equal(routeEntry(bad, sw('test', true, 1)), 'none');
+  assert.equal(routeEntry(real, null), 'none'); assert.equal(routeEntry(real, { live: 'true' }), 'none');
+});
+test('routeEntry: the test switch alone sends everything to the coordinator\'s test devices, as before live existed', () => {
+  for (const e of [real, made, hand]) assert.equal(routeEntry(e, sw('test', false)), 'coordinator');
+});
+test('routeEntry: live alone sends a real notification to its family, and made-up or hand-sent ones nowhere (they need the test switch)', () => {
+  assert.equal(routeEntry(real, sw('uit', true, 50)), 'family');
+  assert.equal(routeEntry(made, sw('uit', true, 50)), 'none'); assert.equal(routeEntry(hand, sw('uit', true, 50)), 'none');
+});
+test('routeEntry: both on: real goes to the family only (no test copy for the coordinator), made-up and hand-sent to the coordinator', () => {
+  assert.equal(routeEntry(real, sw('test', true, 50)), 'family');
+  assert.equal(routeEntry(made, sw('test', true, 50)), 'coordinator'); assert.equal(routeEntry(hand, sw('test', true, 50)), 'coordinator');
+});
+test('routeEntry: a real notification from before live was switched on never goes to a family (no old news); it stays a test copy', () => {
+  assert.equal(routeEntry({ ...real, createdAt: 49 }, sw('uit', true, 50)), 'none');
+  assert.equal(routeEntry({ ...real, createdAt: 49 }, sw('test', true, 50)), 'coordinator');
+  assert.equal(routeEntry({ ...real, createdAt: 50 }, sw('uit', true, 50)), 'family');
+  assert.equal(routeEntry({ test: false }, sw('uit', true, 50)), 'none', 'no creation time: never sent to a family');
+});
+test('isTestCopy: made-up, hand-sent and pre-live entries are test copies; real ones after live are not', () => {
+  assert.equal(isTestCopy(made, sw('uit', true, 1)), true); assert.equal(isTestCopy(hand, sw('uit', true, 1)), true);
+  assert.equal(isTestCopy(real, sw('uit', false)), true); assert.equal(isTestCopy({ ...real, createdAt: 0 }, sw('uit', true, 1)), true);
+  assert.equal(isTestCopy(real, sw('uit', true, 1)), false); assert.equal(isTestCopy(null, sw('uit', true, 1)), true);
+});
+const EP = 'https://fcm.googleapis.com/fcm/send/x';
+const devs = {
+  t1: { owner: 'coordinator', endpoint: EP, createdAt: 10 },
+  p1: { owner: 'family', familyId: 'f1', endpoint: EP, createdAt: 10 }, p2: { owner: 'family', familyId: 'f2', endpoint: EP, createdAt: 10 },
+  both: { owner: 'coordinator', familyId: 'f1', endpoint: EP, createdAt: 10 }, off: { owner: 'coordinator', familyId: '', endpoint: EP, createdAt: 10 },
+  bad: { owner: 'family', familyId: 'f1', endpoint: 'https://evil.example/x', createdAt: 10 }, nul: null,
+};
+test('devicesFor coordinator: only test devices (a phone that is also a family phone counts, a family-only phone does not)', () => {
+  assert.deepEqual(Object.keys(devicesFor('coordinator', real, devs)).sort(), ['both', 'off', 't1']);
+});
+test('devicesFor family: only the phones of the family the entry is for; never another family, never an address of an unknown service', () => {
+  assert.deepEqual(Object.keys(devicesFor('family', { toFamilyId: 'f1', createdAt: 100 }, devs)).sort(), ['both', 'p1']);
+  assert.deepEqual(Object.keys(devicesFor('family', { toFamilyId: 'f2', createdAt: 100 }, devs)), ['p2']);
+  assert.deepEqual(devicesFor('family', { toFamilyId: 'f9', createdAt: 100 }, devs), {});
+  assert.deepEqual(devicesFor('none', real, devs), {}); assert.deepEqual(devicesFor('family', real, null), {});
+});
+test('devicesFor family: a phone switched on long after the notification was made does not get it (no old news), a small clock difference is fine', () => {
+  const late = { p: { familyId: 'f1', endpoint: EP, createdAt: 1_000_000 } };
+  assert.deepEqual(devicesFor('family', { toFamilyId: 'f1', createdAt: 1_000_000 - DEVICE_GRACE_MS - 1 }, late), {});
+  assert.deepEqual(Object.keys(devicesFor('family', { toFamilyId: 'f1', createdAt: 1_000_000 - DEVICE_GRACE_MS }, late)), ['p']);
+  assert.deepEqual(Object.keys(devicesFor('family', { toFamilyId: 'f1', createdAt: 2_000_000 }, late)), ['p']);
+});
+test('the real push is the plain text: no "Test ·", no family to open as, and it opens Ritten ruilen', () => {
+  const p = buildLivePayload({ text: { title: 'Rit vrij: donderdag 16:15', body: 'Jan biedt een rit aan.' }, key: 'families__f1__notifications__x' });
+  assert.deepEqual(p, { title: 'Rit vrij: donderdag 16:15', body: 'Jan biedt een rit aan.', tag: 'families__f1__notifications__x', forFamilyId: '', test: false, open: 'ritbeurs', url: './?open=ritbeurs' });
+  const long = buildLivePayload({ text: { title: 't'.repeat(200), body: 'b'.repeat(900) }, key: 'k' });
+  assert.equal(long.title.length, 80); assert.equal(long.body.length, 400);
+});
+test('?open=ritbeurs is read; anything else is not', () => {
+  assert.equal(parseOpenLink('?open=ritbeurs'), 'ritbeurs'); assert.equal(parseOpenLink('?a=1&open=ritbeurs&b=2'), 'ritbeurs'); assert.equal(parseOpenLink('?open=ritbeurs#x'), 'ritbeurs');
+  for (const bad of ['', '?open=ritbeursx', '?open=other', '?xopen=ritbeurs', '?pushas=f1', null, undefined, 5]) assert.equal(parseOpenLink(bad), null, String(bad));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

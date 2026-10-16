@@ -90,7 +90,17 @@ await test('a push shows a notification with the title, text, icon, tag and the 
   await push({ title: 'Test · Ouder van Saar', body: 'Rit vrij: donderdag 16:15\nJan biedt een rit aan.', tag: 'q1', url: './?pushas=f6', forFamilyId: 'f6' });
   assert.equal(shown.length, 1); assert.equal(shown[0].title, 'Test · Ouder van Saar');
   const o = shown[0].options;
-  assert.equal(o.body, 'Rit vrij: donderdag 16:15\nJan biedt een rit aan.'); assert.equal(o.icon, './icon-192.png'); assert.equal(o.tag, 'q1'); assert.deepEqual(o.data, { url: './?pushas=f6', forFamilyId: 'f6' });
+  assert.equal(o.body, 'Rit vrij: donderdag 16:15\nJan biedt een rit aan.'); assert.equal(o.icon, './icon-192.png'); assert.equal(o.tag, 'q1'); assert.deepEqual(o.data, { url: './?pushas=f6', forFamilyId: 'f6', open: '' });
+});
+await test('a real push (to a parent) carries open: ritbeurs and no family; a tap tells an open app to show Ritten ruilen, and opens ?open=ritbeurs otherwise', async () => {
+  reset2();
+  await push({ title: 'Rit vrij: donderdag 16:15', body: 'Jan biedt een rit aan.', tag: 'q2', url: './?open=ritbeurs', forFamilyId: '', open: 'ritbeurs' });
+  assert.deepEqual(shown[0].options.data, { url: './?open=ritbeurs', forFamilyId: '', open: 'ritbeurs' });
+  assert.ok(!/Test/.test(shown[0].title));
+  reset2(); const events = []; openClients = [{ url: SCOPE, focus: async () => ({ focused: true }), postMessage: m => events.push(m) }];
+  await click({ url: './?open=ritbeurs', forFamilyId: '', open: 'ritbeurs' });
+  assert.deepEqual(events, [{ type: 'push-open', forFamilyId: '', open: 'ritbeurs' }]); assert.deepEqual(opened, []);
+  reset2(); await click({ url: './?open=ritbeurs', forFamilyId: '', open: 'ritbeurs' }); assert.deepEqual(opened, [SCOPE + '?open=ritbeurs']);
 });
 await test('an empty, broken or odd push still shows a plain AZ Carpool notification instead of failing (browsers take permission back otherwise)', async () => {
   for (const [data, opts] of [[undefined, {}], [{}, {}], [null, {}], ['text', {}], [42, {}], [undefined, { raw: true }], [{ title: 5, body: { x: 1 }, tag: [], url: 7 }, {}]]) {
@@ -105,7 +115,7 @@ await test('a huge push is cut to a sensible size', async () => {
 await test('tapping closes the notification; an app that is open comes forward and is told which family to open (no new window)', async () => {
   reset2(); const events = []; openClients = [{ url: SCOPE + '?x=1', focus: async () => { events.push('focus'); return { focused: true }; }, postMessage: m => events.push(m) }];
   const r = await click({ url: './?pushas=f6', forFamilyId: 'f6' });
-  assert.equal(r.closed, true); assert.deepEqual(events, ['focus', { type: 'push-open', forFamilyId: 'f6' }]); assert.deepEqual(opened, []);
+  assert.equal(r.closed, true); assert.deepEqual(events, ['focus', { type: 'push-open', forFamilyId: 'f6', open: '' }]); assert.deepEqual(opened, []);
 });
 await test('a window of another site is not used; without an open app a new window opens at the address of the push', async () => {
   reset2(); openClients = [{ url: 'https://other.example/', focus: async () => assert.fail('wrong window'), postMessage: () => assert.fail('wrong window') }];
@@ -117,7 +127,7 @@ await test('an address on another site, or no address at all, opens the start pa
 });
 await test('a refused focus does not stop the message to the open app, and the app is opened as a fallback', async () => {
   reset2(); const events = []; openClients = [{ url: SCOPE, focus: async () => { throw new Error('refused'); }, postMessage: m => events.push(m) }];
-  await click({ url: './?pushas=f6', forFamilyId: 'f6' }); assert.deepEqual(events, [{ type: 'push-open', forFamilyId: 'f6' }]); assert.deepEqual(opened, [SCOPE + '?pushas=f6']);
+  await click({ url: './?pushas=f6', forFamilyId: 'f6' }); assert.deepEqual(events, [{ type: 'push-open', forFamilyId: 'f6', open: '' }]); assert.deepEqual(opened, [SCOPE + '?pushas=f6']);
 });
 await test('Firefox on Android: focus() only brings the browser forward, not the tab (it stays hidden): the app is opened as well', async () => {
   reset2(); const events = []; openClients = [{ url: SCOPE, focus: async () => ({ focused: false, visibilityState: 'hidden' }), postMessage: m => events.push(m) }];

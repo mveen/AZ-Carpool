@@ -900,12 +900,12 @@ await testAsync('Push test phase: a tapped test push that waits for the Ritten-r
   assert.equal(S.ritbeurs.on, true); assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.push.pendingView, false);
   stopDataListeners();
 });
-await testAsync('Push test phase: every member reads the master switch (only "test" counts), and it is released on stop', async () => {
+await testAsync('Push: every member reads the switches (only "test" and only live: true count), and they are released on stop', async () => {
   useFakeDb({ ...sampleDbSeed(), 'settings/push': { mode: 'test', updatedAt: 1 } }); sampleParentState({ pushSettings: null });
   startDataListeners(); await tick(); await tick();
-  assert.deepEqual(S.pushSettings, { mode: 'test' });
+  assert.deepEqual(S.pushSettings, { mode: 'test', live: false, liveSince: 0 });
   stopDataListeners(); assert.equal(S.pushSettings, null);
-  for (const doc of [{ mode: 'live' }, { mode: 7 }, {}]) { useFakeDb({ ...sampleDbSeed(), 'settings/push': doc }); sampleParentState({ pushSettings: null }); startDataListeners(); await tick(); await tick(); assert.deepEqual(S.pushSettings, { mode: 'uit' }, JSON.stringify(doc)); stopDataListeners(); }
+  for (const doc of [{ mode: 'live' }, { mode: 7 }, {}]) { useFakeDb({ ...sampleDbSeed(), 'settings/push': doc }); sampleParentState({ pushSettings: null }); startDataListeners(); await tick(); await tick(); assert.deepEqual(S.pushSettings, { mode: 'uit', live: false, liveSince: 0 }, JSON.stringify(doc)); stopDataListeners(); }
   useFakeDb(sampleDbSeed()); sampleParentState({ pushSettings: { mode: 'test' } }); startDataListeners(); await tick(); await tick();
   assert.equal(S.pushSettings, null, 'no document: not loaded, which means off'); stopDataListeners();
 });

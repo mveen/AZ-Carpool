@@ -71,6 +71,21 @@ test('the order is Mijn gezin, Thema, Agenda, Help for a parent; a visitor witho
   resetState({ me: 'x' }); ({ ov } = installSheet()); openSettings(() => {});
   assert.doesNotMatch(ov.html, /setAgenda/);
 });
+test('Push-meldingen: a row after Agenda and before Help, only while the push switch and Ritten ruilen are on and the browser belongs to a family', () => {
+  const rows = patch => { sampleParentState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 }, ...patch }); const { ov } = installSheet(); openSettings(() => {}); return ov; };
+  let ov = rows({}); const at = k => ov.html.indexOf(k);
+  assert.ok(at('id="setAgenda"') < at('id="setPush"') && at('id="setPush"') < at('id="setHelp"')); assert.match(text(ov.html), /Agenda Push-meldingen Help/);
+  for (const patch of [{ pushSettings: { mode: 'test', live: false, liveSince: 0 } }, { pushSettings: null }, { ritbeurs: { on: false } }, { links: {} }, { impersonateFamilyId: 'f6' }]) {
+    ov = rows(patch); assert.doesNotMatch(ov.html, /setPush/, JSON.stringify(patch));
+  }
+  sampleParentState(); ({ ov } = installSheet()); openSettings(() => {}); assert.doesNotMatch(ov.html, /setPush/, 'default: off, no row');
+});
+test('a tap on the Push-meldingen row opens its sheet', () => {
+  sampleParentState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } }); const { ov, els } = installSheet(); openSettings(() => {});
+  assert.equal(typeof els.setPush.onclick, 'function');
+  let opened = null; dom.doc.createElement = () => ({ innerHTML: '', addEventListener() {} }); dom.doc.body.appendChild = el => { opened = el; };
+  els.setPush.onclick(); assert.match(opened.innerHTML, /id="pushMeCard"/); assert.match(text(opened.innerHTML), /^Push-meldingen/);
+});
 test('the app version in the sheet is the same as the cache name of the service worker', () => {
   const sw = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
   assert.equal(APP_VERSION, /CACHE_NAME = 'az-carpool-(v\d+)'/.exec(sw)[1]);

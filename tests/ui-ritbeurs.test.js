@@ -1,5 +1,6 @@
 // Run with: node ui-ritbeurs.test.js
-// The Ritbeurs screens: the segment in Wijzigen, open rides, own rides, "Ik kan inspringen", notifications, the badge and the Beheer switch.
+// The Ritbeurs screens: the segment in Wijzigen, open rides, own rides, "Ik kan inspringen", notifications, the badge and the Beheer switches
+// (Ritten ruilen, and the push switch for the parents, off by default).
 import assert from 'node:assert/strict';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -249,6 +250,47 @@ await testAsync('the switch saves at once (no Opslaan button) and turns the Ritb
   assert.equal(fake.get('settings/ritbeurs').on, false);
   assert.equal(ritbeursAvailable(), false);
   assert.doesNotMatch(dom.html('tab-beheer').match(/id="ritbeursCard"[\s\S]*?<\/div>\s*<\/div>/)[0], /Opslaan/);
+});
+
+console.log('=== Beheer: the push switch (default off) ===');
+test('the push switch sits on the Ritten-ruilen card, below the Ritten-ruilen switch, and is off by default', () => {
+  sampleCoordinatorState({ ritbeurs: { on: true } });
+  const html = ritbeursCardHtml(), s = text(html);
+  assert.ok(html.indexOf('id="ritbeursOn"') < html.indexOf('id="pushLiveOn"'));
+  assert.match(html, /<input type="checkbox" role="switch" class="switch" id="pushLiveOn">/); assert.doesNotMatch(html, /id="pushLiveOn" checked/);
+  assert.match(s, /Push-meldingen Aan: ouders kunnen in Instellingen push-meldingen aanzetten/); assert.match(s, /Testen kan altijd bij Push-meldingen testen/);
+  assert.match(s, /Uit: er gaat niets naar ouders/); assert.doesNotMatch(s, /gezinnen hebben een telefoon aangemeld/);
+  for (const bad of [null, { live: 'true' }, { mode: 'test' }]) { S.pushSettings = bad; assert.doesNotMatch(ritbeursCardHtml(), /id="pushLiveOn" checked/); }
+});
+test('on: the switch is on and the card says how many families have a phone switched on (each family once; test devices do not count)', () => {
+  sampleCoordinatorState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } });
+  S.push.devices = { a: { familyId: 'f2' }, b: { familyId: 'f2' }, c: { familyId: 'f3' }, d: { owner: 'coordinator' } };
+  const html = ritbeursCardHtml(); const n = Object.keys(S.families).length;
+  assert.match(html, /id="pushLiveOn" checked>/); assert.match(text(html), new RegExp(`Aan: 2 van ${n} gezinnen hebben een telefoon aangemeld`));
+});
+test('on, but the server does not report itself: a warning; with a fresh report no warning', () => {
+  sampleCoordinatorState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } });
+  const now = new Date(NOW).getTime();
+  S.push.status = null; assert.match(text(ritbeursCardHtml(now)), /De server meldt zich niet/);
+  S.push.status = { lastRunAt: now - 2 * 3600 * 1000 }; assert.match(text(ritbeursCardHtml(now)), /De server meldt zich niet/);
+  S.push.status = { lastRunAt: now - 60000 }; assert.doesNotMatch(text(ritbeursCardHtml(now)), /De server meldt zich niet/);
+  sampleCoordinatorState({ ritbeurs: { on: true } }); assert.doesNotMatch(text(ritbeursCardHtml(now)), /De server meldt zich niet/, 'off: no warning');
+});
+await testAsync('the push switch saves at once (no Opslaan button), keeps the test switch and does not touch Ritten ruilen', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/ritbeurs': { on: true }, 'settings/push': { mode: 'test', live: false, liveSince: 0, updatedAt: 1 } });
+  sampleCoordinatorState({ ritbeurs: { on: true }, pushSettings: { mode: 'test', live: false, liveSince: 0 } });
+  withFakeNow(NOW, () => renderBeheer());
+  const sw = dom.el('pushLiveOn'); sw.checked = true; wireRitbeursCard();
+  await withFakeNowAsync(NOW, () => sw.onchange());
+  const d = fake.get('settings/push'); assert.equal(d.live, true); assert.equal(d.mode, 'test'); assert.ok(d.liveSince > 0);
+  assert.equal(fake.get('settings/ritbeurs').on, true); assert.match(dom.html('tab-beheer'), /id="pushLiveOn" checked/);
+  assert.doesNotMatch(dom.html('tab-beheer').match(/id="ritbeursCard"[\s\S]*?<\/div>\s*<\/div>/)[0], /Opslaan/);
+});
+await testAsync('a refused save puts the switch back and says why', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed() }); sampleCoordinatorState({ ritbeurs: { on: true } });
+  withFakeNow(NOW, () => renderBeheer());
+  const sw = dom.el('pushLiveOn'); sw.checked = true; wireRitbeursCard(); fake.failWrites('settings/push', 'permission-denied');
+  await sw.onchange(); assert.equal(sw.checked, false); assert.match(toast(), /permission-denied/); assert.equal(S.pushSettings, null);
 });
 
 test('the offered ride shows its passengers as chips (your own daughter in red), no old pill markup', () => {
