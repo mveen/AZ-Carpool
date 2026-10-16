@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { recomputeCanEdit } from '../coordinator.js';
-import { syncCoordinatorNav, bootstrap, init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
+import { getWithRetry, syncCoordinatorNav, bootstrap, init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
 
 const dom = installFakeDom();
 const status = () => dom.doc.getElementById('whoami').innerHTML;
@@ -135,6 +135,40 @@ await testAsync('a failed sign-in is kept on the phone for the log, and sent at 
   fake = useFakeDb(sampleDbSeed(), { uid: 'p7' }); resetState({ appReady: false });
   await withFakeNowAsync(NOW, () => init()); await new Promise(r => setImmediate(r)); await new Promise(r => setImmediate(r));
   const rows = fake.collection('errorLog'); assert.equal(rows.length, 1); assert.match(rows[0][0], /^p7_[0-9]$/); assert.equal(rows[0][1].where, 'start');
+});
+
+console.log('\n=== start-up retry ===');
+const unavailable = () => Object.assign(new Error('Failed to get document because the client is offline.'), { code: 'unavailable' });
+await testAsync('getWithRetry asks again after "unavailable" and returns the first good answer', async () => {
+  let calls = 0;
+  const r = await getWithRetry(async () => { if (++calls < 3) throw unavailable(); return 'ok'; }, [0, 0]);
+  assert.equal(r, 'ok'); assert.equal(calls, 3);
+});
+await testAsync('getWithRetry gives up after the last delay and throws the original error', async () => {
+  let calls = 0;
+  await assert.rejects(getWithRetry(async () => { calls++; throw unavailable(); }, [0, 0]), e => e.code === 'unavailable');
+  assert.equal(calls, 3);   // first try + two retries
+});
+await testAsync('getWithRetry does not retry other errors such as permission-denied', async () => {
+  let calls = 0;
+  await assert.rejects(getWithRetry(async () => { calls++; throw Object.assign(new Error('no'), { code: 'permission-denied' }); }, [0, 0]), e => e.code === 'permission-denied');
+  assert.equal(calls, 1);
+});
+await testAsync('init recovers when the first coordinator read is "unavailable" once', async () => {
+  installNav(); resetState({ appReady: false });
+  const { initDb, createFirestoreDb } = await import('../data.js'); const { createFakeFirestore } = await import('./fake-db.js');
+  const fake = createFakeFirestore(sampleDbSeed(), { uid: 'coord' });
+  const inner = createFirestoreDb({ sdk: fake.sdk, firestoreDb: fake.firestoreDb, auth: fake.auth, calendarApiKey: 'k' });
+  let failed = 0;
+  initDb({ ...inner, doc: p => { const d = inner.doc(p); return p === 'config/coordinator' ? { ...d, get: async () => { if (!failed++) throw unavailable(); return d.get(); } } : d; } });
+  const { START_RETRY_DELAYS_MS: delays } = await import('../app.js'); const saved = [...delays]; delays.fill(0);   // no real waiting in the test
+  try { await withFakeNowAsync(NOW, () => init()); } finally { saved.forEach((v, i) => { delays[i] = v; }); }
+  assert.equal(S.appReady, true); assert.ok(failed >= 1);
+});
+test('index.html opens Firestore with automatic long-polling detection', () => {
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /initializeFirestore\(app, \{ experimentalAutoDetectLongPolling: true \}\)/);
+  assert.match(html, /firestoreDb: openFirestore\(fbApp\)/);
 });
 
 console.log('\n=== links and week rollover ===');

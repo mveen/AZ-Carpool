@@ -14,7 +14,7 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
-import { loadConfig, secretsDir, codeDir } from './lib/setup.mjs';
+import { loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const APP_MODULES = ['rides.js', 'ride-log.js', 'dates.js', 'period.js', 'state.js'];
@@ -93,7 +93,7 @@ export async function runPurge({ firestore, app, now = Date.now(), log = console
   return { logged: docs.length, deleted, skipped, kept: deviations.length - stale.length, logsDeleted };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   try {
     const { projectId } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));

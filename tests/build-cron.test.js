@@ -3,7 +3,7 @@
 // suitable Node.js, runs the right job and refuses anything else.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, chmodSync, existsSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -95,6 +95,14 @@ await test('a job without its key file fails loudly (stderr, exit 1) instead of 
   assert.equal(x.status, 1); assert.match(x.stderr, /BACK-UP FAILED: Cannot read the key file/);
   const y = runSh(['matches'], { PATH: process.env.PATH, HOME: tmp });
   assert.equal(y.status, 1); assert.match(y.stderr, /MATCH CALENDARS FAILED: Cannot read the key file/);
+});
+
+await test('a job started through a symbolic link still runs (macOS temp folders are links) instead of silently doing nothing with exit 0', () => {
+  const link = join(tmp, 'link-to-dist-cron'); symlinkSync(out, link);
+  for (const [job, text] of [['purge', /PURGE FAILED: Cannot read the key file/], ['backup', /BACK-UP FAILED: Cannot read the key file/], ['matches', /MATCH CALENDARS FAILED: Cannot read the key file/]]) {
+    const x = spawnSync(bash, [join(link, 'run.sh'), job], { encoding: 'utf8', env: { PATH: process.env.PATH, HOME: tmp } });
+    assert.equal(x.status, 1, job + ': ' + x.stdout + x.stderr); assert.match(x.stderr, text);
+  }
 });
 
 rmSync(tmp, { recursive: true, force: true });

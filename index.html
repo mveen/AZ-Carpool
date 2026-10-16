@@ -73,9 +73,15 @@ import { startApp } from "https://mveen.github.io/AZ-Carpool/app.js";
 
 const { firebaseConfig, googleCalendarApiKey } = appConfig;
 const fbApp = initializeApp(firebaseConfig);
+// Some browsers/networks (seen: Safari and Firefox on iPhone and Mac) block Firestore's default streaming connection, which
+// ended in "client is offline" at start-up. With auto-detect the SDK switches to plain HTTP requests (long polling) when needed.
+function openFirestore(app) {
+  try { return firestoreSdk.initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); }
+  catch (e) { return firestoreSdk.getFirestore(app); }   // already initialised: use it as it is
+}
 initDb(createFirestoreDb({
   sdk: { ...firestoreSdk, signInAnonymously, signOut },
-  firestoreDb: firestoreSdk.getFirestore(fbApp),
+  firestoreDb: openFirestore(fbApp),
   auth: getAuth(fbApp),
   calendarApiKey: googleCalendarApiKey
 }));

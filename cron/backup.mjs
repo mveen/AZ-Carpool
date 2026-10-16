@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore } from './lib/firestore-rest.mjs';
-import { loadConfig, secretsDir, dataDir } from './lib/setup.mjs';
+import { loadConfig, secretsDir, dataDir, isMainModule } from './lib/setup.mjs';
 
 export const KEEP_DAILY = 30, KEEP_MONTHLY_DAYS = 366;
 const NAME = /^firestore-(\d{4})-(\d{2})-(\d{2})\.jsonl\.gz$/;
@@ -70,7 +70,7 @@ export async function runBackup({ firestore, dir, now = Date.now(), log = consol
   return { name, docs, pruned: doomed, previous: before };
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+if (isMainModule(import.meta.url)) {
   try {
     const { projectId } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'backup-key.json'));

@@ -3,12 +3,18 @@
 //                                                   ~/azcarpool-secrets/  the two key files (never in git)
 //                                                   ~/azcarpool-data/backups/  the nightly back-ups
 //                                                   ~/domains/azcarpool.nl/public_html/agenda/  the calendar files (agenda.mjs)
-import { readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const codeDir = join(dirname(fileURLToPath(import.meta.url)), '..');
+// True when this file is the one node was started with (not just imported, e.g. by a test). Compares REAL paths: a start through a
+// symbolic link (macOS temp folders, a host whose /home is a link) must still run the job, instead of silently doing nothing with exit 0.
+export function isMainModule(metaUrl, argv1 = process.argv[1]) {
+  if (!argv1) return false;
+  try { return realpathSync(argv1) === realpathSync(fileURLToPath(metaUrl)); } catch (e) { return false; }
+}
 export const secretsDir = () => process.env.AZ_SECRETS || join(homedir(), 'azcarpool-secrets');
 export const dataDir = () => process.env.AZ_DATA || join(homedir(), 'azcarpool-data');
 // The folder with the calendar files (the only job output that lives INSIDE the web folder, so calendar apps can fetch it).

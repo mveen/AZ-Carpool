@@ -84,6 +84,7 @@ test('the avatar library icons all exist in PH_PATHS', () => {
   for (const k of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
 test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); });
+test('APP_VERSION is at least v91 (start-up retry release)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 91); });
 test('APP_VERSION is at least v73 (mobile layout fixes)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 73); });
 
 test('APP_VERSION is at least v79 (the home-screen sheet behind its feature toggle)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 79); });
