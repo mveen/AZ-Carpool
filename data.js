@@ -475,13 +475,17 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
-  if(coord && !S.periodBackupsUnsub){
+  // The ride log, the error log and the period back-ups are only shown in Beheer, and every read counts against the daily quota of the free plan.
+  // So the coordinator's app listens to them only after Beheer was opened (activateTab). The ride logging itself is done by the nightly job on the
+  // server; logPassedShifts here (first load of the ride log) and the clean-up of the error log are safety nets for when Beheer is open.
+  const beheer = coord && S.beheerOpened;
+  if(beheer && !S.periodBackupsUnsub){
     S.periodBackupsUnsub = db.collection("periodBackups").onSnapshot(snap=>{
       S.periodBackups={}; snap.docs.forEach(d=>S.periodBackups[d.id]=d.data());
       renderBeheer();
     }, err=>{});
   }
-  if(coord && !S.rideLogUnsub){
+  if(beheer && !S.rideLogUnsub){
     S.rideLogUnsub = db.collection("rideLog").onSnapshot(snap=>{
       S.rideLog={}; snap.docs.forEach(d=>S.rideLog[d.id]=d.data());
       const first = !S.rideLogLoaded; S.rideLogLoaded = true;
@@ -489,7 +493,7 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
-  if(coord && !S.errorLogUnsub){
+  if(beheer && !S.errorLogUnsub){
     S.errorLogUnsub = db.collection("errorLog").onSnapshot(snap=>{
       S.errorLog={}; snap.docs.forEach(d=>S.errorLog[d.id]=d.data());
       const first = !S.errorLogLoaded; S.errorLogLoaded = true;

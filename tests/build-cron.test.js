@@ -27,7 +27,7 @@ const runSh = (args, env = {}) => spawnSync(bash, [join(out, 'run.sh'), ...args]
 console.log('=== the cron folder ===');
 await test('holds the jobs, the helpers, the few app modules the purge, agenda and push jobs reuse and config.json, and nothing else', () => {
   const own = r.files.filter(f => !f.startsWith('app/'));
-  assert.deepEqual(own, ['agenda.mjs', 'backup.mjs', 'config.json', 'lib/firestore-rest.mjs', 'lib/google-auth.mjs', 'lib/setup.mjs', 'lib/webpush.mjs', 'match-calendars.mjs', 'package.json', 'purge.mjs', 'push.mjs', 'run.sh', 'selftest.mjs']);
+  assert.deepEqual(own, ['agenda.mjs', 'backup.mjs', 'config.json', 'lib/firestore-rest.mjs', 'lib/google-auth.mjs', 'lib/run-window.mjs', 'lib/setup.mjs', 'lib/webpush.mjs', 'match-calendars.mjs', 'package.json', 'purge.mjs', 'push.mjs', 'run.sh', 'selftest.mjs']);
   // the app code the purge, agenda and push jobs reuse: only what rides.js, calendar-feed.js and push.js need, no screens, no database code
   assert.deepEqual(r.files.filter(f => f.startsWith('app/')).sort(), ['app/calendar-feed.js', 'app/constants.js', 'app/dates.js', 'app/escape.js', 'app/i18n.js', 'app/locations.js', 'app/notif-text.js', 'app/ov.js', 'app/period.js', 'app/planning.js', 'app/push.js', 'app/ride-log.js', 'app/rides.js', 'app/ritbeurs.js', 'app/state.js', 'app/texts-nl.js']);
 });

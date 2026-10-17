@@ -75,9 +75,17 @@ const { firebaseConfig, googleCalendarApiKey } = appConfig;
 const fbApp = initializeApp(firebaseConfig);
 // Some browsers/networks (seen: Safari and Firefox on iPhone and Mac) block Firestore's default streaming connection, which
 // ended in "client is offline" at start-up. With auto-detect the SDK switches to plain HTTP requests (long polling) when needed.
+// The offline copy (persistentLocalCache, IndexedDB) keeps what was read on the phone: opening the app again soon after only costs the documents that
+// changed in between, not the whole database again (the free plan allows 50,000 reads a day). Several open tabs share it. Where the browser cannot
+// store it (private mode, old browsers) the SDK or the fallbacks below use a plain in-memory cache: slower and more reads, but everything works.
 function openFirestore(app) {
-  try { return firestoreSdk.initializeFirestore(app, { experimentalAutoDetectLongPolling: true }); }
-  catch (e) { return firestoreSdk.getFirestore(app); }   // already initialised: use it as it is
+  const { initializeFirestore, getFirestore, persistentLocalCache, persistentMultipleTabManager } = firestoreSdk;
+  const base = { experimentalAutoDetectLongPolling: true };
+  try { return initializeFirestore(app, { ...base, localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) }); }
+  catch (e) {
+    try { return initializeFirestore(app, base); }
+    catch (e2) { return getFirestore(app); }   // already initialised: use it as it is
+  }
 }
 initDb(createFirestoreDb({
   sdk: { ...firestoreSdk, signInAnonymously, signOut },

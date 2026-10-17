@@ -12,7 +12,13 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
-import { agendaDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
+import { agendaDir, dataDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
+import { skipReason, lastRunAt, markRun } from './lib/run-window.mjs';
+
+// This job reads 9 whole collections per run, and calendar apps only fetch the file every hour at best (Google about once a day). So the job
+// does its work at most once an hour (the cron line may stay every 30 minutes) and not at night. Reads cost quota (Firestore free plan: 50,000 a day).
+export const AGENDA_QUIET = { fromHour: 0, toHour: 6 };
+export const AGENDA_MIN_GAP_MS = 50 * 60 * 1000;
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const AGENDA_APP_MODULES = ['calendar-feed.js', 'rides.js', 'period.js', 'state.js', 'i18n.js'];
@@ -112,9 +118,13 @@ export async function runAgenda({ firestore, app, outDir, now = Date.now(), log 
 
 if (isMainModule(import.meta.url)) {
   try {
+    const stamp = join(dataDir(), 'agenda.lastrun');
+    const why = skipReason({ nowMs: Date.now(), quiet: AGENDA_QUIET, lastMs: lastRunAt(stamp), minGapMs: AGENDA_MIN_GAP_MS });
+    if (why) { console.log('Agenda: ' + why + ', nothing done'); process.exit(0); }
     const { projectId } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));
     const firestore = createFirestore({ projectId, getToken: tokenProvider({ account }) });
     await runAgenda({ firestore, app: await loadAgendaApp(), outDir: agendaDir() });
+    markRun(stamp, Date.now());
   } catch (e) { console.error('AGENDA FAILED: ' + e.message); process.exit(1); }
 }

@@ -337,5 +337,9 @@ test('the Afwijkend weekrooster article explains Zelf indelen, Toch zelf wijzige
   assert.match(s, /Zelf indelen/); assert.match(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);
 });
 
+test('the privacy item tells that the phone keeps a copy of the carpool data for speed, and that Opnieuw beginnen wipes it', () => {
+  const s = JSON.stringify(articles.find(x => /privacy/.test(x.id)) || {});
+  assert.match(s, /een kopie van de carpoolgegevens, zodat de app sneller opent/); assert.match(s, /Opnieuw beginnen.{1,6} wist die kopie/); assert.match(s, /geen cookiebanner/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -132,6 +132,8 @@ export function activateTab(tab){
   }
   const m=document.querySelector('main'); if(m) m.scrollTop=0;
   updateHeader(tab);
+  // Beheer's own data (ride log, error log, period back-ups) is only listened to once Beheer has been opened: see syncListeners.
+  if(tab==='beheer' && !S.beheerOpened){ S.beheerOpened = true; syncListeners(); }
 }
 
 export function chooseDefaultTab(){

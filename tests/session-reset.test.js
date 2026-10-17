@@ -8,7 +8,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { installFakeDom, resetState, useFakeDb } from './test-support.js';
-import { resetSession, shouldAutoReset, clearAutoReset } from '../session-reset.js';
+import { resetSession, clearOfflineCopy, shouldAutoReset, clearAutoReset } from '../session-reset.js';
 
 installFakeDom();
 const memStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
@@ -23,6 +23,24 @@ await testAsync('signs out, deletes every cache, removes the service worker and 
   await resetSession({ win, nav, cacheApi });
   assert.equal(fake.signOutCount(), 1);
   assert.deepEqual(log, ['cache:a', 'cache:b', 'sw', 'reload']);
+});
+await testAsync('removes the offline copy of the database (only Firestore\'s own) between the caches and the service worker', async () => {
+  useFakeDb({}); resetState({ me: 'u1' });
+  const log = [];
+  const idb = { databases: async () => [{ name: 'firestore/[DEFAULT]/az-carpool/main' }, { name: 'other-app' }, { name: 'firestore/[DEFAULT]/az-carpool/main-x' }, {}], deleteDatabase: n => { log.push('idb:' + n); } };
+  const cacheApi = { keys: async () => ['a'], delete: async k => { log.push('cache:' + k); return true; } };
+  const nav = { serviceWorker: { getRegistrations: async () => [{ unregister: async () => { log.push('sw'); } }] } };
+  await resetSession({ win: { location: { reload: () => log.push('reload') } }, nav, cacheApi, idb });
+  assert.deepEqual(log, ['cache:a', 'idb:firestore/[DEFAULT]/az-carpool/main', 'idb:firestore/[DEFAULT]/az-carpool/main-x', 'sw', 'reload']);
+});
+await testAsync('clearOfflineCopy: no IndexedDB, no databases() (older browsers) or a failing one never stops the reset', async () => {
+  assert.equal(await clearOfflineCopy(null), 0);
+  assert.equal(await clearOfflineCopy({}), 0);
+  await assert.rejects(clearOfflineCopy({ databases: async () => { throw new Error('no'); } }));
+  useFakeDb({}); resetState({ me: 'u1' });
+  const log = [];
+  await resetSession({ win: { location: { reload: () => log.push('reload') } }, nav: {}, cacheApi: null, idb: { databases: async () => { throw new Error('no'); } } });
+  assert.deepEqual(log, ['reload']);
 });
 await testAsync('still reloads when one of the steps fails or does not exist', async () => {
   useFakeDb({}); resetState({ me: 'u1' });

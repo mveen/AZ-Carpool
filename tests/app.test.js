@@ -41,6 +41,17 @@ test('activateTab shows only the chosen tab and marks its button current', () =>
   assert.equal(buttons.find(b => b.dataset.tab === 'deviation').getAttribute('aria-current'), 'page');
   assert.equal(buttons.find(b => b.dataset.tab === 'schedule').getAttribute('aria-current'), null);
 });
+test('opening Beheer for the first time starts the coordinator-only listeners (ride log, error log, back-ups); other tabs do not', () => {
+  installNav(); useFakeDb(sampleDbSeed()); sampleCoordinatorState({ links: {}, families: {} });
+  dom.el('tab-gate').style.display = 'none';
+  activateTab('deviation');
+  assert.equal(S.beheerOpened, false); assert.equal(S.rideLogUnsub, null); assert.equal(S.errorLogUnsub, null); assert.equal(S.periodBackupsUnsub, null);
+  activateTab('beheer');
+  assert.equal(S.beheerOpened, true);
+  assert.equal(typeof S.rideLogUnsub, 'function'); assert.equal(typeof S.errorLogUnsub, 'function'); assert.equal(typeof S.periodBackupsUnsub, 'function');
+  const first = S.rideLogUnsub; activateTab('schedule'); activateTab('beheer'); assert.equal(S.rideLogUnsub, first, 'not started again');
+  [S.rideLogUnsub, S.errorLogUnsub, S.periodBackupsUnsub, S.linksCollUnsub, S.sessionsUnsub, S.invitesUnsub].forEach(u => u && u());
+});
 test('activateTab puts the screen name in the header and shows the share button on Mijn week only', () => {
   installNav(); resetState({}); dom.el('tab-gate').style.display = 'none';
   activateTab('deviation'); assert.equal(dom.el('headerTitle').textContent, 'Wijzigen'); assert.equal(dom.el('shareToggle').hidden, true);
@@ -165,10 +176,27 @@ await testAsync('init recovers when the first coordinator read is "unavailable" 
   try { await withFakeNowAsync(NOW, () => init()); } finally { saved.forEach((v, i) => { delays[i] = v; }); }
   assert.equal(S.appReady, true); assert.ok(failed >= 1);
 });
-test('index.html opens Firestore with automatic long-polling detection', () => {
+test('index.html opens Firestore with automatic long-polling detection and a persistent offline copy (fewer reads), with plain fallbacks', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /initializeFirestore\(app, \{ experimentalAutoDetectLongPolling: true \}\)/);
+  assert.match(html, /const base = \{ experimentalAutoDetectLongPolling: true \};/);
+  assert.match(html, /initializeFirestore\(app, \{ \.\.\.base, localCache: persistentLocalCache\(\{ tabManager: persistentMultipleTabManager\(\) \}\) \}\)/);
+  assert.match(html, /return initializeFirestore\(app, base\);/);          // fallback 1: the old in-memory way
+  assert.match(html, /return getFirestore\(app\);/);                        // fallback 2: already initialised
   assert.match(html, /firestoreDb: openFirestore\(fbApp\)/);
+});
+test('the persistent-cache open falls back step by step when the SDK or the browser refuses it', () => {
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  const src = /function openFirestore\(app\) \{[\s\S]*?\n\}\n/.exec(html)[0];
+  const open = new Function('firestoreSdk', src + '; return openFirestore;');
+  const calls = [];
+  const sdk = (failFirst) => ({
+    persistentLocalCache: o => ({ persistent: true, o }), persistentMultipleTabManager: () => 'multi',
+    initializeFirestore: (app, s) => { calls.push(s); if (failFirst.includes(calls.length)) throw new Error('no'); return { made: s }; },
+    getFirestore: () => ({ got: 'existing' }),
+  });
+  const a = open(sdk([]))('app'); assert.equal(calls.length, 1); assert.equal(a.made.experimentalAutoDetectLongPolling, true); assert.equal(a.made.localCache.persistent, true); assert.equal(a.made.localCache.o.tabManager, 'multi');
+  calls.length = 0; const b = open(sdk([1]))('app'); assert.equal(calls.length, 2); assert.equal(b.made.localCache, undefined); assert.equal(b.made.experimentalAutoDetectLongPolling, true);
+  calls.length = 0; const c = open(sdk([1, 2]))('app'); assert.equal(calls.length, 2); assert.equal(c.got, 'existing');
 });
 
 console.log('\n=== links and week rollover ===');
