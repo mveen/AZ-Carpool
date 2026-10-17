@@ -10,6 +10,8 @@ import { normalizeNotice } from './notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
 import { normalizeMaintenance } from './maintenance.js';
 import { normalizeRitbeurs } from './ritbeurs.js';
+import { normalizeWeekrooster } from './weekrooster.js';
+import { purgeStaleWeekRequests, stopWeekRequests, syncWeekRequests } from './weekrooster-data.js';
 import { normalizePush } from './push.js';
 import { stopPushListeners, syncPushListeners } from './push-data.js';
 import { applyPendingPushOpen } from './ui-push.js';
@@ -23,7 +25,7 @@ import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from
 import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
 import { carStdId, normalizeLocations } from './locations.js';
-import { applyOv, keepOv, ovIds } from './ov.js';
+import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
 import { purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
@@ -153,6 +155,7 @@ export async function purgeStaleDeviations(){
       try{ await db.doc("deviations/"+key).delete(); }catch(e){}
     }
   }
+  purgeStaleWeekRequests();   // Afwijkend weekrooster: old requests go too (only the real coordinator's browser, only while the switch is on)
 }
 
 // Step 2 of "periode met andere tijden": a family hands in its times for the period (once per period; it can be changed until the
@@ -449,6 +452,7 @@ export function syncListeners(){
       }, err=>{});
     }
   }
+  syncWeekRequests();   // only does anything while the Afwijkend weekrooster is on for this person
   const coord = isRealCoordinator();
   if(coord && !S.linksCollUnsub){
     S.linksCollUnsub = db.collection("links").onSnapshot(snap=>{
@@ -527,6 +531,9 @@ export function startDataListeners(){
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
     db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; applyPendingPushOpen(); renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
+      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    // Afwijkend weekrooster: only the feature switch is read here (one document). Everything else waits until the switch is on.
+    db.doc("settings/weekrooster").onSnapshot(snap=>{ S.weekrooster = snap.exists? normalizeWeekrooster(snap.data()) : null; syncWeekRequests(); renderBeheer(); renderDeviationTab(); renderMyWeek(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Push: every member reads the switches (test and live), so no queue entry is written while both are off and the parent's Push-meldingen row knows whether it shows.
     db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
@@ -608,7 +615,8 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  stopWeekRequests();
+  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.weekrooster=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   stopPushListeners();
   renderNoticeBanner();
@@ -682,7 +690,9 @@ export async function saveDeviationCars(day,direction,cars,opts){
   try{
     refreshWeekKey();
     // "Rijdt niet mee" marks (US-06, both directions) live on the deviation and survive other edits, unless the girl is in a car again.
-    const extra = keepOv(currentDeviationDoc(day,direction), cars);
+    // A change made by someone who does not decide that day ("Toch zelf wijzigen") is marked, so the day coordinator can see it. Nothing else is stored.
+    const self = S.wrEdit && S.wrEdit.override && myLinkedFamilyId()? { selfBy: myLinkedFamilyId(), selfAt: Date.now() } : {};
+    const extra = { ...keepOv(currentDeviationDoc(day,direction), cars), ...self };
     await writeDeviation(day,direction,cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
@@ -696,7 +706,7 @@ export async function setReturnByPublicTransport(day,girlId,on,direction='terug'
     refreshWeekKey();
     const cur = currentDeviationDoc(day,direction);
     const r = applyOv({cars:effectiveCars(day,direction), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,direction,ids));
-    const extra = r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {};
+    const extra = { ...(r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {}), ...keepTimes(cur) };
     await writeDeviation(day,direction,r.cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }

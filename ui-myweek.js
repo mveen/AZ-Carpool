@@ -16,6 +16,9 @@ import { renderMatchesTab } from './ui-matches.js';
 import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
+import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-rooster.js';
+import { openDayEditor } from './ui-weekrooster-edit.js';
+import { myWeekWeekroosterHtml, requestPillHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
 export function matchDistanceText(m){
@@ -70,7 +73,8 @@ export function renderMyWeek(){
   const box=document.getElementById('tab-myweek');
   if(!box) return;
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('myweek.mijn_week')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; return; }
-  const linked = !!(S.links[S.me] && S.links[S.me].familyId);
+  // Testweergave (Bekijk als) shows a family's own week only while the new weekrooster is on for this person; otherwise exactly as before.
+  const linked = !!(S.links[S.me] && S.links[S.me].familyId) || (!!S.impersonateFamilyId && weekroosterActive());
   if(!linked){ box.innerHTML=`<div class="card"><h2>${t('myweek.mijn_week')}</h2><p class="muted">${t('myweek.koppel_eerst_je_dochter_via')}</p></div>`; return; }
   // Data still on its way: a spinner instead of rides that would wrongly read "nog geen rit".
   if(renderLoadingIfNeeded(box)) return;
@@ -95,7 +99,7 @@ export function renderMyWeek(){
     const dep = ownCar ? (ownCar.departureTime||s) : s;
     // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
     const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), cars).length>0;
-    const changedTag = (differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '';
+    const changedTag = ((differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '') + requestPillHtml(day);
     const route = `${dirName(direction)} · ${routeLabel(ownCar||{},direction,cfg,day)}`;
 
     let status;
@@ -225,10 +229,11 @@ export function renderMyWeek(){
   });
 
   box.innerHTML = `
-    ${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}
+    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}
     ${matchTiles}${matchFailNote}${matchStatusNote}
     ${dayCoordinatorHtml()}
   `;
+  wireMyWeekWeekrooster(box); wireMyWeekActions(box);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';
@@ -248,6 +253,7 @@ export function renderMyWeek(){
 
 // Jump to the Wijzigen tab, optionally straight into one day.
 export function goToWijzigen(day){
+  if(day && weekroosterActive()) return openDayEditor(day);   // the day-by-day editor moved to Rooster (planners straight in, others after a warning)
   if(day) S.deviationDay = day; // no day given: keep the day that was open
   S.openMatchCarpoolForm = null;
   renderDeviationTab(); activateTab('deviation'); hapticTap();

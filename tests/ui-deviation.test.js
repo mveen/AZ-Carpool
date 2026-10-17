@@ -529,7 +529,18 @@ await testAsync('Wijzigen: choosing another driver that breaks the rule warns so
   assert.match(warned, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(warned, /Ongedaan/);
   assert.doesNotMatch(await run({ rules: [] }), /Let op/);
 });
+test('Wijzigen: with an open Rooster editor (S.wrEdit) and the switch off, the day editor of Wijzigen is drawn as always', () => {
+  const html = render(sampleParentState, { wrEdit: { day: 'Ma', override: true } }); assert.match(html, /devDir|daysection/); S.wrEdit = null;
+});
 test('ui-deviation.js imports nothing it does not use', () => assertNoUnusedImports('ui-deviation.js'));
+
+test('Afwijkend weekrooster: Wijzigen shows the week form only while the switch is on for this person', () => {
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'uit' } }); withFakeNow(NOW, () => renderDeviationTab());
+  assert.doesNotMatch(dom.html('tab-deviation'), /id="wrForm"/);
+  sampleParentState({ weekrooster: { mode: 'aan' } }); withFakeNow(NOW, () => renderDeviationTab());
+  assert.match(dom.html('tab-deviation'), /id="wrForm"/);
+});
 
 test('Wijzigen shows the spinner while the data is loading', () => {
   assert.match(render(sampleParentState, { deviationsLoaded: false }), /class="spinner"/);

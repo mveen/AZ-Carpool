@@ -29,10 +29,15 @@ export function applyOv(state, girlId, on, departureFor){
 
 // After any other edit of the terug cars: a girl who is in a car again is no longer "OV".
 // Returns only the fields that must be stored (nothing at all when nobody is marked).
+// The one-off times of this shift (Afwijkend weekrooster, accepted requests: { girlId: 'HH:MM' }, '' = she does not ride this way) are
+// kept as well, whatever else is edited.
+export function keepTimes(dev){
+  return dev && dev.times && typeof dev.times==='object' && Object.keys(dev.times).length ? { times: { ...dev.times } } : {};
+}
 export function keepOv(dev, cars){
   const inCar = new Set((cars||[]).flatMap(c=>c.girlIds||[]));
   const ovGirlIds = ovIds(dev).filter(id=>!inCar.has(id));
-  if(!ovGirlIds.length) return {};
+  if(!ovGirlIds.length) return keepTimes(dev);
   const ovFrom = {}; ovGirlIds.forEach(id=>{ ovFrom[id] = (dev.ovFrom && dev.ovFrom[id]) || null; });
-  return { ovGirlIds, ovFrom };
+  return { ovGirlIds, ovFrom, ...keepTimes(dev) };
 }

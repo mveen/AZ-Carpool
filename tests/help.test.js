@@ -257,6 +257,13 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   assert.match(a.title + b.title, /Ritten ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
 });
 
+test('the Afwijkend weekrooster has a coordinator-only Beheer article that explains uit, test and aan', () => {
+  const b = articles.find(x => x.id === 'beheer-weekrooster');
+  assert.ok(b && b.coordinatorOnly && b.tab === 'beheer'); const s = b.body.join(' ');
+  assert.match(s, /Uit[\s\S]*precies als voorheen[\s\S]*Test[\s\S]*alleen jij[\s\S]*Aan[\s\S]*iedereen/); assert.match(s, /database-regels/); assert.match(s, /Bestaande gegevens blijven ongemoeid/);
+  assert.doesNotMatch(s, /reden/i, 'no reason is ever asked or stored');
+});
+
 test('the push messages: a parent article (how to switch on, per phone, iPhone, quiet hours), the Beheer article (default off, count, testing always works) and the privacy and services articles', () => {
   const a = findArticle('push-meldingen'), ritb = allText(findArticle('ritbeurs')), beheer = allText(findArticle('beheer-ritbeurs', { canEdit: true }));
   assert.ok(a && !a.coordinatorOnly); const t = allText(a);
@@ -306,6 +313,28 @@ test('Help explains "Eigen ouder rijdt mee" (terug, hard rule, only when the par
   assert.match(s, /geen wens maar een vaste regel en gaat voor al het andere/);
   assert.match(s, /zelf een andere auto kiezen kan altijd[\s\S]*maar houdt je niet tegen/);
   assert.match(a.keywords, /eigen ouder/);
+});
+
+test('the Afwijkend weekrooster article explains what Test shows and that day-by-day changing is hidden while it is on', () => {
+  const a = articles.find(x => x.id === 'beheer-weekrooster'); assert.ok(a);
+  const s = JSON.stringify(a.body || a);
+  assert.match(s, /Tijden wijzigen/); assert.match(s, /Volgende week/); assert.match(s, /verborgen/);
+});
+
+test('the Afwijkend weekrooster article tells a day coordinator what he sees (action card, Recente wijzigingen, dot, number)', () => {
+  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+  assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/);
+});
+
+test('the Afwijkend weekrooster article explains the advice: variants, the reason, Overnemen, Ongedaan, Dagbericht', () => {
+  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+  assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/); assert.match(s, /Overnemen/); assert.match(s, /Ongedaan/); assert.match(s, /Dagbericht/);
+  assert.doesNotMatch(s, /Overnemen volgt/);
+});
+
+test('the Afwijkend weekrooster article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
+  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+  assert.match(s, /Zelf indelen/); assert.match(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

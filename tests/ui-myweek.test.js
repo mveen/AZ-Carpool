@@ -309,6 +309,14 @@ test('design v2: no "je dochter" any more; the alert names the daughter', () => 
   assert.match(text(render({})), /Jahaimy heeft nog geen rit/); assert.doesNotMatch(text(render({})), /[Jj]e dochter/);
 });
 
+test('Afwijkend weekrooster: Mijn week shows the day coordinator\'s action card only with the switch on', () => {
+  const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req } });
+  withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /data-wraction="Do"/);
+  S.weekrooster = { mode: 'uit' }; withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /data-wraction/);
+});
+
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-myweek.js imports nothing it does not use', () => assertNoUnusedImports('ui-myweek.js'));
 
@@ -325,5 +333,16 @@ test('matchInfoHtml: a practice match gets the Oefen tag, a calendar match does 
   assert.doesNotMatch(text(matchInfoHtml({ ...base, eventId: 'e1' })), /Oefen/);
 });
 
+test('Afwijkend weekrooster: Mijn week shows "Tijden wijzigen" only while the switch is on; Testweergave only then shows a family\'s week', () => {
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'uit' } }); withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /wrChange/);
+  sampleParentState({ weekrooster: { mode: 'aan' } }); withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /id="wrChange"/);
+  resetState({ me: 'coord', appReady: true, impersonateFamilyId: 'f2', canEdit: false, links: {}, families: S.families, weekrooster: { mode: 'uit' } });
+  withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /geen eigen gezin/);
+});
+
+test('goToWijzigen with the switch off still opens the Wijzigen tab on that day', () => {
+  sampleParentState({}); withFakeNow(NOW, () => goToWijzigen('Di')); assert.equal(S.deviationDay, 'Di'); assert.equal(S.wrEdit, null);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

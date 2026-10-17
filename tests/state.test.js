@@ -86,6 +86,10 @@ test('the ride log starts empty, not loaded, without a listener, and the deviati
   assert.equal(S.deviationsLoaded, false);
 });
 
+test('the Afwijkend-weekrooster switch starts empty, which means uit', () => {
+  assert.equal(S.weekrooster, null);
+});
+
 test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch is read', () => {
   assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {}); assert.deepEqual(S.notifications, {});
   assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null);
@@ -110,6 +114,11 @@ test('match carpool form: no form open and no car being edited at start', () => 
 
 test('practice matches start empty', () => { assert.deepEqual(S.practiceMatches, {}); });
 
+test('Afwijkend weekrooster: no requests, no listeners and no form open at start; this week is shown', () => {
+  assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, ''); assert.deepEqual(S.weekRequestsUnsubs, []);
+  assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrBusy, false); assert.equal(S.weekrooster, null);
+});
+
 test('Mijn week loading flags: all start false, so rideDataLoaded() is false until every listener has answered', async () => {
   const { rideDataLoaded } = await import('../state.js');
   for (const k of ['familiesLoaded', 'groupsLoaded', 'deviationsLoaded', 'periodsLoaded', 'periodCarsLoaded']) assert.equal(S[k], false, k);
@@ -118,5 +127,11 @@ test('Mijn week loading flags: all start false, so rideDataLoaded() is false unt
   assert.equal(rideDataLoaded(), true);
 });
 
+test('Afwijkend weekrooster (day coordinator): no requests of other families and no listeners at start', () => {
+  assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, ''); assert.deepEqual(S.dayRequestsUnsubs, []);
+});
+
+test('Afwijkend weekrooster (phase 4): no Advies view and no finished Overnemen open at start', () => { assert.equal(S.wrAdvice, null); assert.equal(S.wrDone, null); });
+test('Afwijkend weekrooster (phase 5): no car editor open in Rooster at start', () => { assert.equal(S.wrEdit, null); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

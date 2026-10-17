@@ -10,9 +10,10 @@ import { DAYS, todayKeyNow } from './constants.js';
 import { dateForWeekday, dayUp, deviationExpiryMs, deviationKey, refreshWeekKey } from './dates.js';
 import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { contactButtonHtml } from './ui-contact.js';
-import { flexSuffix } from './ui-schedule.js';
+import { flexSuffix, renderSchedule } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
 import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs, wireRitbeursSegment } from './ui-ritbeurs.js';
+import { weekroosterActive, weekroosterBodyHtml, wireWeekrooster } from './ui-weekrooster-form.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
 export function sendWhatsAppUpdate(buildFn){
@@ -51,6 +52,8 @@ export function renderDeviationTab(){
   if(!box) return;
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('deviation.wijzigen')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; markPeriodShown(); return; }
   if(renderLoadingIfNeeded(box)){ markPeriodShown(); return; }
+  // The car editor lives in Rooster while the new flow is on (S.wrEdit): its handlers draw again through here, so draw Rooster.
+  if(S.wrEdit && weekroosterActive() && document.getElementById('tab-schedule') && document.getElementById('tab-schedule').style.display==='block'){ renderSchedule(); return; }
   // Periode met andere tijden: while the form is open it is all Wijzigen shows.
   if(periodFormActive()){ box.innerHTML = periodFormHtml(); wirePeriod(); markPeriodShown(); return; }
   // Ritbeurs (only while the feature switch is on): a segment "Wijzigen | Ritbeurs" at the top; the Ritbeurs view replaces the rest.
@@ -58,6 +61,8 @@ export function renderDeviationTab(){
   if(!rbOn && S.rbView==='ritbeurs') S.rbView = 'wijzigen';
   const seg = rbOn? ritbeursSegmentHtml() : '';
   if(rbOn && S.rbView==='ritbeurs'){ box.innerHTML = seg + ritbeursViewHtml(); wireRitbeurs(); markPeriodShown(); return; }
+  // Afwijkend weekrooster (only while the switch is on for this person): the week form replaces the day-by-day editor.
+  if(weekroosterActive()){ box.innerHTML = seg + periodCardsHtml() + weekroosterBodyHtml(); wireRitbeursSegment(); wirePeriod(); wireWeekrooster(); markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
   if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKeyNow() || 'Ma';
   const day = S.deviationDay;

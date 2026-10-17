@@ -168,6 +168,25 @@ table.avail th,table.avail td{padding:6px 4px}
 .periodDayHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .periodDay{border:1px solid var(--line);border-radius:var(--radius-control);padding:10px;margin-top:8px;background:var(--surface-card)}
 .periodDay.changed{border-color:var(--warn-icon);background:var(--warn-soft)}
+.periodDay--past{background:var(--surface-soft);color:var(--text-muted)}
+.periodColHead{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:var(--space-5);font:var(--type-caption);color:var(--text-muted)}
+.periodDone--stack{display:flex;flex-direction:column;gap:var(--space-5);padding:var(--space-6) var(--space-7);border-radius:var(--radius-card)}
+.periodDone--stack .noteLine{margin:0}
+.periodDone--stack #wrWho{display:flex;flex-direction:column;gap:var(--space-3)}
+.periodDone--stack .btn{width:100%;margin:0}
+.periodDone--stack .linkbtn{align-self:center}
+.reqRow{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.reqRow__day{font:var(--type-card-title);color:var(--text-1)}
+.reqRow__day span{font:var(--type-small);color:var(--text-muted)}
+.reqRow__times{font:var(--type-time-sm);color:var(--text-2);margin-top:var(--space-2)}
+.periodDone--wait{background:var(--warn-soft);border-color:var(--warn-edge)}
+.periodDone--wait .periodDoneTitle{color:var(--warn-ink)}
+.logItem{display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-4) 0;border-top:1px solid var(--line)}
+.logItem__dot{flex:none;width:8px;height:8px;margin-top:var(--space-3);border-radius:50%;background:var(--warn-icon)}
+.logItem__dot--ok{background:var(--ok-ink)}
+.logItem__main{flex:1;font:var(--type-small);color:var(--text-1)}
+.logItem__side{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-2)}
+.logItem__when{font:var(--type-caption);color:var(--text-muted)}
 .periodRide{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600;margin:0}
 .periodRide input{width:22px;height:22px;margin:0}
 input[type=time].periodTime.changed{border-color:var(--warn-icon);background:var(--warn-soft)}
@@ -347,6 +366,8 @@ a.btn{text-decoration:none}
 label.chip{margin:var(--space-1) var(--space-3) var(--space-1) 0}   /* the checkbox labels of the screens that are not rebuilt yet */
 button.chip{cursor:pointer;font-family:inherit}
 .chip--mine{background:var(--accent-soft);color:var(--accent-ink);font-weight:800}
+.chip--add{background:var(--ok-soft);color:var(--ok-ink);font-weight:800}
+.chip--gone{background:transparent;color:var(--text-muted);text-decoration:line-through}
 .chip--flex{background:transparent;border:1px dashed var(--text-muted)}
 .tag{display:inline-flex;align-items:center;gap:var(--space-2);font:var(--type-micro);padding:var(--space-1) var(--space-3);border-radius:var(--radius-pill);
   background:var(--surface-soft);color:var(--text-2);white-space:nowrap}
@@ -432,6 +453,7 @@ button.chip{cursor:pointer;font-family:inherit}
 /* ---------- Car card (Rooster): time, driver, route, seats, passenger chips ---------- */
 .carCard{background:var(--surface-card);border-radius:var(--radius-car);padding:var(--space-5) var(--space-6);margin-top:var(--space-3);box-shadow:var(--shadow-card);border:2px solid transparent}
 .carCard--changed{border-color:var(--warn-edge)}
+.carCard--gone{opacity:.6;border-style:dashed;border-color:var(--control-line)}
 .carCard--match{border-color:var(--match-ink)}
 .carCard__head{display:flex;align-items:center;gap:var(--space-5)}
 .carCard__time{font:800 20px/1 var(--font-mono);letter-spacing:var(--track-time)}
@@ -444,6 +466,13 @@ button.chip{cursor:pointer;font-family:inherit}
 .carCard__note{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
 .carCard select{margin-top:var(--space-3)}
 .dashBox{margin-top:var(--space-3);border:2px dashed var(--warn-icon);border-radius:var(--radius-car);padding:var(--space-4) var(--space-6);font:var(--type-small);color:var(--warn-ink)}
+.wrStack{display:flex;flex-direction:column;gap:var(--space-5);margin-bottom:var(--space-5)}
+.wrStack--tight{gap:var(--space-3);margin-bottom:0}
+.wrStack>*,.wrStack .carCard{margin-top:0;margin-bottom:0}
+.wrStack .btn{width:100%}
+.diffLabel{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
+.actionBar{display:flex;gap:var(--space-3);margin-top:var(--space-3)}
+.actionBar .btn{flex:1}
 .noteLine{font:var(--type-caption);color:var(--text-muted);margin:var(--space-3) var(--space-1) 0}
 .btn svg{width:18px;height:18px;fill:currentColor;flex:none}
 .btn.pill{border-radius:var(--radius-pill)}

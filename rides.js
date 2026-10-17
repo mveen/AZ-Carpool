@@ -75,6 +75,9 @@ export function periodTimeFor(id, iso, direction, st=S){
 
 // The time that counts for a shift of the current planning week: the handed-in time where the temporary rooster applies, else the standard one.
 export function rideTime(id, day, direction, st=S){
+  // A one-off time of this shift (an accepted request of the Afwijkend weekrooster) goes first; '' = she does not ride this way.
+  const dev = activeDeviation(day,direction, st);
+  if(dev && dev.times && Object.prototype.hasOwnProperty.call(dev.times, id)) return dev.times[id];
   const ps = periodShift(day,direction, st);
   return ps? periodTimeFor(id, ps.iso, direction, st) : famTime(id, day, direction, st);
 }

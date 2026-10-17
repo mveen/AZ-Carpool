@@ -292,6 +292,16 @@ test('Rooster has no "Laatst bijgewerkt" footer, in any mode', () => {
     assert.doesNotMatch(h, /Laatst bijgewerkt/i);
   }
 });
+test('Afwijkend weekrooster: Rooster "Deze week" gets the action block only on a day this person decides, and only with the switch on', () => {
+  const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req }, scheduleDay: 'Do', roosterMode: 'week' });
+  withFakeNow(NOW, () => renderSchedule()); assert.match(dom.html('tab-schedule'), /id="wrAlert"/);
+  S.scheduleDay = 'Wo'; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAlert"/);
+  S.scheduleDay = 'Do'; S.roosterMode = 'standard'; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAlert"/, 'Vast rooster stays as it is');
+  S.roosterMode = 'week'; S.weekrooster = { mode: 'uit' }; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAlert|wrLog|Dagcoördinator donderdag/);
+});
+
 import { assertNoUnusedImports } from './test-support.js';
 await (async () => {
   const toastNow = () => text(dom.doc.getElementById('toast').innerHTML);
@@ -307,6 +317,10 @@ await (async () => {
     assert.match(toastNow(), /verplaatst/); assert.doesNotMatch(toastNow(), /Let op/); assert.deepEqual(fake.get('groups/g2').girlIds, ['f1', 'f6']); passed++; console.log('  ✓ a move that keeps parent and daughter together gives no warning');
   } catch (e) { failed++; console.log('  ✗ own-car warning in the Vast rooster\n     ', e.message); }
 })();
+test('Rooster week view: with the switch off there is no "Toch zelf wijzigen" or "Zelf indelen" under the day', () => {
+  sampleParentState({ scheduleDay: 'Ma', roosterMode: 'week' }); withFakeNow(NOW, () => renderSchedule());
+  assert.doesNotMatch(dom.html('tab-schedule'), /wroverride|wredit|Toch zelf wijzigen|Zelf indelen/);
+});
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
 
 test('Rooster shows the spinner while the data is loading', () => {
@@ -314,5 +328,9 @@ test('Rooster shows the spinner while the data is loading', () => {
   assert.doesNotMatch(render(() => sampleParentState({})), /class="spinner"/);
 });
 
+test('the Rooster week view shows the Advies view in place of the day when S.wrAdvice is open (and nothing of it by default)', () => {
+  sampleParentState({ scheduleDay: 'Do', roosterMode: 'week' }); S.wrAdvice = null;
+  withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAdvice|wrAccept/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -89,3 +89,19 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - `git tag v1-stable` is the last version before this redesign (commit `b1fc7ad`). Roll back by redeploying that tag (or reverting the merge of `feat/redesign-v2`).
 - The database is shared with the old version: changes are **additive only** (new optional fields; no rename, delete or migration of existing data).
+
+## Components added for the Afwijkend weekrooster (phase 2)
+
+- **Past day** `.periodDay--past`: a day of the week form that is over; grey, its fields disabled, label "Voorbij".
+- **Column heads** `.periodColHead`: the two captions ("Heen: aankomsttijd", "Terug: klaar om op te halen") above the day rows of a time form.
+- **Request card** `.periodDone--stack` with `.reqRow` (`.reqRow__day`, `.reqRow__times`): the "Doorgegeven" card as one column: title with clock, per day the name and the times (time font) next to the status tag, one note line for what other families notice, a full-width secondary button and a quiet danger link.
+- **Waiting card** `.periodDone--wait`: the "Doorgegeven" card in amber while at least one day waits for the day coordinator (green when everything was applied at once).
+- Reused as they are: `.periodDay` (+ `.changed`), `.periodDone`, `.segmented`, `.alertCard`, `.tag--warn` / `.tag--ok`, `.coordLine`, `.noteLine`, `.linkbtn`, `.formActions`, `.periodSummary`.
+
+## Components added for the Afwijkend weekrooster (phase 3)
+
+- **Day editor in Rooster** (no new classes): the car editor of Wijzigen (`devDir`, `devRide`) inside Rooster "Deze week", the link `.linkbtn` ("Zelf indelen" / "Toch zelf wijzigen") under the day, the warning as a standard `.sheet` with `.sheet__actions` (Terug secondary, Doorgaan ink), and the log line with a neutral `.tag` ("Zelf gewijzigd").
+- **Stack** `.wrStack` (`.wrStack--tight`): a column with the standard gap between a full-width button, alert cards and cards (Mijn week button + request, the Advies view). Buttons in it span the width and carry an icon.
+- **Advice** `.carCard--gone` (dashed: this car does not drive), `.chip--add` (green "+ Noor": joins this car), `.chip--gone` (struck through: leaves this car), `.diffLabel` ("Eerder: …" under a changed car) and `.actionBar` (two equal buttons on the canvas under the last block, in the normal flow: nothing floats or sticks; Zelf indelen secondary, Overnemen ink) in the Advies view for the day coordinator. The "Reden:" line is a `.noteLine` built from the planning, never typed.
+- **Log line** `.logItem` with `.logItem__dot`, `.logItem__dot--ok`, `.logItem__main`, `.logItem__side`, `.logItem__when`: one line of "Recente wijzigingen" in Rooster: who, what, the tag (Aanvraag amber, Direct or Akkoord green) and when ("wo 07:12"). A status log of what is in force now, not a notification.
+- Reused as they are: `.devAlert` ("Actie nodig"), `.alertCard--stack` with `.alertCard__row` (the action card in Mijn week), `.dayPill__dot` (a day that needs an action), `.coordLine`, `.noteLine`, `.tag--warn` / `.tag--ok`, `.navbadge` (the Rooster tab number).

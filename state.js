@@ -57,6 +57,19 @@ export const S = {
   maintenance: null,       // settings/maintenance: onderhoudsmodus { on, text } (null = none / not loaded)
   maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
   ritbeurs: null,          // settings/ritbeurs: the Ritbeurs feature switch { on } (null = none / not loaded, which means off)
+  weekrooster: null,       // settings/weekrooster: the Afwijkend-weekrooster switch { mode: 'uit'|'test'|'aan' } (null = none / not loaded, which means uit)
+  weekRequests: {},        // weekRequests/*: the own family's requests for this and next week, by document id (only while the switch is on for this person)
+  weekRequestsKey: '',     // '<family>|<week>' the listeners belong to ('' = none)
+  weekRequestsUnsubs: [],
+  dayRequests: {},         // weekRequests/* of OTHER families for the days this person decides (day coordinator), this week only
+  dayRequestsKey: '',
+  dayRequestsUnsubs: [],
+  wrAdvice: null,          // the Advies view open in Rooster: { day, direction, variant } (null = closed)
+  wrEdit: null,            // the car editor open in Rooster: { day, override } (override = a parent changing it after the warning)
+  wrDone: null,            // right after Overnemen: { day } (shows the Dagbericht)
+  wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
+  wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
+  wrBusy: false,           // a request is being saved (a double tap makes no double request)
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id
   notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id

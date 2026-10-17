@@ -893,6 +893,21 @@ await testAsync('Ritbeurs: the switch, the offers and the moments are read; the 
   stopDataListeners(); assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {});
   S.links = {}; syncListeners(); assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null); assert.deepEqual(S.notifications, {});
 });
+await testAsync('Afwijkend weekrooster: only the switch document is read, a missing or unknown one means uit, and stopping the listeners clears it', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.weekrooster, null, 'a missing document: nothing stored, so uit');
+  stopDataListeners();
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'test', updatedAt: 1 } }); sampleParentState({ weekrooster: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.weekrooster, { mode: 'test' });
+  assert.deepEqual([...fake.store.keys()].filter(k => k.startsWith('weekRequests')), [], 'no request is read or written while only the switch is known');
+  stopDataListeners(); assert.equal(S.weekrooster, null);
+  useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'AAN' } }); sampleParentState({ weekrooster: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.weekrooster, { mode: 'uit' }, 'an unknown value means uit');
+  stopDataListeners();
+});
 await testAsync('Ritbeurs: a missing switch document means off', async () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ ritbeurs: { on: true } });
   startDataListeners(); await tick(); await tick();
@@ -977,6 +992,17 @@ await testAsync('purgeStalePracticeMatches removes practice matches more than a 
   assert.deepEqual(fake.collection('practiceMatches').map(e => e[0]).sort(), ['future', 'recent']);
 });
 
+test('Afwijkend weekrooster: leaving (stopDataListeners) closes the request listeners and forgets the requests; the switch document and the requests are wired in', async () => {
+  const { stopDataListeners } = await import('../data.js');
+  const { syncWeekRequests } = await import('../weekrooster-data.js');
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests();
+  assert.equal(S.weekRequestsUnsubs.length, 10);
+  stopDataListeners();
+  assert.deepEqual(S.weekRequestsUnsubs, []); assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, '');
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  assert.match(src, /settings\/weekrooster[\s\S]{0,200}syncWeekRequests\(\)/);
+});
+
 test('the ride listeners mark themselves loaded (also on error) and stopDataListeners resets the flags', async () => {
   const { stopDataListeners } = await import('../data.js');
   const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
@@ -987,5 +1013,20 @@ test('the ride listeners mark themselves loaded (also on error) and stopDataList
   for (const k of ['familiesLoaded', 'groupsLoaded', 'periodsLoaded', 'periodCarsLoaded', 'deviationsLoaded']) assert.equal(S[k], false, k);
 });
 
+await testAsync('marking public transport keeps the one-off times of a deviation', async () => {
+  const seed = sampleDbSeed(); seed['deviations/Di_heen'] = { ...seed['deviations/Di_heen'], times: { f1: '08:45' } };
+  const fake = useFakeDb(seed); sampleParentState(); S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Di', 'f4', true, 'heen'));
+  assert.deepEqual(fake.get('deviations/Di_heen').times, { f1: '08:45' }); assert.deepEqual(fake.get('deviations/Di_heen').ovGirlIds, ['f4']);
+});
+await testAsync('saveDeviationCars marks a change made by "Toch zelf wijzigen" (selfBy, selfAt) and leaves a planner\'s change unmarked', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState(); const cars = [{ driverFamilyId: 'f3', girlIds: ['f1', 'f4'], reserveFamilyIds: [], departureTime: '09:00' }];
+  S.wrEdit = { day: 'Di', override: true };
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
+  assert.equal(fake.get('deviations/Di_heen').selfBy, 'f2'); assert.equal(typeof fake.get('deviations/Di_heen').selfAt, 'number');
+  S.wrEdit = { day: 'Di', override: false };
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
+  assert.equal('selfBy' in fake.get('deviations/Di_heen'), false); S.wrEdit = null;
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

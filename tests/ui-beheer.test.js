@@ -168,7 +168,7 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 19);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen"
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 20);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Afwijkend weekrooster"
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
   assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
@@ -213,7 +213,7 @@ test('the menus inside each Beheer section are in the order the coordinator chos
   };
   assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard']);
   assert.deepEqual(order('periodes'), ['locationsCard', 'planningCard', 'periodCard']);
-  assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'maintenanceCard', 'notifCard']);
+  assert.deepEqual(order('berichten'), ['ritbeursCard', 'weekroosterCard', 'pushCard', 'noticeCard', 'maintenanceCard', 'notifCard']);
   assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'impactCard', 'errorLogCard']);
 });
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
@@ -720,6 +720,14 @@ test('design v2: ui-beheer.js only uses variables from tokens.css in its inline 
   const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
   const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
   assert.deepEqual(unknown, []);
+});
+
+test('Afwijkend weekrooster: the number on the Rooster tab also counts the requests that wait for this day coordinator', () => {
+  const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req } });
+  updateTimeChangesBadge(); assert.equal(dom.el('navRoosterBadge').textContent, '1');
+  S.weekrooster = { mode: 'uit' }; updateTimeChangesBadge(); assert.equal(dom.el('navRoosterBadge').style.display, 'none');
 });
 
 import { assertNoUnusedImports } from './test-support.js';
