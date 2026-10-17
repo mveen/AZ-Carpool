@@ -99,6 +99,14 @@ export function syncWeekRequests() {
   syncOwn(fid);
   syncDays(fid);
 }
+// A listener that is refused or loses its connection ends for good. Start them again after a pause (at most a few times in a row, so a
+// database that keeps refusing is not asked every few seconds); any answer resets the count.
+let retries = 0, retryTimer = null;
+function resyncSoon() {
+  if (retryTimer || retries >= 5) return;
+  retries++;
+  retryTimer = setTimeout(() => { retryTimer = null; S.weekRequestsKey = ''; S.dayRequestsKey = ''; syncWeekRequests(); }, 5000 * retries);
+}
 function syncOwn(fid) {
   const key = fid ? fid + '|' + S.currentWeekKey : '';
   if (key === (S.weekRequestsKey || '')) return;
@@ -110,9 +118,9 @@ function syncOwn(fid) {
     S.weekRequestsUnsubs.push(db.doc('weekRequests/' + id).onSnapshot(snap => {
       const next = { ...S.weekRequests };
       if (snap.exists) next[id] = snap.data(); else delete next[id];
-      S.weekRequests = next;
+      S.weekRequests = next; retries = 0;
       renderDeviationTab(); renderMyWeek(); renderSchedule();
-    }, () => { /* no permission or offline: the screens simply show no requests */ }));
+    }, () => resyncSoon()));   // no permission or offline: the screens show no requests until it works again
   }));
 }
 function syncDays(fid) {
@@ -128,9 +136,9 @@ function syncDays(fid) {
     S.dayRequestsUnsubs.push(db.doc('weekRequests/' + id).onSnapshot(snap => {
       const next = { ...S.dayRequests };
       if (snap.exists) next[id] = snap.data(); else delete next[id];
-      S.dayRequests = next;
+      S.dayRequests = next; retries = 0;
       renderMyWeek(); renderSchedule();
-    }, () => { /* not allowed (not the day coordinator after all) or offline: nothing to show */ }));
+    }, () => resyncSoon()));   // not allowed (not the day coordinator after all) or offline: nothing to show, try again later
   }));
 }
 
@@ -165,6 +173,11 @@ export async function submitWeekRequests(which, days) {
     });
     if (!built.writes.length && !built.skipped.some(s => s.why === 'same' && S.weekRequests[requestId(weekKey, s.day, familyId)])) return { ok: false, written: [], skipped: built.skipped };
     await batch.commit();
+    // What was just saved shows at once, also when the live listeners are not running (yet).
+    const local = { ...S.weekRequests };
+    built.writes.forEach(w => { local[w.id] = w.doc; });
+    built.skipped.filter(s => s.why === 'same').forEach(s => { const id = requestId(weekKey, s.day, familyId), old = local[id]; if (old && (old.status === 'pending' || old.status === 'direct')) local[id] = withdrawRequest(old, nowMs); });
+    S.weekRequests = local;
     // "Rijdt niet mee" counts at once, for the current week (the cars of next week do not exist yet).
     if (which === 'this') {
       for (const w of built.writes) if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) await setReturnByPublicTransport(w.doc.day, familyId, false, dir);
@@ -188,6 +201,9 @@ export async function withdrawWeekRequests(which) {
     const batch = db.batch();
     open.forEach(r => batch.set('weekRequests/' + requestId(r.weekKey, r.day, r.familyId), withdrawRequest(r, nowMs)));
     await batch.commit();
+    const local = { ...S.weekRequests };
+    open.forEach(r => { local[requestId(r.weekKey, r.day, r.familyId)] = withdrawRequest(r, nowMs); });
+    S.weekRequests = local;
     return true;
   } catch (e) { showToast(t('data.opslaan_mislukt') + (e && e.message || e)); return false; }
   finally { S.wrBusy = false; }

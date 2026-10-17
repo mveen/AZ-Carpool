@@ -131,6 +131,16 @@ await testAsync('a refused save shows the error and NOT "Je hebt niets gewijzigd
   assert.match(toast(), /permission-denied/); assert.doesNotMatch(toast(), /niets gewijzigd/);
   assert.equal(S.wrForm.days.Do.terug, '19:00', 'what was typed is kept'); assert.equal(S.wrBusy, false);
 });
+await testAsync('what was just handed in shows at once ("Doorgegeven"), even when the live listener is not running', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });   // no syncWeekRequests: the listeners are dead
+  assert.equal(S.weekRequestsUnsubs.length, 0);
+  wijzigen(); fillInputs(); setField('wrTerug_Do', '12:45');
+  assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), true);
+  const s = text(wijzigen()); assert.match(s, /Doorgegeven · week 40/); assert.match(s, /Terug 12:45/);
+  const { withdrawWeekRequests } = await import('../weekrooster-data.js');
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this')), true);
+  assert.doesNotMatch(text(wijzigen()), /Doorgegeven · week/, 'withdrawn: the form is back');
+});
 
 console.log('=== the code ===');
 test('ui-weekrooster-form.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-form.js'));
