@@ -35,7 +35,7 @@ console.log('=== day pills (same design as Rooster) ===');
 test('shows the week, one pill per day and the content of one day straight away', () => {
   const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: null });
   const s = text(html);
-  assert.match(s, /^vandaag 30 do 1 vr 2 Eenmalige ritaanpassing voor deze week .* Week 40 · 28 sep – 2 okt\./);
+  assert.match(s, /^vandaag 30 do 1 vr 2 Eenmalige ritaanpassing voor deze week\. Het standaardrooster blijft intact; wijzigingen worden elke vrijdag om 19:00 automatisch gewist\./);
   assert.equal((html.match(/data-devday=/g) || []).length, 3);   // today (Wed) and the two days after it
   assert.match(html, /class="dayPills dayPills--3"/);
   assert.doesNotMatch(html, /devDayBtn|grid5/);            // the old day tiles are gone
@@ -44,9 +44,9 @@ test('shows the week, one pill per day and the content of one day straight away'
   assert.match(html, /Heen · Aalsmeer → Alkmaar/);          // day content is loaded without an extra tap
   assert.equal(S.deviationDay, day);
 });
-test('day names are lowercase in the middle of a sentence, capitalised as heading', () => {
+test('the day name is a capitalised heading and the info line no longer repeats it', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Do' }));
-  assert.match(s, /Wijzigingen hier gelden alleen voor donderdag deze week .* Donderdag Heen Heen · Aalsmeer → Alkmaar/);
+  assert.match(s, /gewist\. .*Donderdag Heen Heen · Aalsmeer → Alkmaar/);
   const yes = text(render(sampleParentState, { deviationDay: 'Do', dayCoordinators: { Do: 'f2' } }));
   assert.match(yes, /Jij bent dagcoördinator op donderdag\./);
 });
@@ -67,7 +67,7 @@ test('tapping a pill loads that day (like Rooster)', () => {
   withFakeNow(NOW, () => { renderDeviationTab(); btn.onclick(); });
   dom.doc.querySelectorAll = all;
   assert.equal(S.deviationDay, 'Vr');
-  assert.match(text(dom.html('tab-deviation')), /Wijzigingen hier gelden alleen voor vrijdag .* Vrijdag Heen/);
+  assert.match(text(dom.html('tab-deviation')), /gewist\. .*Vrijdag Heen/);
   expectSnapshot('ui-deviation', 'parent day pills with a live match', render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
 });
 test('an unknown day falls back to today (or Monday)', () => {
@@ -97,7 +97,7 @@ test('while filling in is open the task card comes before the weekly changes; wi
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
   const s = text(renderOpen(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
-  assert.match(s, /Wijzigingen hier gelden alleen voor dinsdag deze week en verdwijnen vrijdag om 19:00 vanzelf\. = deze week gewijzigd Dinsdag Heen Heen · Aalsmeer/);
+  assert.match(s, /automatisch gewist\. = deze week gewijzigd Dinsdag Heen Heen · Aalsmeer/);
   assert.doesNotMatch(s, /Andere dag/);   // no separate day picker screen any more
   assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
   assert.match(s, /Terug naar standaard rooster/);
@@ -160,7 +160,7 @@ import { sampleFamilies as _sampleFamilies } from './test-support.js';
 console.log('\n=== conclusie-appje (US-03) ===');
 test('the card shows the drafted text: "volgens schema" when nothing changed', () => {
   const s = text(render(sampleParentState, { deviationDay: 'Vr' }));
-  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Zie Mijn week: https:\/\/azcarpool\.nl\/ Deel in de groep/);
+  assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Deel in de groep/);
 });
 test('with a deviation there is one line per change from Wijzigen', () => {
   const html = render(sampleParentState, { deviationDay: 'Di' });

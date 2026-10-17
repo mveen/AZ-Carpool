@@ -47,8 +47,6 @@ test('one line per day with a time; days without any time are left out', () => {
     'Carpool deze week – Jahaimy:',
     'MA 28 — heen: 07:30 met Jan | terug: 17:30 (nog niet ingepland)',
     'DI 29 — heen: 10:15 (nog niet ingepland) | terug: –',
-    '',
-    'https://azcarpool.nl/',
   ].join('\n'));
 });
 test('a day with a deviation is marked "(gewijzigd)"', () => {
@@ -68,11 +66,11 @@ test('match rides are sorted into the week by date and described with team, oppo
     matchRides: [{ doc: { startMs: kick, summary: 'AZ O15-1-Hoorn O15-2', teamLabel: 'AZ O15-1' }, car: { departureTime: '09:15', driverFamilyId: 'f1' } }],
   }));
   const lines = text.split('\n');
-  assert.equal(lines[lines.length - 3], 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 met Jan');
+  assert.equal(lines[lines.length - 1], 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 met Jan');
 });
 test('nothing planned at all: says so instead of an empty list', () => {
   const text = buildMyWeekMessageFrom(ctx({ myId: 'f9', myFam: { girlName: 'Nieuw', schedule: {} }, matchRides: [] }));
-  assert.equal(text, 'Carpool deze week – Nieuw:\nGeen ritten ingesteld deze week.\n\nhttps://azcarpool.nl/');
+  assert.equal(text, 'Carpool deze week – Nieuw:\nGeen ritten ingesteld deze week.');
 });
 
 console.log('\n=== "can you drive?" asks ===');
@@ -93,7 +91,6 @@ test('parent view: Mijn week message', () => {
     'DI 29 (gewijzigd) — heen: 10:15 (nog niet ingepland) | terug: 17:30 (nog niet ingepland)',
     'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
     'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
-    '', 'https://azcarpool.nl/',
   ].join('\n')));
 });
 test('helpers for the asks follow the current state', () => {
@@ -114,7 +111,7 @@ test('conclusie: cars that go to ATC say Wijdewormer, in both directions', () =>
   const eff = { Ma_heen: [atc('f1', ['f1', 'f2'])], Ma_terug: [atc('f1', ['f1', 'f2'], '17:30')] };
   const text = buildConclusieFrom(conclCtx(base, eff), 'Ma');
   assert.match(text, /\nHeen · Aalsmeer → Wijdewormer \(aangepast\):\n• 07:30 – Jan: Eline, Jahaimy\n/);
-  assert.match(text, /\nTerug · Wijdewormer → Aalsmeer \(aangepast\):\n• 17:30 – Jan: Eline, Jahaimy\n/);
+  assert.match(text, /\nTerug · Wijdewormer → Aalsmeer \(aangepast\):\n• 17:30 – Jan: Eline, Jahaimy(\n|$)/);
   assert.doesNotMatch(text, /Alkmaar/);
 });
 test('conclusie: one car to AFC and one to ATC names both places and tells which car goes where', () => {
@@ -132,7 +129,7 @@ test('conclusie: a car without driver or time is still listed, cars without pass
 test('the conclusie-appje takes the place from the rooster too, and a day without rides keeps AFC \'34', () => {
   const base = { Do_heen: [atc('f1', ['f1', 'f2'])] };
   const out = buildConclusieFrom(conclCtx(base, { Do_heen: [atc('f1', ['f1'])] }), 'Do');
-  assert.match(out, /\nHeen · Aalsmeer → Wijdewormer \(aangepast\):\n• 07:30 – Jan: Eline\nTerug · Alkmaar → Aalsmeer:\n• geen ritten\n/);
+  assert.match(out, /\nHeen · Aalsmeer → Wijdewormer \(aangepast\):\n• 07:30 – Jan: Eline\nTerug · Alkmaar → Aalsmeer:\n• geen ritten(\n|$)/);
 });
 test('only the arrival changed: the conclusie says so instead of "volgens schema"', () => {
   const plain = (driverFamilyId, girlIds) => ({ driverFamilyId, girlIds, departureTime: '07:30' });
@@ -147,14 +144,13 @@ const grp = (driverFamilyId, girlIds, departureTime = '07:30') => ({ driverFamil
 function conclCtx(base, eff) {
   return ctx({ baseCars: (d, dir) => (base[d + '_' + dir] || []), cars: (d, dir) => (eff[d + '_' + dir] || base[d + '_' + dir] || []) });
 }
-const CURL = 'https://azcarpool.nl/';
-test('no deviations: "<Dag>: volgens schema" plus the Mijn week link', () => {
+test('no deviations: "<Dag>: volgens schema" and no app link', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
-  assert.equal(buildConclusieFrom(conclCtx(base, {}), 'Do'), 'Donderdag: volgens schema. Zie Mijn week: ' + CURL);
+  assert.equal(buildConclusieFrom(conclCtx(base, {}), 'Do'), 'Donderdag: volgens schema.');
 });
 test('a deviation that ends up equal to the standard rooster is still "volgens schema"', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
-  assert.equal(buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f1', ['f1', 'f2'])] }), 'Do'), 'Donderdag: volgens schema. Zie Mijn week: ' + CURL);
+  assert.equal(buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f1', ['f1', 'f2'])] }), 'Do'), 'Donderdag: volgens schema.');
 });
 test('changes first, then the full day schedule; kinds without entries are left out; day name is lowercase mid-sentence', () => {
   const base = { Do_heen: [grp('f1', ['f1', 'f2'])] };
@@ -167,8 +163,6 @@ test('changes first, then the full day schedule; kinds without entries are left 
     '• 07:30 – Jan: Eline',
     'Terug · Alkmaar → Aalsmeer:',
     '• geen ritten',
-    '',
-    CURL,
   ].join('\n'));
   assert.doesNotMatch(out, /Gewijzigde|ook mee/);
 });
@@ -186,19 +180,19 @@ test('the five kinds of change come in the agreed order', () => {
   ]);
   assert.equal(lines[6], 'Aangepast schema maandag 28 sep');
   assert.equal(lines[7], 'Heen · Aalsmeer → Alkmaar (aangepast):');
-  assert.equal(lines.at(-1), CURL);
+  assert.doesNotMatch(lines.join('\n'), /azcarpool|https?:/);
 });
 test('a driver who takes over, or a car without driver, is listed as "Gewijzigde chauffeur/tijd"', () => {
   const base = { Do_heen: [grp('f1', ['f2'])], Do_terug: [grp('f1', ['f2'], '17:00')] };
   const out = buildConclusieFrom(conclCtx(base, { Do_heen: [grp('f2', ['f2'], '07:45')], Do_terug: [grp(null, ['f2'], '17:00')] }), 'Do');
   assert.match(out, /^Gewijzigde chauffeur\/tijd: heen Piet 07:45; terug nog geen chauffeur 17:00\n/);
   assert.doesNotMatch(out, /Rijdt niet mee|ook mee/);
-  assert.match(out, /\n• 07:45 – Piet: Jahaimy\n/); assert.match(out, /\n• 17:00 – nog geen chauffeur: Jahaimy\n/);
+  assert.match(out, /\n• 07:45 – Piet: Jahaimy\n/); assert.match(out, /\n• 17:00 – nog geen chauffeur: Jahaimy(\n|$)/);
 });
 test('a Flex driver is a changed car plus a girl who rides "ook mee"; only changed directions say "(aangepast)"', () => {
   const base = { Vr_heen: [grp('f1', ['f1'])], Vr_terug: [grp('f1', ['f1'], '17:00')] };
   const out = buildConclusieFrom(conclCtx(base, { Vr_heen: [grp('f1', ['f1']), grp('f2', ['f2'], '08:00')] }), 'Vr');
-  assert.match(out, /^Gewijzigde chauffeur\/tijd: heen Piet 08:00\nRijdt ook mee heen: Jahaimy\n\nAangepast schema vrijdag 2 okt\nHeen · Aalsmeer → Alkmaar \(aangepast\):\n• 07:30 – Jan: Eline\n• 08:00 – Piet: Jahaimy\nTerug · Alkmaar → Aalsmeer:\n• 17:00 – Jan: Eline\n/);
+  assert.match(out, /^Gewijzigde chauffeur\/tijd: heen Piet 08:00\nRijdt ook mee heen: Jahaimy\n\nAangepast schema vrijdag 2 okt\nHeen · Aalsmeer → Alkmaar \(aangepast\):\n• 07:30 – Jan: Eline\n• 08:00 – Piet: Jahaimy\nTerug · Alkmaar → Aalsmeer:\n• 17:00 – Jan: Eline(\n|$)/);
 });
 test('a Flex girl who joins an existing car is only "Rijdt ook mee"', () => {
   const base = { Vr_heen: [grp('f1', ['f1'])] };
@@ -217,10 +211,8 @@ test('the wrapper reads the running app: Tuesday has a deviation in the sample d
     '• 09:15 – Kees de Vries: Eline, Evi',
     'Terug · Alkmaar → Aalsmeer:',
     '• geen ritten',
-    '',
-    CURL,
   ].join('\n'));
-  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Vr')), 'Vrijdag: volgens schema. Zie Mijn week: ' + CURL);
+  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Vr')), 'Vrijdag: volgens schema.');
 });
 
 console.log('\n=== Rijdt niet mee in the conclusie-appje and Mijn week (US-06) ===');
@@ -275,7 +267,6 @@ test('the Mijn week message uses the handed-in times; a day she does not ride is
     'DI 29 (gewijzigd) — heen: 09:00 (nog niet ingepland) | terug: 12:00 met Kees de Vries',   // Tuesday heen: the one-off change (f3 drives f1 and f4) goes before the temporary rooster
     'DO 1 — heen: 10:15 (nog niet ingepland) | terug: 18:00 (nog niet ingepland)',
     'VR 2 — heen: 11:00 (nog niet ingepland) | terug: 17:00 (nog niet ingepland)',
-    '', 'https://azcarpool.nl/',
   ].join('\n')));
 });
 test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app gives it, else from the standard schedule', () => {
@@ -287,16 +278,16 @@ test('buildMyWeekMessageFrom takes the times from ctx.rideTime when the app give
 test('the conclusie compares with the temporary rooster, not with the standard rooster', () => {
   sampleParentState({ ...period40(), deviations: {} });
   // no one-off changes: the temporary rooster IS the plan, so there is nothing to report
-  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Di')), 'Dinsdag: volgens schema. Zie Mijn week: https://azcarpool.nl/');
+  assert.equal(withFakeNow(NOW, () => buildConclusieMessage('Di')), 'Dinsdag: volgens schema.');
 });
 
 test('a match ride says where the car leaves from (with the place settings; without them the old wording stays)', () => {
   const kick = new Date(2026, 9, 3, 10, 30).getTime();
   const rides = fromId => [{ doc: { startMs: kick, summary: 'AZ O15-1-Hoorn O15-2', teamLabel: 'AZ O15-1' }, car: { departureTime: '09:15', driverFamilyId: 'f1', fromId } }];
-  const last3 = c => buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, cars: () => [], matchRides: rides(c.fromId), ...c.over })).split('\n').slice(-3)[0];
-  assert.equal(last3({ over: { locCfg: normalizeLocations(null) } }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 vanaf Busstation met Jan');
-  assert.equal(last3({ fromId: 'ATC', over: { locCfg: normalizeLocations(null) } }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 vanaf ATC met Jan');
-  assert.equal(last3({}), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 met Jan');
+  const lastLine = c => buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, cars: () => [], matchRides: rides(c.fromId), ...c.over })).split('\n').slice(-1)[0];
+  assert.equal(lastLine({ over: { locCfg: normalizeLocations(null) } }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 vanaf Busstation met Jan');
+  assert.equal(lastLine({ fromId: 'ATC', over: { locCfg: normalizeLocations(null) } }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 vanaf ATC met Jan');
+  assert.equal(lastLine({}), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 met Jan');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

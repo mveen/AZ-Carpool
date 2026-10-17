@@ -286,6 +286,12 @@ test('design v2: the shift tools (Ophalen: <plek>, Opnieuw indelen) are only for
   assert.doesNotMatch(parent, /data-cycleplace|data-replan/);
 });
 
+test('Rooster has no "Laatst bijgewerkt" footer, in any mode', () => {
+  for (const mode of ['week', 'standard']) {
+    const h = render(() => { sampleParentState(); S.roosterMode = mode; S.lastUpdateRooster = { by: 'Jan', at: 1 }; S.lastUpdateDeviation = { by: 'Piet', at: 2 }; });
+    assert.doesNotMatch(h, /Laatst bijgewerkt/i);
+  }
+});
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
 

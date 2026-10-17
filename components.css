@@ -348,7 +348,7 @@ button.chip{cursor:pointer;font-family:inherit}
 .chip--flex{background:transparent;border:1px dashed var(--text-muted)}
 .tag{display:inline-flex;align-items:center;gap:var(--space-2);font:var(--type-micro);padding:var(--space-1) var(--space-3);border-radius:var(--radius-pill);
   background:var(--surface-soft);color:var(--text-2);white-space:nowrap}
-.tag--ok{background:var(--ok-soft);color:var(--ok-ink);font:700 13px/1.2 var(--font-sans);padding:var(--space-1) var(--space-4)}
+.tag--ok{background:var(--ok-soft);color:var(--ok-ink)}
 .tag--warn{background:var(--warn-soft);color:var(--warn-ink)}
 .tag--match{background:var(--match-soft);color:var(--match-ink)}
 .tag--accent{background:var(--accent-soft);color:var(--accent-ink)}

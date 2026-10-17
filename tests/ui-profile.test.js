@@ -292,7 +292,7 @@ test('Eenmalig wijzigen undoes the edit, remembers what was wanted and opens Wij
   assert.equal(S.families.f2.schedule.Ma.heen, '08:30');                        // back to the saved time
   assert.equal(S.weekschemaBase, null); assert.equal(S.weekschemaEdit, null);
   assert.deepEqual(S.deviationIntent.map(c => [c.day, c.direction, c.from, c.to]), [['Ma', 'heen', '08:30', '09:00']]);
-  assert.match(text(dom.html('tab-deviation')), /Wijzigingen/);
+  assert.match(text(dom.html('tab-deviation')), /Eenmalige ritaanpassing/);
 });
 await testAsync('Bevestigen saves the edit for every week and clears the warning', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState(); S.serverSchedules = { f2: JSON.parse(JSON.stringify(S.families.f2.schedule)) };

@@ -2,7 +2,7 @@
 // The build*From(ctx) functions are PURE: all data comes in through `ctx`, nothing reads the browser or the
 // database, so they are tested without a browser (message-texts.test.js). The build*WhatsApp() wrappers below
 // only collect the current app state into a ctx and call them.
-import { APP_URL, DAYS } from './constants.js';
+import { DAYS } from './constants.js';
 import { S } from './state.js';
 import { arrivalPlaces, destinationFor, matchFromName, normalizeLocations } from './locations.js';
 import { t, locale } from './i18n.js';
@@ -56,7 +56,7 @@ export function buildMyWeekMessageFrom(ctx){
   entries.sort((x,y)=>x.sort-y.sort || x.order-y.order);
   const lines = entries.map(e=>e.text);
   const header = t('wa.my.header', { name: myFam.girlName||myFam.parentName||'' });
-  return [header, ...(lines.length? lines : [t('wa.my.none')]), '', APP_URL].join('\n');
+  return [header, ...(lines.length? lines : [t('wa.my.none')])].join('\n');
 }
 
 // One direction of a day as a text block: "Heen · Aalsmeer → Alkmaar (aangepast):" and a line per car.
@@ -77,18 +77,17 @@ function directionBlock(ctx, day, direction, adapted){
 }
 
 // Conclusie-appje (US-03): the text the day coordinator sends to the group after changes on one day.
-// No changes: "<Dag>: volgens schema. Zie Mijn week: <link>". Otherwise: first what changed (one line per kind,
-// a kind without entries is left out), then the full schedule of the day, then the link.
+// No changes: "<Dag>: volgens schema." Otherwise: first what changed (one line per kind,
+// a kind without entries is left out), then the full schedule of the day. No app link in any message.
 // ctx: { baseCars(day,direction), cars(day,direction), dateFor(day)->Date, driverName(id), girlName(id), locCfg? }
 export function buildConclusieFrom(ctx, day){
   const dayLabel = DAYS.find(([k])=>k===day)[1];
-  const link = APP_URL;
   const dirs = ['heen','terug'];
   const word = d=> d==='heen'? t('wa.dir.heen') : t('wa.dir.terug');
   const changes = {};
   dirs.forEach(d=>{ changes[d] = dayChanges(ctx.baseCars(day,d), ctx.cars(day,d)); });
   const ovBy = {}; dirs.forEach(d=>{ ovBy[d] = ctx.ovGirls? ctx.ovGirls(day,d) : []; });   // girls marked "Rijdt niet mee" (US-06)
-  if(!dirs.some(d=>changes[d].length || ovBy[d].length)) return t('wa.conclusie.onSchedule', { dayLabel, url: link });
+  if(!dirs.some(d=>changes[d].length || ovBy[d].length)) return t('wa.conclusie.onSchedule', { dayLabel });
 
   const names = (d,type)=>{
     const ids = [];
@@ -123,9 +122,7 @@ export function buildConclusieFrom(ctx, day){
     '',
     t('wa.conclusie.title', { day: dayLabel.toLowerCase(), date: dateLabel }),
     directionBlock(ctx, day, 'heen', changes.heen.length>0),
-    directionBlock(ctx, day, 'terug', changes.terug.length>0),
-    '',
-    link
+    directionBlock(ctx, day, 'terug', changes.terug.length>0)
   ].join('\n');
 }
 

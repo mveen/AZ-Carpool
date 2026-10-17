@@ -15,7 +15,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import {
-  foldHtml, phIcon, openSheet, closeSheet, hapticTap, esc, lastUpdateFooter, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
+  foldHtml, phIcon, openSheet, closeSheet, hapticTap, esc, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
   isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape,
 } from '../ui-common.js';
 
@@ -37,12 +37,6 @@ test('phIcon honours size and extra style, and returns nothing for an unknown ic
 test('there is no fixed direction label any more (the place follows the rides)', () => {
   assert.equal('dirLabelHtml' in uiCommonModule, false);
 });
-test('lastUpdateFooter: empty without data, otherwise who and when (name escaped)', () => {
-  assert.equal(lastUpdateFooter(null), ''); assert.equal(lastUpdateFooter({}), '');
-  const html = lastUpdateFooter({ by: 'Jan <b>', at: new Date('2026-09-30T10:05:00+02:00').getTime() });
-  assert.match(html, /Laatst bijgewerkt door: Jan &lt;b&gt; — 30-09-2026,? 10:05/);
-});
-
 console.log('\n=== toast, status line, confirm ===');
 test('showToast shows escaped text, optionally with an icon', () => {
   showToast('Mislukt: <script>');
