@@ -73,9 +73,15 @@ await test('every inline script of the built index.html has its hash in the poli
   for (const x of hashes) assert.ok(h.includes(x), x);
   assert.equal(inlineScriptHashes('<script>a</script><script src="x.js"></script>')[0], "'sha256-ypeBEsobvcr6wjGzmiPcTaeG7/gUfE5yuYB3ha/uSLs='");
 });
+await test('the service worker script gets the same CSP as the page, so connect-src must also allow the Firebase SDK host it fetches', () => {
+  const h = read('.htaccess'); const csp = (h.match(/Content-Security-Policy "([^"]+)"/) || [])[1];
+  assert.match((csp.match(/connect-src ([^;]+)/) || [])[1], /https:\/\/www\.gstatic\.com/);
+  const sw = read('service-worker.js');
+  assert.match(sw, /url\.hostname === 'www\.gstatic\.com'/, 'the worker still fetches gstatic');
+});
 await test('connect-src names every host the app talks to', () => {
   const csp = read('.htaccess');
-  for (const host of ['firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'www.googleapis.com', 'api.openrouteservice.org']) {
+  for (const host of ['www.gstatic.com', 'firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'www.googleapis.com', 'api.openrouteservice.org']) {
     assert.ok(csp.includes('https://' + host), host);
   }
 });

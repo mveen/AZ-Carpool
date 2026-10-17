@@ -20,9 +20,9 @@ RewriteRule ^ https://azcarpool.nl%{REQUEST_URI} [L,R=301]
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   # Browsers only run our own files, the Firebase SDK from gstatic and the three inline scripts of index.html (their hashes are filled in by
-  # `npm run build:deploy`, see scripts/build-deploy.mjs). Hosts in connect-src: Firestore, anonymous sign-in, Google Calendar and OpenRouteService.
+  # `npm run build:deploy`, see scripts/build-deploy.mjs). Hosts in connect-src: gstatic (the service worker, which gets this header too, fetches the Firebase SDK from there), Firestore, anonymous sign-in, Google Calendar and OpenRouteService.
   # style-src keeps 'unsafe-inline' because the app still has style="..." attributes (DESIGN.md ratchet); scripts do not.
-  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://www.gstatic.com __INLINE_SCRIPT_HASHES__; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://api.openrouteservice.org; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://www.gstatic.com __INLINE_SCRIPT_HASHES__; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://www.gstatic.com https://firestore.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://api.openrouteservice.org; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
   Header always set X-Frame-Options "DENY"
   Header always set Permissions-Policy "geolocation=(), camera=(), microphone=(), payment=(), usb=()"
   # Always https for a year. No includeSubDomains/preload on purpose: that would bind every other subdomain of azcarpool.nl too.
