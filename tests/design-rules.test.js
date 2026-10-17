@@ -139,7 +139,7 @@ test('the family-type buttons have short labels that fit a segmented button', ()
 
 test('the Afwijkend weekrooster building blocks exist in components.css and are listed in DESIGN.md', () => {
   const design = readFileSync(path.join(root, 'DESIGN.md'), 'utf8');
-  for (const c of ['periodDay--past', 'periodColHead', 'periodDone--wait', 'logItem__dot--ok', 'logItem__main', 'logItem__side', 'logItem__when', 'carCard--gone', 'chip--add', 'chip--gone', 'diffLabel', 'actionBar', 'wrStack', 'wrStack--tight']) {
+  for (const c of ['periodDay--past', 'periodColHead', 'periodDone--wait', 'logItem__dot--ok', 'logItem__main', 'logItem__side', 'logItem__when', 'periodDone--stack', 'reqRow', 'reqRow__day', 'reqRow__times', 'carCard--gone', 'chip--add', 'chip--gone', 'diffLabel', 'actionBar', 'wrStack', 'wrStack--tight']) {
     assert.ok(components.includes('.' + c), c + ' is in components.css');
     assert.ok(design.includes(c), c + ' is in DESIGN.md');
   }

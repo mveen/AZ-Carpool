@@ -170,6 +170,15 @@ table.avail th,table.avail td{padding:6px 4px}
 .periodDay.changed{border-color:var(--warn-icon);background:var(--warn-soft)}
 .periodDay--past{background:var(--surface-soft);color:var(--text-muted)}
 .periodColHead{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:var(--space-5);font:var(--type-caption);color:var(--text-muted)}
+.periodDone--stack{display:flex;flex-direction:column;gap:var(--space-5);padding:var(--space-6) var(--space-7);border-radius:var(--radius-card)}
+.periodDone--stack .noteLine{margin:0}
+.periodDone--stack #wrWho{display:flex;flex-direction:column;gap:var(--space-3)}
+.periodDone--stack .btn{width:100%;margin:0}
+.periodDone--stack .linkbtn{align-self:center}
+.reqRow{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.reqRow__day{font:var(--type-card-title);color:var(--text-1)}
+.reqRow__day span{font:var(--type-small);color:var(--text-muted)}
+.reqRow__times{font:var(--type-time-sm);color:var(--text-2);margin-top:var(--space-2)}
 .periodDone--wait{background:var(--warn-soft);border-color:var(--warn-edge)}
 .periodDone--wait .periodDoneTitle{color:var(--warn-ink)}
 .logItem{display:flex;align-items:flex-start;gap:var(--space-4);padding:var(--space-4) 0;border-top:1px solid var(--line)}

@@ -94,6 +94,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - **Past day** `.periodDay--past`: a day of the week form that is over; grey, its fields disabled, label "Voorbij".
 - **Column heads** `.periodColHead`: the two captions ("Heen: aankomsttijd", "Terug: klaar om op te halen") above the day rows of a time form.
+- **Request card** `.periodDone--stack` with `.reqRow` (`.reqRow__day`, `.reqRow__times`): the "Doorgegeven" card as one column: title with clock, per day the name and the times (time font) next to the status tag, one note line for what other families notice, a full-width secondary button and a quiet danger link.
 - **Waiting card** `.periodDone--wait`: the "Doorgegeven" card in amber while at least one day waits for the day coordinator (green when everything was applied at once).
 - Reused as they are: `.periodDay` (+ `.changed`), `.periodDone`, `.segmented`, `.alertCard`, `.tag--warn` / `.tag--ok`, `.coordLine`, `.noteLine`, `.linkbtn`, `.formActions`, `.periodSummary`.
 

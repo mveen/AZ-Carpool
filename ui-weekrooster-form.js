@@ -1,5 +1,5 @@
 // ui-weekrooster-form.js — Afwijkend weekrooster, phase 2: what a parent (or a day coordinator for the own daughter) sees.
-//   Wijzigen: the week form (same look as the period form), then the "Doorgegeven" card with "Wie merkt dit" and the day coordinators.
+//   Wijzigen: the week form (same look as the period form), then the "Doorgegeven" card (days, what others notice, actions) and the day coordinators.
 //   Mijn week: the button "Tijden wijzigen", the amber card of an open request and the pill "Aanvraag" on the ride.
 // Everything here only shows while the switch is on for this person (weekroosterOn) and the person has a daughter of their own
 // (not Flex). Rules and requests: weekrooster.js; database: weekrooster-data.js.
@@ -109,10 +109,10 @@ function whoRowsHtml(w, open) {
       if (res.noSolution) out.push(t('weekrooster.who.noSolution'));
       else if (res.carsAfter < res.carsBefore) out.push(t('weekrooster.who.saves', { p1: who, p2: res.carsBefore - res.carsAfter }));
       else if (res.carsAfter > res.carsBefore) out.push(t('weekrooster.who.extra'));
-      out.forEach(text => lines.push(`<div class="periodSummary"><span>${esc(tag)}</span><span class="muted">${esc(text)}</span></div>`));
+      out.forEach(text => lines.push(`<p class="noteLine">${esc(tag)}: ${esc(text)}</p>`));
     });
   });
-  return lines.length ? lines.join('') : `<p class="muted">${t('weekrooster.who.none')}</p>`;
+  return lines.length ? lines.join('') : `<p class="noteLine">${esc(t('weekrooster.who.none'))}</p>`;
 }
 
 function coordLineHtml(open) {
@@ -132,18 +132,15 @@ function doneHtml(w, open) {
     const tag = r.status === 'pending'
       ? `<span class="tag tag--warn">${esc(deciderName(r.day) ? t('weekrooster.tag.wait', { p1: deciderName(r.day) }) : t('weekrooster.tag.waitUnknown'))}</span>`
       : `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`;
-    return `<div class="periodSummary"><span>${esc(dayUp(r.day))} <span class="muted">${esc(isoDayLabel(weekKeyDayIso(wk, r.day), ''))}</span></span><span class="muted">${esc(summaryOf(r))}</span>${tag}</div>`;
+    return `<div class="reqRow"><div><div class="reqRow__day">${esc(dayName(r.day))} <span>${esc(isoDayLabel(weekKeyDayIso(wk, r.day), ''))}</span></div><div class="reqRow__times">${esc(summaryOf(r))}</div></div>${tag}</div>`;
   }).join('');
-  return `<div class="periodDone${waiting ? ' periodDone--wait' : ''}" id="wrDone">
-      <p class="periodDoneTitle">${phIcon('check')} ${esc(t('weekrooster.done.title', { p1: weekNumber(wk) }))}</p>
-      <p class="devAlertBody">${esc(t(waiting ? 'weekrooster.done.body' : 'weekrooster.done.bodyDirect'))}</p>
+  return `<div class="periodDone periodDone--stack${waiting ? ' periodDone--wait' : ''}" id="wrDone">
+      <p class="periodDoneTitle">${phIcon(waiting ? 'clock' : 'check')} ${esc(t('weekrooster.done.title', { p1: weekNumber(wk) }))}</p>
       ${rows}
-      <div class="formActions">
-        <button type="button" class="btn small secondary" id="wrEdit">${t('weekrooster.done.edit')}</button>
-        ${waiting ? `<button type="button" class="linkbtn" id="wrWithdraw">${t('weekrooster.done.withdraw')}</button>` : ''}
-      </div>
+      ${waiting ? `<div id="wrWho">${whoRowsHtml(w, open)}<p class="noteLine">${esc(t('weekrooster.done.body'))}</p></div>` : `<p class="noteLine">${esc(t('weekrooster.done.bodyDirect'))}</p>`}
+      <button type="button" class="btn secondary" id="wrEdit">${phIcon('pencil')}${t('weekrooster.done.edit')}</button>
+      ${waiting ? `<button type="button" class="linkbtn danger" id="wrWithdraw">${t('weekrooster.done.withdraw')}</button>` : ''}
     </div>
-    ${waiting ? `<div class="card" id="wrWho"><h2>${t('weekrooster.who.title')}</h2>${whoRowsHtml(w, open)}<p class="noteLine">${t('weekrooster.who.note')}</p></div>` : ''}
     ${coordLineHtml(open)}`;
 }
 

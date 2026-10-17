@@ -298,7 +298,7 @@ test('the Afwijkend-weekrooster texts exist for every mode and no text asks for 
 });
 
 test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeholders, and say what a parent needs to know', () => {
-  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.title', 'who.line', 'myweek.change', 'myweek.request', 'pill.request']
+  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.line', 'myweek.change', 'myweek.request', 'pill.request']
     .forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.done.title', { p1: 40 }), 'Doorgegeven · week 40');
   assert.equal(t('weekrooster.tag.wait', { p1: 'Piet' }), 'Wacht op Piet');

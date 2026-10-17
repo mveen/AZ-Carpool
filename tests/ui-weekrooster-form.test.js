@@ -81,8 +81,9 @@ await testAsync('new times become a request: "Doorgegeven", waiting for the day 
   assert.equal(ok, true); assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'pending'); assert.equal(S.wrForm, null);
   await tick(); const html = wijzigen(), s = text(html);
   assert.match(s, /Doorgegeven · week 40/); assert.match(s, /Het vaste rooster geldt tot de dagcoördinator akkoord geeft/);
-  assert.match(s, /DO 1 okt|Do 1 okt/i); assert.match(s, /Heen 11:00 · Terug 18:00/); assert.match(s, /Wacht op/);
-  assert.match(html, /periodDone periodDone--wait/); assert.match(s, /Wie merkt dit/); assert.match(s, /Dit is een verwachting/);
+  assert.match(s, /Donderdag 1 okt/); assert.match(s, /Heen 11:00 · Terug 18:00/); assert.match(s, /Wacht op/);
+  assert.match(html, /periodDone periodDone--stack periodDone--wait/); assert.doesNotMatch(s, /Wie merkt dit/); assert.match(s, /Voor andere gezinnen verandert er niets/); assert.match(html, /reqRow/);
+  assert.equal((html.match(/class="card"/g) || []).length, 0, 'one card, not two');
   assert.match(html, /id="wrEdit"/); assert.match(html, /id="wrWithdraw"/); assert.doesNotMatch(noStyle(html), /style="/);
 });
 await testAsync('Mijn week: the button, an amber card with the request (decider capitalised) and the pill on the ride', async () => {
@@ -108,7 +109,7 @@ await testAsync('"Rijdt niet mee" is applied at once and shown as "Direct"', asy
   assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), true);
   assert.equal(fake.get('weekRequests/2026-W40_Vr_f2').status, 'direct'); await tick();
   const html = wijzigen();
-  assert.match(text(html), /Direct/); assert.match(text(html), /Dit is direct doorgevoerd/); assert.doesNotMatch(html, /periodDone--wait|id="wrWho"|id="wrWithdraw"/);
+  assert.match(text(html), /Direct/); assert.match(text(html), /Dit is direct doorgevoerd/); assert.doesNotMatch(html, /periodDone--wait|id="wrWho"|id="wrWithdraw"/); assert.match(html, /id="wrEdit"/);
 });
 await testAsync('"Wie merkt dit" says when another car is needed (next week, Monday)', async () => {
   await parentOn(); S.wrWeek = 'next'; wijzigen(); fillInputs([]);
