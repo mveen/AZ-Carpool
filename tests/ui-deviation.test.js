@@ -539,5 +539,10 @@ test('Afwijkend weekrooster: Wijzigen shows the week form only while the switch 
   assert.match(dom.html('tab-deviation'), /id="wrForm"/);
 });
 
+test('Wijzigen shows the spinner while the data is loading', () => {
+  assert.match(render(sampleParentState, { deviationsLoaded: false }), /class="spinner"/);
+  assert.doesNotMatch(render(sampleParentState, {}), /class="spinner"/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
