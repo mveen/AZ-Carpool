@@ -209,6 +209,16 @@ function planInput(day,direction,list, st=S, timeOf, excludeIds){
   };
 }
 
+// SOFT warning (never blocks) for a manual choice: the text to show when a driving parent's daughter ("Eigen ouder rijdt mee", terug) sits
+// in another car, else ''. cars: [{driverFamilyId, girlIds}]; a car without passengers does not drive.
+export function ownCarWarning(direction, cars, st=S){
+  const ids = ownCarIds((st.prefs && st.prefs.rules) || [], direction);
+  if(!ids.size) return '';
+  const driving = (cars||[]).filter(c=>(c.girlIds||[]).length).map(c=>({driverId:c.driverFamilyId, girlIds:c.girlIds}));
+  const broken = ownCarBroken(driving, ids);
+  return broken.length? t('beheer.eigen_ouder_waarschuwing', { p1: broken.map(id=>plainGirlName(id, st)).join(' & ') }) : '';
+}
+
 const optionLabel = (assignment, st)=>assignment.map(a=>esc(fam(a.driverId, st).parentName)).join(' &amp; ');
 
 // The recommended option: a complete planning that passed the safety check. A planning that is incomplete or fails the check is

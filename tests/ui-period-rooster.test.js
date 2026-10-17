@@ -373,6 +373,16 @@ await testAsync('removing the rooster of one period leaves the other one', async
 }); });
 
 import { assertNoUnusedImports } from './test-support.js';
+await testAsync('moving the daughter away from her driving parent in the temporary rooster saves, then warns softly; with the rule off it just says "Opgeslagen"', async () => {
+  const fake = await prep();
+  S.prefs = { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] };
+  assert.equal(await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f2', 'car:1')), true);
+  assert.ok(fake.get('periodCars/2026-10-26_2026-10-27_terug').cars[1].girlIds.includes('f2'), 'saved anyway');
+  assert.match(toast(), /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/);
+  const fake2 = await prep(); S.prefs = { rules: [] };
+  await withFakeNowAsync(OPEN, () => movePeriodGirl('2026-10-27', 'terug', 'f2', 'car:1'));
+  assert.equal(toast(), 'Opgeslagen ✓'); assert.ok(fake2);
+});
 test('ui-period-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-period-rooster.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

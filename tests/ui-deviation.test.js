@@ -508,6 +508,27 @@ test('design v2: ui-deviation.js only uses variables from tokens.css in its inli
 });
 
 import { assertNoUnusedImports } from './test-support.js';
+await testAsync('Wijzigen: moving the daughter away from her driving parent on a terug ride saves, then warns softly ("Eigen ouder rijdt mee")', async () => {
+  const cars = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'], departureTime: '17:30' }, { driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '17:00' }];
+  const rules = { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] };
+  const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_terug': dev1(cars, 'terug').Ma_terug });
+  renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars, 'terug'), prefs: rules });
+  await fire('[data-devmove]', { dataset: { day: 'Ma', direction: 'terug', caridx: '0', girl: 'f2', devmove: '1' } });
+  assert.ok(fake.get('deviations/Ma_terug').cars[1].girlIds.includes('f2'), 'saved anyway');
+  assert.match(toastText(), /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/);
+});
+await testAsync('Wijzigen: choosing another driver that breaks the rule warns softly and keeps the "Ongedaan" button; the same change without the rule does not warn', async () => {
+  const cars = [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '17:00' }, { driverFamilyId: 'f1', girlIds: ['f6'], departureTime: '17:30' }];
+  const run = async prefs => {
+    useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_terug': dev1(cars, 'terug').Ma_terug });
+    renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars, 'terug'), prefs });
+    await fire('.devDriverSel', { value: 'f2', dataset: { day: 'Ma', direction: 'terug', caridx: '1' } }, 'onchange');
+    return toastText();
+  };
+  const warned = await run({ rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] });
+  assert.match(warned, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(warned, /Ongedaan/);
+  assert.doesNotMatch(await run({ rules: [] }), /Let op/);
+});
 test('ui-deviation.js imports nothing it does not use', () => assertNoUnusedImports('ui-deviation.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

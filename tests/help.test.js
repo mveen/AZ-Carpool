@@ -304,6 +304,7 @@ test('Help explains "Eigen ouder rijdt mee" (terug, hard rule, only when the par
   assert.match(s, /Eigen ouder rijdt mee kies je een gezin waarvan de dochter bij de terugrit altijd in de auto van haar eigen ouder zit als die ouder rijdt/);
   assert.match(s, /Rijdt die ouder niet, dan plant de app gewoon vrij/);
   assert.match(s, /geen wens maar een vaste regel en gaat voor al het andere/);
+  assert.match(s, /zelf een andere auto kiezen kan altijd[\s\S]*maar houdt je niet tegen/);
   assert.match(a.keywords, /eigen ouder/);
 });
 

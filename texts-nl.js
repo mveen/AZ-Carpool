@@ -53,6 +53,7 @@ export default {
   "beheer.eigen_ouder": "Eigen ouder rijdt mee",
   "beheer.eigen_ouder_uitleg": "(terug: rijdt de ouder, dan zit haar dochter altijd in die auto en nooit in een andere):",
   "beheer.eigen_ouder_regel": "Eigen ouder rijdt mee (terug): {p1}",
+  "beheer.eigen_ouder_waarschuwing": "Let op: de eigen ouder rijdt, maar {p1} zit in een andere auto (regel Eigen ouder rijdt mee).",
   "beheer.eigen_ouder_bestaat": "Voor {p1} staat deze regel er al.",
   "beheer.kies_een_meisje": "Kies een meisje.",
   "beheer.bij_voorkeur_met_kies_een": "Bij voorkeur met (kies één of meer)",

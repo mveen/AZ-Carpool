@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import {
   fam, seats, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
-  planOptions, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
+  planOptions, ownCarWarning, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
   baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
   periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
@@ -494,6 +494,22 @@ test('rides.js escapes with escape.js and does not import any screen code (the s
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../rides.js', import.meta.url), 'utf8');
   assert.match(src, /from '\.\/escape\.js'/); assert.doesNotMatch(src, /from '\.\/ui-/);
+});
+console.log('\n=== ownCarWarning: the soft warning for manual choices ===');
+test('ownCarWarning names the daughter who sits in another car than her driving parent; nothing when the rule holds', () => {
+  const st = state({ prefs: { rules: [ownRule('f2')] } });
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), 'Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto (regel Eigen ouder rijdt mee).');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'] }, { driverFamilyId: 'f3', girlIds: ['f1'] }], st), '');
+});
+test('ownCarWarning: no rule, a heen shift, an empty car, or a daughter in no car all give no warning; several names are joined', () => {
+  const cars = [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }];
+  assert.equal(ownCarWarning('terug', cars, state()), '');
+  assert.equal(ownCarWarning('heen', cars, state({ prefs: { rules: [ownRule('f2')] } })), '');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: [] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], state({ prefs: { rules: [ownRule('f2')] } })), '', 'a car without passengers does not drive');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }], state({ prefs: { rules: [ownRule('f2')] } })), '', 'she is in no car: that is "niet ingedeeld", not a broken rule');
+  const two = state({ prefs: { rules: [ownRule('f1'), ownRule('f2')] } });
+  assert.match(ownCarWarning('terug', [{ driverFamilyId: 'f1', girlIds: ['f6'] }, { driverFamilyId: 'f2', girlIds: ['f3'] }, { driverFamilyId: 'f3', girlIds: ['f1', 'f2'] }], two), /Eline & Jahaimy zit in een andere auto/);
+  assert.equal(ownCarWarning('terug', [], {}), '', 'a state without prefs does not crash');
 });
 test('rides.js imports nothing it does not use', () => assertNoUnusedImports('rides.js'));
 
