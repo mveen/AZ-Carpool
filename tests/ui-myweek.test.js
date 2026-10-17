@@ -57,6 +57,17 @@ test('once everything has answered the rides are drawn, without a spinner', () =
   assert.match(text(h), /heeft nog geen rit/);
 });
 
+test('Rooster and Wijzigen also show the spinner (not half-empty cards) until the data is in', async () => {
+  const { renderSchedule } = await import('../ui-schedule.js');
+  const { renderDeviationTab } = await import('../ui-deviation.js');
+  withFakeNow(NOW, () => { sampleParentState({ groupsLoaded: false }); renderSchedule(); renderDeviationTab(); });
+  assert.match(dom.html('tab-schedule'), /class="spinner"/);
+  assert.match(dom.html('tab-deviation'), /class="spinner"/);
+  withFakeNow(NOW, () => { sampleParentState({}); renderSchedule(); renderDeviationTab(); });
+  assert.doesNotMatch(dom.html('tab-schedule'), /class="spinner"/);
+  assert.doesNotMatch(dom.html('tab-deviation'), /class="spinner"/);
+});
+
 console.log('\n=== a parent\'s week ===');
 test('there is no hero card any more: the week starts with the rides to arrange (alert cards with a Regelen button)', () => {
   const s = text(render({}));

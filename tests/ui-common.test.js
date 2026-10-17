@@ -205,5 +205,14 @@ test('esc is re-exported from escape.js, so the screens keep importing it from h
 });
 test('ui-common.js imports nothing it does not use', () => assertNoUnusedImports('ui-common.js'));
 
+test('renderLoadingIfNeeded: spinner while the ride data is loading, nothing once it is in', async () => {
+  const { renderLoadingIfNeeded } = await import('../ui-common.js');
+  const box = { id: 'tab-x', innerHTML: '' };
+  sampleParentState({ periodCarsLoaded: false });
+  assert.equal(renderLoadingIfNeeded(box), true); assert.match(box.innerHTML, /class="spinner"/);
+  sampleParentState({}); box.innerHTML = 'x';
+  assert.equal(renderLoadingIfNeeded(box), false); assert.equal(box.innerHTML, 'x');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
