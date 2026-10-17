@@ -35,6 +35,9 @@ export function computeDepartureTime(direction, minutesList, travelLeadMinutes) 
 // Rules, in this order of importance (written out in full in the README, "Planningslogica"):
 //   HARD   every rider in exactly one car; one driver per car, a driver in one car only; riders <= seats of the car;
 //          time spread inside a car <= gapLimitMinutes; only available drivers.
+//   HARD   "Eigen ouder rijdt altijd mee" (Beheer > Reisvoorkeuren, only for the direction of the rule, now: terug): when the parent of
+//          that family drives and her daughter has a ride on the shift, the daughter sits in her own parent's car, never in another car.
+//          The parent is not forced to drive: if she does not drive, the planning is free.
 //   1  Back-up drivers only when the standard drivers cannot do it (too few seats, or the time spread would be too big), as few as possible.
 //   2  Fewest cars.
 //   3  The drivers highest in the Selectievolgorde (lowest sum of rank numbers) that make a valid planning possible.
@@ -43,6 +46,24 @@ export function computeDepartureTime(direction, minutesList, travelLeadMinutes) 
 //      A wish may cost waiting time, but only inside its window (see eligible() below).
 //   6  Ties: the driver highest in the Selectievolgorde takes the car that leaves first.
 // There is NO rule about big cars for big groups: seats only decide whether it fits.
+
+// "Eigen ouder rijdt altijd mee": rules {type:'ownCar', girlId, direction?:'terug'}. The family id is both the rider id (the daughter)
+// and the driver id (her parent). Returns the set of family ids whose rule applies on a shift of this direction.
+export function ownCarIds(rules, direction) {
+  const dir = direction === 'terug' ? 'terug' : 'heen';
+  return new Set((rules || []).filter(r => r && r.type === 'ownCar' && r.girlId && (r.direction || 'terug') === dir).map(r => r.girlId));
+}
+
+// The family ids (of `ids`) whose rule is broken in these cars: the parent drives one car and the daughter sits in another car.
+// cars: [{driverId, girlIds}]. A daughter who is in no car is not a broken rule (that is reported as unplaced).
+export function ownCarBroken(cars, ids) {
+  const out = [];
+  for (const c of cars || []) {
+    if (!ids.has(c.driverId)) continue;
+    if ((cars || []).some(o => o !== c && (o.girlIds || []).includes(c.driverId))) out.push(c.driverId);
+  }
+  return out;
+}
 
 const DEFAULT_RANK = 999;
 const PERMS = {};
@@ -94,6 +115,15 @@ function solveSet(sorted, set, o) {
   const heen = o.direction !== 'terug';
   const perms = permsOf(K);
   const permsFor = sizes => perms.filter(p => p.every((di, g) => sizes[g] <= seats[di]));
+  // "Eigen ouder rijdt altijd mee": a parent in this set whose daughter rides must drive the car her daughter is in.
+  const idIndex = new Map(ids.map((id, i) => [id, i]));
+  const bound = [];
+  set.forEach((d, di) => { if (o.ownCar.has(d.id) && idIndex.has(d.id)) bound.push({ rider: idIndex.get(d.id), di }); });
+  const validPerms = part => {
+    let ps = permsFor(part.map(m => m.length));
+    for (const b of bound) { const g = part.findIndex(m => m.includes(b.rider)); ps = ps.filter(p => p[g] === b.di); }
+    return ps;
+  };
   const groups = [];
   let nodes = 0, aborted = false;
 
@@ -139,7 +169,7 @@ function solveSet(sorted, set, o) {
       m.forEach(i => { const w = heen ? T[i] - first : last - T[i]; waits[i] = w; total += w; });
     });
     const out = [];
-    for (const p of permsFor(part.map(m => m.length))) {
+    for (const p of validPerms(part)) {
       let b = 0, mismatch = 0;
       p.forEach((di, g) => { if (gids[g].includes(set[di].id)) b++; mismatch += Math.abs(di - g); });
       out.push({ part, gids, perm: p, a, b, c, total, waits, mismatch, key: p.join('') + '|' + part.map(m => m.join(',')).join(';') });
@@ -151,7 +181,7 @@ function solveSet(sorted, set, o) {
   let bestTotal = Infinity;
   const e0 = [];
   run(total => {
-    if (!permsFor(groups.map(g => g.members.length)).length) return;
+    if (!validPerms(groups.map(g => g.members)).length) return;
     if (total < bestTotal) { bestTotal = total; e0.length = 0; }
     if (total === bestTotal && e0.length < 3000) e0.push(groups.map(g => g.members.slice()));
   }, total => total > bestTotal, null);
@@ -187,16 +217,25 @@ function solveSet(sorted, set, o) {
 // order go to the car where the time spread grows least; whoever fits nowhere is handed back as unplaced.
 function planPartial(sorted, pool, o) {
   const order = [...pool].sort((a, b) => (b.standard ? 1 : 0) - (a.standard ? 1 : 0) || a.rank - b.rank || String(a.id).localeCompare(String(b.id)));
-  const cars = [], unplaced = [];
+  const cars = [], unplaced = [], done = new Set();
+  const riderIds = new Set(sorted.map(r => r.id));
+  const fits = (c, r, keep) => c.girls.length + keep < c.driver.seats && r.min - c.girls[0].min <= o.gap;
   for (const r of sorted) {
+    done.add(r.id);
+    // "Eigen ouder rijdt altijd mee": a daughter whose parent already drives goes into that car, or stays unplaced (never in another car).
+    const own = o.ownCar.has(r.id) ? cars.find(c => c.driver.id === r.id) : null;
+    if (own) { if (fits(own, r, 0)) own.girls.push(r); else unplaced.push(r.id); continue; }
     let pick = null;
     for (const c of cars) {
-      if (c.girls.length >= c.driver.seats || r.min - c.girls[0].min > o.gap) continue;
+      // keep one seat free in the car of a parent whose daughter still has to be placed
+      const keep = o.ownCar.has(c.driver.id) && riderIds.has(c.driver.id) && !done.has(c.driver.id) ? 1 : 0;
+      if (!fits(c, r, keep)) continue;
       const grow = r.min - c.girls[c.girls.length - 1].min;
       if (!pick || grow < pick.grow) pick = { c, grow };
     }
     if (pick) { pick.c.girls.push(r); continue; }
-    const next = order.find(d => !cars.some(c => c.driver.id === d.id));
+    // a parent whose daughter already sits in another car (or is unplaced) cannot start driving any more
+    const next = order.find(d => !cars.some(c => c.driver.id === d.id) && !(o.ownCar.has(d.id) && d.id !== r.id && riderIds.has(d.id) && done.has(d.id)));
     if (next) cars.push({ driver: next, girls: [r] }); else unplaced.push(r.id);
   }
   return { cars: cars.map(c => ({ driverId: c.driver.id, girlIds: c.girls.map(g => g.id) })), unplaced };
@@ -207,6 +246,7 @@ function planPartial(sorted, pool, o) {
  * @param {{id:string,min:number}[]} riders   who needs a ride, with the time in minutes (heen: arrival needed; terug: ready to be picked up)
  * @param {{id:string,seats:number,standard?:boolean,rank?:number}[]} drivers   every available driver (standard or back-up), Flex drivers included
  * @param {'heen'|'terug'} direction
+ * (input.ownCarRules: optional [{type:'ownCar', girlId}]; see ownCarIds)
  * @returns {{cars:{driverId:string,girlIds:string[]}[], unplaced:string[], backupsUsed:number, partial:boolean}}
  *   cars are in departure order; girlIds are in time order. partial = no complete planning exists, so some riders are unplaced.
  */
@@ -215,6 +255,7 @@ export function planShift(input) {
     direction: input.direction === 'terug' ? 'terug' : 'heen',
     gap: input.gapLimitMinutes != null ? input.gapLimitMinutes : 180,
     together: input.togetherRules || [], prefer: input.preferRules || [],
+    ownCar: ownCarIds(input.ownCarRules, input.direction),
     prefW: input.prefWindowMinutes != null ? input.prefWindowMinutes : 30,
     parentW: input.parentPrefWindowMinutes != null ? input.parentPrefWindowMinutes : 60,
     maxNodes: input.maxNodes || 3000000,
@@ -249,24 +290,36 @@ export function planShift(input) {
 
 // Can ANY valid planning be made with these drivers? Written separately from planShift on purpose (plain search over drivers),
 // so checkPlan does not just repeat the planner's own reasoning. Returns true / false, or null when the search was too big.
-function feasible(sorted, drivers, gap) {
+function feasible(sorted, drivers, gap, ownCar) {
   const n = sorted.length;
   const used = drivers.map(() => ({ count: 0, first: 0 }));
+  const own = ownCar || new Set();
+  const riderIdx = new Map(sorted.map((r, i) => [r.id, i]));
+  const driverIdx = new Map(drivers.map((d, i) => [d.id, i]));
+  const placedIn = new Array(n).fill(-1);
   let nodes = 0;
   function go(i) {
     if (++nodes > 2000000) return null;
     if (i === n) return true;
     const triedEmpty = new Set();
+    const parent = own.has(sorted[i].id) && driverIdx.has(sorted[i].id) ? driverIdx.get(sorted[i].id) : -1;
     for (let d = 0; d < drivers.length; d++) {
       const u = used[d];
       if (u.count >= drivers[d].seats) continue;
-      if (u.count === 0) { if (triedEmpty.has(drivers[d].seats)) continue; triedEmpty.add(drivers[d].seats); } // two empty cars with equal seats are the same
+      // "Eigen ouder rijdt altijd mee": a daughter goes into the car of her parent once that car is in use,
+      // and a parent cannot start driving after her daughter was placed in another car.
+      if (parent >= 0 && d !== parent && used[parent].count > 0) continue;
+      if (u.count === 0 && own.has(drivers[d].id) && riderIdx.has(drivers[d].id)) {
+        const j = riderIdx.get(drivers[d].id);
+        if (j < i && placedIn[j] !== d) continue;
+      }
+      if (u.count === 0 && !own.has(drivers[d].id)) { if (triedEmpty.has(drivers[d].seats)) continue; triedEmpty.add(drivers[d].seats); } // two empty cars with equal seats are the same (unless a rule makes one of them special)
       if (u.count > 0 && sorted[i].min - u.first > gap) continue;
       const before = { count: u.count, first: u.first };
       if (u.count === 0) u.first = sorted[i].min;
-      u.count++;
+      u.count++; placedIn[i] = d;
       const r = go(i + 1);
-      u.count = before.count; u.first = before.first;
+      u.count = before.count; u.first = before.first; placedIn[i] = -1;
       if (r !== false) return r;
     }
     return false;
@@ -304,12 +357,14 @@ export function checkPlan(input, plan) {
     if (count === 1 && isUnplaced) problems.push(r.id + ' zit in een auto én staat als niet ingedeeld.');
   }
   for (const id of placed.keys()) if (!minOf.has(id)) problems.push(id + ' is geen passagier van deze shift.');
+  const ownCar = ownCarIds(input.ownCarRules, input.direction);
+  ownCarBroken(plan.cars, ownCar).forEach(id => problems.push('Chauffeur ' + id + ' rijdt, maar de eigen dochter zit in een andere auto.'));
   // A back-up driver is only allowed when the standard drivers alone cannot cover this shift.
   const usesBackup = (plan.cars || []).some(c => driverOf.get(c.driverId) && driverOf.get(c.driverId).standard === false);
   if (usesBackup && !plan.partial) {
     const sorted = [...(input.riders || [])].sort((a, b) => a.min - b.min);
     const standard = (input.drivers || []).filter(d => d.standard !== false && d.seats > 0);
-    if (feasible(sorted, standard, gap) === true) problems.push('Er rijdt een back-up-chauffeur terwijl de standaard-chauffeurs de shift aankunnen.');
+    if (feasible(sorted, standard, gap, ownCar) === true) problems.push('Er rijdt een back-up-chauffeur terwijl de standaard-chauffeurs de shift aankunnen.');
   }
   return problems;
 }

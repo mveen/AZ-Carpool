@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, withFakeNowAsync, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
+import { installFakeDom, sampleFamilies, withFakeNowAsync, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { foldCards } from '../ui-common.js';
 import {
@@ -22,6 +22,7 @@ import {
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const toast = () => dom.doc.getElementById('toast').innerHTML;
+const tick = () => new Promise(r => setImmediate(r));
 
 console.log('=== families list ===');
 test('every family is listed with parent, coordinator badge, invite code state and a Wijzig button', () => {
@@ -74,6 +75,32 @@ test('preferences card: empty message, and rules rendered in plain words', () =>
   S.prefs = { rules: [{ type: 'together', ids: ['f1', 'f2'] }, { type: 'prefer', girlId: 'f3', withAny: ['f1', 'f4'] }] };
   const s = text(renderPrefsCard());
   assert.match(s, /Samen reizen: Eline & Jahaimy/); assert.match(s, /Voorkeur: Anouk met Eline .*Evi/);
+});
+test('preferences card: the "Eigen ouder rijdt mee" block lists every non-Flex family, and a rule reads in plain words', () => {
+  sampleCoordinatorState({ families: { ...sampleFamilies(), f5: { ...sampleFamilies().f5, familyType: 'flex' } } });
+  const html = renderPrefsCard();
+  assert.match(text(html), /Eigen ouder rijdt mee \(terug: rijdt de ouder, dan zit haar dochter altijd in die auto en nooit in een andere\):/);
+  const sel = html.match(/<select id="ownCarGirlSelect">(.*?)<\/select>/)[1];
+  assert.deepEqual([...sel.matchAll(/<option value="(\w+)"/g)].map(m => m[1]).sort(), ['f1', 'f2', 'f3', 'f4', 'f6'], 'Lois (f5) is Flex and never a passenger');
+  assert.match(html, /id="addOwnCarPref"/);
+  S.prefs = { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] };
+  assert.match(text(renderPrefsCard()), /Eigen ouder rijdt mee \(terug\): Jahaimy/);
+});
+await testAsync('adding an "Eigen ouder rijdt mee" rule saves {type:ownCar, girlId, direction:terug} next to the existing rules; the same family twice is refused', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/prefs': { rules: [{ type: 'together', ids: ['f1', 'f2'] }] } });
+  sampleCoordinatorState({ prefs: { rules: [{ type: 'together', ids: ['f1', 'f2'] }] } });
+  withFakeNow(NOW, () => renderBeheer());
+  dom.el('ownCarGirlSelect').value = 'f3'; dom.el('addOwnCarPref').onclick();
+  await tick();
+  assert.deepEqual(fake.get('settings/prefs').rules, [{ type: 'together', ids: ['f1', 'f2'] }, { type: 'ownCar', girlId: 'f3', direction: 'terug' }]);
+  assert.equal(toast(), 'Toegevoegd ✓');
+  S.prefs = { rules: fake.get('settings/prefs').rules };
+  dom.doc.getElementById('toast').innerHTML = '';
+  withFakeNow(NOW, () => renderBeheer());
+  dom.el('ownCarGirlSelect').value = 'f3'; dom.el('addOwnCarPref').onclick();
+  await tick();
+  assert.equal(fake.get('settings/prefs').rules.length, 2, 'not added twice');
+  assert.equal(toast(), 'Voor Anouk staat deze regel er al.');
 });
 test('priority card lists all ten shifts; rows show the drivers of the selected shift in order', () => {
   sampleCoordinatorState({ shiftPriority: { Ma_heen: { f2: 1, f1: 2 } }, selectedShiftKey: 'Ma_heen' });

@@ -49,6 +49,8 @@ details.group.fold>summary{font-size:14px}
 .begAttnItem{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);width:100%;min-height:var(--hit-min);background:none;border:none;border-top:1px solid var(--warn-edge);padding:0;font:var(--type-body);font-weight:600;color:var(--warn-ink);text-align:left;cursor:pointer}
 .foldTitle{display:inline-flex;align-items:center;gap:12px;min-width:0}
 .foldIcon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:var(--radius-chip);background:var(--surface-soft);color:var(--text-2);font-size:18px;flex-shrink:0}
+.prefBlock{margin-top:var(--space-6)}
+.prefBlock .btn{margin-top:var(--space-3)}
 .cardActions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
 /* Melding voor iedereen: dunne gele balk bovenaan (alle gebruikers) + kaart in Beheer. Geen knop, dus ruim lager dan de testbalk. */
 .noticeBar{display:flex;align-items:center;justify-content:center;gap:var(--space-3);background:var(--notice-bg);color:var(--notice-ink);padding:var(--space-2) var(--space-6);font:var(--type-caption);font-weight:600;line-height:1.35;text-align:center}

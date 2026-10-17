@@ -5,7 +5,7 @@ import { deviationKey, weekKeyDayIso } from './dates.js';
 import { periodDayKey, periodEntryId, periodForDate, periodShiftId, periodWorkdays } from './period.js';
 import { ovIds } from './ov.js';
 import { esc } from './escape.js';
-import { checkPlan, computeDepartureTime as pureComputeDepartureTime, planAlternativeAssignments, planShift, timeToMinutes as pureTimeToMinutes } from './planning.js';
+import { checkPlan, computeDepartureTime as pureComputeDepartureTime, ownCarBroken, ownCarIds, planAlternativeAssignments, planShift, timeToMinutes as pureTimeToMinutes } from './planning.js';
 
 // Day labels are always shown in capitals ("MA"); the keys themselves ("Ma") stay as stored data.
 // A family's time for one day+direction; '' when the family, its schedule or that day is missing
@@ -203,6 +203,7 @@ function planInput(day,direction,list, st=S, timeOf, excludeIds){
     gapLimitMinutes: (st.settings.gapThresholdHours||3)*60,
     togetherRules: rules.filter(r=>r.type==='together'),
     preferRules: rules.filter(r=>r.type==='prefer'),
+    ownCarRules: rules.filter(r=>r.type==='ownCar'),
     prefWindowMinutes: st.settings.prefWindowMinutes!=null? st.settings.prefWindowMinutes : 30,
     parentPrefWindowMinutes: st.settings.parentPrefWindowMinutes!=null? st.settings.parentPrefWindowMinutes : 60,
   };
@@ -233,6 +234,8 @@ export function planOptions(day,direction,list, st=S, excludeIds){
     const cost = a=>a.assignment.reduce((s,x)=>s+(byId.get(x.driverId).standard?0:100000)+shiftPriorityOf(day,direction,x.driverId, st),0);
     opts = planAlternativeAssignments(clusters, input.drivers.map(d=>({id:d.id, seats:d.seats})))
       .map(assignment=>({label: optionLabel(assignment, st), assignment}))
+      // "Eigen ouder rijdt altijd mee": swapping drivers must not put a parent in another car than her own daughter
+      .filter(o=>!ownCarBroken(o.assignment, ownCarIds(input.ownCarRules, direction)).length)
       .sort((a,b)=>cost(a)-cost(b));
   }
   const primary = planPrimaryOption(day,direction,list, st, excludeIds);

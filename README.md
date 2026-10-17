@@ -309,7 +309,7 @@ One engine plans a shift (weekday + heen/terug): `planShift` in `planning.js`. `
 
 **Wait.** Heen: rider time minus the earliest time in the car. Terug: latest time in the car minus rider time. The spread inside one car may never exceed the gap limit (default 3 hours, inclusive).
 
-**Hard rules.** Every rider in exactly one car; a driver has at most one car; seats are enough; spread within the limit; together-rules are kept when possible.
+**Hard rules.** Every rider in exactly one car; a driver has at most one car; seats are enough; spread within the limit; together-rules are kept when possible. Also hard: *Eigen ouder rijdt mee* (Beheer, Reisvoorkeuren; rule `{type:'ownCar', girlId, direction:'terug'}` in `settings/prefs`, family id = driver id = rider id): on a *terug* shift, when that family's parent drives, her daughter sits in her own parent's car, never in another. The parent is not forced to drive; if she does not drive, the rule does nothing. Where no complete plan exists under the rule, the daughter is reported as unplaced, never put in another car. `checkPlan` rejects a plan that breaks it, `planOptions` drops driver swaps that break it. Not enforced: manual choices in Rooster/Wijzigen.
 
 **Order of importance among valid plans.**
 1. As few back-up drivers as possible (only when the standard drivers cannot cover the shift: seats or the time limit).

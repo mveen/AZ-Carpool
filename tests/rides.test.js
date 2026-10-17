@@ -188,6 +188,29 @@ test('option labels name the drivers and are HTML-safe', () => {
   assert.ok(!labels.includes('<P>'));
 });
 
+console.log('\n=== planOptions: "Eigen ouder rijdt mee" (terug) ===');
+const ownRule = girlId => ({ type: 'ownCar', girlId, direction: 'terug' });
+const parentWithoutDaughter = (opts, id) => opts.filter(o => o.assignment.some(a => a.driverId === id && !a.girlIds.includes(id)));
+test('Ma terug: without the rule Piet (f2) may drive a car without his daughter; with the rule those alternatives are gone, the primary stays', () => {
+  const list = girlsFor('Ma', 'terug', state());
+  const without = planOptions('Ma', 'terug', list, state());
+  const withRule = planOptions('Ma', 'terug', list, state({ prefs: { rules: [ownRule('f2')] } }));
+  assert.ok(parentWithoutDaughter(without, 'f2').length > 0, 'the situation exists without the rule');
+  assert.equal(parentWithoutDaughter(withRule, 'f2').length, 0);
+  assert.ok(withRule.length >= 1 && withRule[0].primary);
+  assert.equal(withRule[0].label, without[0].label);
+});
+test('the rule is ignored on a heen shift', () => {
+  const list = girlsFor('Ma', 'heen', state());
+  assert.deepEqual(planOptions('Ma', 'heen', list, state({ prefs: { rules: [ownRule('f1'), ownRule('f2')] } })).map(o => o.label), planOptions('Ma', 'heen', list, state()).map(o => o.label));
+});
+test('no option of any shift ever separates a driving parent from her daughter, whichever family has the rule', () => {
+  ['f1', 'f2', 'f3', 'f4', 'f6'].forEach(f => ['Ma', 'Di', 'Do'].forEach(day => {
+    const st = state({ prefs: { rules: [ownRule(f)] } });
+    planOptions(day, 'terug', girlsFor(day, 'terug', st), st).forEach(o => assert.equal(parentWithoutDaughter([o], f).length, 0, day + ' ' + f + ': ' + o.label));
+  }));
+});
+
 console.log('\n=== default: reads the shared app state ===');
 test('called without a state argument, functions read S', () => {
   resetState({ families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations() });
@@ -412,6 +435,12 @@ test('planPeriodShift: auto planning with the handed-in times (clusters by time,
   const r = planPeriodShift('2026-10-27', 'terug', pst());
   assert.deepEqual(r.cars, [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f5'], departureTime: '13:00' }, { driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]);
   assert.deepEqual(r.unplaced, []);
+});
+test('planPeriodShift keeps the rule too (the temporary rooster plans with the same engine)', () => {
+  const st = pst({ prefs: { rules: [ownRule('f2'), ownRule('f4')] } });
+  const r = planPeriodShift('2026-10-27', 'terug', st);
+  r.cars.forEach(c => { if (c.driverFamilyId === 'f2' || c.driverFamilyId === 'f4') assert.ok(c.girlIds.includes(c.driverFamilyId), c.driverFamilyId + ' has her own daughter'); });
+  assert.deepEqual([...r.cars.flatMap(c => c.girlIds), ...r.unplaced].sort(), ['f1', 'f2', 'f4', 'f5', 'f6']);
 });
 test('planPeriodShift: a rider nobody can drive is handed back as unplaced, the rest is planned', () => {
   const fams = sampleFamilies(); fams.f4 = { ...fams.f4, availability: { ...fams.f4.availability, Di: { heen: false, terug: false } } };

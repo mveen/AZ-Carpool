@@ -154,6 +154,14 @@ test('a Flex family that is available is a driver for the planning engine, never
   assert.deepEqual(analyzeImpact({ ...base, families: f, before, after }), { kind: 'none' });
 });
 
+console.log('\n=== "Eigen ouder rijdt mee" reaches the preview planning ===');
+test('a rule in prefs changes nothing for a shift where it does not bite, and does not break the analysis on a terug shift', () => {
+  const rule = { type: 'ownCar', girlId: 'f2', direction: 'terug' };
+  const t = { ...base, direction: 'terug' };
+  const before = [car('f1', ['f1']), car('f2', ['f2'])], after = [car('f2', ['f1', 'f2'])];
+  assert.deepEqual(analyzeImpact({ ...t, before, after, prefs: { rules: [rule] } }), analyzeImpact({ ...t, before, after }));
+  assert.deepEqual(analyzeImpact({ ...base, before: [car('f1', ['f1'])], after: [car('f1', ['f1', 'f2'])], prefs: { rules: [rule] } }), { kind: 'none' });
+});
 import { assertNoUnusedImports } from './test-support.js';
 test('impact.js imports nothing it does not use', () => assertNoUnusedImports('impact.js'));
 

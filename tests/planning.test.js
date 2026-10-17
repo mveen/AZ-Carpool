@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import {
   timeToMinutes, minutesToTime, computeDepartureTime,
-  planShift, checkPlan, planAlternativeAssignments
+  planShift, checkPlan, planAlternativeAssignments, ownCarIds, ownCarBroken
 } from '../planning.js';
 
 let passed = 0, failed = 0;
@@ -295,12 +295,15 @@ function mulberry(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0
 function reference(input) {
   const R = [...input.riders].sort((a, b) => a.min - b.min || (a.id < b.id ? -1 : 1)), D = input.drivers, n = R.length;
   const gap = input.gapLimitMinutes, heen = input.direction !== 'terug';
+  const own = ownCarIds(input.ownCarRules, input.direction);
   let best = null; const assign = new Array(n);
   (function rec(i) {
     if (i === n) {
       const groups = D.map(() => []);
       assign.forEach((d, r) => groups[d].push(R[r]));
       const used = groups.map((g, d) => ({ g, d })).filter(x => x.g.length);
+      // "Eigen ouder rijdt mee": a driving parent whose daughter rides has her daughter in her own car
+      if (used.some(({ g, d }) => own.has(D[d].id) && R.some(x => x.id === D[d].id) && !g.some(x => x.id === D[d].id))) return;
       let total = 0, backups = 0, rankSum = 0;
       for (const { g, d } of used) {
         const t = g.map(x => x.min), lo = Math.min(...t), hi = Math.max(...t);
@@ -347,6 +350,109 @@ test('300 random shifts: same back-ups / cars / rank sum as brute force, valid p
     compared++;
   }
   assert.ok(compared > 150, 'enough random cases were really compared, got ' + compared);
+});
+
+console.log('\n=== "Eigen ouder rijdt mee" (hard rule, terug) ===');
+const cars = plan => plan.cars.map(c => c.driverId + ':' + sorted(c.girlIds).join('+')).sort();
+const own = girlId => ({ type: 'ownCar', girlId, direction: 'terug' });
+const ownBase = { direction: 'terug', riders: riders([['x', '17:00'], ['y', '17:00'], ['p', '17:00'], ['q', '17:00']]), drivers: [std('x', 3, 1), std('y', 3, 2)], togetherRules: [{ ids: ['x', 'y'] }] };
+test('ownCarIds: only rules of this direction count; a rule without direction means terug; other rule types are ignored', () => {
+  const rules = [own('a'), { type: 'ownCar', girlId: 'b' }, { type: 'ownCar', girlId: 'c', direction: 'heen' }, { type: 'together', ids: ['d', 'e'] }, null];
+  assert.deepEqual(sorted(ownCarIds(rules, 'terug')), ['a', 'b']);
+  assert.deepEqual(sorted(ownCarIds(rules, 'heen')), ['c']);
+  assert.deepEqual(sorted(ownCarIds(undefined, 'terug')), []);
+});
+test('ownCarBroken: the parent drives one car, her daughter sits in another; no daughter in a car is not broken', () => {
+  const ids = new Set(['x']);
+  assert.deepEqual(ownCarBroken([{ driverId: 'x', girlIds: ['p'] }, { driverId: 'y', girlIds: ['x'] }], ids), ['x']);
+  assert.deepEqual(ownCarBroken([{ driverId: 'x', girlIds: ['p', 'x'] }, { driverId: 'y', girlIds: ['y'] }], ids), []);
+  assert.deepEqual(ownCarBroken([{ driverId: 'x', girlIds: ['p'] }], ids), []);
+});
+test('without the rule, a samen-reizen wish puts the daughter of a driving parent in the other car (the situation the rule prevents)', () => {
+  assert.deepEqual(cars(planShift(ownBase)), ['x:p+q', 'y:x+y']);
+});
+test('with the rule for both families, each driving parent has her own daughter in the car', () => {
+  const input = { ...ownBase, ownCarRules: [own('x'), own('y')] };
+  const plan = planShift(input);
+  assert.ok(plan.cars.find(c => c.driverId === 'x').girlIds.includes('x'));
+  assert.ok(plan.cars.find(c => c.driverId === 'y').girlIds.includes('y'));
+  assert.equal(plan.partial, false);
+  assert.deepEqual(checkPlan(input, plan), []);
+});
+test('the rule for one family only binds that family', () => {
+  const input = { ...ownBase, ownCarRules: [own('x')] };
+  const plan = planShift(input);
+  assert.ok(plan.cars.find(c => c.driverId === 'x').girlIds.includes('x'));
+  assert.deepEqual(checkPlan(input, plan), []);
+});
+test('the rule does not apply on a heen shift', () => {
+  const input = { ...ownBase, direction: 'heen', ownCarRules: [own('x'), own('y')] };
+  assert.deepEqual(cars(planShift(input)), cars(planShift({ ...ownBase, direction: 'heen' })));
+});
+test('the rule does nothing when the parent does not drive (she is available, but not needed)', () => {
+  const input = { direction: 'terug', riders: riders([['a', '17:00'], ['b', '17:00'], ['c', '17:00']]), drivers: [std('a', 3, 1), std('c', 3, 2)], ownCarRules: [own('c')] };
+  const plan = planShift(input);
+  assert.deepEqual(cars(plan), ['a:a+b+c']);
+});
+test('the rule is hard: the daughter joins her parent even when it costs more waiting than the own-parent window allows', () => {
+  // p drives the early car (17:00 a, b) but her own time is 19:00: without the rule p stays out of it; with the rule she may not ride elsewhere
+  const input = { direction: 'terug', parentPrefWindowMinutes: 0, riders: riders([['a', '17:00'], ['b', '17:00'], ['p', '19:00'], ['q', '19:00']]), drivers: [std('p', 3, 1), std('a', 3, 2)], ownCarRules: [own('p')] };
+  const plan = planShift(input);
+  const pc = plan.cars.find(c => c.driverId === 'p');
+  assert.ok(!pc || pc.girlIds.includes('p'));
+  assert.equal(plan.partial, false);
+  assert.deepEqual(checkPlan(input, plan), []);
+});
+test('a back-up is allowed when only the rule keeps the standard drivers from covering the shift (checkPlan agrees)', () => {
+  const input = { direction: 'terug', gapLimitMinutes: 60, riders: riders([['x', '17:00'], ['p', '17:00'], ['y', '19:00'], ['q', '19:00'], ['r', '17:00']]),
+    drivers: [std('x', 2, 1), std('y', 2, 2), bak('z', 3, 3)], ownCarRules: [own('x')] };
+  const plan = planShift(input);
+  assert.equal(plan.partial, false);
+  assert.deepEqual(checkPlan(input, plan), []);
+  const xc = plan.cars.find(c => c.driverId === 'x');
+  assert.ok(!xc || xc.girlIds.includes('x'));
+});
+test('when no complete planning exists under the rule, the daughter is unplaced, never put in another car', () => {
+  const input = { direction: 'terug', riders: riders([['x', '17:00'], ['y', '17:00'], ['p', '17:00'], ['q', '17:00']]), drivers: [std('x', 2, 1), std('y', 1, 2)], ownCarRules: [own('x'), own('y')] };
+  const plan = planShift(input);
+  assert.equal(plan.partial, true);
+  assert.deepEqual(ownCarBroken(plan.cars, ownCarIds(input.ownCarRules, 'terug')), []);
+  assert.deepEqual(checkPlan(input, plan).filter(p => /eigen dochter/.test(p)), []);
+});
+test('checkPlan names a hand-made plan that breaks the rule', () => {
+  const input = { direction: 'terug', riders: riders([['x', '17:00'], ['p', '17:00']]), drivers: [std('x', 2, 1), std('p', 2, 2)], ownCarRules: [own('x')] };
+  const problems = checkPlan(input, { cars: [{ driverId: 'x', girlIds: ['p'] }, { driverId: 'p', girlIds: ['x'] }], unplaced: [] });
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /eigen dochter zit in een andere auto/);
+});
+test('a plan with the rule never breaks it when the rule is left out of the input (no side effects on old data)', () => {
+  const input = { ...ownBase };
+  assert.deepEqual(checkPlan(input, planShift(input)), []);
+});
+test('300 random terug shifts with the rule on some families: the engine agrees with brute force on back-ups, cars and rank sum; the rule is never broken', () => {
+  const rnd = mulberry(20261017); let compared = 0, ruleBites = 0;
+  for (let k = 0; k < 300; k++) {
+    const n = 2 + Math.floor(rnd() * 5), nd = 1 + Math.floor(rnd() * 4);
+    const rs = Array.from({ length: n }, (_, i) => ({ id: 'r' + i, min: 1020 + 15 * Math.floor(rnd() * 12) }));
+    const ranks = [1, 2, 3, 4].sort(() => rnd() - 0.5);
+    const ds = Array.from({ length: nd }, (_, i) => ({ id: 'r' + i, seats: 1 + Math.floor(rnd() * 4), standard: rnd() < 0.6, rank: ranks[i] }));
+    const ownCarRules = ds.filter(() => rnd() < 0.6).map(d => own(d.id));
+    const togetherRules = rnd() < 0.5 && n > 1 ? [{ ids: ['r0', 'r1'] }] : [];
+    const input = { riders: rs, drivers: ds, direction: 'terug', gapLimitMinutes: 120, togetherRules, ownCarRules };
+    const ref = reference(input), plan = planShift(input);
+    const ids = ownCarIds(ownCarRules, 'terug');
+    assert.deepEqual(ownCarBroken(plan.cars, ids), [], 'case ' + k + ': rule never broken');
+    if (!ref) { assert.equal(plan.partial, true, 'case ' + k + ': no valid plan exists under the rule, so the engine must say so'); continue; }
+    assert.equal(plan.partial, false, 'case ' + k);
+    assert.deepEqual(checkPlan(input, plan), [], 'case ' + k);
+    const byId = Object.fromEntries(ds.map(d => [d.id, d]));
+    const key = [plan.cars.filter(c => !byId[c.driverId].standard).length, plan.cars.length, plan.cars.reduce((s, c) => s + byId[c.driverId].rank, 0)];
+    assert.deepEqual(key, ref.key, 'case ' + k + ': back-ups, cars, rank sum');
+    if (!planShift({ ...input, ownCarRules: [] }).cars.every(c => !ids.has(c.driverId) || c.girlIds.includes(c.driverId) || !rs.some(r => r.id === c.driverId))) ruleBites++;
+    compared++;
+  }
+  assert.ok(compared > 150, 'enough random cases were really compared, got ' + compared);
+  assert.ok(ruleBites > 10, 'the rule really changed the outcome in some cases, got ' + ruleBites);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -297,6 +297,15 @@ test('help explains how to add a practice match and where a car leaves from', ()
   assert.equal(findArticle('oefenwedstrijd').tab, 'matches'); assert.ok(!findArticle('oefenwedstrijd').coordinatorOnly);
   assert.match(allText(findArticle('wedstrijden')), /Vertrek vanaf staat standaard op het busstation/);
 });
+test('Help explains "Eigen ouder rijdt mee" (terug, hard rule, only when the parent drives) and that it goes before the wishes', () => {
+  const a = articles.find(x => x.id === 'beheer-instellingen');
+  assert.ok(a.coordinatorOnly);
+  const s = allText(a);
+  assert.match(s, /Eigen ouder rijdt mee kies je een gezin waarvan de dochter bij de terugrit altijd in de auto van haar eigen ouder zit als die ouder rijdt/);
+  assert.match(s, /Rijdt die ouder niet, dan plant de app gewoon vrij/);
+  assert.match(s, /geen wens maar een vaste regel en gaat voor al het andere/);
+  assert.match(a.keywords, /eigen ouder/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
