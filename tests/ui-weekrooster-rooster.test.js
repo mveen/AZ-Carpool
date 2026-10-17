@@ -68,7 +68,9 @@ await testAsync('"Bekijk" opens Rooster on that day, in "Deze week"', async () =
   await asDecider({ scheduleDay: 'Ma', roosterMode: 'standard' });
   const btn = { dataset: { wrlook: 'Do' }, onclick: null };
   wireMyWeekActions({ querySelectorAll: sel => (sel === '[data-wrlook]' ? [btn] : []) });
-  btn.onclick(); assert.equal(S.scheduleDay, 'Do'); assert.equal(S.roosterMode, 'week');
+  withFakeNow(NOW, () => btn.onclick()); assert.equal(S.scheduleDay, 'Do'); assert.equal(S.roosterMode, 'week');
+  const html = dom.html('tab-schedule');
+  assert.match(html, /id="wrAlert"/, 'Rooster was drawn again for the day of the request, not left on Monday'); assert.match(text(html), /Actie nodig: 1 wijziging voor donderdag/);
 });
 await testAsync('the number on the Rooster tab adds the waiting requests to the existing count', async () => {
   await asDecider(); S.canEdit = false; updateTimeChangesBadge();

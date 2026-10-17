@@ -10,6 +10,7 @@ import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { activateTab } from './app.js';
+import { renderSchedule } from './ui-schedule.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges } from './weekrooster.js';
 import { dayEndMs, deciderFamilyOf, myDeciderDays, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekroosterActive } from './ui-weekrooster-form.js';
@@ -83,5 +84,5 @@ export function myWeekActionCardsHtml() {
 }
 
 export function wireMyWeekActions(box) {
-  box.querySelectorAll('[data-wrlook]').forEach(b => b.onclick = () => { hapticTap(); S.scheduleDay = b.dataset.wrlook; S.roosterMode = 'week'; activateTab('schedule'); });
+  box.querySelectorAll('[data-wrlook]').forEach(b => b.onclick = () => { hapticTap(); S.scheduleDay = b.dataset.wrlook; S.roosterMode = 'week'; S.wrAdvice = null; S.wrDone = null; renderSchedule(); activateTab('schedule'); });
 }
