@@ -5,14 +5,15 @@
 // These are status views, not notifications. Everything here only exists while the switch is on for this person.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, hapticTap, phIcon } from './ui-common.js';
+import { esc, hapticTap, phIcon, showToast } from './ui-common.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { activateTab } from './app.js';
 import { renderSchedule } from './ui-schedule.js';
+import { renderMyWeek } from './ui-myweek.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
-import { dayEndMs, deciderFamilyOf, myDeciderDays, requestsForDeciding } from './weekrooster-data.js';
+import { acceptDay, adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekroosterActive } from './ui-weekrooster-form.js';
 
 const wk = () => S.currentWeekKey;
@@ -72,6 +73,17 @@ export function scheduleDayExtrasHtml(day) {
 }
 
 // Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).
+// The advice for the day in one line (cars saved or added, all directions, "Zuinigst"); null when there is no sound arrangement.
+export function adviceLineOf(day) {
+  const advice = adviceForDay(day), dirs = Object.keys(advice.directions);
+  if (!dirs.length || dirs.some(d => advice.directions[d].variants.zuinig.noSolution)) return null;
+  const diff = dirs.reduce((sum, d) => sum + advice.directions[d].variants.zuinig.carsAfter - advice.directions[d].carsBefore, 0);
+  if (diff === 0) return t('weekrooster.action.adviceSame');
+  const n = Math.abs(diff);
+  if (diff < 0) return n === 1 ? t('weekrooster.action.adviceLess1') : t('weekrooster.action.adviceLessN', { p1: n });
+  return n === 1 ? t('weekrooster.action.adviceMore1') : t('weekrooster.action.adviceMoreN', { p1: n });
+}
+
 export function myWeekActionCardsHtml() {
   if (!weekroosterActive()) return '';
   const now = Date.now();
@@ -82,11 +94,25 @@ export function myWeekActionCardsHtml() {
     const row = (r, tag) => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span>${tag}</div>`;
     const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
       .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
+    const line = adviceLineOf(day);
     return `<div class="alertCard alertCard--stack" data-wraction="${day}"><div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>${rows}
-      <div class="formActions"><button type="button" class="btn small secondary" data-wrlook="${day}">${esc(t('weekrooster.action.look'))}</button></div></div>`;
+      ${line ? `<div class="alertCard__text">${esc(line)}</div>` : ''}
+      <div class="formActions"><button type="button" class="btn small secondary" data-wrlook="${day}">${esc(t('weekrooster.action.look'))}</button>${line ? `<button type="button" class="btn small" data-wrtake="${day}">${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button>` : ''}</div></div>`;
   }).join('');
 }
 
 export function wireMyWeekActions(box) {
   box.querySelectorAll('[data-wrlook]').forEach(b => b.onclick = () => { hapticTap(); S.scheduleDay = b.dataset.wrlook; S.roosterMode = 'week'; S.wrAdvice = null; S.wrDone = null; renderSchedule(); activateTab('schedule'); });
+  box.querySelectorAll('[data-wrtake]').forEach(b => b.onclick = async () => {
+    hapticTap();
+    const day = b.dataset.wrtake;
+    b.disabled = true;
+    const r = await acceptDay(day, 'zuinig');
+    if (!r.ok) { b.disabled = false; return; }
+    S.wrAdvice = null; S.wrDone = null;
+    showToast(t(r.n === 1 ? 'weekrooster.advice.doneOne' : 'weekrooster.advice.doneMany', { p1: r.n }), {
+      action: { label: t('deviation.ongedaan'), run: async () => { if (await r.undo()) { showToast(t('weekrooster.advice.undone')); renderSchedule(); renderMyWeek(); } } },
+    });
+    renderSchedule(); renderMyWeek();
+  });
 }

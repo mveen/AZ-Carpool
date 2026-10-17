@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, withFakeNow, NOW, sampleDbSeed, sampleParentState, assertNoUnusedImports } from './test-support.js';
+import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
@@ -62,7 +62,13 @@ await testAsync('Mijn week: the card "Actie nodig voor donderdag" with the reque
   assert.match(html, /alertCard alertCard--stack" data-wraction="Do"/); assert.match(s, /Actie nodig voor donderdag/);
   assert.match(s, /Anouk: Heen 11:00 · Terug 18:00 Aanvraag/); assert.match(s, /Evi: Rijdt niet mee Direct/);
   assert.match(html, /data-wrlook="Do"/); assert.doesNotMatch(noStyle(html), /style="/);
-  assert.doesNotMatch(s, /Overnemen/, 'accepting comes in the next phase');
+  assert.match(s, /Advies: (scheelt \d+ auto|zelfde aantal auto|\d+ auto.{0,3} erbij)/, 'one line of advice'); assert.match(html, /data-wrtake="Do"/); assert.match(s, /Overnemen/);
+});
+await testAsync('"Overnemen" on the card accepts the request and shows the toast; Bekijk and Overnemen sit side by side', async () => {
+  await asDecider(); const btn = { dataset: { wrtake: 'Do' }, onclick: null, disabled: false };
+  wireMyWeekActions({ querySelectorAll: sel => (sel === '[data-wrtake]' ? [btn] : []) });
+  await withFakeNowAsync(NOW, () => btn.onclick());
+  assert.equal(S.dayRequests['2026-W40_Do_f3'].status, 'accepted'); assert.doesNotMatch(text(mijnWeek()), /Actie nodig voor donderdag/);
 });
 await testAsync('"Bekijk" opens Rooster on that day, in "Deze week"', async () => {
   await asDecider({ scheduleDay: 'Ma', roosterMode: 'standard' });
@@ -77,6 +83,12 @@ await testAsync('the number on the Rooster tab adds the waiting requests to the 
   assert.equal(dom.el('navRoosterBadge').textContent, '1'); assert.notEqual(dom.el('navRoosterBadge').style.display, 'none');
   useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests(); updateTimeChangesBadge();
   assert.equal(dom.el('navRoosterBadge').style.display, 'none');
+});
+
+await testAsync('on his own day, children who do not ride along are struck-through chips; on another day the plain line stays', async () => {
+  await asDecider(); S.deviations = { ...S.deviations, Do_terug: { day: 'Do', direction: 'terug', weekKey: S.currentWeekKey, cars: [], ovGirlIds: ['f4'] }, Wo_terug: { day: 'Wo', direction: 'terug', weekKey: S.currentWeekKey, cars: [], ovGirlIds: ['f4'] } };
+  const html = rooster(); assert.match(html, /chip chip--gone/); assert.match(text(html), /Rijdt niet mee:/);
+  S.scheduleDay = 'Wo'; const other = rooster(); assert.doesNotMatch(other, /chip chip--gone/);
 });
 
 console.log('=== a parent ===');

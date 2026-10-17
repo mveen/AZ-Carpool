@@ -15,6 +15,8 @@ import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandar
 import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
+import { myDeciderDays } from './weekrooster-data.js';
+import { weekroosterActive } from './ui-weekrooster-form.js';
 import { scheduleAdviceHtml, wireAdvice } from './ui-weekrooster-advice.js';
 import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
@@ -216,7 +218,9 @@ export function renderDirectionWeek(day,direction){
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
   const askCar = cars.find(c=>myId && c.driverFamilyId===myId) || cars.find(c=>myId && (c.girlIds||[]).includes(myId)) || cars[0];
   const notRiding = ovGirlsFor(day,undefined,direction);
-  const notRidingHtml = notRiding.length? `<div class="noteLine">${t('schedule.rijdt_niet_mee')} ${sortGirlIds(notRiding).map(id=>girlName(id)).join(', ')}</div>` : '';
+  // The day coordinator (new weekly request feature on) sees who stays home as struck-through chips; everyone else keeps the plain line.
+  const goneChips = weekroosterActive() && myDeciderDays().includes(day);
+  const notRidingHtml = notRiding.length? (goneChips? `<div class="chips"><span class="noteLine">${t('schedule.rijdt_niet_mee')}</span>${sortGirlIds(notRiding).map(id=>`<span class="chip chip--gone">${girlName(id)}</span>`).join('')}</div>` : `<div class="noteLine">${t('schedule.rijdt_niet_mee')} ${sortGirlIds(notRiding).map(id=>girlName(id)).join(', ')}</div>`) : '';
   return `<div>
     ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>`:'')}
     ${cardsHtml}${unplacedBoxHtml(day,direction)}${notRidingHtml}
