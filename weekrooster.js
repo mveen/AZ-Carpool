@@ -166,3 +166,24 @@ export function staleRequestIds(requests, currentWeekKey) {
   return Object.entries(requests || {}).filter(([, r]) => r && ((isWeekKey(r.weekKey) && r.weekKey < currentWeekKey) || r.status === 'withdrawn')).map(([id]) => id);
 }
 
+// ---------- the day coordinator's view (phase 3) ----------
+// The weekdays this family decides (deciderOf(day) = family id of the day coordinator, or of the real coordinator when none is set).
+export function decidedDays(deciderOf, familyId) {
+  return familyId ? REQUEST_DAYS.filter(day => deciderOf(day) === familyId) : [];
+}
+// How many requests of a week still wait for a decision, per day ({ Do: 2 }; only days with a number above zero).
+export function actionCounts(requests, weekKey, days, nowMs, dayEndOf) {
+  const out = {};
+  for (const day of days || []) {
+    const n = pendingForDay(requests, weekKey, day, nowMs, dayEndOf ? dayEndOf(day) : undefined).length;
+    if (n > 0) out[day] = n;
+  }
+  return out;
+}
+// The log of one day ("Recente wijzigingen"): requests and direct changes that are still in force (not withdrawn, not expired), newest first.
+export function recentChanges(requests, weekKey, day, nowMs, dayEnd) {
+  return Object.entries(requests || {})
+    .filter(([, r]) => r && r.weekKey === weekKey && r.day === day && ['pending', 'direct', 'accepted'].includes(requestState(r, nowMs, dayEnd)))
+    .sort((a, b) => b[1].updatedAt - a[1].updatedAt || (a[0] < b[0] ? -1 : 1))
+    .map(([id, r]) => ({ id, ...r, state: requestState(r, nowMs, dayEnd) }));
+}

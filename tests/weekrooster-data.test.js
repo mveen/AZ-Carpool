@@ -9,7 +9,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
-import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
+import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -157,6 +157,38 @@ await testAsync('withdrawing takes back the open requests of one week only', asy
     await new Promise(x => setImmediate(x));
     assert.equal(await withdrawWeekRequests('this'), false, 'nothing open any more');
   });
+});
+
+console.log('=== phase 3: the day coordinator reads the requests of his days ===');
+const WK = '2026-W40';
+const reqDoc = (day, fam, extra = {}) => ({ weekKey: WK, day, familyId: fam, rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1, ...extra });
+await testAsync('the days a person decides: the day coordinator\'s own days; the coordinator\'s family when no day coordinator is set; nobody without the switch', async () => {
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2', Vr: 'f3' } });
+  assert.deepEqual(myDeciderDays(), ['Do']);
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, coordinatorConfig: { uid: 'coord', familyId: 'f2' } });
+  assert.deepEqual(myDeciderDays(), ['Ma', 'Di', 'Wo', 'Do', 'Vr'], 'days without a day coordinator belong to the coordinator\'s family');
+  sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); assert.deepEqual(myDeciderDays(), []);
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, links: {} }); assert.deepEqual(myDeciderDays(), []);
+});
+await testAsync('a day coordinator reads the other families\' requests of his day (this week), live; the own ones stay separate', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': reqDoc('Do', 'f3'), 'weekRequests/2026-W40_Do_f4': reqDoc('Do', 'f4', { status: 'direct', rides: false, heen: '', terug: '' }), 'weekRequests/2026-W40_Vr_f3': reqDoc('Vr', 'f3'), 'weekRequests/2026-W41_Do_f3': reqDoc('Do', 'f3', { weekKey: '2026-W41' }) });
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  assert.deepEqual(Object.keys(S.dayRequests).sort(), ['2026-W40_Do_f3', '2026-W40_Do_f4'], 'only his day, only this week, only the others');
+  assert.equal(S.dayRequestsUnsubs.length, 5, 'one listener per other family for his one day');
+  await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'weekRequests/2026-W40_Do_f5'), reqDoc('Do', 'f5'));
+  assert.ok(S.dayRequests['2026-W40_Do_f5'], 'a new request shows up at once');
+  assert.ok(requestsForDeciding()['2026-W40_Do_f3'] && !requestsForDeciding()['2026-W41_Do_f3']);
+  syncWeekRequests(); assert.equal(S.dayRequestsUnsubs.length, 5, 'unchanged: the listeners are kept');
+});
+await testAsync('a parent who decides no day reads nothing of others; switch off: nothing at all; stopping closes everything', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': reqDoc('Do', 'f3') });
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' } }); syncWeekRequests();
+  assert.equal(S.dayRequestsUnsubs.length, 0); assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, '');
+  sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
+  assert.equal(S.dayRequestsUnsubs.length + S.weekRequestsUnsubs.length, 0);
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
+  assert.equal(S.dayRequestsUnsubs.length, 5); stopWeekRequests();
+  assert.equal(S.dayRequestsUnsubs.length, 0); assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, '');
 });
 
 import { assertNoUnusedImports } from './test-support.js';

@@ -16,6 +16,7 @@ import { renderMatchesTab } from './ui-matches.js';
 import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
+import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-rooster.js';
 import { myWeekWeekroosterHtml, requestPillHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
@@ -227,11 +228,11 @@ export function renderMyWeek(){
   });
 
   box.innerHTML = `
-    ${myWeekWeekroosterHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}
+    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}
     ${matchTiles}${matchFailNote}${matchStatusNote}
     ${dayCoordinatorHtml()}
   `;
-  wireMyWeekWeekrooster(box);
+  wireMyWeekWeekrooster(box); wireMyWeekActions(box);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';

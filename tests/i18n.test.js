@@ -310,6 +310,13 @@ test('Mijn week loading texts exist: spinner line, slow line and reload button',
   assert.match(t('myweek.laden'), /geladen/); assert.match(t('myweek.laden_traag'), /langer dan normaal/); assert.equal(t('myweek.opnieuw_laden'), 'Opnieuw laden');
 });
 
+test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist and name the day', () => {
+  ['tag.request', 'tag.accepted', 'action.title', 'action.look', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
+  assert.equal(t('weekrooster.alert.titleOne', { p1: 1, p2: 'donderdag' }), 'Actie nodig: 1 wijziging voor donderdag');
+  assert.equal(t('weekrooster.alert.titleMany', { p1: 3, p2: 'donderdag' }), 'Actie nodig: 3 wijzigingen voor donderdag');
+  assert.match(t('weekrooster.alert.body'), /Rijdt niet mee/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

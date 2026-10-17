@@ -1210,6 +1210,15 @@ export default {
   "weekrooster.myweek.request": "Aanvraag voor {p1}: {p2}. {p3} beslist.",
   "weekrooster.myweek.nextWeek": "volgende week {p1}",
   "weekrooster.pill.request": "Aanvraag",
+  "weekrooster.tag.request": "Aanvraag",
+  "weekrooster.tag.accepted": "Akkoord",
+  "weekrooster.action.title": "Actie nodig voor {p1}",
+  "weekrooster.action.look": "Bekijk",
+  "weekrooster.alert.titleOne": "Actie nodig: 1 wijziging voor {p2}",
+  "weekrooster.alert.titleMany": "Actie nodig: {p1} wijzigingen voor {p2}",
+  "weekrooster.alert.body": "Het vaste rooster geldt tot jij akkoord geeft. 'Rijdt niet mee' is al verwerkt.",
+  "weekrooster.log.title": "Recente wijzigingen",
+  "weekrooster.note.own": "Jouw aanvraag: {p1}. {p2} beslist.",
 
   // Agenda (calendar subscription: Profiel card and the .ics file made by cron/agenda.mjs)
   'agenda.titel_rit': 'Carpool {dir}: {route}',

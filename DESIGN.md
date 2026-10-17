@@ -96,3 +96,8 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - **Column heads** `.periodColHead`: the two captions ("Heen: aankomsttijd", "Terug: klaar om op te halen") above the day rows of a time form.
 - **Waiting card** `.periodDone--wait`: the "Doorgegeven" card in amber while at least one day waits for the day coordinator (green when everything was applied at once).
 - Reused as they are: `.periodDay` (+ `.changed`), `.periodDone`, `.segmented`, `.alertCard`, `.tag--warn` / `.tag--ok`, `.coordLine`, `.noteLine`, `.linkbtn`, `.formActions`, `.periodSummary`.
+
+## Components added for the Afwijkend weekrooster (phase 3)
+
+- **Log line** `.logItem` with `.logItem__dot`, `.logItem__dot--ok`, `.logItem__main`, `.logItem__side`, `.logItem__when`: one line of "Recente wijzigingen" in Rooster: who, what, the tag (Aanvraag amber, Direct or Akkoord green) and when ("wo 07:12"). A status log of what is in force now, not a notification.
+- Reused as they are: `.devAlert` ("Actie nodig"), `.alertCard--stack` with `.alertCard__row` (the action card in Mijn week), `.dayPill__dot` (a day that needs an action), `.coordLine`, `.noteLine`, `.tag--warn` / `.tag--ok`, `.navbadge` (the Rooster tab number).

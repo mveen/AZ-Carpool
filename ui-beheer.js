@@ -8,6 +8,7 @@ import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
 import { weekroosterCardHtml, wireWeekroosterCard } from './ui-weekrooster.js';
+import { weekroosterActionCount } from './ui-weekrooster-rooster.js';
 import { pushCardHtml, wirePushCard } from './ui-push.js';
 import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
@@ -961,7 +962,7 @@ export function wireTimeChangesCard(){
 export function updateTimeChangesBadge(){
   const badge=document.getElementById('navRoosterBadge');
   if(!badge) return;
-  const n = S.canEdit? countPendingChanges(S.families) : 0;
+  const n = (S.canEdit? countPendingChanges(S.families) : 0) + weekroosterActionCount();   // + the requests that wait for this day coordinator
   badge.textContent = n>9? '9+' : String(n);
   badge.style.display = n? '' : 'none';
 }

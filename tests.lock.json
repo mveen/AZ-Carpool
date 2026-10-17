@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "b38b757ce443a8f1df3be0409fe61b108bc823167ff233d4efc606f2e1d40556",
-    "test": "7a2d15d322cd649bd108a34e25ceec95eef82b70e5a51d0e12dcfe4148ccb5cc"
+    "module": "cfb6f10661cb755cede38dc82adc6408615b089835c3d0b718b12718b53b090f",
+    "test": "6811d791df1885d3198d29b35981dc5b095e3dc173c927c5c0f90cc8f9b41642"
   },
   "coordinator.js": {
     "module": "d732b9bd620219e8591cbb22f30f7aeba2089ffed4eb815d4b6d70f1c769b13e",
@@ -52,16 +52,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "6366fb9e4c2be2c292ceacf8fad936342bb1583f15a7d9e5e849a359b535bf50",
-    "test": "e4ffa45ca762d8673c7ba2a80a6e0d2b89d1ddfecadec98912a2d1b49b1583f5"
+    "module": "c2ae1516172f411907836b1fdf2d1548d6bb9ed37e95a5c16cddac1d503ddff0",
+    "test": "47673a3abd322622a2aa36920237dd734a8b34eba096b1beefd40a268ede4ccc"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "e4ffa45ca762d8673c7ba2a80a6e0d2b89d1ddfecadec98912a2d1b49b1583f5"
+    "test": "47673a3abd322622a2aa36920237dd734a8b34eba096b1beefd40a268ede4ccc"
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "0c60e49680746051f3832c060f579e561a0d6522e05f7809491ea1f9ea931c64"
+    "test": "325bc1e028615e15bef59aea90022355051deed5620aacde7f9e57eb66fc6ab5"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -148,24 +148,24 @@
     "test": "886ab9cbf435ff4ecfa12f24cd730387005b5821eff4a8ba8904e939ebc10159"
   },
   "state.js": {
-    "module": "1d409c0ad03dcb0cd5494d978cd60f8f56c03d1567c2e8871ba38d94fb4571e6",
-    "test": "ad4f0a4a287fa8dfd3c63d694a3537df0d669ddc13b3a5162d9528609c9da364"
+    "module": "d09b5e71379c02cad2018e8e4bdf6e701225dff0cffc72c4db2d52f548c1be90",
+    "test": "4402d2b80a44cef4400fb5ae726fa4a5a50216fc5341bf1efd48fddaac5dad42"
   },
   "swipe-tabs.js": {
     "module": "0cd7e7ab88193d845bd2b9a8948bd86d3bc9cc48c57d5df39fe6ef1d60dfe1bb",
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "ee242a232aac71a52813f7c9ff6d26d8bbbd43f0892b4419ecb403d0c2ce6763",
-    "test": "0c60e49680746051f3832c060f579e561a0d6522e05f7809491ea1f9ea931c64"
+    "module": "07940079d09e9aab7a46fd689084e26a721128e1647fb942fadb469147bf013c",
+    "test": "325bc1e028615e15bef59aea90022355051deed5620aacde7f9e57eb66fc6ab5"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
     "test": "a2fcb51f00216c17eb995b61969f177796b30199f13e739306509b8febfeabc8"
   },
   "ui-beheer.js": {
-    "module": "8705fb88d678be07517e599a7faf0582fb5e76fcc9e75c19445c367e6cd8f6c8",
-    "test": "2c4f991a2bc1d1b33b37854406d741cc6ca82572c9ca05821826d3fa4f52cce0"
+    "module": "7f317ef7aefb000655cd1c75aaf0605ff98af4857d67049fbdc2b5c6f09de4dd",
+    "test": "1e3c6f322314daacdd8d2d312f941c0277349033d6a01292878c0b424854bc36"
   },
   "ui-common.js": {
     "module": "012d8ffdfa403d4e3e11d51e209230e9b37ebf353892627e9a1663661881e4b4",
@@ -196,8 +196,8 @@
     "test": "81ca0b8757398ec8ea87ba83f2e72bc1dbf81a6aad6c9dbf1c66202398fe49bd"
   },
   "ui-myweek.js": {
-    "module": "1d38b61152999dafdefbe5d1f115490e0e12b47a019d61247377c6a71f1c2f3d",
-    "test": "ae58a531dd17ea790752aee775007f62172a1c6d4b32d8cb1dfd333e3fbf0cd1"
+    "module": "0e9182f7c457bc169a5e201e63df0ba4996c2f1cbe0db4cb2c6dc8ca3f85b30c",
+    "test": "ec9d0c8fb23076181e5b41555e972c87e49c7b6522ac406968f6d6e5158afd26"
   },
   "ui-notice.js": {
     "module": "7d865a1452c65c3f140e18eceba721b8a37985a8ccb709de53877d070af42554",
@@ -236,31 +236,35 @@
     "test": "517b4fefcabfc3462e054ebfd63f300188a2724468664f100d8c6824b411bf6f"
   },
   "ui-schedule.js": {
-    "module": "264e6a3858679cc2e9a257f580bc3cdb36e568ecf0c330aa82cada7b7065f47c",
-    "test": "28078b39b6a3bb6014d4e1a41fe002ec36fbe55b2198eace735537425b0a5408"
+    "module": "57745d722c72725d17336925b402a8cb429178b11ed06d5fb818d0e400e9c1e8",
+    "test": "edea2700cac72a6d0daeb7c3a3183d7f842fdb4316efafdbc0f7c09f886d1e7c"
   },
   "ui-shell.js": {
     "module": "5656890dc40270f6fcd214c2500457c1d0fd757e62a2bc6c340ad94380c7c5fd",
     "test": "85819663039270c7153005a17bde399b3a5cf2aec42e05324d7219e8a31eafe3"
   },
   "ui-weekrooster-form.js": {
-    "module": "ac5f5f75daf3f68a54666d0fb3ac17d81034ea89d68df8c094508dc517a67687",
-    "test": "2048faa9b3a78cbeafcbf567b283879022359cc4ca39e7d48d31fee7aec04dc4"
+    "module": "59c34a6deca80ed9314b56a05c9671af533fe682c39a01c0fb6270340b0eb820",
+    "test": "d1c24f6d6a8ff0d219486123667ff7fe95bfe4f934b3bfdb725cb006b806f959"
+  },
+  "ui-weekrooster-rooster.js": {
+    "module": "1ce3f9f1958b926eba748eecea89367efba42648033ab3a42ea13e1e155a1b35",
+    "test": "db79b0bfcd513ff7c3cadfedb85e84cfdce63f62d2044fa9d9248930c60fdfac"
   },
   "ui-weekrooster.js": {
     "module": "4126f4e8294ff3ef31e80208740f90a2412172757dc0c85a211411cfa9e8ead1",
     "test": "7719b80d8505e3e1b5cd91752fcb429c6e6f8c6d7c7a870d2ee3181767290c9d"
   },
   "weekrooster-data.js": {
-    "module": "7e84e8ff277a0bfdefdc681f67a425888acc3456d1694a9fe6d820111beba234",
-    "test": "58d4c1593a2a507c9e3e957b30608b1e98ebfc06bf0deba1c504f619bcbe2972"
+    "module": "7911d58b5e6e03e8f298bba19ac87975a9d72c6e3fb9a66b9c8f5250352b8ad2",
+    "test": "c86b11d5205a4b6471fe0c793f68414cdde88ff71400e8656572ccee5d1f8f3d"
   },
   "weekrooster-impact.js": {
     "module": "2e0f13aabc8d5e186fbed3681b10d685056ec474e6875d9e338fbfe046615f40",
     "test": "2036488cc0ef2e71d61c21bcd1767ecb88971c31a81d37fa871898529bfd3c2a"
   },
   "weekrooster.js": {
-    "module": "1e8585c3459a30df3b8205910720116bef0c3fcec238e92873d4b71aef5427aa",
-    "test": "7444bc70fdfdf137cd3d43e77851275c6aee352a84784ceabdf471b4f6f4c682"
+    "module": "0d574e7709a914a615c5c66583397c29225b8db5b816f73baeeac64c00c6638b",
+    "test": "9db728be48ed5f74c54bb667763cb666546e1431cefbf6d490325a8175d0b303"
   }
 }

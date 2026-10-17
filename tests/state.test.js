@@ -127,5 +127,9 @@ test('Mijn week loading flags: all start false, so rideDataLoaded() is false unt
   assert.equal(rideDataLoaded(), true);
 });
 
+test('Afwijkend weekrooster (day coordinator): no requests of other families and no listeners at start', () => {
+  assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, ''); assert.deepEqual(S.dayRequestsUnsubs, []);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

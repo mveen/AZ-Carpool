@@ -722,6 +722,14 @@ test('design v2: ui-beheer.js only uses variables from tokens.css in its inline 
   assert.deepEqual(unknown, []);
 });
 
+test('Afwijkend weekrooster: the number on the Rooster tab also counts the requests that wait for this day coordinator', () => {
+  const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req } });
+  updateTimeChangesBadge(); assert.equal(dom.el('navRoosterBadge').textContent, '1');
+  S.weekrooster = { mode: 'uit' }; updateTimeChangesBadge(); assert.equal(dom.el('navRoosterBadge').style.display, 'none');
+});
+
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-beheer.js imports nothing it does not use', () => assertNoUnusedImports('ui-beheer.js'));
 

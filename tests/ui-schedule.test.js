@@ -292,6 +292,16 @@ test('Rooster has no "Laatst bijgewerkt" footer, in any mode', () => {
     assert.doesNotMatch(h, /Laatst bijgewerkt/i);
   }
 });
+test('Afwijkend weekrooster: Rooster "Deze week" gets the action block only on a day this person decides, and only with the switch on', () => {
+  const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req }, scheduleDay: 'Do', roosterMode: 'week' });
+  withFakeNow(NOW, () => renderSchedule()); assert.match(dom.html('tab-schedule'), /id="wrAlert"/);
+  S.scheduleDay = 'Wo'; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAlert"/);
+  S.scheduleDay = 'Do'; S.roosterMode = 'standard'; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAlert"/, 'Vast rooster stays as it is');
+  S.roosterMode = 'week'; S.weekrooster = { mode: 'uit' }; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAlert|wrLog|Dagcoördinator donderdag/);
+});
+
 import { assertNoUnusedImports } from './test-support.js';
 await (async () => {
   const toastNow = () => text(dom.doc.getElementById('toast').innerHTML);

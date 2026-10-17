@@ -11,7 +11,7 @@ import './test-support.js';
 import {
   WEEKROOSTER_MODES, REQUEST_DAYS, REQUEST_STATUSES, REQUEST_FIELDS,
   normalizeWeekrooster, weekroosterDoc, weekroosterVisible, requestId, isValidRequest, decideMode, buildRequests,
-  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf,
+  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf, decidedDays, actionCounts, recentChanges,
 } from '../weekrooster.js';
 
 console.log('=== the feature switch ===');
@@ -211,6 +211,35 @@ test('the open requests of a family: pending (not expired) and direct, in week o
   assert.deepEqual(openRequestsOf(requests, WK, 'f2', 1, d => ends[d]).map(r => r.day), ['Wo', 'Do', 'Vr']);
   assert.deepEqual(openRequestsOf(requests, WK, 'f2', 5000, d => ends[d]).map(r => r.day), ['Wo', 'Vr']);
   assert.deepEqual(openRequestsOf(undefined, WK, 'f2', 1), []);
+});
+
+console.log('=== phase 3: the day coordinator\'s view ===');
+test('the days a family decides: its own days; none without a family', () => {
+  const dec = d => ({ Ma: 'f1', Do: 'f2', Vr: 'f2' }[d] || 'f9');
+  assert.deepEqual(decidedDays(dec, 'f2'), ['Do', 'Vr']); assert.deepEqual(decidedDays(dec, 'f1'), ['Ma']);
+  assert.deepEqual(decidedDays(dec, ''), []); assert.deepEqual(decidedDays(dec, null), []); assert.deepEqual(decidedDays(dec, 'nobody'), []);
+});
+test('the actions per day count the pending requests only (not direct, accepted, withdrawn or expired ones), of the asked days only', () => {
+  const reqs = {
+    a: { ...good, familyId: 'fa' }, b: { ...good, familyId: 'fb' }, c: { ...good, day: 'Vr', familyId: 'fc' },
+    d: { ...good, familyId: 'fd', status: 'direct', rides: false, heen: '', terug: '' }, e: { ...good, familyId: 'fe', status: 'accepted' }, f: { ...good, familyId: 'ff', status: 'withdrawn' },
+    g: { ...good, weekKey: '2026-W42', familyId: 'fg' },
+  };
+  assert.deepEqual(actionCounts(reqs, WK, ['Do'], 1, () => 5000), { Do: 2 });
+  assert.deepEqual(actionCounts(reqs, WK, ['Do', 'Vr'], 1, () => 5000), { Do: 2, Vr: 1 });
+  assert.deepEqual(actionCounts(reqs, WK, ['Do'], 5000, () => 5000), {}, 'a day that is over: nothing to do any more');
+  assert.deepEqual(actionCounts(reqs, WK, ['Ma'], 1), {}); assert.deepEqual(actionCounts(undefined, WK, ['Do'], 1), {}); assert.deepEqual(actionCounts(reqs, WK, undefined, 1), {});
+});
+test('the log of a day: what is in force, newest first, with its state', () => {
+  const reqs = {
+    a: { ...good, familyId: 'fa', updatedAt: 5 }, b: { ...good, familyId: 'fb', status: 'direct', rides: false, heen: '', terug: '', updatedAt: 9 },
+    c: { ...good, familyId: 'fc', status: 'accepted', updatedAt: 7 }, d: { ...good, familyId: 'fd', status: 'withdrawn', updatedAt: 99 },
+    e: { ...good, familyId: 'fe', day: 'Vr', updatedAt: 99 }, f: null,
+  };
+  const log = recentChanges(reqs, WK, 'Do', 1, 5000);
+  assert.deepEqual(log.map(r => [r.id, r.state]), [['b', 'direct'], ['c', 'accepted'], ['a', 'pending']]);
+  assert.deepEqual(recentChanges(reqs, WK, 'Do', 5000, 5000).map(r => r.id), ['b', 'c'], 'an expired request leaves the log');
+  assert.deepEqual(recentChanges(undefined, WK, 'Do', 1), []);
 });
 
 import { assertNoUnusedImports } from './test-support.js';

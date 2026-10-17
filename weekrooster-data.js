@@ -13,7 +13,8 @@ import { weekKeyDayIso } from './dates.js';
 import { db, setReturnByPublicTransport } from './data.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMyWeek } from './ui-myweek.js';
-import { REQUEST_DAYS, buildRequests, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
+import { renderSchedule } from './ui-schedule.js';
+import { REQUEST_DAYS, buildRequests, decidedDays, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
 
 export function weekroosterMode() { return normalizeWeekrooster(S.weekrooster).mode; }
 // Does THIS person see and use the new flow? "test": only the real coordinator (Testweergave does not change that). "aan": everybody.
@@ -74,12 +75,31 @@ function stopWeekRequestListeners() {
   (S.weekRequestsUnsubs || []).forEach(u => { try { u(); } catch (e) { /* already gone */ } });
   S.weekRequestsUnsubs = [];
 }
-export function stopWeekRequests() { stopWeekRequestListeners(); S.weekRequests = {}; S.weekRequestsKey = ''; }
+function stopDayRequestListeners() {
+  (S.dayRequestsUnsubs || []).forEach(u => { try { u(); } catch (e) { /* already gone */ } });
+  S.dayRequestsUnsubs = [];
+}
+export function stopWeekRequests() { stopWeekRequestListeners(); stopDayRequestListeners(); S.weekRequests = {}; S.weekRequestsKey = ''; S.dayRequests = {}; S.dayRequestsKey = ''; }
+
+// The weekdays this person decides (day coordinator of that day, or the coordinator's family when no day coordinator is set).
+export function myDeciderDays() {
+  if (!weekroosterOn() || !myLinkedFamilyId()) return [];
+  return decidedDays(deciderFamilyOf, myFamilyId());
+}
+// All requests of this week that this person may see: the own ones plus, for the days they decide, those of the other families.
+export function requestsForDeciding() { return { ...S.dayRequests, ...S.weekRequests }; }
 
 // Keeps the listeners in step with: the switch, who is looking (also in Testweergave) and the planning week. With the switch off for
 // this person there are none, and nothing is read.
+// - Own requests: 10 known documents (this week and next week, five days).
+// - A day coordinator also reads the requests of the other families for the days they decide, THIS week only: what was handed in as
+//   "next week" shows up by itself when the week changes (Friday 19:00).
 export function syncWeekRequests() {
   const fid = (db && S.me && weekroosterOn() && myLinkedFamilyId()) ? myFamilyId() : null;
+  syncOwn(fid);
+  syncDays(fid);
+}
+function syncOwn(fid) {
   const key = fid ? fid + '|' + S.currentWeekKey : '';
   if (key === (S.weekRequestsKey || '')) return;
   stopWeekRequestListeners();
@@ -91,8 +111,26 @@ export function syncWeekRequests() {
       const next = { ...S.weekRequests };
       if (snap.exists) next[id] = snap.data(); else delete next[id];
       S.weekRequests = next;
-      renderDeviationTab(); renderMyWeek();
+      renderDeviationTab(); renderMyWeek(); renderSchedule();
     }, () => { /* no permission or offline: the screens simply show no requests */ }));
+  }));
+}
+function syncDays(fid) {
+  const days = fid ? myDeciderDays() : [];
+  const others = fid ? Object.keys(S.families || {}).filter(id => id !== fid).sort() : [];
+  const key = days.length && others.length ? [fid, S.currentWeekKey, days.join(''), others.join(',')].join('|') : '';
+  if (key === (S.dayRequestsKey || '')) return;
+  stopDayRequestListeners();
+  S.dayRequests = {}; S.dayRequestsKey = key;
+  if (!key) return;
+  days.forEach(day => others.forEach(other => {
+    const id = requestId(S.currentWeekKey, day, other);
+    S.dayRequestsUnsubs.push(db.doc('weekRequests/' + id).onSnapshot(snap => {
+      const next = { ...S.dayRequests };
+      if (snap.exists) next[id] = snap.data(); else delete next[id];
+      S.dayRequests = next;
+      renderMyWeek(); renderSchedule();
+    }, () => { /* not allowed (not the day coordinator after all) or offline: nothing to show */ }));
   }));
 }
 

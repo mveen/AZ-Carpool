@@ -14,6 +14,7 @@ import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandardShift, useOption } from './data.js';
 import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
+import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
@@ -58,7 +59,7 @@ export function renderSchedule(){
     return `<button type="button" class="dayPill${isActive?' on':''}${isToday?' dayPill--today':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? t('schedule.niet_ingedeeld_2', { p1: unplaced }):''}">
       <span class="dayPill__ab">${isToday? esc(t('myweek.vandaag').toLowerCase()) : dayUp(k).toLowerCase()}</span>
       <span class="dayPill__n">${dateForWeekday(k).getDate()}</span>
-      ${unplaced? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
+      ${(unplaced || (mode==='week' && weekroosterDayDot(k)))? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
     </button>`;
   }).join('');
   const label = DAYS.find(([k])=>k===S.scheduleDay)[1];
@@ -76,7 +77,7 @@ export function renderSchedule(){
     + segHtml
     + (mode==='period'
       ? periodViewHtml()
-      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label));
+      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + (mode==='week'? scheduleDayExtrasHtml(S.scheduleDay) : '') + renderDay(S.scheduleDay, label));
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
   });

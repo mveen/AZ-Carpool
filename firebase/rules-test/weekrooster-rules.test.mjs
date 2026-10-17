@@ -75,6 +75,10 @@ await check('a family reads its own request', getDoc(doc(as('u4'), 'weekRequests
 await check('a family cannot read another family\'s request', getDoc(doc(as('u3'), 'weekRequests/' + id('Do', 'f4'))), false);
 await check('the day coordinator reads the requests of his day', getDocs(query(collection(as('u2'), 'weekRequests'), where('day', '==', 'Do'))));
 await check('the day coordinator cannot read another day', getDocs(query(collection(as('u2'), 'weekRequests'), where('day', '==', 'Vr'))), false);
+await check('a family reads its own request that does not exist (yet): an empty answer, not an error', getDoc(doc(as('u3'), 'weekRequests/' + id('Di', 'f3'))));
+await check('the day coordinator reads a request of his day that does not exist (yet)', getDoc(doc(as('u2'), 'weekRequests/' + id('Do', 'f3'))));
+await check('a family cannot "read" the missing request of another family either', getDoc(doc(as('u3'), 'weekRequests/' + id('Di', 'f4'))), false);
+await check('the day coordinator cannot read a missing request of another day', getDoc(doc(as('u2'), 'weekRequests/' + id('Vr', 'f4'))), false);
 await check('a family lists its own requests', getDocs(query(collection(as('u4'), 'weekRequests'), where('familyId', '==', 'f4'))));
 await check('a family cannot list everything', getDocs(collection(as('u4'), 'weekRequests')), false);
 await check('the coordinator reads everything', getDocs(collection(as('coord'), 'weekRequests')));

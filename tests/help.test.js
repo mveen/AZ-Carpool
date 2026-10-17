@@ -321,5 +321,10 @@ test('the Afwijkend weekrooster article explains what Test shows and that day-by
   assert.match(s, /Tijden wijzigen/); assert.match(s, /Volgende week/); assert.match(s, /verborgen/);
 });
 
+test('the Afwijkend weekrooster article tells a day coordinator what he sees (action card, Recente wijzigingen, dot, number)', () => {
+  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+  assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

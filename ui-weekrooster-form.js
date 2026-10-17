@@ -17,9 +17,9 @@ import { REQUEST_DAYS, requestId, requestState, weekFormFrom, openRequestsOf } f
 import { expectedImpact } from './weekrooster-impact.js';
 import { dayEndMs, deciderFamilyOf, isDayPast, standardTimes, submitWeekRequests, weekKeyFor, weekroosterOn, withdrawWeekRequests } from './weekrooster-data.js';
 
-const dayName = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
-const lower = s => String(s || '').toLowerCase();
-const upperFirst = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
+export const dayName = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
+export const lower = s => String(s || '').toLowerCase();
+export const upperFirst = s => String(s || '').charAt(0).toUpperCase() + String(s || '').slice(1);
 const weekNumber = weekKey => +String(weekKey).split('-W')[1];
 
 // ---------- who sees it ----------
@@ -35,11 +35,11 @@ function mine(w) {
   const wk = weekKeyFor(w);
   return openRequestsOf(S.weekRequests, wk, myFamilyId(), Date.now(), day => dayEndMs(wk, day));
 }
-const deciderName = day => { const id = deciderFamilyOf(day); return id ? (fam(id).parentName || '') : ''; };
-const deciderLabel = day => deciderName(day) || t('weekrooster.decider.unknown');
+export const deciderName = day => { const id = deciderFamilyOf(day); return id ? (fam(id).parentName || '') : ''; };
+export const deciderLabel = day => deciderName(day) || t('weekrooster.decider.unknown');
 
 // One short text for a handed-in day: "Heen 16:30 · Terug 17:45" or "Rijdt niet mee".
-function summaryOf(r) {
+export function summaryOf(r) {
   if (r.rides === false) return t('weekrooster.done.out');
   return [r.heen ? t('weekrooster.done.heen', { p1: r.heen }) : '', r.terug ? t('weekrooster.done.terug', { p1: r.terug }) : ''].filter(Boolean).join(' · ');
 }

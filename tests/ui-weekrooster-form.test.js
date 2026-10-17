@@ -15,7 +15,7 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, myWeekWeekroosterHtml, requestPillHtml } from '../ui-weekrooster-form.js';
+import { weekroosterActive, submitWeekForm, myWeekWeekroosterHtml, requestPillHtml, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
@@ -116,6 +116,13 @@ await testAsync('"Wie merkt dit" says when another car is needed (next week, Mon
   assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), true); await tick();
   const s = text(wijzigen());
   assert.match(s, /Doorgegeven · week 41/); assert.match(s, /MA Heen[^.]*auto extra nodig/);
+});
+test('the helpers the day coordinator\'s screens share: one-line summary, day names, the decider (never lower case at the start of a sentence)', () => {
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' } });
+  assert.equal(summaryOf({ rides: true, heen: '11:00', terug: '18:00' }), 'Heen 11:00 · Terug 18:00');
+  assert.equal(summaryOf({ rides: true, heen: '', terug: '18:00' }), 'Terug 18:00'); assert.equal(summaryOf({ rides: false, heen: '', terug: '' }), 'Rijdt niet mee');
+  assert.equal(dayName('Do'), 'Donderdag'); assert.equal(lower('Donderdag'), 'donderdag'); assert.equal(upperFirst('de coördinator'), 'De coördinator');
+  assert.equal(deciderLabel('Do'), 'Kees de Vries'); assert.equal(deciderLabel('Ma'), 'de coördinator');
 });
 
 console.log('=== the code ===');

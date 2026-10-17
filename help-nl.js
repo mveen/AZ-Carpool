@@ -393,7 +393,7 @@ export default [
       'Test betekent: alleen jij als coördinator ziet de nieuwe functie. Ouders merken niets. Met Bekijk als kun je hem als ouder of dagcoördinator proberen.',
       'Aan betekent: iedereen ziet de nieuwe functie. Zet de schakelaar pas op Test of Aan nadat de nieuwe database-regels zijn uitgerold.',
       'Zet je de schakelaar weer op Uit, dan stopt alles direct. Bestaande gegevens blijven ongemoeid.',
-      'Wat je in Test ziet: in Mijn week de knop Tijden wijzigen, en in Wijzigen het weekformulier voor Deze week en Volgende week. Nieuwe tijden worden een aanvraag. Rijdt niet mee geldt direct. Het vaste rooster blijft gelden tot de dagcoördinator akkoord geeft. Let op: zolang de nieuwe functie aan staat, is het dag-voor-dag wijzigen in Wijzigen verborgen; zet je hem op Uit, dan is het weer terug.',
+      'Wat je in Test ziet: in Mijn week de knop Tijden wijzigen, en in Wijzigen het weekformulier voor Deze week en Volgende week. Nieuwe tijden worden een aanvraag. Rijdt niet mee geldt direct. Het vaste rooster blijft gelden tot de dagcoördinator akkoord geeft. Ben je dagcoördinator van een dag, dan zie je in Mijn week een kaart Actie nodig, in Rooster een blok met Recente wijzigingen, een stip bij die dag en een getal bij het tabblad Rooster. Aanvragen van andere gezinnen zie je alleen voor jouw eigen dag; Overnemen volgt in een volgende stap. Let op: zolang de nieuwe functie aan staat, is het dag-voor-dag wijzigen in Wijzigen verborgen; zet je hem op Uit, dan is het weer terug.',
     ],
     tab: 'beheer',
     coordinatorOnly: true,

@@ -61,6 +61,9 @@ export const S = {
   weekRequests: {},        // weekRequests/*: the own family's requests for this and next week, by document id (only while the switch is on for this person)
   weekRequestsKey: '',     // '<family>|<week>' the listeners belong to ('' = none)
   weekRequestsUnsubs: [],
+  dayRequests: {},         // weekRequests/* of OTHER families for the days this person decides (day coordinator), this week only
+  dayRequestsKey: '',
+  dayRequestsUnsubs: [],
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
   wrBusy: false,           // a request is being saved (a double tap makes no double request)
