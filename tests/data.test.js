@@ -753,7 +753,12 @@ await testAsync('syncListeners: only the coordinator reads the back-ups; a paren
 });
 
 console.log('\n=== Terug met OV (US-06) ===');
-import { setReturnByPublicTransport } from '../data.js';
+import { setReturnByPublicTransport, returnByPublicTransportDoc } from '../data.js';
+await testAsync('returnByPublicTransportDoc gives the deviation to save and writes nothing itself', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  const r = await withFakeNowAsync(NOW, async () => returnByPublicTransportDoc('Ma', 'f6', true));
+  assert.equal(r.key, 'Ma_terug'); assert.deepEqual(r.doc.ovGirlIds, ['f6']); assert.equal(fake.get('deviations/Ma_terug'), undefined);
+});
 await testAsync('marking takes the girl out of her terug car and stores the mark with the car she left', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState();
   const ok = await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true));

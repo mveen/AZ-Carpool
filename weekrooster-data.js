@@ -2,17 +2,17 @@
 //
 // The feature switch (settings/weekrooster): with mode "uit" (the default, also for a missing document or an unknown value) nothing of the new
 // flow is shown, read or written; the Firestore rules check the same switch, so an app that is still open stops too.
-// Requests (weekRequests/<weekKey>_<day>_<familyId>): a family reads only its OWN. They are read document by document (10 known ids: this week
-// and next week, five days), and only while the switch is on for this person.
+// Requests (weekRequests/<weekKey>_<day>_<familyId>): the own ones are read document by document (10 known ids: this week and next week, five
+// days); the requests of the other families (times only) come in through ONE listener on the collection. Only while the switch is on for this person.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { showToast } from './ui-common.js';
-import { effectiveCars, rideTime, famTime } from './rides.js';
+import { effectiveCars, rideTime, famTime, computeRideDeparture } from './rides.js';
 import { keepOv } from './ov.js';
 import { buildAdvice } from './weekrooster-impact.js';
 import { deviationExpiryMs, deviationKey, weekKeyDayIso } from './dates.js';
-import { cleanCars, currentDeviationDoc, db, recordLastUpdate, setReturnByPublicTransport } from './data.js';
+import { cleanCars, currentDeviationDoc, db, recordLastUpdate, returnByPublicTransportDoc } from './data.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderSchedule } from './ui-schedule.js';
@@ -56,11 +56,15 @@ export function dayEndMs(weekKey, day) {
 
 // The fixed times of one family for one week: this week it follows the temporary rooster of a period (rideTime), next week the standard.
 export function standardTimes(familyId, which) {
+  // The FIXED rooster: the one-off times of an agreed request (deviation.times) do not count here, so a day put back to it can be recognised.
+  const devs = {};
+  Object.entries(S.deviations || {}).forEach(([k, d]) => { if (d && d.times) { const { times, ...rest } = d; devs[k] = rest; } else devs[k] = d; });
+  const st = { ...S, deviations: devs };
   const out = {};
   REQUEST_DAYS.forEach(day => {
     out[day] = which === 'next'
       ? { heen: famTime(familyId, day, 'heen'), terug: famTime(familyId, day, 'terug') }
-      : { heen: rideTime(familyId, day, 'heen'), terug: rideTime(familyId, day, 'terug') };
+      : { heen: rideTime(familyId, day, 'heen', st), terug: rideTime(familyId, day, 'terug', st) };
   });
   return out;
 }
@@ -126,25 +130,39 @@ function syncOwn(fid) {
   }));
 }
 function syncDays(fid) {
-  const days = fid ? REQUEST_DAYS : [];   // every linked family reads the open requests of the others (times only), for the parent's note
-  const others = fid ? Object.keys(S.families || {}).filter(id => id !== fid).sort() : [];
-  const key = days.length && others.length ? [fid, S.currentWeekKey, days.join(''), others.join(',')].join('|') : '';
+  // Every linked family reads the open requests of the others (times only), for the parent's note: ONE listener on the collection, this week only.
+  const key = fid ? fid + '|' + S.currentWeekKey : '';
   if (key === (S.dayRequestsKey || '')) return;
   stopDayRequestListeners();
   S.dayRequests = {}; S.dayRequestsKey = key;
   if (!key) return;
-  days.forEach(day => others.forEach(other => {
-    const id = requestId(S.currentWeekKey, day, other);
-    S.dayRequestsUnsubs.push(db.doc('weekRequests/' + id).onSnapshot(snap => {
-      const next = { ...S.dayRequests };
-      if (snap.exists) next[id] = snap.data(); else delete next[id];
-      S.dayRequests = next; retries = 0;
-      renderMyWeek(); renderSchedule();
-    }, () => resyncSoon()));   // not allowed (not the day coordinator after all) or offline: nothing to show, try again later
-  }));
+  const wk = S.currentWeekKey;
+  S.dayRequestsUnsubs.push(db.collection('weekRequests').onSnapshot(snap => {
+    const next = {};
+    snap.docs.forEach(d => { const r = d.data(); if (r && r.weekKey === wk && r.familyId !== fid) next[d.id] = r; });
+    S.dayRequests = next; retries = 0;
+    renderMyWeek(); renderSchedule();
+  }, () => resyncSoon()));   // not allowed or offline: nothing to show, try again later
 }
 
 // ---------- writing ----------
+// A family put a day back on its fixed rooster: its one-off times come off the cars of that day (the cars themselves stay as they are, only the
+// departure time of the car she sits in is calculated again). Returns [{ key, doc }] for the shifts that had a one-off time of her.
+function revertedTimesDocs(day, familyId) {
+  const out = [];
+  ['heen', 'terug'].forEach(dir => {
+    const cur = currentDeviationDoc(day, dir);
+    if (!cur || !cur.times || !Object.prototype.hasOwnProperty.call(cur.times, familyId)) return;
+    const { [familyId]: gone, ...times } = cur.times;
+    const key = deviationKey(day, dir), without = { ...cur }; delete without.times;
+    if (Object.keys(times).length) without.times = times;
+    const st = { ...S, deviations: { ...S.deviations, [key]: without } };
+    without.cars = (cur.cars || []).map(c => (c.girlIds || []).includes(familyId) ? { ...c, departureTime: computeRideDeparture(day, dir, c.girlIds, st) } : c);
+    out.push({ key, doc: without });
+  });
+  return out;
+}
+
 // A family hands in the week form (one document per changed day, in one batch). days: { Do: { rides, heen, terug } } for every day of the form.
 // - New times wait for the day coordinator ('pending'); "rijdt niet mee" is applied at once on the current week ('direct').
 // - A day put back to the fixed rooster withdraws the request that was open for it (and puts a "rijdt niet mee" back).
@@ -174,27 +192,28 @@ export async function submitWeekRequests(which, days) {
     const batch = db.batch();
     built.writes.forEach(w => batch.set('weekRequests/' + w.id, w.doc));
     Object.entries(devDocs).forEach(([key, d]) => batch.set('deviations/' + key, d));
-    // Days back on the fixed rooster: withdraw what was open (pending), and undo an earlier "rijdt niet mee".
-    const undoRides = [];
+    // "Rijdt niet mee" counts at once, for the current week (the cars of next week do not exist yet): the deviations go in the SAME batch,
+    // so the request and the cars are saved together or not at all.
+    if (which === 'this') {
+      built.writes.forEach(w => { if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) { const r = returnByPublicTransportDoc(w.doc.day, familyId, false, dir); if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } } });
+    }
+    // Days back on the fixed rooster: withdraw what was open (pending, direct or accepted), undo an earlier "rijdt niet mee" and take the
+    // one-off times of this family off the cars again.
+    const localWithdrawn = {};
     built.skipped.filter(s => s.why === 'same').forEach(s => {
       const id = requestId(weekKey, s.day, familyId), old = S.weekRequests[id];
-      if (!old) return;
-      if (old.status === 'pending' || old.status === 'direct') batch.set('weekRequests/' + id, withdrawRequest(old, nowMs));
-      if (old.status === 'direct' && old.rides === false) undoRides.push(s.day);
+      if (!old || !['pending', 'direct', 'accepted'].includes(old.status)) return;
+      const { decidedAt, decidedBy, ...rest } = withdrawRequest(old, nowMs);   // a withdrawn request carries no decision (the rules want that for an accepted one)
+      localWithdrawn[id] = rest; batch.set('weekRequests/' + id, rest);
+      if (which !== 'this') return;
+      const docs = old.rides === false ? ['heen', 'terug'].map(dir => returnByPublicTransportDoc(s.day, familyId, true, dir)) : revertedTimesDocs(s.day, familyId);
+      docs.forEach(r => { if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } });
     });
-    if (!built.writes.length && !built.skipped.some(s => s.why === 'same' && S.weekRequests[requestId(weekKey, s.day, familyId)])) return { ok: false, written: [], skipped: built.skipped };
+    if (!built.writes.length && !Object.keys(localWithdrawn).length) return { ok: false, written: [], skipped: built.skipped };
     await batch.commit();
     // What was just saved shows at once, also when the live listeners are not running (yet).
-    const local = { ...S.weekRequests };
-    built.writes.forEach(w => { local[w.id] = w.doc; });
-    built.skipped.filter(s => s.why === 'same').forEach(s => { const id = requestId(weekKey, s.day, familyId), old = local[id]; if (old && (old.status === 'pending' || old.status === 'direct')) local[id] = withdrawRequest(old, nowMs); });
-    S.weekRequests = local;
+    S.weekRequests = { ...S.weekRequests, ...Object.fromEntries(built.writes.map(w => [w.id, w.doc])), ...localWithdrawn };
     if (Object.keys(devDocs).length) { S.deviations = { ...S.deviations, ...devDocs }; recordLastUpdate('Deviation'); }
-    // "Rijdt niet mee" counts at once, for the current week (the cars of next week do not exist yet).
-    if (which === 'this') {
-      for (const w of built.writes) if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) await setReturnByPublicTransport(w.doc.day, familyId, false, dir);
-      for (const day of undoRides) for (const dir of ['heen', 'terug']) await setReturnByPublicTransport(day, familyId, true, dir);
-    }
     return { ok: true, written: built.writes.map(w => w.doc), skipped: built.skipped };
   } catch (e) {
     showToast(t('data.opslaan_mislukt') + (e && e.message || e));

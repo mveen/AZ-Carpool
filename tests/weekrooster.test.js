@@ -251,5 +251,14 @@ test('selfChanges: only a deviation of this week and day, changed by hand by som
   assert.deepEqual(selfChanges(dev, '2026-W40', 'Ma', 'f3'), [], 'another week'); assert.deepEqual(selfChanges(dev, '2026-W40', 'Di', 'f3'), [], 'no mark / no time');
   assert.deepEqual(selfChanges(null, '2026-W40', 'Do', 'f3'), []);
 });
+test('what is already handed in or applied is not written again ("unchanged"), so an accepted request stays accepted', () => {
+  const live = st => ({ [requestId(WK, 'Do', 'f2')]: { weekKey: WK, day: 'Do', familyId: 'f2', rides: true, heen: '16:30', terug: '17:45', status: st, createdAt: 5, updatedAt: 5 } });
+  ['pending', 'direct', 'accepted'].forEach(st => {
+    const r = buildRequests({ ...base, existing: live(st), days: { Do: { rides: true, heen: '16:30', terug: '17:45' } } });
+    assert.equal(r.writes.length, 0, st); assert.deepEqual(r.skipped, [{ day: 'Do', why: 'unchanged' }], st);
+  });
+  assert.equal(buildRequests({ ...base, existing: live('withdrawn'), days: { Do: { rides: true, heen: '16:30', terug: '17:45' } } }).writes.length, 1, 'a withdrawn one is asked again');
+  assert.equal(buildRequests({ ...base, existing: live('accepted'), days: { Do: { rides: true, heen: '16:30', terug: '18:00' } } }).writes[0].doc.status, 'pending', 'a changed one starts over');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

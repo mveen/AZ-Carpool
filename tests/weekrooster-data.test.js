@@ -175,20 +175,20 @@ await testAsync('every linked family reads the other families\' requests of all 
   const fake = useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': reqDoc('Do', 'f3'), 'weekRequests/2026-W40_Do_f4': reqDoc('Do', 'f4', { status: 'direct', rides: false, heen: '', terug: '' }), 'weekRequests/2026-W40_Vr_f3': reqDoc('Vr', 'f3'), 'weekRequests/2026-W41_Do_f3': reqDoc('Do', 'f3', { weekKey: '2026-W41' }) });
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
   assert.deepEqual(Object.keys(S.dayRequests).sort(), ['2026-W40_Do_f3', '2026-W40_Do_f4', '2026-W40_Vr_f3'], 'all days, only this week, only the others');
-  assert.equal(S.dayRequestsUnsubs.length, 25, 'one listener per other family per day');
+  assert.equal(S.dayRequestsUnsubs.length, 1, 'ONE listener on the collection, not one per family per day');
   await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'weekRequests/2026-W40_Do_f5'), reqDoc('Do', 'f5'));
   assert.ok(S.dayRequests['2026-W40_Do_f5'], 'a new request shows up at once');
   assert.ok(requestsForDeciding()['2026-W40_Do_f3'] && !requestsForDeciding()['2026-W41_Do_f3']);
-  syncWeekRequests(); assert.equal(S.dayRequestsUnsubs.length, 25, 'unchanged: the listeners are kept');
+  syncWeekRequests(); assert.equal(S.dayRequestsUnsubs.length, 1, 'unchanged: the listener is kept');
 });
 await testAsync('a parent who decides no day also reads the others (for the note); switch off: nothing at all; stopping closes everything', async () => {
   useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': reqDoc('Do', 'f3') });
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' } }); syncWeekRequests();
-  assert.equal(S.dayRequestsUnsubs.length, 25); assert.ok(S.dayRequestsKey);
+  assert.equal(S.dayRequestsUnsubs.length, 1); assert.ok(S.dayRequestsKey);
   sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
   assert.equal(S.dayRequestsUnsubs.length + S.weekRequestsUnsubs.length, 0);
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
-  assert.equal(S.dayRequestsUnsubs.length, 25); stopWeekRequests();
+  assert.equal(S.dayRequestsUnsubs.length, 1); stopWeekRequests();
   assert.equal(S.dayRequestsUnsubs.length, 0); assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, '');
 });
 
@@ -257,6 +257,52 @@ await testAsync('purgeStaleWeekRequests: only the real coordinator, only while t
   fake = useFakeDb({ ...sampleDbSeed(), ...seedDocs }); sampleCoordinatorState({ weekrooster: { mode: 'test' } });
   assert.equal(await purgeStaleWeekRequests(), 1);
   assert.equal(fake.get('weekRequests/2026-W39_Do_f3'), undefined); assert.ok(fake.get('weekRequests/2026-W40_Do_f3')); assert.ok(fake.get('weekRequests/2026-W41_Ma_f3'));
+});
+console.log('=== one batch, and back to the fixed rooster ===');
+await testAsync('"rijdt niet mee" and its cars are saved in one batch: a refused deviation saves no request either', async () => {
+  const fake = await asDay({}, {});
+  fake.failWrites('deviations', 'denied');
+  const r = await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } }));
+  assert.equal(r.ok, false); assert.equal(S.wrBusy, false); assert.match(toast(), /denied/, 'the refusal is shown (one batch: a real database saves nothing)');
+});
+await testAsync('"rijdt niet mee" saved: request direct and the girl is out of the cars', async () => {
+  const fake = await asDay({}, {});
+  await withFakeNowAsync(NOW, async () => { assert.equal((await submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } })).ok, true); });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'direct');
+  assert.ok(fake.get('deviations/Do_heen') && fake.get('deviations/Do_terug'), 'both directions are written with the request');
+  assert.ok(!fake.get('deviations/Do_heen').cars.some(c => (c.girlIds || []).includes('f2')));
+});
+await testAsync('an accepted request put back to the fixed rooster is withdrawn (no decision kept) and her one-off time leaves the cars', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') }, { dayCoordinators: { Do: 'f2' } });
+  await withFakeNowAsync(NOW, async () => { assert.equal((await acceptDay('Do', 'gedoe')).ok, true); });
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, links: { p1: { familyId: 'f3' } }, deviations: { ...S.deviations } });
+  syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNowAsync(NOW, async () => {
+    assert.equal(rideTime('f3', 'Do', 'heen'), '07:00');
+    const std = standardTimes('f3', 'this').Do;
+    assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: '07:00', terug: advDoc('Do', 'f3').terug } })).ok, false, 'the accepted form submitted unchanged writes nothing');
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'accepted');
+    const r = await submitWeekRequests('this', { Do: { rides: true, heen: std.heen, terug: std.terug } });
+    assert.equal(r.ok, true);
+    assert.equal(rideTime('f3', 'Do', 'heen'), std.heen, 'her fixed time counts again');
+  });
+  const d = fake.get('weekRequests/2026-W40_Do_f3');
+  assert.equal(d.status, 'withdrawn'); assert.ok(!('decidedBy' in d) && !('decidedAt' in d));
+  assert.ok(!fake.get('deviations/Do_heen').times || !('f3' in fake.get('deviations/Do_heen').times));
+});
+await testAsync('a day coordinator who puts his own direct change back: request withdrawn, time off the cars', async () => {
+  const fake = await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
+  await withFakeNowAsync(NOW, async () => {
+    await submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' } });
+    assert.equal(rideTime('f3', 'Do', 'heen'), '07:10');
+    const std = standardTimes('f3', 'this').Do;
+    assert.notEqual(std.heen, '07:10', 'the fixed rooster ignores the one-off time');
+    assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' } })).ok, false, 'the same again: nothing is written');
+    assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: std.heen, terug: std.terug } })).ok, true);
+    assert.equal(rideTime('f3', 'Do', 'heen'), std.heen);
+  });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'withdrawn');
+  assert.ok(!fake.get('deviations/Do_heen').times || !('f3' in fake.get('deviations/Do_heen').times));
 });
 console.log('=== the own day of a day coordinator is direct ===');
 await testAsync('a day coordinator changing his own daughter on his own day: direct, the cars change at once; on another day: a request', async () => {
