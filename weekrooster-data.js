@@ -140,7 +140,7 @@ function syncDays(fid) {
 // - A day put back to the fixed rooster withdraws the request that was open for it (and puts a "rijdt niet mee" back).
 // Returns { ok, written, skipped } (ok false = nothing was saved).
 export async function submitWeekRequests(which, days) {
-  const none = { ok: false, written: [], skipped: [] };
+  const none = { ok: false, error: true, written: [], skipped: [] };   // error: nothing could be saved (the reason was shown, or there was nothing to do for this person)
   if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return none; }
   if (!weekroosterOn() || !myLinkedFamilyId()) return none;
   if (S.wrBusy) return none;   // a double tap makes no double request

@@ -124,6 +124,13 @@ test('the helpers the day coordinator\'s screens share: one-line summary, day na
   assert.equal(dayName('Do'), 'Donderdag'); assert.equal(lower('Donderdag'), 'donderdag'); assert.equal(upperFirst('de coördinator'), 'De coördinator');
   assert.equal(deciderLabel('Do'), 'Kees de Vries'); assert.equal(deciderLabel('Ma'), 'de coördinator');
 });
+await testAsync('a refused save shows the error and NOT "Je hebt niets gewijzigd"; the form stays as typed', async () => {
+  const fake = await parentOn(); wijzigen(); fillInputs(); setField('wrTerug_Do', '19:00');
+  fake.failWrites('weekRequests/', 'permission-denied');
+  assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), false);
+  assert.match(toast(), /permission-denied/); assert.doesNotMatch(toast(), /niets gewijzigd/);
+  assert.equal(S.wrForm.days.Do.terug, '19:00', 'what was typed is kept'); assert.equal(S.wrBusy, false);
+});
 
 console.log('=== the code ===');
 test('ui-weekrooster-form.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-form.js'));
