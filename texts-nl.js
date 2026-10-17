@@ -233,6 +233,7 @@ export default {
   "data.controleer_op_dubbelen": "' — controleer op dubbelen.",
   "data.opgeslagen": "Opgeslagen ✓",
   "data.code_alleen_letters_cijfers_en": "Code: alleen letters, cijfers en '-', 4–32 tekens.",
+  "data.code_te_kort": "Een nieuwe code heeft minstens {p1} tekens. Gebruik 'Nieuwe code' voor een veilige code.",
   "data.deze_code_is_al_in": "Deze code is al in gebruik bij een ander gezin — kies een andere.",
   "data.gemarkeerd_als_gezien": "Gemarkeerd als gezien ✓",
   "data.kon_groep_niet_opslaan_alleen": "Kon groep niet opslaan (alleen coördinator kan bewerken): ",
@@ -655,7 +656,7 @@ export default {
   "profile.gezinstype.flex": "Flex (zelf plannen)",
   // ---- API-sleutels (Beheer) ----
   "apikeys.titel": "API-sleutels",
-  "apikeys.uitleg": "De sleutel voor OpenRouteService (afstand van uitwedstrijden) staat hier in de database, niet in de publieke GitHub-map. Alleen leden kunnen hem lezen; alleen de coördinator kan hem wijzigen.",
+  "apikeys.uitleg": "De sleutel voor OpenRouteService (afstand van uitwedstrijden) staat hier in de database, niet in de publieke GitHub-map. Alleen de coördinator kan hem lezen en wijzigen; de afstanden worden elke dag op de server berekend.",
   "apikeys.ors_label": "OpenRouteService-sleutel",
   "apikeys.ors_placeholder": "Nieuwe sleutel plakken",
   "apikeys.ors_ingesteld": "OpenRouteService-sleutel is ingesteld (eindigt op {p1}).",

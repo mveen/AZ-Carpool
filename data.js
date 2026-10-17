@@ -2,7 +2,7 @@
 import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { deviationExpiryMs, deviationKey, getISOWeekKey, effectivePlanningDate, refreshWeekKey, weekKeyDayIso } from './dates.js';
-import { isMemberNow, isRealCoordinator, isValidInviteCode, myDisplayInfo, myLinkedFamilyId, normalizePhone, recomputeCanEdit } from './coordinator.js';
+import { isMemberNow, isRealCoordinator, isStrongInviteCode, isValidInviteCode, MIN_NEW_INVITE_CODE, myDisplayInfo, myLinkedFamilyId, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { notifyCoordinatorOfNewTimeChanges, renderBeheer } from './ui-beheer.js';
 import { renderAll } from './app.js';
 import { renderNoticeBanner } from './ui-notice.js';
@@ -609,7 +609,8 @@ export function startDataListeners(){
       renderMyWeek(); renderMatchesTab();
       refreshMatchesIfStale();
     }, err=>{ S.matchCacheLoaded = true; refreshMatchesIfStale(); });
-    // API keys that must not sit in the public GitHub folder. Members only (Firestore rules); only the coordinator can change it.
+    // API keys that must not sit in the public GitHub folder. Coordinator only (Firestore rules): for a parent this listener is refused and
+    // S.orsApiKey stays empty, so a parent's browser never calculates distances; the daily server job does (cron/match-calendars.mjs).
     db.doc("settings/apiKeys").onSnapshot(snap=>{
       S.orsApiKey = snap.exists? String((snap.data()||{}).ors||'').trim() : '';
       renderBeheer(); renderMyWeek(); renderMatchesTab();
@@ -799,6 +800,7 @@ export async function restoreFamilies(plan){
 export async function saveInviteCode(familyId, code){
   if(code===(S.inviteByFamily[familyId]||'')) return true;
   if(code && !isValidInviteCode(code)){ showToast(t('data.code_alleen_letters_cijfers_en')); return false; }
+  if(code && !isStrongInviteCode(code)){ showToast(t('data.code_te_kort', { p1: MIN_NEW_INVITE_CODE })); return false; }
   if(code){
     const existing = await db.doc("invites/"+code).get();
     if(existing.exists && existing.data().familyId!==familyId){ showToast(t('data.deze_code_is_al_in')); return false; }

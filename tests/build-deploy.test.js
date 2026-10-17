@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, existsSync, writeFileSync, mkdirSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildDeploy, assetList, relativeReferences, SOURCE_SITE } from '../scripts/build-deploy.mjs';
+import { buildDeploy, assetList, relativeReferences, inlineScriptHashes, HASH_PLACEHOLDER, SOURCE_SITE } from '../scripts/build-deploy.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -50,6 +50,34 @@ await test('.htaccess forces https, never caches the app files and the service w
   assert.match(h, /FilesMatch "\\\.\(html\|js\|mjs\|css\|json\)\$"[\s\S]*Cache-Control "no-cache"/);
   assert.match(h, /X-Robots-Tag "noindex, nofollow"/);
   assert.match(h, /AddType text\/javascript \.js/);
+});
+
+await test('.htaccess sends a Content-Security-Policy that allows only own files, gstatic and the hashed inline scripts', () => {
+  const h = read('.htaccess');
+  const csp = (h.match(/Content-Security-Policy "([^"]+)"/) || [])[1] || '';
+  assert.ok(csp, 'CSP header present');
+  assert.match(csp, /default-src 'self'/);
+  assert.match(csp, /object-src 'none'/);
+  assert.match(csp, /frame-ancestors 'none'/);
+  const script = (csp.match(/script-src ([^;]+)/) || [])[1] || '';
+  assert.ok(!script.includes('unsafe-inline') && !script.includes('unsafe-eval'), 'no unsafe script sources');
+  assert.ok(!script.includes('*'), 'no wildcard script source');
+  assert.ok(!h.includes(HASH_PLACEHOLDER), 'placeholder filled in');
+  assert.match(h, /X-Frame-Options "DENY"/);
+  assert.match(h, /Strict-Transport-Security "max-age=\d+"/);
+});
+await test('every inline script of the built index.html has its hash in the policy, and the hashes are correct', () => {
+  const html = read('index.html'), h = read('.htaccess');
+  const hashes = inlineScriptHashes(html);
+  assert.ok(hashes.length >= 3, 'index.html has at least its three inline scripts');
+  for (const x of hashes) assert.ok(h.includes(x), x);
+  assert.equal(inlineScriptHashes('<script>a</script><script src="x.js"></script>')[0], "'sha256-ypeBEsobvcr6wjGzmiPcTaeG7/gUfE5yuYB3ha/uSLs='");
+});
+await test('connect-src names every host the app talks to', () => {
+  const csp = read('.htaccess');
+  for (const host of ['firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'www.googleapis.com', 'api.openrouteservice.org']) {
+    assert.ok(csp.includes('https://' + host), host);
+  }
 });
 
 console.log('=== safety checks ===');

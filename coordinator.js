@@ -44,6 +44,10 @@ export function needsGateFor(state){ if(state.impersonateFamilyId) return false;
 export function myFamilyIdFor(state){ return state.impersonateFamilyId || (state.links[state.me] && state.links[state.me].familyId) || state.me; }
 
 export function isValidInviteCode(c){ return /^[A-Za-z0-9-]{4,32}$/.test(c||''); }
+// A NEW invite code must be long enough to be unguessable (genCode makes 10 digits). Older, shorter codes still work at the gate;
+// firestore.rules refuses to create a new one shorter than this.
+export const MIN_NEW_INVITE_CODE = 8;
+export function isStrongInviteCode(c){ return isValidInviteCode(c) && String(c).length >= MIN_NEW_INVITE_CODE; }
 
 // What a parent typed or pasted (e.g. from WhatsApp) made ready for the code check: full-width characters become plain ones,
 // and spaces, non-breaking spaces and invisible characters (zero-width, direction marks) are removed.

@@ -6,7 +6,8 @@ import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW } from './
 import { S } from '../state.js';
 import { loadAllMatches, feedsSignature as clientSignature } from '../matches.js';
 import { encodeFields, decodeFields } from '../cron/lib/firestore-rest.mjs';
-import { runMatches, buildMatchCache, eventsFromItems, calendarUrl, feedsSignature } from '../cron/match-calendars.mjs';
+import { runMatches, buildMatchCache, eventsFromItems, calendarUrl, feedsSignature, runDistances, matchesForDistances, matchKey, loadDistanceApp, DISTANCE_APP_MODULES, PRACTICE_PREFIX } from '../cron/match-calendars.mjs';
+import { matchSlug, PRACTICE_PREFIX as APP_PRACTICE_PREFIX, practiceToMatch } from '../matches.js';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -108,6 +109,51 @@ await test('only settings/matchCache is ever written', async () => {
   const fs = fakeFirestore({ 'settings/matchFeeds': { feeds } });
   await runMatches({ firestore: fs, apiKey: 'K', referer: 'r', now, fetchFn: router({ [feeds[0].calendarId]: ok({ items: [] }), [feeds[1].calendarId]: ok({ items: [] }) }), ...quiet });
   assert.deepEqual(fs.writes, ['settings/matchCache']);
+});
+
+console.log('=== distances (the key stays on the server) ===');
+const orsFetch = (seen = []) => async url => { seen.push(String(url)); return { ok: true, json: async () => String(url).includes('/geocode/') ? { features: [{ geometry: { coordinates: [4.9, 52.3] } }] } : { features: [{ properties: { summary: { distance: 25400 } } }] } }; };
+const distApp = await loadDistanceApp();
+const awayList = [{ key: 'ev_cal1__e9', location: 'De Toekomst, Amsterdam' }];
+await test('the job asks for the distance modules of the app and nothing else', () => {
+  assert.deepEqual(DISTANCE_APP_MODULES, ['distance.js', 'locations.js']);
+});
+await test('a match without a stored distance is calculated with the key from settings/apiKeys, and the whole document is written once', async () => {
+  const fs = fakeFirestore({ 'settings/apiKeys': { ors: 'SECRET-KEY' }, 'settings/matchDistances': { old: { loc: 'x', km: 5 } } }); const seen = [];
+  const n = await runDistances({ firestore: fs, app: distApp, matches: awayList, fetchFn: orsFetch(seen), ...quiet });
+  assert.equal(n, 1); assert.deepEqual(fs.writes, ['settings/matchDistances']);
+  assert.equal(fs.data['settings/matchDistances'].ev_cal1__e9.km, 25.4); assert.equal(fs.data['settings/matchDistances'].old.km, 5, 'what was stored stays');
+  assert.match(seen[0], /api_key=SECRET-KEY/); assert.match(seen[0], /text=Busstation%20Aalsmeer%2C%20Aalsmeer%2C%20Nederland/);
+});
+await test('the address of the busstation from Beheer is the starting point', async () => {
+  const fs = fakeFirestore({ 'settings/apiKeys': { ors: 'K' }, 'settings/locations': { places: [{ id: 'busstation', address: 'Stationsweg 1, Aalsmeer' }] } }); const seen = [];
+  await runDistances({ firestore: fs, app: distApp, matches: [{ key: 'ev_cal1__e8', location: 'Sportpark Hoorn' }], fetchFn: orsFetch(seen), ...quiet });
+  assert.match(seen[0], /text=Stationsweg%201%2C%20Aalsmeer/);
+});
+await test('no key (or the placeholder): nothing is requested and nothing is written', async () => {
+  for (const apiKeys of [undefined, { ors: '' }, { ors: 'PASTE_YOUR_OPENROUTESERVICE_API_KEY_HERE' }]) {
+    const fs = fakeFirestore(apiKeys ? { 'settings/apiKeys': apiKeys } : {}); const seen = [];
+    assert.equal(await runDistances({ firestore: fs, app: distApp, matches: awayList, fetchFn: orsFetch(seen), ...quiet }), 0);
+    assert.deepEqual(seen, []); assert.deepEqual(fs.writes, []);
+  }
+});
+await test('a match that already has its distance, and AFC/ATC matches, are not requested again', async () => {
+  const fs = fakeFirestore({ 'settings/apiKeys': { ors: 'K' }, 'settings/matchDistances': { ev_cal1__e9: { loc: 'De Toekomst, Amsterdam', km: 25.4 } } }); const seen = [];
+  const n = await runDistances({ firestore: fs, app: distApp, matches: [...awayList, { key: 'ev_cal1__afc', location: "AFC'34" }], fetchFn: orsFetch(seen), ...quiet });
+  assert.equal(n, 0); assert.deepEqual(seen, []); assert.deepEqual(fs.writes, []);
+});
+await test('a service that is down stores nothing (tried again tomorrow) and the job does not throw', async () => {
+  const fs = fakeFirestore({ 'settings/apiKeys': { ors: 'K' } });
+  const n = await runDistances({ firestore: fs, app: distApp, matches: [{ key: 'ev_c__1', location: 'Plaats A' }, { key: 'ev_c__2', location: 'Plaats B' }, { key: 'ev_c__3', location: 'Plaats C' }], fetchFn: async () => ({ ok: false, status: 500, json: async () => ({}) }), ...quiet });
+  assert.equal(n, 0); assert.deepEqual(fs.writes, []);
+});
+await test('the match key is the same as the app\'s matchSlug (so the app finds what the job stored), for calendar and practice matches', () => {
+  const m = { calendarId: 'a@group.calendar.google.com', eventId: 'ev/1+x', teamLabel: 'T', summary: 'A-B', location: 'L', start: new Date(now) };
+  assert.equal(matchKey(m), matchSlug(m));
+  assert.equal(PRACTICE_PREFIX, APP_PRACTICE_PREFIX);
+  const list = matchesForDistances([m, { calendarId: '', eventId: '', location: 'x' }], [{ id: 'p1', data: { calendarId: feeds[0].calendarId, location: 'Hoorn', startMs: now, opponent: 'X', isHome: false, teamLabel: 'T' } }]);
+  assert.equal(list.length, 2, 'a match without ids has no key and is skipped');
+  assert.equal(list[1].key, matchSlug(practiceToMatch('p1', { calendarId: feeds[0].calendarId, location: 'Hoorn', startMs: now, opponent: 'X', isHome: false, teamLabel: 'T' })));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

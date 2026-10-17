@@ -66,7 +66,9 @@ service cloud.firestore {
     match /invites/{code} {
       allow get: if signedIn();          // look up ONE code you already know
       allow list: if isCoordinator();    // only the coordinator can see all codes
+      // A NEW code has at least 8 characters (the app generates 10 digits). Codes made before this rule stay valid and can still be updated or removed.
       allow create: if isCoordinator()
+        && code.size() >= 8
         && request.resource.data.keys().hasOnly(['familyId'])
         && request.resource.data.familyId is string;
       // A code can never be silently moved to another family.
@@ -140,15 +142,16 @@ service cloud.firestore {
     match /settings/matchCache {
       allow read, write: if isMember();
     }
-    // Calculated distances of away matches (US-21): any member stores the result of a route calculation once.
+    // Calculated distances of away matches (US-21): every member reads them. They are written by the daily server job (cron/match-calendars.mjs,
+    // service account, outside these rules) and by the coordinator's own app; a parent's browser never calculates or writes them.
     match /settings/matchDistances {
-      allow read, write: if isMember();
-    }
-    // API keys that must not be public (OpenRouteService): read by members only, written by the coordinator only.
-    // Same effect as the general settings rule below; it is spelled out so nobody loosens it by accident.
-    match /settings/apiKeys {
       allow read: if isMember();
       allow write: if isCoordinator();
+    }
+    // API keys that must not be public (OpenRouteService): read and written by the coordinator only. The daily server job reads the key with its
+    // service account. A parent never needs it: the distances are calculated on the server and stored in settings/matchDistances.
+    match /settings/apiKeys {
+      allow read, write: if isCoordinator();
     }
     match /settings/{docId} {
       allow read: if isMember();

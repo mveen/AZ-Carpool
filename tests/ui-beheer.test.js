@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import { foldCards } from '../ui-common.js';
 import {
   renderBeheer, renderAvailabilityTable, renderPrefsCard, renderPriorityCard, renderShiftPriorityRows, movePriority, renderCoordEditor,
-  familyBackupCardHtml, prepareRestore, confirmRestore, cancelRestore, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges,
+  familyBackupCardHtml, prepareRestore, confirmRestore, cancelRestore, timeChangesCardHtml, updateTimeChangesBadge, notifyCoordinatorOfNewTimeChanges, apiKeysCardHtml,
 } from '../ui-beheer.js';
 
 const dom = installFakeDom();
@@ -730,6 +730,12 @@ test('Afwijkend weekrooster: the number on the Rooster tab also counts the reque
   S.weekrooster = { mode: 'uit' }; updateTimeChangesBadge(); assert.equal(dom.el('navRoosterBadge').style.display, 'none');
 });
 
+test('the API-key card says that only the coordinator can read the key and that the server calculates the distances', () => {
+  sampleCoordinatorState({ orsApiKey: 'abcdef1234' });
+  const h = text(apiKeysCardHtml());
+  assert.match(h, /Alleen de coördinator kan hem lezen en wijzigen/); assert.match(h, /elke dag op de server/); assert.match(h, /eindigt op 1234/);
+  assert.ok(!h.includes('abcdef'), 'the key itself is never shown');
+});
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-beheer.js imports nothing it does not use', () => assertNoUnusedImports('ui-beheer.js'));
 
