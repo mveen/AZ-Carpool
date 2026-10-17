@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "6ff2d65823ce1d474c5146b1bcb06e4e9ff09ac34295d769d0e8ab4d8065ff97",
-    "test": "1ef099aca26491e1564bdf5afe2cc3b020ea9762e3e903c0aaeb7ff2b7bf866a"
+    "module": "52db661027ced35c85319d60cf73f17028c1556c42c9eb3a02f6b4f4e137c157",
+    "test": "04286bc8ca57c99747a8c67199cf6ef05a9e37009cb9ab09a68198c63cf32254"
   },
   "coordinator.js": {
     "module": "d732b9bd620219e8591cbb22f30f7aeba2089ffed4eb815d4b6d70f1c769b13e",
