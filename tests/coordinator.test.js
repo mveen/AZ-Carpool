@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleFamilies } from './test-support.js';
 import { S } from '../state.js';
 import {
-  isRealCoordinatorFor, canEditFor, canSwitchViewFor, hasOwnFamilyFor, isMemberFor, needsGateFor, myFamilyIdFor, isValidInviteCode,
+  isRealCoordinatorFor, canEditFor, canSwitchViewFor, hasOwnFamilyFor, isMemberFor, needsGateFor, myFamilyIdFor, isValidInviteCode, isStrongInviteCode, MIN_NEW_INVITE_CODE,
   isRealCoordinator, isMemberNow, recomputeCanEdit, myFamilyId, needsGate, myLinkedFamilyId, myDisplayInfo,
   normalizePhone, genCode, cleanCode,
 } from '../coordinator.js';
@@ -105,6 +105,12 @@ test('isValidInviteCode: 4-32 letters, digits or "-"', () => {
   assert.equal(isValidInviteCode('ABCD'), true); assert.equal(isValidInviteCode('1234567890'), true); assert.equal(isValidInviteCode('a-b-c-d'), true);
   assert.equal(isValidInviteCode('abc'), false); assert.equal(isValidInviteCode('has space'), false);
   assert.equal(isValidInviteCode('x'.repeat(33)), false); assert.equal(isValidInviteCode(''), false); assert.equal(isValidInviteCode(null), false);
+});
+test('isStrongInviteCode: a NEW code needs at least 8 valid characters; the generated code always passes', () => {
+  assert.equal(MIN_NEW_INVITE_CODE, 8);
+  assert.equal(isStrongInviteCode('1234567'), false); assert.equal(isStrongInviteCode('12345678'), true); assert.equal(isStrongInviteCode('ab-cd-ef-gh'), true);
+  assert.equal(isStrongInviteCode('has space 123'), false); assert.equal(isStrongInviteCode(''), false); assert.equal(isStrongInviteCode(null), false);
+  for (let i = 0; i < 20; i++) assert.equal(isStrongInviteCode(genCode()), true);
 });
 test('genCode: 10 digits, never starting with 0, different each time', () => {
   const codes = Array.from({ length: 50 }, genCode);

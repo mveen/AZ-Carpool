@@ -193,6 +193,12 @@ await testAsync('saveInviteCode refuses a code that belongs to another family, o
   assert.equal(await saveInviteCode('f1', 'a b'), false); assert.match(toast(), /^Code: alleen letters/);
   assert.equal(fake.get('invites/TAKEN123').familyId, 'f2');
 });
+await testAsync('saveInviteCode refuses a new code shorter than 8 characters (firestore.rules refuses it too), but an unchanged old short code is left alone', async () => {
+  const fake = useFakeDb({ 'invites/OLD1': { familyId: 'f1' } }); resetState({ invitesByCode: { OLD1: 'f1' }, inviteByFamily: { f1: 'OLD1' } });
+  assert.equal(await saveInviteCode('f1', 'abcd'), false); assert.match(toast(), /^Een nieuwe code heeft minstens 8 tekens/);
+  assert.equal(await saveInviteCode('f1', 'OLD1'), true); assert.deepEqual(fake.writes, []);
+  assert.deepEqual(fake.collection('invites').map(e => e[0]), ['OLD1']);
+});
 await testAsync('saveInviteCode with an unchanged code does nothing', async () => {
   const fake = useFakeDb({}); resetState({ invitesByCode: { AAAA1111: 'f1' }, inviteByFamily: { f1: 'AAAA1111' } });
   assert.equal(await saveInviteCode('f1', 'AAAA1111'), true); assert.deepEqual(fake.writes, []);

@@ -240,6 +240,10 @@ test('the Ritbeurs texts exist and fill their placeholders (no place buttons any
   assert.equal(t('period.view.overruledClear'), 'Eenmalige wijziging verwijderen');
 });
 
+test('the too-short invite code message names the minimum, and the API-key text says only the coordinator reads the key', () => {
+  assert.equal(t('data.code_te_kort', { p1: 8 }), "Een nieuwe code heeft minstens 8 tekens. Gebruik 'Nieuwe code' voor een veilige code.");
+  assert.match(t('apikeys.uitleg'), /Alleen de coördinator kan hem lezen en wijzigen/); assert.doesNotMatch(t('apikeys.uitleg'), /Alleen leden/);
+});
 import { assertNoDuplicateKeys } from './test-support.js';
 test('texts-nl.js defines every key once', () => assertNoDuplicateKeys('texts-nl.js'));
 

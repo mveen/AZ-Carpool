@@ -3,14 +3,30 @@
 // The app then finds a cache from today and does not fetch anything itself. If this job is down, the app still
 // fetches by itself, so nothing breaks.
 //   node match-calendars.mjs
-// Needs: the service account with "Cloud Datastore User" (reads settings/matchFeeds, writes settings/matchCache).
+// It then also calculates the car distance of every match that has none yet (settings/matchDistances), with the OpenRouteService key
+// from settings/apiKeys. Only the coordinator and this job (service account) can read that key; parents never see it.
+// Needs: the service account with "Cloud Datastore User" (reads settings/matchFeeds, apiKeys, locations, practiceMatches; writes settings/matchCache, matchDistances).
+import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
-import { loadConfig, secretsDir, isMainModule } from './lib/setup.mjs';
+import { loadConfig, secretsDir, isMainModule, codeDir } from './lib/setup.mjs';
 
 export const MATCH_HORIZON_DAYS = 29;   // same as matches.js
+
+// The app modules the distance step reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
+export const DISTANCE_APP_MODULES = ['distance.js', 'locations.js'];
+export async function loadDistanceApp(dir = codeDir) {
+  const base = existsSync(join(dir, 'app', 'distance.js')) ? join(dir, 'app') : join(dir, '..');
+  const [distance, locations] = await Promise.all(DISTANCE_APP_MODULES.map(f => import(pathToFileURL(join(base, f)).href)));
+  return { ...distance, ...locations };
+}
+
+// Same key as matchSlug() in matches.js (matches.js itself draws screens, so it cannot run here). A match without calendar and event id has none.
+const idPart = s => String(s || '').replace(/[^A-Za-z0-9_-]/g, '_');
+export const matchKey = m => (m && m.calendarId && m.eventId ? 'ev_' + idPart(m.calendarId) + '__' + idPart(m.eventId) : '');
+export const PRACTICE_PREFIX = 'practice_';   // same as matches.js
 
 // Same as feedsSignature() in matches.js.
 export const feedsSignature = feeds => (feeds || []).map(f => f && f.calendarId).filter(Boolean).sort().join(',');
@@ -73,11 +89,44 @@ export async function runMatches({ firestore, apiKey, referer, now = Date.now(),
   return built;
 }
 
+// The matches that need a distance: the calendar matches just stored plus the practice matches parents added in the app.
+export function matchesForDistances(cacheMatches, practiceDocs) {
+  const list = (cacheMatches || []).map(m => ({ key: matchKey(m), location: m.location }));
+  for (const { id, data } of practiceDocs || []) list.push({ key: matchKey({ calendarId: data.calendarId, eventId: PRACTICE_PREFIX + id }), location: data.location });
+  return list.filter(m => m.key);
+}
+
+// Calculates what is still missing and writes the whole settings/matchDistances document once (stored + new). No key: does nothing.
+export async function runDistances({ firestore, app, matches, fetchFn = fetch, log = console.log, warn = console.error }) {
+  const keyDoc = await firestore.getDocument('settings/apiKeys');
+  const apiKey = String((keyDoc && decodeFields(keyDoc.fields).ors) || '').trim();
+  if (!app.hasApiKey(apiKey)) { log('Distances: no OpenRouteService key set, skipped'); return 0; }
+  const locDoc = await firestore.getDocument('settings/locations');
+  const cfg = app.normalizeLocations(locDoc ? decodeFields(locDoc.fields) : null);
+  const bus = cfg.places.find(p => p.id === 'busstation');
+  const originText = (bus && bus.address) || 'Busstation Aalsmeer, Aalsmeer, Nederland';
+  const storedDoc = await firestore.getDocument('settings/matchDistances');
+  const stored = storedDoc ? decodeFields(storedDoc.fields) : {};
+  const merged = { ...stored }; let added = 0;
+  const calls = await app.ensureDistances({
+    matches, storedByKey: stored, fixedKm: cfg.fixedKm, apiKey, originText, fetchFn,
+    store: async (key, val) => { merged[key] = val; added++; },
+  });
+  if (added) await firestore.setDocument('settings/matchDistances', merged);
+  log(`Distances: ${calls} routes requested, ${added} stored`);
+  return added;
+}
+
 if (isMainModule(import.meta.url)) {
   try {
     const { projectId, calendarApiKey, referer } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));
     const firestore = createFirestore({ projectId, getToken: tokenProvider({ account }) });
-    await runMatches({ firestore, apiKey: calendarApiKey, referer });
+    const built = await runMatches({ firestore, apiKey: calendarApiKey, referer });
+    // A problem with distances must never fail the calendar job: the app shows "afstand onbekend" and the next run tries again.
+    try {
+      const practice = (await firestore.listDocuments('practiceMatches')).filter(d => d.createTime).map(d => ({ id: d.name.slice(d.name.lastIndexOf('/') + 1), data: decodeFields(d.fields) }));
+      await runDistances({ firestore, app: await loadDistanceApp(), matches: matchesForDistances(built.doc.matches, practice) });
+    } catch (e) { console.error('WARNING: distances not calculated: ' + e.message); }
   } catch (e) { console.error('MATCH CALENDARS FAILED: ' + e.message); process.exit(1); }
 }

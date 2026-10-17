@@ -508,7 +508,7 @@ export function locationsCardHtml(){
 }
 
 // API keys that may not sit in the public GitHub folder. Now only the OpenRouteService key (distance of away matches).
-// Stored in settings/apiKeys: members can read it (the app needs it), only the coordinator can change it (Firestore rules).
+// Stored in settings/apiKeys: only the coordinator can read and change it (Firestore rules); the daily server job reads it with its service account.
 // The key itself is never shown again after saving, only the last 4 characters.
 export function apiKeysCardHtml(){
   const has = hasApiKey(S.orsApiKey);

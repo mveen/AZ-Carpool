@@ -33,5 +33,5 @@ export const googleCalendarApiKey = "AIzaSyBxLbG-osWKvzzmPS_njfHvtFjxS-i5urg";
 
 // OpenRouteService (free, distance of away matches): its key is NOT in this file. ORS keys cannot be
 // restricted to one website, so a key in a public GitHub folder can be used by anyone. Enter it in the app instead:
-// Beheer -> "API-sleutels". It is stored in the database (settings/apiKeys): only members can read it, only the
-// coordinator can change it. Get a free key at openrouteservice.org -> Dashboard -> Request a token (type "Standard").
+// Beheer -> "API-sleutels". It is stored in the database (settings/apiKeys): only the coordinator can read or change it;
+// the daily server job (cron/match-calendars.mjs) reads it too and calculates the distances. Get a free key at openrouteservice.org -> Dashboard -> Request a token (type "Standard").

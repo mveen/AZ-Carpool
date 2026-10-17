@@ -11,6 +11,7 @@ import { buildCron, cronConfig, CRON_REFERER } from '../scripts/build-cron.mjs';
 import { APP_MODULES } from '../cron/purge.mjs';
 import { AGENDA_APP_MODULES } from '../cron/agenda.mjs';
 import { PUSH_APP_MODULES } from '../cron/push.mjs';
+import { DISTANCE_APP_MODULES } from '../cron/match-calendars.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -29,7 +30,7 @@ await test('holds the jobs, the helpers, the few app modules the purge, agenda a
   const own = r.files.filter(f => !f.startsWith('app/'));
   assert.deepEqual(own, ['agenda.mjs', 'backup.mjs', 'config.json', 'lib/firestore-rest.mjs', 'lib/google-auth.mjs', 'lib/run-window.mjs', 'lib/setup.mjs', 'lib/webpush.mjs', 'match-calendars.mjs', 'package.json', 'purge.mjs', 'push.mjs', 'run.sh', 'selftest.mjs']);
   // the app code the purge, agenda and push jobs reuse: only what rides.js, calendar-feed.js and push.js need, no screens, no database code
-  assert.deepEqual(r.files.filter(f => f.startsWith('app/')).sort(), ['app/calendar-feed.js', 'app/constants.js', 'app/dates.js', 'app/escape.js', 'app/i18n.js', 'app/locations.js', 'app/notif-text.js', 'app/ov.js', 'app/period.js', 'app/planning.js', 'app/push.js', 'app/ride-log.js', 'app/rides.js', 'app/ritbeurs.js', 'app/state.js', 'app/texts-nl.js']);
+  assert.deepEqual(r.files.filter(f => f.startsWith('app/')).sort(), ['app/calendar-feed.js', 'app/constants.js', 'app/dates.js', 'app/distance.js', 'app/escape.js', 'app/i18n.js', 'app/locations.js', 'app/notif-text.js', 'app/ov.js', 'app/period.js', 'app/planning.js', 'app/push.js', 'app/ride-log.js', 'app/rides.js', 'app/ritbeurs.js', 'app/state.js', 'app/texts-nl.js']);
 });
 await test('config.json carries the public values from firebase-config.js (project, Calendar key, the website as Referer)', () => {
   const c = JSON.parse(readFileSync(join(out, 'config.json'), 'utf8'));
@@ -38,7 +39,7 @@ await test('config.json carries the public values from firebase-config.js (proje
 });
 await test('no key file or secret is ever in the repo\'s cron folder or in the build (the build refuses it)', () => {
   const fake = join(tmp, 'repo'); mkdirSync(join(fake, 'cron'), { recursive: true });
-  for (const f of [...APP_MODULES, ...AGENDA_APP_MODULES, ...PUSH_APP_MODULES]) writeFileSync(join(fake, f), '');
+  for (const f of [...APP_MODULES, ...AGENDA_APP_MODULES, ...PUSH_APP_MODULES, ...DISTANCE_APP_MODULES]) writeFileSync(join(fake, f), '');
   writeFileSync(join(fake, 'cron/run.sh'), '#!/bin/sh'); writeFileSync(join(fake, 'cron/backup-key.json'), '{}');
   writeFileSync(join(fake, 'firebase-config.js'), 'export const firebaseConfig = {\n projectId: "p",\n};\nexport const googleCalendarApiKey = "AIzaX";\n');
   assert.throws(() => buildCron({ rootDir: fake, out: join(tmp, 'x') }), /secret-looking files/);
