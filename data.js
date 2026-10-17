@@ -43,7 +43,7 @@ import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, p
 // The OpenRouteService key is NOT here: it lives in the database (settings/apiKeys, members only) -> S.orsApiKey.
 // ============================================================
 export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
-  const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, deleteField, signInAnonymously } = sdk;
+  const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, deleteField, signInAnonymously, query, where } = sdk;
   function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data(), pending:!!(s.metadata&&s.metadata.hasPendingWrites) }; }
   // While startDataListeners() runs, every onSnapshot() made through this adapter drops its
   // unsubscribe function in here, so all member-only listeners can be stopped together.
@@ -65,6 +65,8 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
     return {
       get: ()=>getDocs(ref).then(wrapQuerySnap),
       onSnapshot: (onNext,onErr)=>track(onSnapshot(ref, s=>onNext(wrapQuerySnap(s)), onErr)),
+      // A listener on only the documents whose field equals a value: the server sends (and bills) just those.
+      whereEqual: (field,value)=>{ const q = query(ref, where(field,'==',value)); return { onSnapshot: (onNext,onErr)=>track(onSnapshot(q, s=>onNext(wrapQuerySnap(s)), onErr)) }; },
       doc: (id)=>docRef(path+'/'+id)
     };
   }
@@ -503,6 +505,7 @@ export function syncListeners(){
   }
   syncPushListeners();
   if(!coord){
+    S.beheerOpened = false;
     if(S.errorLogUnsub){ S.errorLogUnsub(); S.errorLogUnsub=null; S.errorLog={}; S.errorLogLoaded=false; }
     if(S.rideLogUnsub){ S.rideLogUnsub(); S.rideLogUnsub=null; S.rideLog={}; S.rideLogLoaded=false; }
     if(S.periodBackupsUnsub){ S.periodBackupsUnsub(); S.periodBackupsUnsub=null; S.periodBackups={}; }

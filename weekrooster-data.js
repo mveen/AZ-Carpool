@@ -130,14 +130,15 @@ function syncOwn(fid) {
   }));
 }
 function syncDays(fid) {
-  // Every linked family reads the open requests of the others (times only), for the parent's note: ONE listener on the collection, this week only.
+  // Every linked family reads the open requests of the others (times only), for the parent's note: ONE listener on the collection, filtered
+  // on this week by the server (so older weeks are not read).
   const key = fid ? fid + '|' + S.currentWeekKey : '';
   if (key === (S.dayRequestsKey || '')) return;
   stopDayRequestListeners();
   S.dayRequests = {}; S.dayRequestsKey = key;
   if (!key) return;
   const wk = S.currentWeekKey;
-  S.dayRequestsUnsubs.push(db.collection('weekRequests').onSnapshot(snap => {
+  S.dayRequestsUnsubs.push(db.collection('weekRequests').whereEqual('weekKey', wk).onSnapshot(snap => {
     const next = {};
     snap.docs.forEach(d => { const r = d.data(); if (r && r.weekKey === wk && r.familyId !== fid) next[d.id] = r; });
     S.dayRequests = next; retries = 0;

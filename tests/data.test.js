@@ -273,6 +273,18 @@ await testAsync('syncListeners: a parent never listens to the error log', async 
   syncListeners(); await tick(); await tick();
   assert.equal(S.errorLogUnsub, null); assert.deepEqual(S.errorLog, {});
 });
+await testAsync('syncListeners: when the person is no coordinator (any more), "Beheer opened" is forgotten, so the next coordinator on this page starts without those reads', async () => {
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ families: {}, groups: {}, beheerOpened: true });
+  syncListeners(); await tick();
+  assert.equal(S.beheerOpened, false);
+});
+await testAsync('db.collection(..).whereEqual: only the documents with that value are sent, live', async () => {
+  const fake = useFakeDb({ 'x/a': { w: 1 }, 'x/b': { w: 2 } });
+  let seen = null; db.collection('x').whereEqual('w', 1).onSnapshot(s => { seen = s.docs.map(d => d.id); });
+  await tick(); assert.deepEqual(seen, ['a']);
+  await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'x/c'), { w: 1 }); await tick(); assert.deepEqual(seen, ['a', 'c']);
+});
 await testAsync('db.signOut forgets the anonymous account; an older SDK without signOut does not break it', async () => {
   let fake = useFakeDb({}); await db.signOut(); assert.equal(fake.signOutCount(), 1);
   fake = useFakeDb({}); delete fake.sdk.signOut; await db.signOut();

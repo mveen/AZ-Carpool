@@ -179,6 +179,8 @@ await testAsync('every linked family reads the other families\' requests of all 
   await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'weekRequests/2026-W40_Do_f5'), reqDoc('Do', 'f5'));
   assert.ok(S.dayRequests['2026-W40_Do_f5'], 'a new request shows up at once');
   assert.ok(requestsForDeciding()['2026-W40_Do_f3'] && !requestsForDeciding()['2026-W41_Do_f3']);
+  await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'weekRequests/2026-W41_Do_f5'), reqDoc('Do', 'f5', { weekKey: '2026-W41' }));
+  assert.ok(!S.dayRequests['2026-W41_Do_f5'], 'another week is filtered by the server query');
   syncWeekRequests(); assert.equal(S.dayRequestsUnsubs.length, 1, 'unchanged: the listener is kept');
 });
 await testAsync('a parent who decides no day also reads the others (for the note); switch off: nothing at all; stopping closes everything', async () => {

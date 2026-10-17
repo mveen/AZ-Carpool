@@ -28,9 +28,9 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
     const has = store.has(path);
     return { id: seg(path).pop(), exists: () => has, data: () => has ? clone(store.get(path)) : undefined, metadata: { hasPendingWrites: false } };
   }
-  function collSnap(path) {
+  function collSnap(path, filters = []) {
     const n = seg(path).length + 1;
-    return { docs: [...store.keys()].filter(k => k.startsWith(path + '/') && seg(k).length === n).sort().map(docSnap) };
+    return { docs: [...store.keys()].filter(k => k.startsWith(path + '/') && seg(k).length === n && filters.every(f => (store.get(k) || {})[f.field] === f.value)).sort().map(docSnap) };
   }
   function checkFail(path) {
     if (failure && path.startsWith(failure.prefix)) { const f = failure; failure = null; throw Object.assign(new Error(f.message), f.code ? { code: f.code } : {}); }
@@ -45,6 +45,8 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
   }
   const api = {
     collection: (db, p) => ({ kind: 'coll', path: p }),
+    query: (ref, ...filters) => ({ ...ref, filters }),
+    where: (field, op, value) => { if (op !== '==') throw new Error('fake where: only =='); return { field, value }; },
     doc: (db, ...s) => ({ kind: 'doc', path: s.join('/') }),
     getDoc: async r => { checkReadFail(r.path); return docSnap(r.path); },
     getDocs: async r => collSnap(r.path),
@@ -73,7 +75,7 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
       return b;
     },
     onSnapshot: (r, next) => {
-      const l = { kind: r.kind, path: r.path, fire() { Promise.resolve().then(() => next(r.kind === 'doc' ? docSnap(r.path) : collSnap(r.path))); } };
+      const l = { kind: r.kind, path: r.path, fire() { Promise.resolve().then(() => next(r.kind === 'doc' ? docSnap(r.path) : collSnap(r.path, r.filters))); } };
       listeners.push(l); l.fire();
       return () => { const i = listeners.indexOf(l); if (i >= 0) listeners.splice(i, 1); };
     },
