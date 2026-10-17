@@ -301,5 +301,12 @@ test('afterLinksChanged offers the home-screen sheet at the end (the feature tog
   assert.match(src, /S\.deferredInstallPrompt=e; renderProfile\(\); maybeShowInstallPrompt\(\);/);
 });
 
+test('Afwijkend weekrooster: every redraw keeps the request listeners in step with the switch', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'uit' } });
+  withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0);
+  S.weekrooster = { mode: 'aan' }; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 10);
+  S.weekrooster = { mode: 'uit' }; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

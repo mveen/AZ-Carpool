@@ -992,5 +992,16 @@ await testAsync('purgeStalePracticeMatches removes practice matches more than a 
   assert.deepEqual(fake.collection('practiceMatches').map(e => e[0]).sort(), ['future', 'recent']);
 });
 
+test('Afwijkend weekrooster: leaving (stopDataListeners) closes the request listeners and forgets the requests; the switch document and the requests are wired in', async () => {
+  const { stopDataListeners } = await import('../data.js');
+  const { syncWeekRequests } = await import('../weekrooster-data.js');
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests();
+  assert.equal(S.weekRequestsUnsubs.length, 10);
+  stopDataListeners();
+  assert.deepEqual(S.weekRequestsUnsubs, []); assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, '');
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  assert.match(src, /settings\/weekrooster[\s\S]{0,200}syncWeekRequests\(\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

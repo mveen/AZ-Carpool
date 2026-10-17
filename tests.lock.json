@@ -1,7 +1,7 @@
 {
   "app.js": {
-    "module": "6c618ff40e1f7a32ffafd70444ac33ed6566aa67defe6ab9e628a74f8a2f0572",
-    "test": "5e1e73a0409f8568b775ceb874db6fdf6c1fd47c59d29cb4fe0073ea1901c55d"
+    "module": "fcf39f7a9af3e9ef3c02da3ca57e1e8783079ca3b17607a51679561d86c6d428",
+    "test": "31de14bf9373acc0db85a189f162737461b0bd878446e0ea4eb0b580f8243b4f"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
@@ -12,16 +12,16 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "dff97890b114e10ac3333dc7610e56855eefe87ccae47827863e539ce6fa7af7",
-    "test": "208168fc64b043b30db5fdf6d101f10a857ba29e9fb736c912626e3330f12a46"
+    "module": "ba39251691475362c993421515ac20ae109a2ef2080d563b69f10d7fae303892",
+    "test": "7a2d15d322cd649bd108a34e25ceec95eef82b70e5a51d0e12dcfe4148ccb5cc"
   },
   "coordinator.js": {
     "module": "d732b9bd620219e8591cbb22f30f7aeba2089ffed4eb815d4b6d70f1c769b13e",
     "test": "86880c0e853f091389969be3f7af50d94f06dcafc49a2e3c7baf964ddd7eae0c"
   },
   "data.js": {
-    "module": "06e368e3161f7b1a923898c48b0d7135e6b5f32944a6ab417bd5d345d4b90b02",
-    "test": "0a79d3ea4a86deeedef2af5a8352018d72985cba012c0c144d66610276af48e9"
+    "module": "1b1753d7fad64bc83f4ea82ce964c4e26d4ea185c67496ac4be4b697c860b7ce",
+    "test": "86f6393e4df51abbe4a37e08b3aa955eef1f13870c54880128138d551d53c3b4"
   },
   "dates.js": {
     "module": "ed5a2dd1459bb0f037672976b5b45e4feb5cfb2ae8524ed77a93cec890de6a46",
@@ -52,16 +52,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "1a5141ac5a346968a721db72be096d60d62edbbb4567be178e2e7493c437890c",
-    "test": "911871377b3a96995f64b9bd2b35e673f2445920c891e6fd723ad348a142a47f"
+    "module": "6366fb9e4c2be2c292ceacf8fad936342bb1583f15a7d9e5e849a359b535bf50",
+    "test": "e4ffa45ca762d8673c7ba2a80a6e0d2b89d1ddfecadec98912a2d1b49b1583f5"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "911871377b3a96995f64b9bd2b35e673f2445920c891e6fd723ad348a142a47f"
+    "test": "e4ffa45ca762d8673c7ba2a80a6e0d2b89d1ddfecadec98912a2d1b49b1583f5"
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "152cb75cf738c5db69df58f234a189fb72e9701c277e45d15c6a8ba4965a5187"
+    "test": "d57d552bda95328fb69e1629c1eb43597068d9351e03b69e8497014a89d6798c"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -148,16 +148,16 @@
     "test": "886ab9cbf435ff4ecfa12f24cd730387005b5821eff4a8ba8904e939ebc10159"
   },
   "state.js": {
-    "module": "94c56e79c2ba00dc39dbb60f7ad1a189f694acb2f0ad4c3d0e2dcbc6ce23df21",
-    "test": "9c70d0301241a3ece997a1597d6fbdd50018c9d3087b0ea2b04f0778cfddf45c"
+    "module": "f7a12710a98f88874e97a11393246cd8e6d68d1ec9625d6f4cd53c1d9f37e809",
+    "test": "9c8d1720ee0c356fd04df7bf6445f0c42ebc35b35ffce8d9a0192032ef95f37d"
   },
   "swipe-tabs.js": {
     "module": "0cd7e7ab88193d845bd2b9a8948bd86d3bc9cc48c57d5df39fe6ef1d60dfe1bb",
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "bfa3d04f5be769b6f1cf1c6154daf5c5a85e4aa8a500edaed7d96e4e24560c81",
-    "test": "152cb75cf738c5db69df58f234a189fb72e9701c277e45d15c6a8ba4965a5187"
+    "module": "95d3fd258e0d0d836b6085e8f320c8de005a99113d51b993f3c54d1a037e686d",
+    "test": "d57d552bda95328fb69e1629c1eb43597068d9351e03b69e8497014a89d6798c"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
@@ -176,8 +176,8 @@
     "test": "795be6b454a4b31866c122e14825363c56e59177825a3a5418598905b1e8096f"
   },
   "ui-deviation.js": {
-    "module": "aad436e3bf40588208716c355df31d7a95523bfc19082aaad192c69c859849d5",
-    "test": "25adffcecdca75c22923a722ff29507e04c793dc1c566d312cb68f68d24de327"
+    "module": "b7cecec5f853c0729e3607fee8ac720f9fb0a83196c8ccdbb677db641d76a528",
+    "test": "2b4bbf449ca737cb6cdee7420b087b8ca1c0865dc65c6938b9a56f9c14500df6"
   },
   "ui-help.js": {
     "module": "766d29eb7984e12328a4fc6b6c24aa2d899e94f600953bad31e9cec9d9c7edb5",
@@ -196,8 +196,8 @@
     "test": "81ca0b8757398ec8ea87ba83f2e72bc1dbf81a6aad6c9dbf1c66202398fe49bd"
   },
   "ui-myweek.js": {
-    "module": "0a199f4215165781bfec44ed8eba3bfb944f140084e75d57e8bf4c9b16d8fcb7",
-    "test": "bcae2f57b7b75aacd77a8bb09f6303b8fe132d3c218b10e055e69350515aa087"
+    "module": "21895754eb31b1ff8ec67b47a948a6e39a5afa797e717c209d5d27f7f51ca12e",
+    "test": "38817714e6875ddbed5e7c6be6bd492e38a0fc5ffc4d0e80142c8b91d5cdfdd1"
   },
   "ui-notice.js": {
     "module": "7d865a1452c65c3f140e18eceba721b8a37985a8ccb709de53877d070af42554",
@@ -243,16 +243,24 @@
     "module": "5656890dc40270f6fcd214c2500457c1d0fd757e62a2bc6c340ad94380c7c5fd",
     "test": "85819663039270c7153005a17bde399b3a5cf2aec42e05324d7219e8a31eafe3"
   },
+  "ui-weekrooster-form.js": {
+    "module": "ac5f5f75daf3f68a54666d0fb3ac17d81034ea89d68df8c094508dc517a67687",
+    "test": "2048faa9b3a78cbeafcbf567b283879022359cc4ca39e7d48d31fee7aec04dc4"
+  },
   "ui-weekrooster.js": {
     "module": "4126f4e8294ff3ef31e80208740f90a2412172757dc0c85a211411cfa9e8ead1",
-    "test": "f33290b3f61a74eecf2d2e3d6d4243a9d0180ce4aa8e5614616f28f7a1882946"
+    "test": "7719b80d8505e3e1b5cd91752fcb429c6e6f8c6d7c7a870d2ee3181767290c9d"
   },
   "weekrooster-data.js": {
-    "module": "615107642ec007327d1fa626c03ea392e40d609e48fccb4060b3cbef3d5824ec",
-    "test": "c41a32ee8d406fe38f568fe500e4da34b3f3e0a34fba80bbb2fa20b58045bbb0"
+    "module": "7e84e8ff277a0bfdefdc681f67a425888acc3456d1694a9fe6d820111beba234",
+    "test": "58d4c1593a2a507c9e3e957b30608b1e98ebfc06bf0deba1c504f619bcbe2972"
+  },
+  "weekrooster-impact.js": {
+    "module": "2e0f13aabc8d5e186fbed3681b10d685056ec474e6875d9e338fbfe046615f40",
+    "test": "2036488cc0ef2e71d61c21bcd1767ecb88971c31a81d37fa871898529bfd3c2a"
   },
   "weekrooster.js": {
-    "module": "54ff7fb88bd36ac838e603b7d84667730934e969b19ddf3a07032fccd018508b",
-    "test": "0652b63273e01759f6ed285cfd4a231f546d159a94cdd24c9ab5e4ff6b7c636f"
+    "module": "1e8585c3459a30df3b8205910720116bef0c3fcec238e92873d4b71aef5427aa",
+    "test": "7444bc70fdfdf137cd3d43e77851275c6aee352a84784ceabdf471b4f6f4c682"
   }
 }

@@ -11,7 +11,7 @@ import './test-support.js';
 import {
   WEEKROOSTER_MODES, REQUEST_DAYS, REQUEST_STATUSES, REQUEST_FIELDS,
   normalizeWeekrooster, weekroosterDoc, weekroosterVisible, requestId, isValidRequest, decideMode, buildRequests,
-  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds,
+  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf,
 } from '../weekrooster.js';
 
 console.log('=== the feature switch ===');
@@ -74,7 +74,7 @@ test('a week can be mixed: own day direct, another day a request', () => {
 test('days that equal the fixed rooster, past days and incomplete times are skipped, in week order', () => {
   const r = buildRequests({
     ...base, isPast: d => d === 'Ma',
-    days: { Vr: { rides: true, heen: '15:00', terug: '16:00' }, Ma: { rides: true, heen: '10:00', terug: '11:00' }, Di: { rides: true, heen: '', terug: '17:00' }, Wo: { rides: true, heen: '9:00', terug: '17:00' }, Do: { rides: true, heen: '16:30', terug: '17:00' } },
+    days: { Vr: { rides: true, heen: '15:00', terug: '16:00' }, Ma: { rides: true, heen: '10:00', terug: '11:00' }, Di: { rides: true, heen: '', terug: '' }, Wo: { rides: true, heen: '9:00', terug: '17:00' }, Do: { rides: true, heen: '16:30', terug: '17:00' } },
   });
   assert.deepEqual(r.writes.map(w => w.doc.day), ['Do']);
   assert.deepEqual(r.skipped, [{ day: 'Ma', why: 'past' }, { day: 'Di', why: 'time' }, { day: 'Wo', why: 'time' }, { day: 'Vr', why: 'same' }]);
@@ -101,7 +101,7 @@ test('a good request is valid; every unknown field (reason, note, text) makes it
 test('bad values are refused', () => {
   const bad = [
     null, 'x', {}, { ...good, weekKey: '2026-41' }, { ...good, day: 'Za' }, { ...good, familyId: '' }, { ...good, rides: 'yes' }, { ...good, status: 'open' },
-    { ...good, heen: '' }, { ...good, terug: '25:00' }, { ...good, heen: '9:00' }, { ...good, rides: false }, { ...good, rides: false, heen: '', terug: '17:00' },
+    { ...good, heen: '', terug: '' }, { ...good, terug: '25:00' }, { ...good, heen: '9:00' }, { ...good, rides: false }, { ...good, rides: false, heen: '', terug: '17:00' },
     { ...good, createdAt: '1' }, { ...good, updatedAt: null }, { ...good, decidedAt: 'x' }, { ...good, decidedBy: 5 }, { ...good, test: false },
   ];
   bad.forEach((b, i) => assert.equal(isValidRequest(b), false, 'case ' + i));
@@ -162,6 +162,55 @@ test('requests of an older week and withdrawn ones can be removed; the current a
   const reqs = { a: { ...good, weekKey: '2026-W40' }, b: { ...good }, c: { ...good, weekKey: '2026-W42' }, d: { ...good, status: 'withdrawn' }, e: null, f: { ...good, weekKey: 'kapot' } };
   assert.deepEqual(staleRequestIds(reqs, '2026-W41').sort(), ['a', 'd']);
   assert.deepEqual(staleRequestIds(undefined, '2026-W41'), []);
+});
+
+console.log('=== phase 2: one direction only, own day, weeks, the form ===');
+test('a request may have just one direction (the other stays empty), but not none', () => {
+  assert.ok(isValidRequest({ ...good, heen: '', terug: '17:00' }));
+  assert.ok(isValidRequest({ ...good, heen: '16:30', terug: '' }));
+  assert.equal(isValidRequest({ ...good, heen: '', terug: '' }), false);
+  const r = buildRequests({ ...base, days: { Do: { rides: true, heen: '', terug: '17:45' } } });
+  assert.equal(r.writes.length, 1); assert.equal(r.writes[0].doc.heen, ''); assert.ok(isValidRequest(r.writes[0].doc));
+});
+test('directTimes false: even the own day of the day coordinator stays a request; "rijdt niet mee" stays direct', () => {
+  const r = buildRequests({ ...base, directTimes: false, days: { Vr: { rides: true, heen: '14:00', terug: '16:00' }, Wo: { rides: false } } });
+  assert.deepEqual(r.writes.map(w => [w.doc.day, w.doc.status]), [['Wo', 'direct'], ['Vr', 'pending']]);
+  assert.ok(r.writes.every(w => isValidRequest(w.doc)));
+});
+test('the next week, also over the end of a year (W52, W53 and a year with no W53)', () => {
+  assert.equal(nextWeekKey('2026-W40'), '2026-W41');
+  assert.equal(nextWeekKey('2026-W52'), '2026-W53');   // 2026 has 53 weeks
+  assert.equal(nextWeekKey('2026-W53'), '2027-W01');
+  assert.equal(nextWeekKey('2027-W52'), '2028-W01');   // 2027 has 52 weeks
+  assert.equal(nextWeekKey('2024-W52'), '2025-W01');
+  assert.equal(nextWeekKey('2020-W53'), '2021-W01');
+  ['', null, undefined, 'x', '2026-41'].forEach(k => assert.equal(nextWeekKey(k), null));
+});
+test('the form opens on the fixed rooster, or on what was handed in (a "rijdt niet mee" keeps the fixed times to show)', () => {
+  const requests = {
+    [requestId(WK, 'Do', 'f2')]: { ...good },
+    [requestId(WK, 'Wo', 'f2')]: { ...good, day: 'Wo', rides: false, heen: '', terug: '', status: 'direct' },
+    [requestId(WK, 'Di', 'f2')]: { ...good, day: 'Di', status: 'withdrawn' },
+    [requestId(WK, 'Ma', 'f3')]: { ...good, day: 'Ma', familyId: 'f3' },
+  };
+  const f = weekFormFrom({ weekKey: WK, familyId: 'f2', standard, requests });
+  assert.deepEqual(f.Do, { rides: true, heen: '16:30', terug: '17:00', requested: 'pending' });
+  assert.deepEqual(f.Wo, { rides: false, heen: '16:00', terug: '17:00', requested: 'direct' });
+  assert.deepEqual(f.Di, { rides: true, heen: '16:00', terug: '17:00', requested: '' });
+  assert.deepEqual(f.Ma, { rides: true, heen: '16:00', terug: '17:00', requested: '' });
+  assert.deepEqual(Object.keys(f), REQUEST_DAYS);
+});
+test('the open requests of a family: pending (not expired) and direct, in week order, only its own', () => {
+  const requests = {
+    [requestId(WK, 'Vr', 'f2')]: { ...good, day: 'Vr' }, [requestId(WK, 'Do', 'f2')]: { ...good },
+    [requestId(WK, 'Wo', 'f2')]: { ...good, day: 'Wo', status: 'direct', rides: false, heen: '', terug: '' },
+    [requestId(WK, 'Di', 'f2')]: { ...good, day: 'Di', status: 'accepted' }, [requestId(WK, 'Ma', 'f2')]: { ...good, day: 'Ma', status: 'withdrawn' },
+    [requestId(WK, 'Do', 'f3')]: { ...good, familyId: 'f3' },
+  };
+  const ends = { Do: 5000, Vr: 99999 };
+  assert.deepEqual(openRequestsOf(requests, WK, 'f2', 1, d => ends[d]).map(r => r.day), ['Wo', 'Do', 'Vr']);
+  assert.deepEqual(openRequestsOf(requests, WK, 'f2', 5000, d => ends[d]).map(r => r.day), ['Wo', 'Vr']);
+  assert.deepEqual(openRequestsOf(undefined, WK, 'f2', 1), []);
 });
 
 import { assertNoUnusedImports } from './test-support.js';

@@ -89,3 +89,10 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - `git tag v1-stable` is the last version before this redesign (commit `b1fc7ad`). Roll back by redeploying that tag (or reverting the merge of `feat/redesign-v2`).
 - The database is shared with the old version: changes are **additive only** (new optional fields; no rename, delete or migration of existing data).
+
+## Components added for the Afwijkend weekrooster (phase 2)
+
+- **Past day** `.periodDay--past`: a day of the week form that is over; grey, its fields disabled, label "Voorbij".
+- **Column heads** `.periodColHead`: the two captions ("Heen: aankomsttijd", "Terug: klaar om op te halen") above the day rows of a time form.
+- **Waiting card** `.periodDone--wait`: the "Doorgegeven" card in amber while at least one day waits for the day coordinator (green when everything was applied at once).
+- Reused as they are: `.periodDay` (+ `.changed`), `.periodDone`, `.segmented`, `.alertCard`, `.tag--warn` / `.tag--ok`, `.coordLine`, `.noteLine`, `.linkbtn`, `.formActions`, `.periodSummary`.

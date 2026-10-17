@@ -49,8 +49,9 @@ export function isValidRequest(d) {
   if (!isWeekKey(d.weekKey) || !REQUEST_DAYS.includes(d.day) || typeof d.familyId !== 'string' || !d.familyId) return false;
   if (typeof d.rides !== 'boolean' || !REQUEST_STATUSES.includes(d.status)) return false;
   if (typeof d.heen !== 'string' || typeof d.terug !== 'string') return false;
-  if (d.rides) { if (!isTime(d.heen) || !isTime(d.terug)) return false; }
-  else if (d.heen !== '' || d.terug !== '') return false;           // "rijdt niet mee": no times are kept
+  if (d.rides) {   // each direction is a time or empty (no ride that way), but not both empty
+    if ((d.heen !== '' && !isTime(d.heen)) || (d.terug !== '' && !isTime(d.terug)) || (d.heen === '' && d.terug === '')) return false;
+  } else if (d.heen !== '' || d.terug !== '') return false;           // "rijdt niet mee": no times are kept
   if (typeof d.createdAt !== 'number' || typeof d.updatedAt !== 'number') return false;
   if ('decidedAt' in d && typeof d.decidedAt !== 'number') return false;
   if ('decidedBy' in d && typeof d.decidedBy !== 'string') return false;
@@ -77,7 +78,9 @@ export function decideMode({ ownDaughter, rides, isDayCoordinator }) {
 //   deciderOf(day): family id of the day coordinator (or of the real coordinator when none is set)
 //   existing: { <requestId>: doc }  what is stored already, to keep createdAt when a request is replaced
 // Returns { writes: [{ id, doc }], skipped: [{ day, why }] }. A day that equals the fixed rooster is skipped ('same'), a past day too ('past').
-export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, test }) {
+// directTimes (default true): may new times be applied at once on the own day of a day coordinator? Phase 2 passes false (that
+// needs the same mechanism as "Overnemen", which comes later), so there it stays a request. "Rijdt niet mee" is always direct.
+export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, test, directTimes = true }) {
   const writes = [], skipped = [];
   for (const day of REQUEST_DAYS) {
     const f = days && days[day];
@@ -87,9 +90,9 @@ export function buildRequests({ weekKey, familyId, days, standard, isPast, decid
     const std = (standard && standard[day]) || { heen: '', terug: '' };
     const heen = rides ? String(f.heen || '').trim() : '';
     const terug = rides ? String(f.terug || '').trim() : '';
-    if (rides && (!isTime(heen) || !isTime(terug))) { skipped.push({ day, why: 'time' }); continue; }
     if (rides && heen === std.heen && terug === std.terug) { skipped.push({ day, why: 'same' }); continue; }
-    const mode = decideMode({ ownDaughter: true, rides, isDayCoordinator: deciderOf ? deciderOf(day) === familyId : false });
+    if (rides && ((heen !== '' && !isTime(heen)) || (terug !== '' && !isTime(terug)) || (heen === '' && terug === ''))) { skipped.push({ day, why: 'time' }); continue; }
+    const mode = decideMode({ ownDaughter: true, rides, isDayCoordinator: directTimes && deciderOf ? deciderOf(day) === familyId : false });
     const id = requestId(weekKey, day, familyId);
     const old = existing && existing[id];
     const doc = { weekKey, day, familyId, rides, heen, terug, status: mode, createdAt: old && typeof old.createdAt === 'number' ? old.createdAt : nowMs, updatedAt: nowMs };
@@ -98,6 +101,41 @@ export function buildRequests({ weekKey, familyId, days, standard, isPast, decid
     writes.push({ id, doc });
   }
   return { writes, skipped };
+}
+
+// The ISO week after this one ('2026-W53' -> '2027-W01'), or null for something that is not a week key.
+export function nextWeekKey(weekKey) {
+  const m = /^(\d{4})-W(\d{2})$/.exec(String(weekKey || ''));
+  if (!m) return null;
+  const DAY = 86400000;
+  const mondayOf = (y, w) => { const j4 = Date.UTC(y, 0, 4); return j4 - ((new Date(j4).getUTCDay() + 6) % 7) * DAY + (w - 1) * 7 * DAY; };
+  const nextMonday = mondayOf(+m[1], +m[2]) + 7 * DAY;
+  const year = new Date(nextMonday + 3 * DAY).getUTCFullYear();   // the Thursday decides which year the week belongs to
+  const week = Math.round((nextMonday - mondayOf(year, 1)) / (7 * DAY)) + 1;
+  return year + '-W' + String(week).padStart(2, '0');
+}
+
+// The form as it opens: per day what is handed in (a pending, direct or accepted request of this family) or else the fixed rooster.
+//   standard: { Ma: { heen, terug }, ... }   requests: { <id>: doc }   Returns { Ma: { rides, heen, terug, requested } }
+export function weekFormFrom({ weekKey, familyId, standard, requests }) {
+  const out = {};
+  for (const day of REQUEST_DAYS) {
+    const std = (standard && standard[day]) || { heen: '', terug: '' };
+    const r = requests && requests[requestId(weekKey, day, familyId)];
+    const live = r && (r.status === 'pending' || r.status === 'direct' || r.status === 'accepted');
+    out[day] = live
+      ? { rides: r.rides !== false, heen: r.rides === false ? std.heen : r.heen, terug: r.rides === false ? std.terug : r.terug, requested: r.status }
+      : { rides: true, heen: std.heen, terug: std.terug, requested: '' };
+  }
+  return out;
+}
+
+// The requests of one family for one week that are still open for it (pending) or were applied at once (direct), in week order.
+export function openRequestsOf(requests, weekKey, familyId, nowMs, dayEndOf) {
+  return REQUEST_DAYS
+    .map(day => ({ day, doc: requests && requests[requestId(weekKey, day, familyId)] }))
+    .filter(x => x.doc && (x.doc.status === 'direct' || requestState(x.doc, nowMs, dayEndOf ? dayEndOf(x.day) : undefined) === 'pending'))
+    .map(x => ({ day: x.day, ...x.doc }));
 }
 
 // The state of one request, for the screens. A pending request of a day that is over has expired: the fixed rooster stayed.

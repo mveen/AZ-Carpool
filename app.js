@@ -11,6 +11,7 @@ import { renderBeheer } from './ui-beheer.js';
 import { renderNoticeBanner } from './ui-notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
 import { checkRitbeurs } from './ritbeurs-data.js';
+import { syncWeekRequests } from './weekrooster-data.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { refreshPeriodTask } from './ui-period.js';
@@ -108,7 +109,7 @@ export function afterLinksChanged(){
   maybeShowInstallPrompt();   // feature toggle inside: does nothing while it is off
 }
 
-export function renderAll(){ syncCoordinatorNav(); renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); updateHeader(); renderMaintenance(); adjustMainPadding(); applyPendingPushOpen(); }
+export function renderAll(){ syncWeekRequests(); syncCoordinatorNav(); renderProfile(); renderSchedule(); renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab(); renderImpersonateBanner(); renderNoticeBanner(); updateHeader(); renderMaintenance(); adjustMainPadding(); applyPendingPushOpen(); }
 
 // The Beheer tab belongs to the coordinator view only ("Bekijk als: Ouder" hides it too).
 export function syncCoordinatorNav(){

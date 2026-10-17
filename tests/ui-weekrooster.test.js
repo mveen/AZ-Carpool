@@ -73,18 +73,27 @@ const tabs = () => {
   withFakeNow(NOW, () => { renderMyWeek(); renderSchedule(); renderDeviationTab(); });
   return ['tab-myweek', 'tab-schedule', 'tab-deviation'].map(id => dom.html(id)).join('\n');
 };
-test('with every mode, parents get exactly the same screens as before (phase 1 shows nothing new)', () => {
-  useFakeDb(sampleDbSeed());
-  const out = {};
-  [null, { mode: 'uit' }, { mode: 'test' }, { mode: 'aan' }, { mode: 'kapot' }].forEach((w, i) => { sampleParentState({ weekrooster: w }); out[i] = tabs(); });
-  Object.values(out).forEach(h => assert.equal(h, out[0]));
-  assert.doesNotMatch(out[0], /weekrooster|Tijden wijzigen|Toch zelf wijzigen|Doorgegeven|Aanvraag/i);
-});
-test('the coordinator gets the same parent screens in every mode as well', () => {
+test('uit, a missing document, a broken one, and test for a parent: parents get exactly the same screens as before', () => {
   useFakeDb(sampleDbSeed());
   const out = [];
-  [null, { mode: 'test' }, { mode: 'aan' }].forEach(w => { sampleCoordinatorState({ weekrooster: w }); out.push(tabs()); });
+  [null, { mode: 'uit' }, { mode: 'test' }, { mode: 'kapot' }].forEach(w => { sampleParentState({ weekrooster: w }); out.push(tabs()); });
   out.forEach(h => assert.equal(h, out[0]));
+  assert.doesNotMatch(out[0], /weekrooster|Tijden wijzigen|Tijden deze week|Toch zelf wijzigen|Doorgegeven|Aanvraag/i);
+});
+test('aan: parents get the new parts (and only then); uit puts everything back', () => {
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'uit' } }); const uit = tabs();
+  sampleParentState({ weekrooster: { mode: 'aan' } }); const aan = tabs();
+  assert.notEqual(aan, uit); assert.match(aan, /Tijden wijzigen/); assert.match(aan, /Tijden deze week/);
+  sampleParentState({ weekrooster: { mode: 'uit' } }); assert.equal(tabs(), uit);
+});
+test('the coordinator sees the new parts only when he looks as a family (Testweergave), in test and aan', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ weekrooster: null }); const plain = tabs();
+  sampleCoordinatorState({ weekrooster: { mode: 'test' } }); assert.equal(tabs(), plain, 'no family of his own in view: nothing new');
+  sampleCoordinatorState({ weekrooster: { mode: 'uit' }, impersonateFamilyId: 'f2' }); const asUit = tabs();
+  sampleCoordinatorState({ weekrooster: { mode: 'test' }, impersonateFamilyId: 'f2' }); const asTest = tabs();
+  assert.notEqual(asTest, asUit); assert.match(asTest, /Tijden wijzigen/);
 });
 test('looking at the screens writes nothing to the database', () => {
   const fake = useFakeDb(sampleDbSeed()); const before = JSON.stringify([...fake.store.entries()]);

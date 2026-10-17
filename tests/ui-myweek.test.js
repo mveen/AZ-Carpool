@@ -296,5 +296,13 @@ test('matchInfoHtml: a practice match gets the Oefen tag, a calendar match does 
   assert.doesNotMatch(text(matchInfoHtml({ ...base, eventId: 'e1' })), /Oefen/);
 });
 
+test('Afwijkend weekrooster: Mijn week shows "Tijden wijzigen" only while the switch is on; Testweergave only then shows a family\'s week', () => {
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'uit' } }); withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /wrChange/);
+  sampleParentState({ weekrooster: { mode: 'aan' } }); withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /id="wrChange"/);
+  resetState({ me: 'coord', appReady: true, impersonateFamilyId: 'f2', canEdit: false, links: {}, families: S.families, weekrooster: { mode: 'uit' } });
+  withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /geen eigen gezin/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

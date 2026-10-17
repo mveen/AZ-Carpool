@@ -38,6 +38,10 @@ await check('bad time refused', setDoc(doc(as('u4'), 'weekRequests/' + id('Di', 
 await check('bad day refused', setDoc(doc(as('u4'), 'weekRequests/' + `${WK}_Za_f4`), req('Za', 'f4')), false);
 await check('"rijdt niet mee" with times refused', setDoc(doc(as('u4'), 'weekRequests/' + id('Di', 'f4')), req('Di', 'f4', { rides: false, status: 'direct' })), false);
 await check('"rijdt niet mee" is direct without times', setDoc(doc(as('u4'), 'weekRequests/' + id('Di', 'f4')), req('Di', 'f4', { rides: false, heen: '', terug: '', status: 'direct' })));
+await check('one direction only is fine (the other stays empty)', setDoc(doc(as('u4'), 'weekRequests/' + id('Ma', 'f4')), req('Ma', 'f4', { heen: '', terug: '17:45' })));
+await check('both directions empty is refused', setDoc(doc(as('u4'), 'weekRequests/' + id('Ma', 'f4')), req('Ma', 'f4', { heen: '', terug: '' })), false);
+await check('a "rijdt niet mee" that is put back is replaced by a withdrawn document', setDoc(doc(as('u4'), 'weekRequests/' + id('Di', 'f4')), req('Di', 'f4', { rides: false, heen: '', terug: '', status: 'withdrawn' })));
+await check('the day coordinator withdraws an own-day direct document (decidedBy kept)', (async () => { await setDoc(doc(as('u2'), 'weekRequests/' + id('Do', 'f2')), req('Do', 'f2', { status: 'direct', decidedAt: 1, decidedBy: 'f2' })); return setDoc(doc(as('u2'), 'weekRequests/' + id('Do', 'f2')), req('Do', 'f2', { status: 'withdrawn', decidedAt: 1, decidedBy: 'f2', updatedAt: 5 })); })());
 await check('a family cannot make new times direct on a day it does not coordinate', setDoc(doc(as('u4'), 'weekRequests/' + id('Wo', 'f4')), req('Wo', 'f4', { status: 'direct' })), false);
 await check('a family cannot write accepted', setDoc(doc(as('u4'), 'weekRequests/' + id('Wo', 'f4')), req('Wo', 'f4', { status: 'accepted', decidedAt: 1, decidedBy: 'f4' })), false);
 await check('the day coordinator makes new times direct on the own day (own daughter)', setDoc(doc(as('u2'), 'weekRequests/' + id('Do', 'f2')), req('Do', 'f2', { status: 'direct', decidedAt: 1, decidedBy: 'f2' })));

@@ -315,5 +315,11 @@ test('Help explains "Eigen ouder rijdt mee" (terug, hard rule, only when the par
   assert.match(a.keywords, /eigen ouder/);
 });
 
+test('the Afwijkend weekrooster article explains what Test shows and that day-by-day changing is hidden while it is on', () => {
+  const a = articles.find(x => x.id === 'beheer-weekrooster'); assert.ok(a);
+  const s = JSON.stringify(a.body || a);
+  assert.match(s, /Tijden wijzigen/); assert.match(s, /Volgende week/); assert.match(s, /verborgen/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

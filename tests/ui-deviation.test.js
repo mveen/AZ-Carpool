@@ -531,5 +531,13 @@ await testAsync('Wijzigen: choosing another driver that breaks the rule warns so
 });
 test('ui-deviation.js imports nothing it does not use', () => assertNoUnusedImports('ui-deviation.js'));
 
+test('Afwijkend weekrooster: Wijzigen shows the week form only while the switch is on for this person', () => {
+  useFakeDb(sampleDbSeed());
+  sampleParentState({ weekrooster: { mode: 'uit' } }); withFakeNow(NOW, () => renderDeviationTab());
+  assert.doesNotMatch(dom.html('tab-deviation'), /id="wrForm"/);
+  sampleParentState({ weekrooster: { mode: 'aan' } }); withFakeNow(NOW, () => renderDeviationTab());
+  assert.match(dom.html('tab-deviation'), /id="wrForm"/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

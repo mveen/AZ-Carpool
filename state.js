@@ -54,6 +54,12 @@ export const S = {
   maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
   ritbeurs: null,          // settings/ritbeurs: the Ritbeurs feature switch { on } (null = none / not loaded, which means off)
   weekrooster: null,       // settings/weekrooster: the Afwijkend-weekrooster switch { mode: 'uit'|'test'|'aan' } (null = none / not loaded, which means uit)
+  weekRequests: {},        // weekRequests/*: the own family's requests for this and next week, by document id (only while the switch is on for this person)
+  weekRequestsKey: '',     // '<family>|<week>' the listeners belong to ('' = none)
+  weekRequestsUnsubs: [],
+  wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
+  wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
+  wrBusy: false,           // a request is being saved (a double tap makes no double request)
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id
   notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id

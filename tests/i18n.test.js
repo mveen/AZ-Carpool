@@ -297,6 +297,15 @@ test('the Afwijkend-weekrooster texts exist for every mode and no text asks for 
   assert.match(t('weekrooster.err.coordinatorOnly'), /Alleen de coördinator/);
 });
 
+test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeholders, and say what a parent needs to know', () => {
+  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.title', 'who.line', 'myweek.change', 'myweek.request', 'pill.request']
+    .forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
+  assert.equal(t('weekrooster.done.title', { p1: 40 }), 'Doorgegeven · week 40');
+  assert.equal(t('weekrooster.tag.wait', { p1: 'Piet' }), 'Wacht op Piet');
+  assert.match(t('weekrooster.who.line', { p1: 'Piet', p2: 'Eline', p3: '07:00', p4: '07:30' }), /Piet.*Eline.*07:00.*07:30/);
+  assert.doesNotMatch(Object.entries(nl).filter(([k]) => k.startsWith('weekrooster.')).map(([, v]) => v).join(' '), /reden|toelichting/i, 'no reason is ever asked');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

@@ -114,5 +114,10 @@ test('match carpool form: no form open and no car being edited at start', () => 
 
 test('practice matches start empty', () => { assert.deepEqual(S.practiceMatches, {}); });
 
+test('Afwijkend weekrooster: no requests, no listeners and no form open at start; this week is shown', () => {
+  assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, ''); assert.deepEqual(S.weekRequestsUnsubs, []);
+  assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrBusy, false); assert.equal(S.weekrooster, null);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

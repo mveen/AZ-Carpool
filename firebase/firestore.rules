@@ -184,7 +184,7 @@ service cloud.firestore {
         && d.familyId is string && reqId == d.weekKey + '_' + d.day + '_' + d.familyId
         && d.rides is bool && d.heen is string && d.terug is string
         && (d.rides
-            ? (d.heen.matches('([01][0-9]|2[0-3]):[0-5][0-9]') && d.terug.matches('([01][0-9]|2[0-3]):[0-5][0-9]'))
+            ? ((d.heen == '' || d.heen.matches('([01][0-9]|2[0-3]):[0-5][0-9]')) && (d.terug == '' || d.terug.matches('([01][0-9]|2[0-3]):[0-5][0-9]')) && (d.heen != '' || d.terug != ''))
             : (d.heen == '' && d.terug == ''))
         && d.status in ['pending', 'direct', 'accepted', 'withdrawn']
         && d.createdAt is number && d.updatedAt is number
@@ -199,7 +199,7 @@ service cloud.firestore {
       return isLinked() && d.familyId == linkedFamilyId() && validRequest(reqId)
         && d.status in ['pending', 'direct', 'withdrawn']
         && (d.status != 'direct' || d.rides == false || isDayCoordinatorOf(d.day))
-        && (!('decidedAt' in d || 'decidedBy' in d) || (d.status == 'direct' && d.decidedBy == d.familyId));
+        && (!('decidedAt' in d || 'decidedBy' in d) || (d.status in ['direct', 'withdrawn'] && d.decidedBy == d.familyId));
     }
     match /weekRequests/{reqId} {
       // A family reads its own requests; the day coordinator the requests of his day; the coordinator everything.

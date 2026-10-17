@@ -168,6 +168,10 @@ table.avail th,table.avail td{padding:6px 4px}
 .periodDayHead{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .periodDay{border:1px solid var(--line);border-radius:var(--radius-control);padding:10px;margin-top:8px;background:var(--surface-card)}
 .periodDay.changed{border-color:var(--warn-icon);background:var(--warn-soft)}
+.periodDay--past{background:var(--surface-soft);color:var(--text-muted)}
+.periodColHead{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:var(--space-5);font:var(--type-caption);color:var(--text-muted)}
+.periodDone--wait{background:var(--warn-soft);border-color:var(--warn-edge)}
+.periodDone--wait .periodDoneTitle{color:var(--warn-ink)}
 .periodRide{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600;margin:0}
 .periodRide input{width:22px;height:22px;margin:0}
 input[type=time].periodTime.changed{border-color:var(--warn-icon);background:var(--warn-soft)}
