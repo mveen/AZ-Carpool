@@ -158,13 +158,22 @@ export async function submitWeekRequests(which, days) {
   S.wrBusy = true;
   try {
     const built = buildRequests({
-      weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs, directTimes: false,
+      weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs, directTimes: which === 'this',   // next week has no cars yet: there it stays a request
       test: weekroosterMode() === 'test',
       isPast: day => isDayPast(weekKey, day),
       deciderOf: deciderFamilyOf,
     });
+    // The own day of a day coordinator is direct: the cars change at once (same change as Overnemen). Without a sound arrangement it stays a request.
+    const devDocs = {};
+    built.writes.forEach(w => {
+      if (w.doc.status !== 'direct' || w.doc.rides === false) return;
+      const plan = directPlan(w.doc.day, { ...w.doc, id: w.id });
+      if (plan) Object.assign(devDocs, plan);
+      else { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; }
+    });
     const batch = db.batch();
     built.writes.forEach(w => batch.set('weekRequests/' + w.id, w.doc));
+    Object.entries(devDocs).forEach(([key, d]) => batch.set('deviations/' + key, d));
     // Days back on the fixed rooster: withdraw what was open (pending), and undo an earlier "rijdt niet mee".
     const undoRides = [];
     built.skipped.filter(s => s.why === 'same').forEach(s => {
@@ -180,6 +189,7 @@ export async function submitWeekRequests(which, days) {
     built.writes.forEach(w => { local[w.id] = w.doc; });
     built.skipped.filter(s => s.why === 'same').forEach(s => { const id = requestId(weekKey, s.day, familyId), old = local[id]; if (old && (old.status === 'pending' || old.status === 'direct')) local[id] = withdrawRequest(old, nowMs); });
     S.weekRequests = local;
+    if (Object.keys(devDocs).length) { S.deviations = { ...S.deviations, ...devDocs }; recordLastUpdate('Deviation'); }
     // "Rijdt niet mee" counts at once, for the current week (the cars of next week do not exist yet).
     if (which === 'this') {
       for (const w of built.writes) if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) await setReturnByPublicTransport(w.doc.day, familyId, false, dir);
@@ -223,8 +233,8 @@ export function pendingOfDay(day) {
 
 // The advice for one day: for every direction a pending request changes, the two variants (see weekrooster-impact.js).
 // Result: { requests, directions: { heen?: { cars (now), variants }, terug?: ... } }. Nothing is saved.
-export function adviceForDay(day) {
-  const requests = pendingOfDay(day), directions = {};
+export function adviceForDay(day, only) {
+  const requests = only || pendingOfDay(day), directions = {};
   DIRECTIONS.forEach(dir => {
     const touching = requests.filter(r => (r[dir] || '') !== (rideTime(r.familyId, day, dir) || ''));
     if (!touching.length) return;
@@ -236,6 +246,20 @@ export function adviceForDay(day) {
     directions[dir] = { cars, ...res };
   });
   return { requests, directions };
+}
+
+// A day coordinator changing the own daughter on a day he decides himself: the same one-off change as "Overnemen", for this one request.
+// Returns the deviation documents to write ({ key: doc }), or null when that is not possible (no sound arrangement) or nothing changes:
+// the caller then keeps it a normal request.
+export function directPlan(day, request) {
+  const advice = adviceForDay(day, [request]), dirs = Object.keys(advice.directions);
+  if (!dirs.length || dirs.some(d => advice.directions[d].variants.zuinig.noSolution)) return null;
+  const out = {};
+  dirs.forEach(dir => {
+    const prev = currentDeviationDoc(day, dir), v = advice.directions[dir].variants.zuinig;
+    out[deviationKey(day, dir)] = { day, direction: dir, weekKey: S.currentWeekKey, expiresAt: deviationExpiryMs(), cars: cleanCars(v.cars), ...keepOv(prev, v.cars), times: { ...((prev && prev.times) || {}), ...v.times } };
+  });
+  return out;
 }
 
 // "Overnemen": the cars of the chosen variant become this week's one-off change (the same deviations as Wijzigen: cars + the one-off times

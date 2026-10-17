@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime } from '../rides.js';
-import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests } from '../weekrooster-data.js';
+import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests, directPlan } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -257,6 +257,26 @@ await testAsync('purgeStaleWeekRequests: only the real coordinator, only while t
   fake = useFakeDb({ ...sampleDbSeed(), ...seedDocs }); sampleCoordinatorState({ weekrooster: { mode: 'test' } });
   assert.equal(await purgeStaleWeekRequests(), 1);
   assert.equal(fake.get('weekRequests/2026-W39_Do_f3'), undefined); assert.ok(fake.get('weekRequests/2026-W40_Do_f3')); assert.ok(fake.get('weekRequests/2026-W41_Ma_f3'));
+});
+console.log('=== the own day of a day coordinator is direct ===');
+await testAsync('a day coordinator changing his own daughter on his own day: direct, the cars change at once; on another day: a request', async () => {
+  const fake = await asDay({}, { dayCoordinators: { Do: 'f3', Vr: 'f4' }, links: { p1: { familyId: 'f3' } } });
+  const r = await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' }, Vr: { rides: true, heen: '07:10', terug: '15:00' } }));
+  assert.equal(r.ok, true);
+  const own = fake.get('weekRequests/2026-W40_Do_f3'), other = fake.get('weekRequests/2026-W40_Vr_f3');
+  assert.equal(own.status, 'direct'); assert.equal(own.decidedBy, 'f3'); assert.equal(other.status, 'pending'); assert.ok(!('decidedBy' in other));
+  const dev = fake.get('deviations/Do_heen'); assert.ok(dev && dev.cars.some(c => (c.girlIds || []).includes('f3'))); assert.equal(dev.times.f3, '07:10');
+  assert.equal(fake.get('deviations/Vr_heen'), undefined, 'the other day waits for its coordinator');
+  await withFakeNowAsync(NOW, async () => { assert.equal(rideTime('f3', 'Do', 'heen'), '07:10'); });
+});
+await testAsync('next week the own day of a day coordinator stays a request (its cars do not exist yet)', async () => {
+  const fake = await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
+  await withFakeNowAsync(NOW, () => submitWeekRequests('next', { Do: { rides: true, heen: '07:10', terug: '15:00' } }));
+  assert.equal(fake.get('weekRequests/2026-W41_Do_f3').status, 'pending'); assert.equal(fake.get('deviations/Do_heen'), undefined);
+});
+await testAsync('directPlan: nothing to plan gives null, so the request stays a request', async () => {
+  await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
+  await withFakeNowAsync(NOW, async () => { assert.equal(directPlan('Do', { id: 'x', weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: rideTime('f3', 'Do', 'heen'), terug: rideTime('f3', 'Do', 'terug'), status: 'pending' }), null); });
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

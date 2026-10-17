@@ -78,8 +78,8 @@ export function decideMode({ ownDaughter, rides, isDayCoordinator }) {
 //   deciderOf(day): family id of the day coordinator (or of the real coordinator when none is set)
 //   existing: { <requestId>: doc }  what is stored already, to keep createdAt when a request is replaced
 // Returns { writes: [{ id, doc }], skipped: [{ day, why }] }. A day that equals the fixed rooster is skipped ('same'), a past day too ('past').
-// directTimes (default true): may new times be applied at once on the own day of a day coordinator? Phase 2 passes false (that
-// needs the same mechanism as "Overnemen", which comes later), so there it stays a request. "Rijdt niet mee" is always direct.
+// directTimes (default true): may new times be applied at once on the own day of a day coordinator? The caller passes false for next week
+// (its cars do not exist yet), so there it stays a request. "Rijdt niet mee" is always direct.
 export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, test, directTimes = true }) {
   const writes = [], skipped = [];
   for (const day of REQUEST_DAYS) {
