@@ -704,14 +704,20 @@ export async function saveDeviationCars(day,direction,cars,opts){
 
 // US-06: a parent marks (or unmarks) that a daughter does not ride along on one shift (heen or terug).
 // She leaves her car (departure time recalculated) and drops out of the planning for that ride.
+// The deviation document that marks (on) or unmarks a daughter as "rijdt niet mee" on one shift, without saving it: { key, doc }.
+export function returnByPublicTransportDoc(day,girlId,on,direction='terug'){
+  refreshWeekKey();
+  const cur = currentDeviationDoc(day,direction);
+  const r = applyOv({cars:effectiveCars(day,direction), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,direction,ids));
+  const extra = { ...(r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {}), ...keepTimes(cur) };
+  return { key:deviationKey(day,direction), doc:{day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:cleanCars(r.cars),...extra} };
+}
+
 export async function setReturnByPublicTransport(day,girlId,on,direction='terug'){
   if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
   try{
-    refreshWeekKey();
-    const cur = currentDeviationDoc(day,direction);
-    const r = applyOv({cars:effectiveCars(day,direction), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,direction,ids));
-    const extra = { ...(r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {}), ...keepTimes(cur) };
-    await writeDeviation(day,direction,r.cars,extra);
+    const { doc } = returnByPublicTransportDoc(day,girlId,on,direction);
+    await writeDeviation(day,direction,doc.cars,{ ...(doc.ovGirlIds? {ovGirlIds:doc.ovGirlIds, ovFrom:doc.ovFrom} : {}), ...(doc.times? {times:doc.times} : {}) });
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
 }

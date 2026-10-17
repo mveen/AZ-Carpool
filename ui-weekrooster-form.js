@@ -185,7 +185,7 @@ export async function submitWeekForm() {
   if (res.ok) { S.wrForm = null; renderDeviationTab(); return true; }
   if (res.error || S.wrBusy) return false;   // a refused save has shown its own message; do not say "nothing changed" on top of it
   if (res.skipped.some(s => s.why === 'time')) showToast(t('weekrooster.form.timeNeeded'));
-  else if (!res.skipped.length || res.skipped.every(s => s.why === 'same' || s.why === 'past')) showToast(t('weekrooster.form.nothing'));
+  else if (!res.skipped.length || res.skipped.every(s => s.why === 'same' || s.why === 'past' || s.why === 'unchanged')) showToast(t('weekrooster.form.nothing'));
   return false;
 }
 

@@ -99,6 +99,14 @@ await testAsync('nothing changed: nothing is written and the parent is told', as
   assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), false);
   assert.match(toast(), /Je hebt niets gewijzigd/); assert.equal([...fake.store.keys()].filter(k => k.startsWith('weekRequests/')).length, 0);
 });
+await testAsync('a day equal to what is already handed in is not written again and the parent is told', async () => {
+  const fake = await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:00'); setField('wrTerug_Do', '18:00');
+  assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), true); await tick();
+  const { weekFormFrom } = await import('../weekrooster.js'), { standardTimes } = await import('../weekrooster-data.js');
+  S.wrForm = { which: 'this', days: weekFormFrom({ weekKey: '2026-W40', familyId: 'f2', standard: standardTimes('f2', 'this'), requests: S.weekRequests }) }; wijzigen(); fillInputs();
+  assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), false);
+  assert.match(toast(), /Je hebt niets gewijzigd/); assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'pending');
+});
 await testAsync('a changed day with both times empty is not handed in', async () => {
   const fake = await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', ''); setField('wrTerug_Do', '');
   assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), false);
