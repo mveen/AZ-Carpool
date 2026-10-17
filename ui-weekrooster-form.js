@@ -215,11 +215,11 @@ export function myWeekWeekroosterHtml() {
   ['this', 'next'].forEach(w => {
     mine(w).filter(r => r.status === 'pending').forEach(r => {
       const when = w === 'next' ? t('weekrooster.myweek.nextWeek', { p1: lower(dayName(r.day)) }) : lower(dayName(r.day));
-      cards.push(`<div class="alertCard"><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span>
-        <div class="alertCard__text"><b>${esc(t('weekrooster.myweek.request', { p1: when, p2: lower(summaryOf(r)), p3: upperFirst(deciderLabel(r.day)) }))}</b></div></div>`);
+      cards.push(`<div class="alertCard"><span class="alertCard__icon">${phIcon('clock')}</span>
+        <div class="alertCard__text">${esc(t('weekrooster.myweek.request', { p1: when, p2: lower(summaryOf(r)), p3: upperFirst(deciderLabel(r.day)) }))}</div></div>`);
     });
   });
-  return `<button type="button" class="btn" id="wrChange">${t('weekrooster.myweek.change')}</button>${cards.join('')}`;
+  return `<div class="wrStack"><button type="button" class="btn" id="wrChange">${phIcon('pencil')}${t('weekrooster.myweek.change')}</button>${cards.join('')}</div>`;
 }
 // The pill "Aanvraag" on the ride of a day with an open request of this week.
 export function requestPillHtml(day) {

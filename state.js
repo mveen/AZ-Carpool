@@ -64,6 +64,8 @@ export const S = {
   dayRequests: {},         // weekRequests/* of OTHER families for the days this person decides (day coordinator), this week only
   dayRequestsKey: '',
   dayRequestsUnsubs: [],
+  wrAdvice: null,          // the Advies view open in Rooster: { day, direction, variant } (null = closed)
+  wrDone: null,            // right after Overnemen: { day } (shows the Dagbericht)
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
   wrBusy: false,           // a request is being saved (a double tap makes no double request)

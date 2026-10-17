@@ -6,7 +6,7 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { ovIds, isOv, applyOv, keepOv } from '../ov.js';
+import { ovIds, isOv, applyOv, keepOv, keepTimes } from '../ov.js';
 
 const dep = ids => ids.length ? 'dep:' + ids.join('+') : '';
 const cars = () => [
@@ -76,5 +76,11 @@ test('keepOv drops the mark of a girl who was put back in a car by hand', () => 
   assert.deepEqual(keepOv({ ovGirlIds: ['a'], ovFrom: { a: 'd1' } }, [{ girlIds: ['a'] }]), {});
 });
 
+test('keepTimes keeps the one-off times of a deviation and nothing when there are none; keepOv carries them along', () => {
+  assert.deepEqual(keepTimes({ times: { f3: '07:00', f4: '' } }), { times: { f3: '07:00', f4: '' } });
+  assert.deepEqual(keepTimes({ times: {} }), {}); assert.deepEqual(keepTimes({}), {}); assert.deepEqual(keepTimes(null), {});
+  assert.deepEqual(keepOv({ times: { f3: '07:00' } }, [{ girlIds: ['b'] }]), { times: { f3: '07:00' } });
+  assert.deepEqual(keepOv({ ovGirlIds: ['a'], ovFrom: { a: 'd1' }, times: { f3: '07:00' } }, [{ girlIds: ['b'] }]), { ovGirlIds: ['a'], ovFrom: { a: 'd1' }, times: { f3: '07:00' } });
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -25,7 +25,7 @@ import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from
 import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
 import { carStdId, normalizeLocations } from './locations.js';
-import { applyOv, keepOv, ovIds } from './ov.js';
+import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
 import { purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
@@ -703,7 +703,7 @@ export async function setReturnByPublicTransport(day,girlId,on,direction='terug'
     refreshWeekKey();
     const cur = currentDeviationDoc(day,direction);
     const r = applyOv({cars:effectiveCars(day,direction), ovGirlIds:ovIds(cur), ovFrom:(cur&&cur.ovFrom)||{}}, girlId, on, ids=>computeRideDeparture(day,direction,ids));
-    const extra = r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {};
+    const extra = { ...(r.ovGirlIds.length? {ovGirlIds:r.ovGirlIds, ovFrom:r.ovFrom} : {}), ...keepTimes(cur) };
     await writeDeviation(day,direction,r.cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }

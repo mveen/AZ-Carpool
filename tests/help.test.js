@@ -326,5 +326,11 @@ test('the Afwijkend weekrooster article tells a day coordinator what he sees (ac
   assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/);
 });
 
+test('the Afwijkend weekrooster article explains the advice: variants, the reason, Overnemen, Ongedaan, Dagbericht', () => {
+  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+  assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/); assert.match(s, /Overnemen/); assert.match(s, /Ongedaan/); assert.match(s, /Dagbericht/);
+  assert.doesNotMatch(s, /Overnemen volgt/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

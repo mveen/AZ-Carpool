@@ -96,6 +96,10 @@ await testAsync('uit (or test for a parent): none of it exists', async () => {
   }
 });
 
+await testAsync('the "Actie nodig" block has the button "Advies bekijken" for the day coordinator', async () => {
+  await asDecider(); const html = rooster();
+  assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Advies bekijken/);
+});
 test('ui-weekrooster-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-rooster.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

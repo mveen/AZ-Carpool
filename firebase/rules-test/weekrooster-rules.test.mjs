@@ -1,7 +1,7 @@
 // Firestore rules test for the Afwijkend weekrooster. Needs the Firestore emulator on port 8089 and: npm i @firebase/rules-unit-testing firebase.
 // Start: firebase emulators:start --only firestore (rules = firebase/firestore.rules, port 8089), then: node weekrooster-rules.test.mjs
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, getDoc, deleteDoc, getDocs, collection, query, where } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, deleteField, getDoc, deleteDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import fs from 'node:fs';
 const env = await initializeTestEnvironment({ projectId: 'demo-test', firestore: { host: '127.0.0.1', port: 8089, rules: fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8') } });
 let ok = 0, bad = 0;
@@ -62,6 +62,13 @@ await check('the day coordinator of ANOTHER day cannot accept', accept('u3', 'Do
 await check('accepting while changing other fields refused', updateDoc(doc(as('u2'), 'weekRequests/' + id('Do', 'f4')), { status: 'accepted', decidedAt: 9, decidedBy: 'f2', updatedAt: 9, heen: '01:00' }), false);
 await check('the day coordinator of that day accepts', accept('u2', 'Do', 'f4'));
 await check('an accepted request cannot be accepted again', accept('u2', 'Do', 'f4'), false);
+const undo = (u, day, fam, extra = {}) => updateDoc(doc(as(u), 'weekRequests/' + id(day, fam)), { status: 'pending', decidedAt: deleteField(), decidedBy: deleteField(), updatedAt: 9, ...extra });
+await check('Ongedaan: another family cannot take an acceptance back', undo('u3', 'Do', 'f4'), false);
+await check('Ongedaan: taking it back while changing the times is refused', undo('u2', 'Do', 'f4', { heen: '01:00' }), false);
+await check('Ongedaan: leaving decidedBy behind is refused', updateDoc(doc(as('u2'), 'weekRequests/' + id('Do', 'f4')), { status: 'pending', decidedAt: deleteField(), updatedAt: 9 }), false);
+await check('Ongedaan: the day coordinator of that day takes the acceptance back', undo('u2', 'Do', 'f4'));
+await check('Ongedaan: a pending request cannot be "taken back" again', undo('u2', 'Do', 'f4'), false);
+await check('Ongedaan: after it, the request can be accepted again', accept('u2', 'Do', 'f4'));
 await check('the owner replaces an accepted request by a new pending one', setDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4')), req('Do', 'f4', { heen: '17:00', updatedAt: 20 })));
 await seed('Vr', 'f4');
 await check('the real coordinator can accept any day', accept('coord', 'Vr', 'f4', 'f1'));

@@ -131,5 +131,6 @@ test('Afwijkend weekrooster (day coordinator): no requests of other families and
   assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, ''); assert.deepEqual(S.dayRequestsUnsubs, []);
 });
 
+test('Afwijkend weekrooster (phase 4): no Advies view and no finished Overnemen open at start', () => { assert.equal(S.wrAdvice, null); assert.equal(S.wrDone, null); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

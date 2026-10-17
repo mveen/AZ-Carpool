@@ -9,7 +9,8 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
-import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding } from '../weekrooster-data.js';
+import { rideTime } from '../rides.js';
+import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -193,6 +194,47 @@ await testAsync('a parent who decides no day reads nothing of others; switch off
 
 import { assertNoUnusedImports } from './test-support.js';
 await testAsync('weekrooster-data.js imports nothing it does not use', async () => assertNoUnusedImports('weekrooster-data.js'));
+
+console.log('=== advice and agreement ===');
+const advDoc = (day, fam, e = {}) => ({ weekKey: '2026-W40', day, familyId: fam, rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1, ...e });
+const asDay = async (extra = {}, patch = {}) => {
+  const fake = useFakeDb({ ...sampleDbSeed(), ...extra }); sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, ...patch });
+  syncWeekRequests(); await new Promise(r => setImmediate(r)); return fake;
+};
+await testAsync('two requests for the same day of two families give one advice and one agreement', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3'), 'weekRequests/2026-W40_Do_f4': advDoc('Do', 'f4', { heen: '07:10', terug: '' }) });
+  await withFakeNowAsync(NOW, async () => {
+    const a = adviceForDay('Do'); assert.equal(a.requests.length, 2); assert.deepEqual(Object.keys(a.directions).sort(), ['heen', 'terug']);
+    const r = await acceptDay('Do', 'zuinig'); assert.equal(r.ok, true); assert.equal(r.n, 2);
+  });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'accepted'); assert.equal(fake.get('weekRequests/2026-W40_Do_f4').status, 'accepted');
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').decidedBy, 'f2'); assert.ok(fake.get('deviations/Do_heen').cars.length);
+  assert.equal(adviceForDay('Do').requests.length, 0, 'nothing left to decide');
+});
+await testAsync('after Overnemen the accepted time shows in the ride; Ongedaan puts the requests and the deviations back', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') });
+  await withFakeNowAsync(NOW, async () => {
+    const r = await acceptDay('Do', 'gedoe'); assert.equal(rideTime('f3', 'Do', 'heen'), '07:00');
+    assert.equal(await r.undo(), true);
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending'); assert.equal(S.dayRequests['2026-W40_Do_f3'] ? S.dayRequests['2026-W40_Do_f3'].status : S.weekRequests['2026-W40_Do_f3'].status, 'pending');
+    assert.equal(fake.get('deviations/Do_heen').times, undefined);
+  });
+});
+await testAsync('a failed batch writes nothing and a second tap while busy does nothing', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') });
+  fake.failWrites('deviations', 'denied');
+  await withFakeNowAsync(NOW, async () => {
+    assert.equal((await acceptDay('Do', 'zuinig')).ok, false); assert.equal(S.wrBusy, false);
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending');
+  });
+  S.wrBusy = true; assert.equal((await acceptDay('Do', 'zuinig')).ok, false); S.wrBusy = false;
+});
+await testAsync('uit: no advice is made into an agreement and nothing is written', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') }, { weekrooster: { mode: 'uit' } });
+  const before = [...fake.store.keys()].sort().join();
+  await withFakeNowAsync(NOW, async () => { assert.equal((await acceptDay('Do', 'zuinig')).ok, false); });
+  assert.equal([...fake.store.keys()].sort().join(), before);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

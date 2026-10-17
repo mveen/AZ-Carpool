@@ -145,5 +145,10 @@ await testAsync('what was just handed in shows at once ("Doorgegeven"), even whe
 console.log('=== the code ===');
 test('ui-weekrooster-form.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-form.js'));
 
+await testAsync('Mijn week: the button spans the width with an icon, in one stack with the request note (a clock, no bold text)', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });
+  const html = myWeekWeekroosterHtml();
+  assert.match(html, /^<div class="wrStack"><button type="button" class="btn" id="wrChange"><svg/); assert.doesNotMatch(html, /<b>/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

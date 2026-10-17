@@ -99,5 +99,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 ## Components added for the Afwijkend weekrooster (phase 3)
 
+- **Stack** `.wrStack` (`.wrStack--tight`): a column with the standard gap between a full-width button, alert cards and cards (Mijn week button + request, the Advies view). Buttons in it span the width and carry an icon.
+- **Advice** `.carCard--gone` (dashed: this car does not drive), `.chip--add` (green "+ Noor": joins this car), `.chip--gone` (struck through: leaves this car), `.diffLabel` ("Eerder: …" under a changed car) and `.actionBar` (sticky bar with Overnemen) in the Advies view for the day coordinator. The "Reden:" line is a `.noteLine` built from the planning, never typed.
 - **Log line** `.logItem` with `.logItem__dot`, `.logItem__dot--ok`, `.logItem__main`, `.logItem__side`, `.logItem__when`: one line of "Recente wijzigingen" in Rooster: who, what, the tag (Aanvraag amber, Direct or Akkoord green) and when ("wo 07:12"). A status log of what is in force now, not a notification.
 - Reused as they are: `.devAlert` ("Actie nodig"), `.alertCard--stack` with `.alertCard__row` (the action card in Mijn week), `.dayPill__dot` (a day that needs an action), `.coordLine`, `.noteLine`, `.tag--warn` / `.tag--ok`, `.navbadge` (the Rooster tab number).

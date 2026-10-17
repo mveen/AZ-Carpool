@@ -1013,5 +1013,11 @@ test('the ride listeners mark themselves loaded (also on error) and stopDataList
   for (const k of ['familiesLoaded', 'groupsLoaded', 'periodsLoaded', 'periodCarsLoaded', 'deviationsLoaded']) assert.equal(S[k], false, k);
 });
 
+await testAsync('marking public transport keeps the one-off times of a deviation', async () => {
+  const seed = sampleDbSeed(); seed['deviations/Di_heen'] = { ...seed['deviations/Di_heen'], times: { f1: '08:45' } };
+  const fake = useFakeDb(seed); sampleParentState(); S.deviations = Object.fromEntries(fake.collection('deviations'));
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Di', 'f4', true, 'heen'));
+  assert.deepEqual(fake.get('deviations/Di_heen').times, { f1: '08:45' }); assert.deepEqual(fake.get('deviations/Di_heen').ovGirlIds, ['f4']);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

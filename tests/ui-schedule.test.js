@@ -324,5 +324,9 @@ test('Rooster shows the spinner while the data is loading', () => {
   assert.doesNotMatch(render(() => sampleParentState({})), /class="spinner"/);
 });
 
+test('the Rooster week view shows the Advies view in place of the day when S.wrAdvice is open (and nothing of it by default)', () => {
+  sampleParentState({ scheduleDay: 'Do', roosterMode: 'week' }); S.wrAdvice = null;
+  withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAdvice|wrAccept/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

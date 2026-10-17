@@ -8,13 +8,15 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { showToast } from './ui-common.js';
-import { rideTime, famTime } from './rides.js';
-import { weekKeyDayIso } from './dates.js';
-import { db, setReturnByPublicTransport } from './data.js';
+import { effectiveCars, rideTime, famTime } from './rides.js';
+import { keepOv } from './ov.js';
+import { buildAdvice } from './weekrooster-impact.js';
+import { deviationExpiryMs, deviationKey, weekKeyDayIso } from './dates.js';
+import { cleanCars, currentDeviationDoc, db, recordLastUpdate, setReturnByPublicTransport } from './data.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderSchedule } from './ui-schedule.js';
-import { REQUEST_DAYS, buildRequests, decidedDays, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
+import { REQUEST_DAYS, acceptRequest, buildRequests, pendingForDay, decidedDays, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
 
 export function weekroosterMode() { return normalizeWeekrooster(S.weekrooster).mode; }
 // Does THIS person see and use the new flow? "test": only the real coordinator (Testweergave does not change that). "aan": everybody.
@@ -207,4 +209,82 @@ export async function withdrawWeekRequests(which) {
     return true;
   } catch (e) { showToast(t('data.opslaan_mislukt') + (e && e.message || e)); return false; }
   finally { S.wrBusy = false; }
+}
+
+// ---------- the advice and the agreement (phase 4) ----------
+export const ADVICE_VARIANTS = ['zuinig', 'gedoe'];
+const DIRECTIONS = ['heen', 'terug'];
+
+// The pending requests of a day that this person decides, oldest first.
+export function pendingOfDay(day) {
+  const wk = S.currentWeekKey;
+  return pendingForDay(requestsForDeciding(), wk, day, Date.now(), dayEndMs(wk, day));
+}
+
+// The advice for one day: for every direction a pending request changes, the two variants (see weekrooster-impact.js).
+// Result: { requests, directions: { heen?: { cars (now), variants }, terug?: ... } }. Nothing is saved.
+export function adviceForDay(day) {
+  const requests = pendingOfDay(day), directions = {};
+  DIRECTIONS.forEach(dir => {
+    const touching = requests.filter(r => (r[dir] || '') !== (rideTime(r.familyId, day, dir) || ''));
+    if (!touching.length) return;
+    const cars = effectiveCars(day, dir).map(c => ({ ...c, girlIds: [...(c.girlIds || [])] }));
+    const res = buildAdvice({
+      day, direction: dir, cars, requests: touching.map(r => ({ familyId: r.familyId, rides: true, time: r[dir] || '' })),
+      timeOf: id => rideTime(id, day, dir), families: S.families, settings: S.settings, prefs: S.prefs, priority: (S.shiftPriority || {})[day + '_' + dir],
+    });
+    directions[dir] = { cars, ...res };
+  });
+  return { requests, directions };
+}
+
+// "Overnemen": the cars of the chosen variant become this week's one-off change (the same deviations as Wijzigen: cars + the one-off times
+// of the askers), and all pending requests of the day become 'accepted'. ONE batch: all or nothing, and the first decision wins (the rules
+// refuse a request that is no longer pending). Returns { ok, n, undo } where undo() puts everything back.
+export async function acceptDay(day, variant) {
+  if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return { ok: false }; }
+  if (!weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return { ok: false };
+  const advice = adviceForDay(day), dirs = Object.keys(advice.directions);
+  if (!advice.requests.length) return { ok: false };
+  if (dirs.some(d => advice.directions[d].variants[variant].noSolution)) { showToast(t('weekrooster.advice.noSolution')); return { ok: false }; }
+  const wk = S.currentWeekKey, nowMs = Date.now(), me = myFamilyId();
+  S.wrBusy = true;
+  try {
+    const batch = db.batch(), prevDocs = {}, nextDocs = {};
+    dirs.forEach(dir => {
+      const key = deviationKey(day, dir), prev = currentDeviationDoc(day, dir), v = advice.directions[dir].variants[variant];
+      prevDocs[key] = prev ? JSON.parse(JSON.stringify(prev)) : { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(advice.directions[dir].cars) };
+      nextDocs[key] = { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(v.cars), ...keepOv(prev, v.cars), times: { ...((prev && prev.times) || {}), ...v.times } };
+      batch.set('deviations/' + key, nextDocs[key]);
+    });
+    const agreed = advice.requests.map(r => ({ id: r.id, before: stripId(r), after: acceptRequest(stripId(r), me, nowMs) }));
+    agreed.forEach(a => batch.set('weekRequests/' + a.id, a.after));
+    await batch.commit();
+    applyLocal(nextDocs, agreed.map(a => [a.id, a.after]));
+    recordLastUpdate('Deviation');
+    const undo = async () => {
+      if (!db) return false;
+      try {
+        const b = db.batch();
+        Object.entries(prevDocs).forEach(([key, d]) => b.set('deviations/' + key, d));
+        agreed.forEach(a => b.set('weekRequests/' + a.id, a.before));
+        await b.commit();
+        applyLocal(prevDocs, agreed.map(a => [a.id, a.before]));
+        recordLastUpdate('Deviation');
+        return true;
+      } catch (e) { showToast(t('data.mislukt') + (e && e.message || e)); return false; }
+    };
+    return { ok: true, n: advice.requests.length, undo };
+  } catch (e) {
+    showToast(t('data.opslaan_mislukt') + (e && e.message || e));
+    return { ok: false };
+  } finally { S.wrBusy = false; }
+}
+const stripId = r => { const { id, ...doc } = r; return doc; };
+// What was just saved shows at once (the live listeners confirm it a moment later).
+function applyLocal(devDocs, reqPairs) {
+  S.deviations = { ...S.deviations, ...devDocs };
+  const own = { ...S.weekRequests }, others = { ...S.dayRequests };
+  reqPairs.forEach(([id, doc]) => { if (id in others) others[id] = doc; else own[id] = doc; });
+  S.weekRequests = own; S.dayRequests = others;
 }

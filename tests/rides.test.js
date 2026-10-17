@@ -513,5 +513,11 @@ test('ownCarWarning: no rule, a heen shift, an empty car, or a daughter in no ca
 });
 test('rides.js imports nothing it does not use', () => assertNoUnusedImports('rides.js'));
 
+test('rideTime: a time agreed in a deviation (times) wins; an empty one means she does not ride that way', () => {
+  const dev = { day: 'Do', direction: 'heen', weekKey: WEEK_KEY, expiresAt: Date.now() + 864e5, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'] }], times: { f2: '07:05', f3: '' } };
+  const st = { ...state(), deviations: { Do_heen: dev } };
+  assert.equal(rideTime('f2', 'Do', 'heen', st), '07:05'); assert.equal(rideTime('f3', 'Do', 'heen', st), '');
+  assert.equal(rideTime('f4', 'Do', 'heen', st), famTime('f4', 'Do', 'heen', st), 'nobody else is touched');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

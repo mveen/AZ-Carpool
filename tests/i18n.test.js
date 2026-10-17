@@ -303,7 +303,7 @@ test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeh
   assert.equal(t('weekrooster.done.title', { p1: 40 }), 'Doorgegeven · week 40');
   assert.equal(t('weekrooster.tag.wait', { p1: 'Piet' }), 'Wacht op Piet');
   assert.match(t('weekrooster.who.line', { p1: 'Piet', p2: 'Eline', p3: '07:00', p4: '07:30' }), /Piet.*Eline.*07:00.*07:30/);
-  assert.doesNotMatch(Object.entries(nl).filter(([k]) => k.startsWith('weekrooster.')).map(([, v]) => v).join(' '), /reden|toelichting/i, 'no reason is ever asked');
+  assert.doesNotMatch(Object.entries(nl).filter(([k]) => k.startsWith('weekrooster.') && !k.startsWith('weekrooster.reason.')).map(([, v]) => v).join(' '), /reden|toelichting/i, 'no reason is ever asked');
 });
 
 test('Mijn week loading texts exist: spinner line, slow line and reload button', () => {
@@ -317,6 +317,12 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
   assert.match(t('weekrooster.alert.body'), /Rijdt niet mee/);
 });
 
+test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {
+  ['look', 'title', 'zuinig', 'gedoe', 'accept', 'now', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
+  assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.carsMany', { p1: 2, p2: '−1' }), "2 auto's (−1)");
+  assert.equal(t('weekrooster.advice.doneMany', { p1: 3 }), '3 wijzigingen doorgevoerd');
+  assert.match(t('weekrooster.reason.out', { p1: 'Noor' }), /Noor rijdt niet mee/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
