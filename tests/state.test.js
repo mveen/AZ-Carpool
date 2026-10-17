@@ -86,6 +86,10 @@ test('the ride log starts empty, not loaded, without a listener, and the deviati
   assert.equal(S.deviationsLoaded, false);
 });
 
+test('the Afwijkend-weekrooster switch starts empty, which means uit', () => {
+  assert.equal(S.weekrooster, null);
+});
+
 test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch is read', () => {
   assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {}); assert.deepEqual(S.notifications, {});
   assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null);

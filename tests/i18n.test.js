@@ -289,6 +289,14 @@ test('the practice match and "vertrek vanaf" texts exist', () => {
   assert.match(t('wa.my.match_van', { day: 'ZA 3', team: 'AZ', opponent: 'X', time: '09:15', place: 'ATC', driver: 'Jan' }), /vertrek 09:15 vanaf ATC met Jan/);
 });
 
+test('the Afwijkend-weekrooster texts exist for every mode and no text asks for a reason', () => {
+  ['uit', 'test', 'aan'].forEach(m => {
+    ['weekrooster.beheer.mode.', 'weekrooster.beheer.status.', 'weekrooster.saved.'].forEach(p => assert.ok(t(p + m) && t(p + m) !== p + m, p + m));
+  });
+  assert.match(t('weekrooster.beheer.status.uit'), /precies als voorheen/);
+  assert.match(t('weekrooster.err.coordinatorOnly'), /Alleen de coördinator/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

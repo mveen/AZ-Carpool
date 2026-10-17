@@ -893,6 +893,21 @@ await testAsync('Ritbeurs: the switch, the offers and the moments are read; the 
   stopDataListeners(); assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {});
   S.links = {}; syncListeners(); assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null); assert.deepEqual(S.notifications, {});
 });
+await testAsync('Afwijkend weekrooster: only the switch document is read, a missing or unknown one means uit, and stopping the listeners clears it', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });
+  startDataListeners(); await tick(); await tick();
+  assert.equal(S.weekrooster, null, 'a missing document: nothing stored, so uit');
+  stopDataListeners();
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'test', updatedAt: 1 } }); sampleParentState({ weekrooster: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.weekrooster, { mode: 'test' });
+  assert.deepEqual([...fake.store.keys()].filter(k => k.startsWith('weekRequests')), [], 'no request is read or written while only the switch is known');
+  stopDataListeners(); assert.equal(S.weekrooster, null);
+  useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'AAN' } }); sampleParentState({ weekrooster: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.weekrooster, { mode: 'uit' }, 'an unknown value means uit');
+  stopDataListeners();
+});
 await testAsync('Ritbeurs: a missing switch document means off', async () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ ritbeurs: { on: true } });
   startDataListeners(); await tick(); await tick();

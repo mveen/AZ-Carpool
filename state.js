@@ -53,6 +53,7 @@ export const S = {
   maintenance: null,       // settings/maintenance: onderhoudsmodus { on, text } (null = none / not loaded)
   maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
   ritbeurs: null,          // settings/ritbeurs: the Ritbeurs feature switch { on } (null = none / not loaded, which means off)
+  weekrooster: null,       // settings/weekrooster: the Afwijkend-weekrooster switch { mode: 'uit'|'test'|'aan' } (null = none / not loaded, which means uit)
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id
   notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id

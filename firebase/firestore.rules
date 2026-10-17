@@ -155,6 +155,72 @@ service cloud.firestore {
       allow write: if isCoordinator();
     }
 
+    // ---- Afwijkend weekrooster: the feature switch and the requests (see weekrooster.js) ----
+    // settings/weekrooster ({ mode: 'uit' | 'test' | 'aan' }, written by the coordinator in Beheer; the general settings rule above covers it)
+    // gates every CREATE and UPDATE of a request. A missing document, a missing field or an unknown value counts as 'uit'. 'test': only the
+    // real coordinator may write. Deleting and reading stay allowed in every mode, so switching off never locks data in.
+    function weekroosterMode() {
+      let p = /databases/$(database)/documents/settings/weekrooster;
+      return exists(p) && ('mode' in get(p).data) ? get(p).data.mode : 'uit';
+    }
+    function weekroosterOpen() {
+      let m = weekroosterMode();
+      return m == 'aan' || (m == 'test' && isCoordinator());
+    }
+    // Is the linked family the day coordinator of this weekday (settings/dayCoordinators = { Ma: familyId, ... })?
+    function isDayCoordinatorOf(day) {
+      let p = /databases/$(database)/documents/settings/dayCoordinators;
+      return isLinked() && exists(p) && (day in get(p).data) && get(p).data[day] == linkedFamilyId();
+    }
+    // The real coordinator decides every day (also when no day coordinator is set); a day coordinator decides only his own day.
+    function mayDecideRequest(day) { return isCoordinator() || isDayCoordinatorOf(day); }
+    // The shape of a request: only times and "rijdt mee", one document per family per day. NO field for a reason or any free text.
+    function validRequest(reqId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['weekKey', 'day', 'familyId', 'rides', 'heen', 'terug', 'status', 'createdAt', 'updatedAt', 'decidedAt', 'decidedBy', 'test'])
+        && d.keys().hasAll(['weekKey', 'day', 'familyId', 'rides', 'heen', 'terug', 'status', 'createdAt', 'updatedAt'])
+        && d.weekKey is string && d.weekKey.matches('[0-9]{4}-W[0-9]{2}')
+        && d.day in ['Ma', 'Di', 'Wo', 'Do', 'Vr']
+        && d.familyId is string && reqId == d.weekKey + '_' + d.day + '_' + d.familyId
+        && d.rides is bool && d.heen is string && d.terug is string
+        && (d.rides
+            ? (d.heen.matches('([01][0-9]|2[0-3]):[0-5][0-9]') && d.terug.matches('([01][0-9]|2[0-3]):[0-5][0-9]'))
+            : (d.heen == '' && d.terug == ''))
+        && d.status in ['pending', 'direct', 'accepted', 'withdrawn']
+        && d.createdAt is number && d.updatedAt is number
+        && (!('decidedAt' in d) || d.decidedAt is number)
+        && (!('decidedBy' in d) || d.decidedBy is string)
+        && (!('test' in d) || d.test == true);
+    }
+    // A family writing its OWN request: 'pending' or 'withdrawn', or 'direct' only for "rijdt niet mee" or on a day it coordinates itself.
+    // It can never write 'accepted'. 'decidedBy' may only name itself (on a direct request).
+    function ownRequestOk(reqId) {
+      let d = request.resource.data;
+      return isLinked() && d.familyId == linkedFamilyId() && validRequest(reqId)
+        && d.status in ['pending', 'direct', 'withdrawn']
+        && (d.status != 'direct' || d.rides == false || isDayCoordinatorOf(d.day))
+        && (!('decidedAt' in d || 'decidedBy' in d) || (d.status == 'direct' && d.decidedBy == d.familyId));
+    }
+    match /weekRequests/{reqId} {
+      // A family reads its own requests; the day coordinator the requests of his day; the coordinator everything.
+      allow get, list: if isCoordinator()
+        || (isLinked() && (resource.data.familyId == linkedFamilyId() || isDayCoordinatorOf(resource.data.day)));
+      allow create: if weekroosterOpen() && (ownRequestOk(reqId) || (isCoordinator() && validRequest(reqId)));
+      // The owner changes or withdraws it (createdAt stays); a replaced accepted request starts over as 'pending'.
+      allow update: if weekroosterOpen() && (
+        (resource.data.familyId == request.resource.data.familyId && request.resource.data.createdAt == resource.data.createdAt
+          && ownRequestOk(reqId))
+        || (isCoordinator() && validRequest(reqId))
+        // The day coordinator agrees: a pending request becomes 'accepted' and only these fields change.
+        || (mayDecideRequest(resource.data.day) && resource.data.status == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'decidedAt', 'decidedBy', 'updatedAt'])
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.decidedAt is number && request.resource.data.decidedBy is string
+          && request.resource.data.updatedAt is number));
+      allow delete: if isCoordinator()
+        || (isLinked() && resource.data.familyId == linkedFamilyId() && resource.data.status in ['pending', 'withdrawn']);
+    }
+
     // ---- Deviations (Dagafwijking): any member may read/write ----------------------
     // Deletes are refused until the deviation's own `expiresAt`, so a stale browser tab still
     // living in last week can never wipe this week's changes.

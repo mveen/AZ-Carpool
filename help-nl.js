@@ -384,6 +384,20 @@ export default [
     coordinatorOnly: true,
   },
   {
+    id: 'beheer-weekrooster',
+    title: 'Beheer: Afwijkend weekrooster aan- of uitzetten',
+    keywords: 'afwijkend weekrooster aanvraag dagcoordinator uitzetten aanzetten test schakelaar week dag wijzigen',
+    body: [
+      'In Beheer, bij Berichten, staat de kaart Afwijkend weekrooster met drie standen: Uit, Test en Aan. De schakelaar slaat direct op.',
+      'Uit betekent: de app werkt precies als voorheen. Er is niets nieuws te zien en er wordt niets nieuws opgeslagen. Dit is de standaard.',
+      'Test betekent: alleen jij als coördinator ziet de nieuwe functie. Ouders merken niets. Met Bekijk als kun je hem als ouder of dagcoördinator proberen.',
+      'Aan betekent: iedereen ziet de nieuwe functie. Zet de schakelaar pas op Test of Aan nadat de nieuwe database-regels zijn uitgerold.',
+      'Zet je de schakelaar weer op Uit, dan stopt alles direct. Bestaande gegevens blijven ongemoeid.',
+    ],
+    tab: 'beheer',
+    coordinatorOnly: true,
+  },
+  {
     id: 'beheer-onderhoud',
     title: 'Beheer: de app tijdelijk dichtzetten (onderhoudsmodus)',
     keywords: 'onderhoud onderhoudsmodus dicht sluiten niet beschikbaar offline storing pagina aan uit zetten',

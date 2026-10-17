@@ -257,6 +257,13 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   assert.match(a.title + b.title, /Ritten ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
 });
 
+test('the Afwijkend weekrooster has a coordinator-only Beheer article that explains uit, test and aan', () => {
+  const b = articles.find(x => x.id === 'beheer-weekrooster');
+  assert.ok(b && b.coordinatorOnly && b.tab === 'beheer'); const s = b.body.join(' ');
+  assert.match(s, /Uit[\s\S]*precies als voorheen[\s\S]*Test[\s\S]*alleen jij[\s\S]*Aan[\s\S]*iedereen/); assert.match(s, /database-regels/); assert.match(s, /Bestaande gegevens blijven ongemoeid/);
+  assert.doesNotMatch(s, /reden/i, 'no reason is ever asked or stored');
+});
+
 test('the push messages: a parent article (how to switch on, per phone, iPhone, quiet hours), the Beheer article (default off, count, testing always works) and the privacy and services articles', () => {
   const a = findArticle('push-meldingen'), ritb = allText(findArticle('ritbeurs')), beheer = allText(findArticle('beheer-ritbeurs', { canEdit: true }));
   assert.ok(a && !a.coordinatorOnly); const t = allText(a);
