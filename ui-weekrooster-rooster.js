@@ -66,10 +66,13 @@ export function scheduleDayExtrasHtml(day) {
       : '';
     return coordLineHtml(day) + alert + logHtml(day);
   }
-  // A parent: the own open request of this day, as a note (nobody else's request is shown).
+  // A parent: the own open request of this day as a note, and the open requests of the other families.
   const own = openRequestsOf(S.weekRequests, wk(), myFamilyId(), Date.now(), d => dayEndMs(wk(), d)).filter(r => r.day === day && r.status === 'pending');
   const notes = own.map(r => `<div class="noteLine">${esc(t('weekrooster.note.own', { p1: lower(summaryOf(r)), p2: upperFirst(deciderLabel(day)) }))}</div>`).join('');
-  return coordLineHtml(day) + notes;
+  // The requests of the other families on this day that still wait for the day coordinator: who, what, and who decides.
+  const others = pendingForDay(S.dayRequests, wk(), day, Date.now(), dayEndMs(wk(), day)).filter(r => r.familyId !== myFamilyId())
+    .map(r => `<div class="noteLine">${esc(t('weekrooster.note.other', { p1: girlName(r.familyId), p2: lower(summaryOf(r)), p3: upperFirst(deciderLabel(day)) }))}</div>`).join('');
+  return coordLineHtml(day) + notes + others;
 }
 
 // Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).

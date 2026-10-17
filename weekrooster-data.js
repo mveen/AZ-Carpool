@@ -94,7 +94,7 @@ export function requestsForDeciding() { return { ...S.dayRequests, ...S.weekRequ
 // Keeps the listeners in step with: the switch, who is looking (also in Testweergave) and the planning week. With the switch off for
 // this person there are none, and nothing is read.
 // - Own requests: 10 known documents (this week and next week, five days).
-// - A day coordinator also reads the requests of the other families for the days they decide, THIS week only: what was handed in as
+// - Every family also reads the requests of the other families, THIS week only (a day coordinator to decide, a parent for the note): what was handed in as
 //   "next week" shows up by itself when the week changes (Friday 19:00).
 export function syncWeekRequests() {
   const fid = (db && S.me && weekroosterOn() && myLinkedFamilyId()) ? myFamilyId() : null;
@@ -126,7 +126,7 @@ function syncOwn(fid) {
   }));
 }
 function syncDays(fid) {
-  const days = fid ? myDeciderDays() : [];
+  const days = fid ? REQUEST_DAYS : [];   // every linked family reads the open requests of the others (times only), for the parent's note
   const others = fid ? Object.keys(S.families || {}).filter(id => id !== fid).sort() : [];
   const key = days.length && others.length ? [fid, S.currentWeekKey, days.join(''), others.join(',')].join('|') : '';
   if (key === (S.dayRequestsKey || '')) return;

@@ -202,13 +202,12 @@ service cloud.firestore {
         && (!('decidedAt' in d || 'decidedBy' in d) || (d.status in ['direct', 'withdrawn'] && d.decidedBy == d.familyId));
     }
     match /weekRequests/{reqId} {
-      // A family reads its own requests; the day coordinator the requests of his day; the coordinator everything.
+      // Every linked family reads the requests (times only, no reason is stored): a parent sees what is asked on a day, the day
+      // coordinator decides. Only the owner changes a request; the day coordinator only agrees.
       // get: judged by the document id (week_day_family), so that asking for a request that does not exist yet gets an empty answer,
       // not an error (the app listens to the known ids). list: judged by the data, so a query has to ask for its own family or day.
-      allow get: if isCoordinator()
-        || (isLinked() && (reqId[12:] == linkedFamilyId() || isDayCoordinatorOf(reqId[9:11])));
-      allow list: if isCoordinator()
-        || (isLinked() && (resource.data.familyId == linkedFamilyId() || isDayCoordinatorOf(resource.data.day)));
+      allow get: if isCoordinator() || isLinked();
+      allow list: if isCoordinator() || isLinked();
       allow create: if weekroosterOpen() && (ownRequestOk(reqId) || (isCoordinator() && validRequest(reqId)));
       // The owner changes or withdraws it (createdAt stays); a replaced accepted request starts over as 'pending'.
       allow update: if weekroosterOpen() && (

@@ -101,6 +101,14 @@ await testAsync('read only: the own request is a note on that day, other familie
   assert.doesNotMatch(text(mijnWeek()), /Actie nodig voor/);
 });
 
+await testAsync('a parent sees the open request of another family on that day as a note; an accepted or direct one is not shown', async () => {
+  useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '12:15', terug: '17:00' }) });
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+  const s = text(rooster());
+  assert.match(s, /: aanvraag heen 12:15 · terug 17:00\. Kees de Vries beslist\./);
+  assert.doesNotMatch(s, /Evi: Rijdt/, 'a direct request is not a note'); assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen/);
+});
+
 console.log('=== switch off ===');
 await testAsync('uit (or test for a parent): none of it exists', async () => {
   for (const mode of ['uit', 'test']) {

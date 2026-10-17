@@ -95,7 +95,7 @@ test('the agenda texts exist and fill their placeholders (card in Profiel and th
 });
 test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
   assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
-  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('myweek.daughter_heen'), 'Aanwezig om'); assert.equal(t('myweek.daughter_terug'), 'Aanwezig om');
+  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('weekrooster.note.other', { p1: 'Noor', p2: 'heen 16:30', p3: 'Kees' }), 'Noor: aanvraag heen 16:30. Kees beslist.'); assert.equal(t('myweek.daughter_heen'), 'Aanwezig om'); assert.equal(t('myweek.daughter_terug'), 'Aanwezig om');
   assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', time: '17:00' }), 'Noor aanwezig 17:00');
   assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });

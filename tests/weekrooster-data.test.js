@@ -171,24 +171,24 @@ await testAsync('the days a person decides: the day coordinator\'s own days; the
   sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); assert.deepEqual(myDeciderDays(), []);
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, links: {} }); assert.deepEqual(myDeciderDays(), []);
 });
-await testAsync('a day coordinator reads the other families\' requests of his day (this week), live; the own ones stay separate', async () => {
+await testAsync('every linked family reads the other families\' requests of all days (this week), live; the own ones stay separate', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': reqDoc('Do', 'f3'), 'weekRequests/2026-W40_Do_f4': reqDoc('Do', 'f4', { status: 'direct', rides: false, heen: '', terug: '' }), 'weekRequests/2026-W40_Vr_f3': reqDoc('Vr', 'f3'), 'weekRequests/2026-W41_Do_f3': reqDoc('Do', 'f3', { weekKey: '2026-W41' }) });
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
-  assert.deepEqual(Object.keys(S.dayRequests).sort(), ['2026-W40_Do_f3', '2026-W40_Do_f4'], 'only his day, only this week, only the others');
-  assert.equal(S.dayRequestsUnsubs.length, 5, 'one listener per other family for his one day');
+  assert.deepEqual(Object.keys(S.dayRequests).sort(), ['2026-W40_Do_f3', '2026-W40_Do_f4', '2026-W40_Vr_f3'], 'all days, only this week, only the others');
+  assert.equal(S.dayRequestsUnsubs.length, 25, 'one listener per other family per day');
   await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'weekRequests/2026-W40_Do_f5'), reqDoc('Do', 'f5'));
   assert.ok(S.dayRequests['2026-W40_Do_f5'], 'a new request shows up at once');
   assert.ok(requestsForDeciding()['2026-W40_Do_f3'] && !requestsForDeciding()['2026-W41_Do_f3']);
-  syncWeekRequests(); assert.equal(S.dayRequestsUnsubs.length, 5, 'unchanged: the listeners are kept');
+  syncWeekRequests(); assert.equal(S.dayRequestsUnsubs.length, 25, 'unchanged: the listeners are kept');
 });
-await testAsync('a parent who decides no day reads nothing of others; switch off: nothing at all; stopping closes everything', async () => {
+await testAsync('a parent who decides no day also reads the others (for the note); switch off: nothing at all; stopping closes everything', async () => {
   useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': reqDoc('Do', 'f3') });
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' } }); syncWeekRequests();
-  assert.equal(S.dayRequestsUnsubs.length, 0); assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, '');
+  assert.equal(S.dayRequestsUnsubs.length, 25); assert.ok(S.dayRequestsKey);
   sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
   assert.equal(S.dayRequestsUnsubs.length + S.weekRequestsUnsubs.length, 0);
   sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
-  assert.equal(S.dayRequestsUnsubs.length, 5); stopWeekRequests();
+  assert.equal(S.dayRequestsUnsubs.length, 25); stopWeekRequests();
   assert.equal(S.dayRequestsUnsubs.length, 0); assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, '');
 });
 

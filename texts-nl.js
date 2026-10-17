@@ -1271,6 +1271,7 @@ export default {
   "weekrooster.alert.body": "Het vaste rooster geldt tot jij akkoord geeft. 'Rijdt niet mee' is al verwerkt.",
   "weekrooster.log.title": "Recente wijzigingen",
   "weekrooster.note.own": "Jouw aanvraag: {p1}. {p2} beslist.",
+  "weekrooster.note.other": "{p1}: aanvraag {p2}. {p3} beslist.",
 
   // Agenda (calendar subscription: Profiel card and the .ics file made by cron/agenda.mjs)
   'agenda.titel_rit': 'Carpool {dir}: {route}',
