@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { esc, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, FREE_TEXT_MAX, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
-import { activeDeviation, computeRideDeparture, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
+import { activeDeviation, computeRideDeparture, ownCarWarning, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, reserveAskText } from './message-texts.js';
@@ -271,7 +271,8 @@ export function renderDevDirection(day,direction){
 const snapshotCars = (day,direction)=>effectiveCars(day,direction).map(c=>({...c, girlIds:[...(c.girlIds||[])]}));
 export async function saveWithUndo(day,direction,prev,cars,text){
   const ok = await saveDeviationCars(day,direction,cars);
-  if(ok) showToast(text, { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) showToast(t('deviation.hersteld')); } } });
+  const warning = ok? ownCarWarning(direction, cars) : '';   // soft: the change is saved, the warning replaces the confirmation text, "Ongedaan" stays
+  if(ok) showToast(warning || text, { ...(warning? {icon:'warning'} : {}), action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) showToast(t('deviation.hersteld')); } } });
   return ok;
 }
 
@@ -358,6 +359,8 @@ export function attachDeviationHandlers(){
     if(ok){
       afterChange(day,direction,fromIdx,prev, girlName(girl)+t('deviation.verplaatst'));
       if(overfull) showToast(t('deviation.deze_auto_zit_nu_vol', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
+      const ownWarning = ownCarWarning(direction, cars);
+      if(ownWarning) showToast(ownWarning, {icon:'warning'});
     }
   });
   // Remove a whole car (one-off, this shift only). An empty car goes at once (with "Ongedaan"); a car with passengers asks a second tap first,

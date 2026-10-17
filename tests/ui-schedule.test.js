@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
-import { renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
+import { moveGirlToGroup, renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -293,6 +293,20 @@ test('Rooster has no "Laatst bijgewerkt" footer, in any mode', () => {
   }
 });
 import { assertNoUnusedImports } from './test-support.js';
+await (async () => {
+  const toastNow = () => text(dom.doc.getElementById('toast').innerHTML);
+  const seed = { 'groups/g1': { day: 'Ma', direction: 'terug', girlIds: ['f2', 'f6'], driverFamilyId: 'f2' }, 'groups/g2': { day: 'Ma', direction: 'terug', girlIds: ['f1'], driverFamilyId: 'f3' } };
+  try {
+    useFakeDb({ ...sampleDbSeed(), ...seed });
+    sampleCoordinatorState({ groups: { g1: seed['groups/g1'], g2: seed['groups/g2'] }, prefs: { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] } });
+    await moveGirlToGroup('g1', 'f2', 'g2');
+    assert.match(toastNow(), /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); passed++; console.log('  ✓ moving the daughter away from her driving parent (Vast rooster) saves, then warns softly');
+    const fake = useFakeDb({ ...sampleDbSeed(), ...seed });
+    sampleCoordinatorState({ groups: { g1: seed['groups/g1'], g2: seed['groups/g2'] }, prefs: { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] } });
+    await moveGirlToGroup('g1', 'f6', 'g2');
+    assert.match(toastNow(), /verplaatst/); assert.doesNotMatch(toastNow(), /Let op/); assert.deepEqual(fake.get('groups/g2').girlIds, ['f1', 'f6']); passed++; console.log('  ✓ a move that keeps parent and daughter together gives no warning');
+  } catch (e) { failed++; console.log('  ✗ own-car warning in the Vast rooster\n     ', e.message); }
+})();
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

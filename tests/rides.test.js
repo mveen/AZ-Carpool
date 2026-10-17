@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import {
   fam, seats, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
-  planOptions, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
+  planOptions, ownCarWarning, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
   baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
   periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
@@ -186,6 +186,29 @@ test('option labels name the drivers and are HTML-safe', () => {
   const st = state(); st.families.f2.parentName = 'Piet <P>';
   const labels = planOptions('Ma', 'heen', girlsFor('Ma', 'heen', st), st).map(o => o.label).join('|');
   assert.ok(!labels.includes('<P>'));
+});
+
+console.log('\n=== planOptions: "Eigen ouder rijdt mee" (terug) ===');
+const ownRule = girlId => ({ type: 'ownCar', girlId, direction: 'terug' });
+const parentWithoutDaughter = (opts, id) => opts.filter(o => o.assignment.some(a => a.driverId === id && !a.girlIds.includes(id)));
+test('Ma terug: without the rule Piet (f2) may drive a car without his daughter; with the rule those alternatives are gone, the primary stays', () => {
+  const list = girlsFor('Ma', 'terug', state());
+  const without = planOptions('Ma', 'terug', list, state());
+  const withRule = planOptions('Ma', 'terug', list, state({ prefs: { rules: [ownRule('f2')] } }));
+  assert.ok(parentWithoutDaughter(without, 'f2').length > 0, 'the situation exists without the rule');
+  assert.equal(parentWithoutDaughter(withRule, 'f2').length, 0);
+  assert.ok(withRule.length >= 1 && withRule[0].primary);
+  assert.equal(withRule[0].label, without[0].label);
+});
+test('the rule is ignored on a heen shift', () => {
+  const list = girlsFor('Ma', 'heen', state());
+  assert.deepEqual(planOptions('Ma', 'heen', list, state({ prefs: { rules: [ownRule('f1'), ownRule('f2')] } })).map(o => o.label), planOptions('Ma', 'heen', list, state()).map(o => o.label));
+});
+test('no option of any shift ever separates a driving parent from her daughter, whichever family has the rule', () => {
+  ['f1', 'f2', 'f3', 'f4', 'f6'].forEach(f => ['Ma', 'Di', 'Do'].forEach(day => {
+    const st = state({ prefs: { rules: [ownRule(f)] } });
+    planOptions(day, 'terug', girlsFor(day, 'terug', st), st).forEach(o => assert.equal(parentWithoutDaughter([o], f).length, 0, day + ' ' + f + ': ' + o.label));
+  }));
 });
 
 console.log('\n=== default: reads the shared app state ===');
@@ -413,6 +436,12 @@ test('planPeriodShift: auto planning with the handed-in times (clusters by time,
   assert.deepEqual(r.cars, [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6', 'f5'], departureTime: '13:00' }, { driverFamilyId: 'f4', girlIds: ['f1', 'f4'], departureTime: '17:30' }]);
   assert.deepEqual(r.unplaced, []);
 });
+test('planPeriodShift keeps the rule too (the temporary rooster plans with the same engine)', () => {
+  const st = pst({ prefs: { rules: [ownRule('f2'), ownRule('f4')] } });
+  const r = planPeriodShift('2026-10-27', 'terug', st);
+  r.cars.forEach(c => { if (c.driverFamilyId === 'f2' || c.driverFamilyId === 'f4') assert.ok(c.girlIds.includes(c.driverFamilyId), c.driverFamilyId + ' has her own daughter'); });
+  assert.deepEqual([...r.cars.flatMap(c => c.girlIds), ...r.unplaced].sort(), ['f1', 'f2', 'f4', 'f5', 'f6']);
+});
 test('planPeriodShift: a rider nobody can drive is handed back as unplaced, the rest is planned', () => {
   const fams = sampleFamilies(); fams.f4 = { ...fams.f4, availability: { ...fams.f4.availability, Di: { heen: false, terug: false } } };
   const r = planPeriodShift('2026-10-27', 'terug', pst({ families: fams }));
@@ -465,6 +494,22 @@ test('rides.js escapes with escape.js and does not import any screen code (the s
   const { readFileSync } = await import('node:fs');
   const src = readFileSync(new URL('../rides.js', import.meta.url), 'utf8');
   assert.match(src, /from '\.\/escape\.js'/); assert.doesNotMatch(src, /from '\.\/ui-/);
+});
+console.log('\n=== ownCarWarning: the soft warning for manual choices ===');
+test('ownCarWarning names the daughter who sits in another car than her driving parent; nothing when the rule holds', () => {
+  const st = state({ prefs: { rules: [ownRule('f2')] } });
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), 'Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto (regel Eigen ouder rijdt mee).');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'] }, { driverFamilyId: 'f3', girlIds: ['f1'] }], st), '');
+});
+test('ownCarWarning: no rule, a heen shift, an empty car, or a daughter in no car all give no warning; several names are joined', () => {
+  const cars = [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }];
+  assert.equal(ownCarWarning('terug', cars, state()), '');
+  assert.equal(ownCarWarning('heen', cars, state({ prefs: { rules: [ownRule('f2')] } })), '');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: [] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], state({ prefs: { rules: [ownRule('f2')] } })), '', 'a car without passengers does not drive');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }], state({ prefs: { rules: [ownRule('f2')] } })), '', 'she is in no car: that is "niet ingedeeld", not a broken rule');
+  const two = state({ prefs: { rules: [ownRule('f1'), ownRule('f2')] } });
+  assert.match(ownCarWarning('terug', [{ driverFamilyId: 'f1', girlIds: ['f6'] }, { driverFamilyId: 'f2', girlIds: ['f3'] }, { driverFamilyId: 'f3', girlIds: ['f1', 'f2'] }], two), /Eline & Jahaimy zit in een andere auto/);
+  assert.equal(ownCarWarning('terug', [], {}), '', 'a state without prefs does not crash');
 });
 test('rides.js imports nothing it does not use', () => assertNoUnusedImports('rides.js'));
 

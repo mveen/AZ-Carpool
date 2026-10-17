@@ -325,15 +325,15 @@ export default [
   {
     id: 'beheer-instellingen',
     title: 'Beheer: planning, plekken en dagcoördinatoren',
-    keywords: 'beheer instellingen onderdelen gezinnen berichten koppelingen planning plekken adres dagcoordinator dagcoördinator voorkeuren samen reizen volgorde standaard ophaalplek',
+    keywords: 'beheer instellingen onderdelen gezinnen berichten koppelingen planning plekken adres dagcoordinator dagcoördinator voorkeuren samen reizen eigen ouder rijdt mee volgorde standaard ophaalplek',
     coordinatorOnly: true,
     body: [
       '• Gezinnen: bij Dagcoördinatoren kies je per weekdag één gezin. Bij Selectievolgorde per shift, Reisvoorkeuren en Beschikbaarheid chauffeurs (weekoverzicht) stel je de planning per gezin af.',
       '• Planning, Ophaal- en afzetplekken: maximaal 6 plekken met naam en adres. Met Plek toevoegen voeg je er een toe. Een adres mag gewoon een adres zijn of GPS-coördinaten. Het Busstation blijft altijd staan.',
       '• Planning, Planning-instellingen: regels voor hoe combinaties in het Rooster worden voorgesteld. Wijzigingen worden vanzelf opgeslagen.',
-      '• Gezinnen, Reisvoorkeuren: wie liever samen in één auto zit.',
+      '• Gezinnen, Reisvoorkeuren: wie liever samen in één auto zit. Met Eigen ouder rijdt mee kies je een gezin waarvan de dochter bij de terugrit altijd in de auto van haar eigen ouder zit als die ouder rijdt, zodat de ouder na de terugrit met haar naar huis kan. Rijdt die ouder niet, dan plant de app gewoon vrij. Het geldt voor het Rooster en het Rooster van een periode met andere tijden; zelf een andere auto kiezen kan altijd, in het Rooster en in Wijzigen. De app laat dan een melding zien ("Let op: de eigen ouder rijdt, maar … zit in een andere auto"), maar houdt je niet tegen.',
       '• Gezinnen, Selectievolgorde per shift: de volgorde van de beschikbare chauffeurs (ook Flex-gezinnen die als chauffeur beschikbaar zijn). Een hogere plek wordt eerder gekozen. Staat er "back-up" achter, dan rijdt dat gezin alleen mee als de standaardchauffeurs de shift niet kunnen dekken.',
-      '• Zo plant de app: eerst moet iedereen mee binnen de maximale wachttijd (en passen de plekken). Daarna zo min mogelijk back-upchauffeurs, dan zo min mogelijk auto\'s, dan de hoogste plekken in de Selectievolgorde, dan de kortste wachttijd. Daarna tellen de wensen: samen reizen, dan de eigen ouder, dan de voorkeur. Een grotere auto krijgt nooit voorrang op tijd.',
+      '• Zo plant de app: eerst moet iedereen mee binnen de maximale wachttijd (en passen de plekken). Daarna zo min mogelijk back-upchauffeurs, dan zo min mogelijk auto\'s, dan de hoogste plekken in de Selectievolgorde, dan de kortste wachttijd. Daarna tellen de wensen: samen reizen, dan de eigen ouder, dan de voorkeur. Eigen ouder rijdt mee (terug) is geen wens maar een vaste regel en gaat voor al het andere. Een grotere auto krijgt nooit voorrang op tijd.',
       '• Berichten, Meldingen bij gewijzigde tijden: zie je bovenaan het Rooster. Zet ook browsermeldingen aan voor een seintje.',
     ],
     tab: 'beheer',

@@ -21,7 +21,7 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
-import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
+import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
@@ -851,5 +851,9 @@ export async function cycleShiftPlace(day,direction){
 export async function createGroupCustom(day,direction,ids){
   if(!ids.length){showToast(t('data.selecteer_minstens_1_dochter'));return;}
   const eligible=eligibleDrivers(day,direction,ids.length);
-  await createGroupWithDriver(day,direction,ids, eligible[0]?eligible[0][0]:null);
+  const driverId = eligible[0]?eligible[0][0]:null;
+  // Soft warning ("Eigen ouder rijdt mee"): worked out before saving, from the cars as they are now plus the new one.
+  const warning = ownCarWarning(direction, [...groupsFor(day,direction).map(([,g])=>g), {driverFamilyId:driverId, girlIds:ids}]);
+  await createGroupWithDriver(day,direction,ids, driverId);
+  if(warning) showToast(warning, {icon:'warning'});
 }

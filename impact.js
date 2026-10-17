@@ -40,6 +40,7 @@ function engineCars({ day, direction, cars, families, settings, prefs, priority 
     riders, drivers: [...drivers.values()], direction,
     gapLimitMinutes: ((settings && settings.gapThresholdHours) || 3) * 60,
     togetherRules: rules.filter(r => r.type === 'together'), preferRules: rules.filter(r => r.type === 'prefer'),
+    ownCarRules: rules.filter(r => r.type === 'ownCar'),
     prefWindowMinutes: settings && settings.prefWindowMinutes != null ? settings.prefWindowMinutes : 30,
     parentPrefWindowMinutes: settings && settings.parentPrefWindowMinutes != null ? settings.parentPrefWindowMinutes : 60,
   });

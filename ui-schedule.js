@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
-import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
+import { driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
 import { esc, hapticTap, locationsCfg, openSheet, phIcon, setStatus, showToast, twoStepConfirm } from './ui-common.js';
@@ -350,6 +350,12 @@ export function renderDirectionStandard(day,direction){
 
 // Move a passenger to another car of the same trip (Standaardrooster). A full destination car
 // offers a swap on that car's own card instead of just refusing.
+// Soft warning after a manual change in the Vast rooster: the same shift with the changed cars (overrides: {groupId: patch}).
+function warnOwnCar(day, direction, overrides){
+  const w = ownCarWarning(direction, groupsFor(day,direction).map(([id,g])=>overrides[id]? {...g, ...overrides[id]} : g));
+  if(w) showToast(w, {icon:'warning'});
+}
+
 export async function moveGirlToGroup(gid, girlId, toGid){
   const from=S.groups[gid], to=S.groups[toGid];
   if(!from||!to) return;
@@ -373,6 +379,7 @@ export async function moveGirlToGroup(gid, girlId, toGid){
     await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime: toDeparture});
     recordLastUpdate('Rooster');
     showToast(girlName(girlId).replace(/&amp;/g,'&')+t('schedule.verplaatst'));
+    warnOwnCar(from.day, from.direction, {[gid]:{girlIds:newFrom}, [toGid]:{girlIds:newTo}});
   }catch(e){showToast(t('schedule.verplaatsen_mislukt')+(e&&e.message||e));}
 }
 
@@ -467,6 +474,7 @@ export function attachScheduleHandlers(){
     const gid=sel.dataset.swap; const g=S.groups[gid]; if(!g)return;
     const newDriver=sel.value;
     try{
+      const patches = {[gid]:{driverFamilyId:newDriver}};
       await db.doc("groups/"+gid).update({driverFamilyId:newDriver});
       const siblings = groupsFor(g.day,g.direction).filter(([oid,og])=>oid!==gid && og.driverFamilyId===newDriver);
       for(const [oid,og] of siblings){
@@ -474,8 +482,10 @@ export function attachScheduleHandlers(){
         usedElsewhere.add(newDriver);
         const alt = eligibleDrivers(g.day,g.direction,og.girlIds.length).map(([id])=>id).find(id=>!usedElsewhere.has(id));
         await db.doc("groups/"+oid).update({driverFamilyId: alt||null});
+        patches[oid] = {driverFamilyId: alt||null};
       }
       showToast(siblings.length? t('schedule.chauffeur_gewisseld_dubbele_boeking_automatisch') : t('schedule.chauffeur_gewisseld'));
+      warnOwnCar(g.day, g.direction, patches);
       recordLastUpdate('Rooster');
     }catch(e){showToast(t('schedule.wisselen_mislukt')+(e&&e.message||e));}
   });
@@ -506,6 +516,7 @@ export function attachScheduleHandlers(){
       await db.doc("groups/"+toGid).update({girlIds:newTo, departureTime:toDeparture});
       recordLastUpdate('Rooster');
       showToast(t('schedule.gewisseld'));
+      warnOwnCar(from.day, from.direction, {[fromGid]:{girlIds:newFrom}, [toGid]:{girlIds:newTo}});
     }catch(e){ showToast(t('schedule.wisselen_mislukt')+(e&&e.message||e)); }
     S.pendingSwapRequest=null;
     renderSchedule();

@@ -8,7 +8,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { dayUp, isoDayLabel, isoRangeLabel, weekKeyDayIso } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
-import { activeDeviation, availableDrivers, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
+import { activeDeviation, availableDrivers, ownCarWarning, plainGirlName, famTime, fam, girlName, isFlex, sortGirlIds, periodCarsFor, periodDeparture, periodEligibleDrivers, periodTimeFor, periodUnplacedFor, seats, plainDriverName } from './rides.js';
 import { clearDeviation, deletePeriodRooster, makePeriodRooster, replanPeriodShift, savePeriodShift } from './data.js';
 import { describeEntryDay, normalizePeriod, periodDayKey, periodEntryId, periodForDate, periodList, periodMoveGirl, periodPhase, periodProgress, periodSetDriver, periodSwapGirls, periodWorkdays } from './period.js';
 import { carRouteHtml, driverLineHtml, flexSuffix, openCarPlaceSheet, renderSchedule } from './ui-schedule.js';
@@ -256,7 +256,8 @@ async function editShift(iso, direction, edit){
   const r = edit(cur(iso, direction));
   if(r.error){ showToast(t(r.error.key, { p1:r.error.p1, p2:r.error.p2 })); renderSchedule(); return false; }
   const ok = await savePeriodShift(iso, direction, r.cars);
-  if(ok) showToast(t('period.rooster.saved'));
+  const warning = ok? ownCarWarning(direction, r.cars) : '';   // soft: the change is saved anyway
+  if(ok) showToast(warning || t('period.rooster.saved'), warning? {icon:'warning'} : undefined);
   renderSchedule();
   return ok;
 }

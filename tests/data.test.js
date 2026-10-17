@@ -167,6 +167,13 @@ await testAsync('createGroupCustom picks the first eligible driver; with no girl
   await withFakeNowAsync(NOW, () => createGroupCustom('Ma', 'heen', ['f4', 'f5']));
   assert.equal(fake.collection('groups')[0][1].driverFamilyId, 'f1');
 });
+await testAsync('createGroupCustom warns (soft, still saves) when the new car has a driving parent whose daughter sits in another car ("Eigen ouder rijdt mee")', async () => {
+  const fake = useFakeDb({}); sampleCoordinatorState({ groups: { Ma_terug_x: { day: 'Ma', direction: 'terug', girlIds: ['f1'], driverFamilyId: 'f3' } }, prefs: { rules: [{ type: 'ownCar', girlId: 'f1', direction: 'terug' }] } });
+  await withFakeNowAsync(NOW, () => createGroupCustom('Ma', 'terug', ['f4', 'f5']));
+  assert.equal(fake.collection('groups').length, 1, 'saved anyway');
+  assert.equal(fake.collection('groups')[0][1].driverFamilyId, 'f1', 'the first eligible driver is Eline\'s parent, whose daughter sits in another car');
+  assert.match(toast(), /Let op: de eigen ouder rijdt, maar Eline zit in een andere auto/);
+});
 await testAsync('a refused write shows the reason', async () => {
   const fake = useFakeDb({}); sampleCoordinatorState({ groups: {} }); fake.failWrites('groups/', 'read-only');
   await withFakeNowAsync(NOW, () => createGroupWithDriver('Ma', 'heen', ['f4'], 'f3'));

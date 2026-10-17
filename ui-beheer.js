@@ -3,7 +3,7 @@ import { t, locale } from './i18n.js';
 import { S } from './state.js';
 import { DAYS } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
-import { availableDrivers, driverNameHtml, isStandaardDriver, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
+import { availableDrivers, driverNameHtml, isFlex, isStandaardDriver, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
@@ -50,11 +50,16 @@ export function renderPrefsCard(){
   const ruleRows = (S.prefs.rules||[]).map((r,i)=>{
     const label = r.type==='together'
       ? t('beheer.samen_reizen_2', { p1: (r.ids||[]).map(id=>girlName(id)).join(' &amp; ') })
-      : t('beheer.voorkeur_met',{p1:girlName(r.girlId),p2:(r.withAny||[]).map(id=>girlName(id)).join(t('beheer.of'))});
+      : r.type==='ownCar'
+        ? t('beheer.eigen_ouder_regel', { p1: girlName(r.girlId) })
+        : t('beheer.voorkeur_met',{p1:girlName(r.girlId),p2:(r.withAny||[]).map(id=>girlName(id)).join(t('beheer.of'))});
     return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="font-size:14px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_voorkeuren')}</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
+  // "Eigen ouder rijdt mee": only families with a daughter who can be a passenger (Flex families are never one)
+  const ownGirls = girls.filter(([id,f])=>!isFlex(f));
+  const ownCarSelect = `<select id="ownCarGirlSelect">${ownGirls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
   const preferChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefWithPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   return `${ruleRows}
     <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
@@ -64,7 +69,12 @@ export function renderPrefsCard(){
     <p class="muted" style="margin-top:14px"><strong>${t('beheer.voorkeur')}</strong> ${t('beheer.moet_met_minstens_een_van')}</p>
     <label>${t('beheer.wie')}</label>${preferSelect}
     <label>${t('beheer.bij_voorkeur_met_kies_een')}</label><div>${preferChecks || t('beheer.span_class_muted_nog_geen')}</div>
-    <button type="button" class="btn small secondary" id="addPreferPref">${t('beheer.toevoegen')}</button>`;
+    <button type="button" class="btn small secondary" id="addPreferPref">${t('beheer.toevoegen')}</button>
+    <div class="prefBlock">
+      <p class="muted"><strong>${t('beheer.eigen_ouder')}</strong> ${t('beheer.eigen_ouder_uitleg')}</p>
+      <label>${t('beheer.wie')}</label>${ownCarSelect}
+      <button type="button" class="btn small secondary" id="addOwnCarPref">${t('beheer.toevoegen')}</button>
+    </div>`;
 }
 
 export function renderPriorityCard(){
@@ -798,6 +808,16 @@ export function renderBeheer(){
       const withAny=[...document.querySelectorAll('.prefWithPick:checked')].map(c=>c.value).filter(id=>id!==girlId);
       if(!girlId||!withAny.length){showToast(t('beheer.kies_een_meisje_en_minstens'));return;}
       try{ await db.doc("settings/prefs").set({rules:[...(S.prefs.rules||[]), {type:'prefer', girlId, withAny}]}); showToast(t('beheer.toegevoegd')); }
+      catch(e){showToast(t('data.mislukt')+(e&&e.message||e));}
+    };
+    const aoc=document.getElementById('addOwnCarPref');
+    if(aoc) aoc.onclick=async ()=>{
+      const sel=document.getElementById('ownCarGirlSelect');
+      const girlId=sel? sel.value : null;
+      if(!girlId){showToast(t('beheer.kies_een_meisje'));return;}
+      if((S.prefs.rules||[]).some(r=>r.type==='ownCar' && r.girlId===girlId)){showToast(t('beheer.eigen_ouder_bestaat',{p1:girlName(girlId)}));return;}
+      if(!db){showToast(t('data.geen_verbinding_met_opslag'));return;}
+      try{ await db.doc("settings/prefs").set({rules:[...(S.prefs.rules||[]), {type:'ownCar', girlId, direction:'terug'}]}); showToast(t('beheer.toegevoegd')); }
       catch(e){showToast(t('data.mislukt')+(e&&e.message||e));}
     };
     document.querySelectorAll('[data-delpref]').forEach(b=>b.onclick=async ()=>{
