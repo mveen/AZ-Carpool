@@ -289,6 +289,10 @@ test('the practice match and "vertrek vanaf" texts exist', () => {
   assert.match(t('wa.my.match_van', { day: 'ZA 3', team: 'AZ', opponent: 'X', time: '09:15', place: 'ATC', driver: 'Jan' }), /vertrek 09:15 vanaf ATC met Jan/);
 });
 
+test('Mijn week loading texts exist: spinner line, slow line and reload button', () => {
+  assert.match(t('myweek.laden'), /geladen/); assert.match(t('myweek.laden_traag'), /langer dan normaal/); assert.equal(t('myweek.opnieuw_laden'), 'Opnieuw laden');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

@@ -39,6 +39,24 @@ test('a visitor who is not linked to a daughter yet is sent to Mijn gezin', () =
   assert.match(text(render({ me: 'x', links: {} })), /Je hebt geen eigen gezin/);
 });
 
+console.log('\n=== loading ===');
+test('while the data is still coming in: a spinner, and never "heeft nog geen rit"', () => {
+  const h = render({ groupsLoaded: false });
+  assert.match(h, /class="spinner"/);
+  assert.match(text(h), /Je week wordt geladen/);
+  assert.doesNotMatch(text(h), /geen rit|Regelen/);
+});
+test('each of the five listeners holds the spinner until it has answered', () => {
+  for (const k of ['familiesLoaded', 'groupsLoaded', 'deviationsLoaded', 'periodsLoaded', 'periodCarsLoaded']) {
+    assert.match(render({ [k]: false }), /class="spinner"/, k);
+  }
+});
+test('once everything has answered the rides are drawn, without a spinner', () => {
+  const h = render({});
+  assert.doesNotMatch(h, /class="spinner"/);
+  assert.match(text(h), /heeft nog geen rit/);
+});
+
 console.log('\n=== a parent\'s week ===');
 test('there is no hero card any more: the week starts with the rides to arrange (alert cards with a Regelen button)', () => {
   const s = text(render({}));

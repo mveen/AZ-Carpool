@@ -120,11 +120,12 @@ export function sampleDeviations() {
   return { Di_heen: { day: 'Di', direction: 'heen', weekKey: WEEK_KEY, expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f3', girlIds: ['f1', 'f4'], reserveFamilyIds: [], departureTime: '09:15' }] } };
 }
 // A full "parent p1 (family f2) is looking at the app" state.
+const LOADED = { familiesLoaded: true, groupsLoaded: true, deviationsLoaded: true, periodsLoaded: true, periodCarsLoaded: true };
 export function sampleParentState(patch = {}) {
-  return resetState({ me: 'p1', appReady: true, links: { p1: { familyId: 'f2' } }, families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
+  return resetState({ ...LOADED, me: 'p1', appReady: true, links: { p1: { familyId: 'f2' } }, families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
 }
 export function sampleCoordinatorState(patch = {}) {
-  return resetState({ me: 'coord', appReady: true, coordinatorExists: true, coordinatorConfig: { uid: 'coord', familyId: 'f1' }, canEdit: true, links: {}, families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
+  return resetState({ ...LOADED, me: 'coord', appReady: true, coordinatorExists: true, coordinatorConfig: { uid: 'coord', familyId: 'f1' }, canEdit: true, links: {}, families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
 }
 // Seed for the fake database: same documents as the state samples.
 export function sampleDbSeed() {

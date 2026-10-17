@@ -5,7 +5,7 @@ import { esc, hapticTap, isAndroidDevice, locationsCfg, phIcon, showToast } from
 import { setReturnByPublicTransport } from './data.js';
 import { distanceInfo, hasApiKey } from './distance.js';
 import { mapLink, isOverride, matchFromName, routeLabel } from './locations.js';
-import { S } from './state.js';
+import { S, rideDataLoaded } from './state.js';
 import { myFamilyId } from './coordinator.js';
 import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
 import { dayChanges } from './day-changes.js';
@@ -66,12 +66,26 @@ function driverButtonHtml(driverFamilyId, tagsHtml){
 
 const dirName = direction => direction==='heen' ? t('dir.heenShort') : t('dir.terugShort');
 
+let loadingTimer = null;
 export function renderMyWeek(){
   const box=document.getElementById('tab-myweek');
   if(!box) return;
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('myweek.mijn_week')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; return; }
   const linked = !!(S.links[S.me] && S.links[S.me].familyId);
   if(!linked){ box.innerHTML=`<div class="card"><h2>${t('myweek.mijn_week')}</h2><p class="muted">${t('myweek.koppel_eerst_je_dochter_via')}</p></div>`; return; }
+  // Data still on its way: show a spinner instead of rides that would wrongly read "nog geen rit". After a while: say so, with a reload button.
+  if(!rideDataLoaded()){
+    box.innerHTML=`<div class="card loadingCard" role="status"><div class="spinner" aria-hidden="true"></div><div id="myweekLoadMsg">${t('myweek.laden')}</div></div>`;
+    if(!loadingTimer && typeof setTimeout==='function') loadingTimer = setTimeout(()=>{
+      loadingTimer = null;
+      const msg = document.getElementById('myweekLoadMsg');
+      if(rideDataLoaded() || !msg) return;
+      msg.innerHTML = `${esc(t('myweek.laden_traag'))}<br><br><button type="button" class="btn" id="myweekReload">${esc(t('myweek.opnieuw_laden'))}</button>`;
+      const b = document.getElementById('myweekReload'); if(b) b.onclick = ()=>{ try{ window.location.reload(); }catch(e){ /* tests */ } };
+    }, 12000);
+    return;
+  }
+  if(loadingTimer){ clearTimeout(loadingTimer); loadingTimer = null; }
   const myId = myFamilyId();
   const myFam = fam(myId);
   const cfg = locationsCfg();

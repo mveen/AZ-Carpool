@@ -110,5 +110,13 @@ test('match carpool form: no form open and no car being edited at start', () => 
 
 test('practice matches start empty', () => { assert.deepEqual(S.practiceMatches, {}); });
 
+test('Mijn week loading flags: all start false, so rideDataLoaded() is false until every listener has answered', async () => {
+  const { rideDataLoaded } = await import('../state.js');
+  for (const k of ['familiesLoaded', 'groupsLoaded', 'deviationsLoaded', 'periodsLoaded', 'periodCarsLoaded']) assert.equal(S[k], false, k);
+  assert.equal(rideDataLoaded(), false);
+  Object.assign(S, { familiesLoaded: true, groupsLoaded: true, deviationsLoaded: true, periodsLoaded: true, periodCarsLoaded: true });
+  assert.equal(rideDataLoaded(), true);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
