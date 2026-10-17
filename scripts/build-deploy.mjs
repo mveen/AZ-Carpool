@@ -9,11 +9,24 @@
 import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 export const SOURCE_SITE = 'https://mveen.github.io/AZ-Carpool/';
 export const DEFAULT_SITE = 'https://azcarpool.nl/';
 const TEXT_TYPES = new Set(['.html', '.js', '.mjs', '.css', '.json', '.svg', '.txt']);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+// Placeholder in deploy/.htaccess that is replaced by the CSP hashes of the inline scripts of index.html.
+export const HASH_PLACEHOLDER = '__INLINE_SCRIPT_HASHES__';
+
+// CSP source entries ('sha256-...') for every inline <script> in a page, so the policy needs no 'unsafe-inline' for scripts.
+export function inlineScriptHashes(html) {
+  const out = [];
+  for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+    out.push(`'sha256-${createHash('sha256').update(m[1], 'utf8').digest('base64')}'`);
+  }
+  return [...new Set(out)];
+}
 
 // The files listed in ASSETS of service-worker.js ('./' is the start page, index.html).
 export function assetList(rootDir = root) {
@@ -53,6 +66,13 @@ export function buildDeploy({ rootDir = root, out = join(root, 'dist'), site = D
   const serverDir = join(rootDir, 'deploy');
   for (const name of existsSync(serverDir) ? readdirSync(serverDir) : []) {
     if (statSync(join(serverDir, name)).isFile()) put(name, readFileSync(join(serverDir, name)));
+  }
+
+  // The Content-Security-Policy in .htaccess allows exactly the inline scripts that index.html has now (their hashes), nothing else.
+  if (written.includes('.htaccess') && written.includes('index.html')) {
+    const hashes = inlineScriptHashes(readFileSync(join(out, 'index.html'), 'utf8'));
+    const htaccess = readFileSync(join(out, '.htaccess'), 'utf8');
+    if (htaccess.includes(HASH_PLACEHOLDER)) put('.htaccess', htaccess.split(HASH_PLACEHOLDER).join(hashes.join(' ')));
   }
 
   // Safety checks: nothing may still point to the old address, and every file that is pointed to must be in the folder.
