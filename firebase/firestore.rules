@@ -205,7 +205,7 @@ service cloud.firestore {
       // Every linked family reads the requests (times only, no reason is stored): a parent sees what is asked on a day, the day
       // coordinator decides. Only the owner changes a request; the day coordinator only agrees.
       // get: judged by the document id (week_day_family), so that asking for a request that does not exist yet gets an empty answer,
-      // not an error (the app listens to the known ids). list: judged by the data, so a query has to ask for its own family or day.
+      // not an error (the app listens to the known ids). list: any linked family or the coordinator (the app asks for one week with a where on weekKey, to read less).
       allow get: if isCoordinator() || isLinked();
       allow list: if isCoordinator() || isLinked();
       allow create: if weekroosterOpen() && (ownRequestOk(reqId) || (isCoordinator() && validRequest(reqId)));
