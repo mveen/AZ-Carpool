@@ -1,10 +1,10 @@
 // AZ Carpool — service worker
-// NETWORK-FIRST on purpose: an online user must always get the current deployed
-// files. The cache exists only so the app still opens (to whatever was last seen)
-// when there's genuinely no connection — it must never mask a real update.
+// STALE-WHILE-REVALIDATE: a file in the cache is served at once and refreshed from the network in the background, so the app
+// opens fast and offline. A new deploy still reaches everybody: the bumped CACHE_NAME below makes this file change, the new
+// worker installs a fresh copy of every ASSET, and bootstrap() in app.js reloads the open app. Not in the cache yet: network.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v122';
+const CACHE_NAME = 'az-carpool-v123';
 const ASSETS = [
   './',
   './index.html',
@@ -171,16 +171,19 @@ function isCacheable(url){
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   if (!isCacheable(new URL(event.request.url))) return;
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        // Never keep an error page: it would be served as the app when offline.
-        if (response.ok && response.status === 200) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request);
+    const network = fetch(event.request).then((response) => {
+      // Never keep an error page: it would be served as the app when offline.
+      if (response.ok && response.status === 200) {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+      }
+      return response;
+    });
+    if (!cached) return network;
+    const refresh = network.catch(() => {});
+    if (typeof event.waitUntil === 'function') event.waitUntil(refresh);
+    return cached;
+  })());
 });

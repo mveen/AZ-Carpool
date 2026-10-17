@@ -30,7 +30,7 @@ await import('../service-worker.js');
 async function run(url, method = 'GET') {
   const req = { url, method };
   let promise = null;
-  handlers.fetch({ request: req, respondWith: p => { promise = p; } });
+  handlers.fetch({ request: req, respondWith: p => { promise = p; }, waitUntil: () => {} });
   const res = promise ? await promise : null;
   await new Promise(r => setTimeout(r, 0));
   return { responded: !!promise, res, cached: store.has(url) };
@@ -69,6 +69,20 @@ await test('a failed good copy is not replaced by a later error; offline gives t
   network = async () => { throw new TypeError('offline'); };
   const r = await run('https://mveen.github.io/AZ-Carpool/app.js');
   assert.equal(await r.res.text(), 'ok');
+});
+
+await test('a cached file is served at once and refreshed from the network in the background', async () => {
+  reset();
+  const u = 'https://mveen.github.io/AZ-Carpool/app.js';
+  await run(u);
+  network = async () => new Response('new');
+  const r = await run(u);
+  assert.equal(await r.res.text(), 'ok');
+  assert.equal(await store.get(u).text(), 'new');
+});
+await test('nothing cached and offline: the request fails like before', async () => {
+  reset(); network = async () => { throw new TypeError('offline'); };
+  await assert.rejects(run('https://mveen.github.io/AZ-Carpool/app.js'));
 });
 
 console.log('\n=== push (test phase) ===');
