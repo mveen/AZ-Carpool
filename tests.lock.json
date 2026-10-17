@@ -12,16 +12,16 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "2411c9044cf76411329f4e5708661f711b2e4c7e495a579a9dc9c9b775cde3e7",
-    "test": "36a20f4409ed5040cd6d141ab1e577e5be5c9469e721733a4049125659b0c9e4"
+    "module": "b4534d4378afe1d7f56efeae5679baeb7dc42d94192666954f0fcb758fba87f8",
+    "test": "49f877d642d319ee80dd55f3a19300974338851dfc5875e25e1d67f9963048fa"
   },
   "coordinator.js": {
     "module": "d732b9bd620219e8591cbb22f30f7aeba2089ffed4eb815d4b6d70f1c769b13e",
     "test": "86880c0e853f091389969be3f7af50d94f06dcafc49a2e3c7baf964ddd7eae0c"
   },
   "data.js": {
-    "module": "e7f2892e132f1646a585259f1913be9475c07386cea3123dc79bf685f166d518",
-    "test": "c7b0ba23a1d3c238a3cdc19b6ab2c820c1a6c1ec4ad547fa0040adb870bcd835"
+    "module": "3ee4892a7de25395b4b10883160f67644a32b0e5d1ad174ce1596c30523c09b5",
+    "test": "6ff40796ef3559899414d39a02db555895d0b1c1fab205828032927ee51e003c"
   },
   "dates.js": {
     "module": "ed5a2dd1459bb0f037672976b5b45e4feb5cfb2ae8524ed77a93cec890de6a46",
@@ -52,16 +52,16 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "8627ad891c2ee9ce11cabe51a24d9e6e1737648a30dcc801bbb5f32a40f02939",
-    "test": "7196313e347af5c3f7b445465a593c5d5a4ca89a5a599be167771bc2e2f91c8a"
+    "module": "969a13871dd5d66e76b0dc8db79ea1e105a6bc4b8a1be36465a5fe829e8273ce",
+    "test": "77b0c8bb3e9c9b7e799c0f1224826a30ee190fb1fe3fd81e79a6e00e352ff354"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "7196313e347af5c3f7b445465a593c5d5a4ca89a5a599be167771bc2e2f91c8a"
+    "test": "77b0c8bb3e9c9b7e799c0f1224826a30ee190fb1fe3fd81e79a6e00e352ff354"
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "2d3471a8af2f898739d42d3eab533edf319e1cd869a83c19a26941aca2b48dbe"
+    "test": "a86e7c6d86acf9bd3b7b503d6a25d741e30fe0e4416895d14a57e37b6a1d77d5"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -148,16 +148,16 @@
     "test": "886ab9cbf435ff4ecfa12f24cd730387005b5821eff4a8ba8904e939ebc10159"
   },
   "state.js": {
-    "module": "0711f6a17c5cb0c46f3df67f38ddf080e94d8b6470bc7b58b44f998eeafc4f0a",
-    "test": "9c35d707aaa14b2b66f063d919d4ff2aa3b1a5ca6017d7522b79972a39a8122a"
+    "module": "2a32e716a62ba2b62899b419bb196094973795a6328f5e16999eb630cf720c04",
+    "test": "c68981887285f863155609a0a1957a4cf5d7235dc04c1084f2edc94de52788a7"
   },
   "swipe-tabs.js": {
     "module": "0cd7e7ab88193d845bd2b9a8948bd86d3bc9cc48c57d5df39fe6ef1d60dfe1bb",
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "169c455cea5d52c0004b0298abb5bf996abcc9b649577f73dbefa36e783615ae",
-    "test": "2d3471a8af2f898739d42d3eab533edf319e1cd869a83c19a26941aca2b48dbe"
+    "module": "385149a95efd10e2d190bb0f16888a9b7e8652b357b6e998b71a4fea685f7832",
+    "test": "a86e7c6d86acf9bd3b7b503d6a25d741e30fe0e4416895d14a57e37b6a1d77d5"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
@@ -176,8 +176,8 @@
     "test": "795be6b454a4b31866c122e14825363c56e59177825a3a5418598905b1e8096f"
   },
   "ui-deviation.js": {
-    "module": "ee9366aba6689fa4de3bab652b0479d44555fb108c2136ce48f7f9754bd7432f",
-    "test": "e4bc934c1b097cc6fcf341368bebff9f7b7d1bf1dcc63d961c7f508ab33990fa"
+    "module": "fa09b9cbf052c5ba3668c6e772c82346d5927669a312aebe9872d7a062252b71",
+    "test": "db3e247a91cce33d7156ed5325df33e903c5b84ca449611e8d5e2d81bc9ca4ca"
   },
   "ui-help.js": {
     "module": "766d29eb7984e12328a4fc6b6c24aa2d899e94f600953bad31e9cec9d9c7edb5",
@@ -196,8 +196,8 @@
     "test": "81ca0b8757398ec8ea87ba83f2e72bc1dbf81a6aad6c9dbf1c66202398fe49bd"
   },
   "ui-myweek.js": {
-    "module": "0e9182f7c457bc169a5e201e63df0ba4996c2f1cbe0db4cb2c6dc8ca3f85b30c",
-    "test": "ec9d0c8fb23076181e5b41555e972c87e49c7b6522ac406968f6d6e5158afd26"
+    "module": "15d31184e47a7e5638f6381121b6e1c3225db80b183ed07de42b4f57bddb5bea",
+    "test": "5111b4c05e02f5ca1a9f92d164e88c26f2b8a5f708d43c29e4e977c02f9046db"
   },
   "ui-notice.js": {
     "module": "7d865a1452c65c3f140e18eceba721b8a37985a8ccb709de53877d070af42554",
@@ -236,39 +236,43 @@
     "test": "517b4fefcabfc3462e054ebfd63f300188a2724468664f100d8c6824b411bf6f"
   },
   "ui-schedule.js": {
-    "module": "aa455d998baa3f22849b80d674b4a69c551329fadc6e83d87615b2eb86f9adc6",
-    "test": "6b329d11f8edeacd0771322de5c82ff95858480159303d112ce5490ffaf63e40"
+    "module": "752d0b09121cb290e3820d6c556af8fc7e50e55aeaf811dbd9e7253223654d8d",
+    "test": "c4185cdda455a7d1462795b97f5ad559cdb97166b971b30c080afb17875ee0ca"
   },
   "ui-shell.js": {
     "module": "5656890dc40270f6fcd214c2500457c1d0fd757e62a2bc6c340ad94380c7c5fd",
     "test": "85819663039270c7153005a17bde399b3a5cf2aec42e05324d7219e8a31eafe3"
   },
   "ui-weekrooster-advice.js": {
-    "module": "86d1fb46e285029ee5d882cedde0899570a6c85a8e8f516ccc5d1ab9b41a8501",
-    "test": "3c62a8bae8f4ea0a5449f84afa32688a01c635ea69905f7873bb812a52ff836e"
+    "module": "b18c9ec8de18133bae92f11f764aac3d713b1e2c4da258a7b3cdeaac15f84604",
+    "test": "e3cbfdfc92264873c0cf8506967149d5410daf79a91a7d241d63ac751c9d2417"
+  },
+  "ui-weekrooster-edit.js": {
+    "module": "f4e3275ef2c885b3d7012d343a6dd379611660e98859d543a87495a9514822ec",
+    "test": "b096a39e3717833a9e8ffdc27227c6613670f506c547f5a4de4725daa66debcf"
   },
   "ui-weekrooster-form.js": {
     "module": "7e1dd544542e2e8abca4e80b28bb224d0bca12c57002f794274675dff05fa998",
     "test": "33e4bd9332b2b63bd2acbb1c75098e2601b09113ac0558784fae19c7864bfd9b"
   },
   "ui-weekrooster-rooster.js": {
-    "module": "0b2027e44e6be55d0b2d30802eddc25f3bc4cf91cfe323165f11355fa8eb3b75",
-    "test": "5e4c3d6e489a4ba656e331ecc6659372417e8ad2b1036beb2e65be648f9cc983"
+    "module": "4f20c1301bd7fbda98fffa9384419d33d04d57f2248508bb0b75358ae8bc3146",
+    "test": "e5a83be036f5ed9e7c76774763d54a32d5e072467501d9bf3eed70e4ad57d039"
   },
   "ui-weekrooster.js": {
     "module": "4126f4e8294ff3ef31e80208740f90a2412172757dc0c85a211411cfa9e8ead1",
     "test": "7719b80d8505e3e1b5cd91752fcb429c6e6f8c6d7c7a870d2ee3181767290c9d"
   },
   "weekrooster-data.js": {
-    "module": "f0c7e1f7506069d4a0a4474f42aecd61b0437e20c766a984ad4b7128feeac812",
-    "test": "224dd836970f523ba6bfca46f6b857e7ee0d6f460d7ca325e5fb33ce77337cde"
+    "module": "b65b6114549fdbb316dfc296d66307e1bf221a731c823c2066f01567d6715548",
+    "test": "fc29fa6f54933792389d77048b3d18fafd18dd24bb2e5356ef22b07a0b1942cc"
   },
   "weekrooster-impact.js": {
     "module": "640722dd48387c311a1d48c7386252540ab23651b06cbe4722750ae7289f6fd8",
     "test": "b847d3fe115a05d067e0aa546bf290b34b50513ee7b63240ada5cb1098d6a68e"
   },
   "weekrooster.js": {
-    "module": "0d574e7709a914a615c5c66583397c29225b8db5b816f73baeeac64c00c6638b",
-    "test": "9db728be48ed5f74c54bb667763cb666546e1431cefbf6d490325a8175d0b303"
+    "module": "36d5ac8aa7924615844112f12549cbe1999eff31c1347d81213cf2cfce64d6d3",
+    "test": "4822771b78df15ac051ab33d7ddd081a31acbaeaa862f2812f6354b1d92d210a"
   }
 }

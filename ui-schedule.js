@@ -16,6 +16,7 @@ import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
 import { scheduleAdviceHtml, wireAdvice } from './ui-weekrooster-advice.js';
+import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
@@ -78,7 +79,7 @@ export function renderSchedule(){
     + segHtml
     + (mode==='period'
       ? periodViewHtml()
-      : (mode==='week' && scheduleAdviceHtml()) || `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + (mode==='week'? scheduleDayExtrasHtml(S.scheduleDay) : '') + renderDay(S.scheduleDay, label));
+      : (mode==='week' && (scheduleEditHtml() || scheduleAdviceHtml())) || `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + (mode==='week'? scheduleDayExtrasHtml(S.scheduleDay) : '') + renderDay(S.scheduleDay, label) + (mode==='week'? scheduleDayFootHtml(S.scheduleDay) : ''));
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
   });
@@ -94,6 +95,7 @@ export function renderSchedule(){
   if(ovOpen) ovOpen.onclick = ()=>{ hapticTap(); openOverview(); };
   wireTimeChangesCard();
   wireAdvice(box);
+  wireEdit(box);
   updateTimeChangesBadge();
   attachScheduleHandlers();
   wirePeriodRooster();

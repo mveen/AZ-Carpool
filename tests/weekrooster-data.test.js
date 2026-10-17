@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime } from '../rides.js';
-import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay } from '../weekrooster-data.js';
+import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -236,5 +236,27 @@ await testAsync('uit: no advice is made into an agreement and nothing is written
   assert.equal([...fake.store.keys()].sort().join(), before);
 });
 
+console.log('=== edge cases and tidying up ===');
+await testAsync('after an agreement a later change by the parent is a NEW request (pending again), the agreement stays in the log of the week', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': { ...advDoc('Do', 'f3'), status: 'accepted', decidedAt: 5, decidedBy: 'f2' } }, { dayCoordinators: { Do: 'f2' }, links: { p1: { familyId: 'f3' } } });
+  const r = await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '07:20', terug: '15:00' } }));
+  assert.equal(r.ok, true); const d = fake.get('weekRequests/2026-W40_Do_f3');
+  assert.equal(d.status, 'pending'); assert.equal(d.heen, '07:20'); assert.ok(!('decidedBy' in d));
+});
+await testAsync('a request whose day is over is no longer open (it expires by itself, nothing is deleted or applied)', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Di_f3': advDoc('Di', 'f3') }, { dayCoordinators: { Di: 'f2' } });
+  await withFakeNowAsync('2026-10-02T08:00:00+02:00', async () => { assert.equal(adviceForDay('Di').requests.length, 0); });
+  assert.equal(fake.get('weekRequests/2026-W40_Di_f3').status, 'pending');
+});
+await testAsync('purgeStaleWeekRequests: only the real coordinator, only while the switch is on, only OLDER weeks (test requests included)', async () => {
+  const seedDocs = { 'weekRequests/2026-W39_Do_f3': advDoc('Do', 'f3', { weekKey: '2026-W39', test: true }), 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3'), 'weekRequests/2026-W41_Ma_f3': advDoc('Ma', 'f3', { weekKey: '2026-W41' }) };
+  let fake = useFakeDb({ ...sampleDbSeed(), ...seedDocs }); sampleParentState({ weekrooster: { mode: 'aan' } });
+  assert.equal(await purgeStaleWeekRequests(), 0, 'a parent never tidies up');
+  fake = useFakeDb({ ...sampleDbSeed(), ...seedDocs }); sampleCoordinatorState({ weekrooster: { mode: 'uit' } });
+  assert.equal(await purgeStaleWeekRequests(), 0, 'switch off: nothing is touched');
+  fake = useFakeDb({ ...sampleDbSeed(), ...seedDocs }); sampleCoordinatorState({ weekrooster: { mode: 'test' } });
+  assert.equal(await purgeStaleWeekRequests(), 1);
+  assert.equal(fake.get('weekRequests/2026-W39_Do_f3'), undefined); assert.ok(fake.get('weekRequests/2026-W40_Do_f3')); assert.ok(fake.get('weekRequests/2026-W41_Ma_f3'));
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

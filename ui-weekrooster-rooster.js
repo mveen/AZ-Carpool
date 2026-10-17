@@ -11,7 +11,7 @@ import { girlName } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { activateTab } from './app.js';
 import { renderSchedule } from './ui-schedule.js';
-import { actionCounts, openRequestsOf, pendingForDay, recentChanges } from './weekrooster.js';
+import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
 import { dayEndMs, deciderFamilyOf, myDeciderDays, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekroosterActive } from './ui-weekrooster-form.js';
 
@@ -36,9 +36,13 @@ function coordLineHtml(day) {
 }
 
 function logHtml(day) {
-  const now = Date.now(), items = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
+  const now = Date.now(), items = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day))
+    .concat(selfChanges(S.deviations, wk(), day, deciderFamilyOf(day))).sort((a, b) => b.updatedAt - a.updatedAt);
   if (!items.length) return '';
   const rows = items.map(r => {
+    if (r.state === 'self') return `<div class="logItem"><span class="logItem__dot logItem__dot--ok" aria-hidden="true"></span>
+      <span class="logItem__main">${esc(t(r.direction === 'heen' ? 'weekrooster.log.selfHeen' : 'weekrooster.log.selfTerug', { p1: girlName(r.familyId) }))}</span>
+      <span class="logItem__side"><span class="tag">${esc(t('weekrooster.tag.self'))}</span><span class="logItem__when">${esc(whenLabel(r.updatedAt))}</span></span></div>`;
     const waiting = r.state === 'pending';
     const tag = waiting ? `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>` : `<span class="tag tag--ok">${esc(t(r.state === 'accepted' ? 'weekrooster.tag.accepted' : 'weekrooster.tag.direct'))}</span>`;
     return `<div class="logItem"><span class="logItem__dot${waiting ? '' : ' logItem__dot--ok'}" aria-hidden="true"></span>

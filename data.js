@@ -11,7 +11,7 @@ import { renderMaintenance } from './ui-maintenance.js';
 import { normalizeMaintenance } from './maintenance.js';
 import { normalizeRitbeurs } from './ritbeurs.js';
 import { normalizeWeekrooster } from './weekrooster.js';
-import { stopWeekRequests, syncWeekRequests } from './weekrooster-data.js';
+import { purgeStaleWeekRequests, stopWeekRequests, syncWeekRequests } from './weekrooster-data.js';
 import { normalizePush } from './push.js';
 import { stopPushListeners, syncPushListeners } from './push-data.js';
 import { applyPendingPushOpen } from './ui-push.js';
@@ -155,6 +155,7 @@ export async function purgeStaleDeviations(){
       try{ await db.doc("deviations/"+key).delete(); }catch(e){}
     }
   }
+  purgeStaleWeekRequests();   // Afwijkend weekrooster: old requests go too (only the real coordinator's browser, only while the switch is on)
 }
 
 // Step 2 of "periode met andere tijden": a family hands in its times for the period (once per period; it can be changed until the
@@ -689,7 +690,9 @@ export async function saveDeviationCars(day,direction,cars,opts){
   try{
     refreshWeekKey();
     // "Rijdt niet mee" marks (US-06, both directions) live on the deviation and survive other edits, unless the girl is in a car again.
-    const extra = keepOv(currentDeviationDoc(day,direction), cars);
+    // A change made by someone who does not decide that day ("Toch zelf wijzigen") is marked, so the day coordinator can see it. Nothing else is stored.
+    const self = S.wrEdit && S.wrEdit.override && myLinkedFamilyId()? { selfBy: myLinkedFamilyId(), selfAt: Date.now() } : {};
+    const extra = { ...keepOv(currentDeviationDoc(day,direction), cars), ...self };
     await writeDeviation(day,direction,cars,extra);
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }

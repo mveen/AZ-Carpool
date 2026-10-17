@@ -317,6 +317,10 @@ await (async () => {
     assert.match(toastNow(), /verplaatst/); assert.doesNotMatch(toastNow(), /Let op/); assert.deepEqual(fake.get('groups/g2').girlIds, ['f1', 'f6']); passed++; console.log('  ✓ a move that keeps parent and daughter together gives no warning');
   } catch (e) { failed++; console.log('  ✗ own-car warning in the Vast rooster\n     ', e.message); }
 })();
+test('Rooster week view: with the switch off there is no "Toch zelf wijzigen" or "Zelf indelen" under the day', () => {
+  sampleParentState({ scheduleDay: 'Ma', roosterMode: 'week' }); withFakeNow(NOW, () => renderSchedule());
+  assert.doesNotMatch(dom.html('tab-schedule'), /wroverride|wredit|Toch zelf wijzigen|Zelf indelen/);
+});
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
 
 test('Rooster shows the spinner while the data is loading', () => {

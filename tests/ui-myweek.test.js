@@ -341,5 +341,8 @@ test('Afwijkend weekrooster: Mijn week shows "Tijden wijzigen" only while the sw
   withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /geen eigen gezin/);
 });
 
+test('goToWijzigen with the switch off still opens the Wijzigen tab on that day', () => {
+  sampleParentState({}); withFakeNow(NOW, () => goToWijzigen('Di')); assert.equal(S.deviationDay, 'Di'); assert.equal(S.wrEdit, null);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

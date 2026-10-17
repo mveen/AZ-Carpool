@@ -318,10 +318,16 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
 });
 
 test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {
-  ['look', 'title', 'zuinig', 'gedoe', 'accept', 'now', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
+  ['look', 'headline', 'zuinig', 'gedoe', 'accept', 'now', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
   assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.carsMany', { p1: 2, p2: '−1' }), "2 auto's (−1)");
   assert.equal(t('weekrooster.advice.doneMany', { p1: 3 }), '3 wijzigingen doorgevoerd');
   assert.match(t('weekrooster.reason.out', { p1: 'Noor' }), /Noor rijdt niet mee/);
+});
+test('Afwijkend weekrooster (phase 5): the warning sheet says who decides, with the exact words', () => {
+  ['title', 'text', 'go', 'back'].forEach(k => assert.ok(hasKey('weekrooster.override.' + k), k));
+  assert.equal(t('weekrooster.override.title'), 'Dagcoördinator beslist');
+  assert.equal(t('weekrooster.override.text', { p1: 'Piet' }), 'De dagcoördinator is Piet. Hij/zij bepaalt de wijziging. Weet je zeker dat je wilt doorgaan?');
+  assert.equal(t('weekrooster.edit.override_link'), 'Toch zelf wijzigen'); assert.equal(t('weekrooster.tag.self'), 'Zelf gewijzigd');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

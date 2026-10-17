@@ -13,6 +13,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
+import { t } from '../i18n.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
 import { scheduleAdviceHtml, wireAdvice } from '../ui-weekrooster-advice.js';
 import { renderSchedule } from '../ui-schedule.js';
@@ -35,7 +36,7 @@ await testAsync('nothing open: nothing shown; open: header, variants, tags, both
   await setup(); assert.equal(view(), '');
   S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
   const html = view(), s = text(html);
-  assert.match(s, /Advies/); assert.match(s, /Donderdag/); assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/);
+  assert.match(s, /Advies · donderdag 1 okt · heen/); assert.doesNotMatch(html, /class="card" id="wrAdvice"/); assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/);
   assert.match(s, /Nu · vaste rooster/); assert.match(s, /Reden:/); assert.match(s, /Overnemen/);
   assert.match(s, /1 auto \(\+1\)/); assert.match(html, /id="wrAccept"/); assert.match(html, /chip/);
   assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
@@ -83,6 +84,13 @@ await testAsync('the Rooster shows the view in place of the day when it is open'
   S.wrAdvice = null; withFakeNow(NOW, () => renderSchedule()); assert.match(dom.html('tab-schedule'), /data-wradvice="Do"/);
 });
 
+await testAsync('the Advies view offers Zelf indelen next to Overnemen', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
+  const html = view(); assert.match(html, /id="wrSelf"/); assert.match(text(html), /Zelf indelen.*Overnemen/); S.wrAdvice = null;
+});
+test('the text under a changed car says what changed: the children, or only the departure time', () => {
+  assert.equal(t('weekrooster.advice.before', { p1: 'Eline & Saar' }), 'Eerder: Eline & Saar'); assert.equal(t('weekrooster.advice.beforeTime', { p1: '14:45' }), 'Eerder vertrek: 14:45');
+});
 test('ui-weekrooster-advice.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-advice.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

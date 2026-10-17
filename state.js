@@ -65,6 +65,7 @@ export const S = {
   dayRequestsKey: '',
   dayRequestsUnsubs: [],
   wrAdvice: null,          // the Advies view open in Rooster: { day, direction, variant } (null = closed)
+  wrEdit: null,            // the car editor open in Rooster: { day, override } (override = a parent changing it after the warning)
   wrDone: null,            // right after Overnemen: { day } (shows the Dagbericht)
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)

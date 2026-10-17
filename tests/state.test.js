@@ -132,5 +132,6 @@ test('Afwijkend weekrooster (day coordinator): no requests of other families and
 });
 
 test('Afwijkend weekrooster (phase 4): no Advies view and no finished Overnemen open at start', () => { assert.equal(S.wrAdvice, null); assert.equal(S.wrDone, null); });
+test('Afwijkend weekrooster (phase 5): no car editor open in Rooster at start', () => { assert.equal(S.wrEdit, null); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

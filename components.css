@@ -471,7 +471,7 @@ button.chip{cursor:pointer;font-family:inherit}
 .wrStack>*,.wrStack .carCard{margin-top:0;margin-bottom:0}
 .wrStack .btn{width:100%}
 .diffLabel{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
-.actionBar{position:sticky;bottom:var(--space-5);display:flex;gap:var(--space-3);margin-top:var(--space-5)}
+.actionBar{position:sticky;bottom:0;display:flex;gap:var(--space-3);margin-top:var(--space-3);padding:var(--space-4) 0;background:var(--surface-page);border-top:1px solid var(--line)}
 .actionBar .btn{flex:1}
 .noteLine{font:var(--type-caption);color:var(--text-muted);margin:var(--space-3) var(--space-1) 0}
 .btn svg{width:18px;height:18px;fill:currentColor;flex:none}

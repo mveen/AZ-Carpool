@@ -13,6 +13,7 @@ import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { ADVICE_VARIANTS, acceptDay, adviceForDay } from './weekrooster-data.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
+import { openDayEditor } from './ui-weekrooster-edit.js';
 
 const dayLabel = dayName;
 const names = ids => sortGirlIds(ids).map(id => girlName(id)).join(' & ');
@@ -36,6 +37,7 @@ function reasonText(reasons) {
 }
 
 // ---------- the cards ----------
+const sameKids = (a, b) => JSON.stringify([...(a.girlIds || [])].sort()) === JSON.stringify([...(b.girlIds || [])].sort());
 const carHtml = (c, mark, old) => {
   const max = seats(fam(c.driverFamilyId));
   const was = old ? (old.girlIds || []) : [];
@@ -47,7 +49,7 @@ const carHtml = (c, mark, old) => {
       <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${tag}</div>
       <span class="tag">${c.girlIds.length}/${max}</span></div>
     <div class="chips">${chips}</div>
-    ${old && mark === 'changed' ? `<div class="diffLabel">${esc(t('weekrooster.advice.before', { p1: names(was) }))}</div>` : ''}
+    ${old && mark === 'changed' ? `<div class="diffLabel">${esc(sameKids(c, old) ? t('weekrooster.advice.beforeTime', { p1: old.departureTime || '--:--' }) : t('weekrooster.advice.before', { p1: names(was) }))}</div>` : ''}
   </div>`;
 };
 const goneHtml = c => `<div class="carCard carCard--gone"><div class="carCard__head"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span>
@@ -79,11 +81,9 @@ export function scheduleAdviceHtml() {
   const diff = v.carsAfter - d.carsBefore, n = v.familiesChanged.length;
   const iso = weekKeyDayIso(S.currentWeekKey, a.day);
   const seg = (attr, items, cur, aria) => `<div class="segmented" role="group" aria-label="${esc(t(aria))}">${items.map(([k, label]) => `<button type="button" class="${k === cur ? 'active' : ''}" ${attr}="${k}" aria-pressed="${k === cur}">${esc(label)}</button>`).join('')}</div>`;
-  return `<div class="wrStack"><div class="card" id="wrAdvice">
-      <button type="button" class="linkbtn" id="wrAdviceBack">${esc(t('weekrooster.advice.back'))}</button>
-      <h2>${esc(t('weekrooster.advice.title'))}</h2>
-      <p class="muted">${esc(dayLabel(a.day))} ${esc(isoDayLabel(iso, ''))} · ${esc(t(direction === 'heen' ? 'weekrooster.advice.heen' : 'weekrooster.advice.terug').toLowerCase())}</p>
-    </div>
+  return `<div class="wrStack" id="wrAdvice">
+    <button type="button" class="linkbtn" id="wrAdviceBack">${phIcon('arrow-left')}${esc(t('weekrooster.advice.back'))}</button>
+    <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.advice.headline', { p1: `${dayLabel(a.day).toLowerCase()} ${isoDayLabel(iso, '')}`, p2: t(direction === 'heen' ? 'weekrooster.advice.heen' : 'weekrooster.advice.terug').toLowerCase() }))}</div></div>
     ${dirs.length > 1 ? seg('data-wrdir', dirs.map(k => [k, t(k === 'heen' ? 'weekrooster.advice.heen' : 'weekrooster.advice.terug')]), direction, 'weekrooster.advice.dirAria') : ''}
     ${seg('data-wrvariant', ADVICE_VARIANTS.map(k => [k, t(k === 'zuinig' ? 'weekrooster.advice.zuinig' : 'weekrooster.advice.gedoe')]), variant, 'weekrooster.advice.variantAria')}
     <div class="chips">
@@ -95,7 +95,7 @@ export function scheduleAdviceHtml() {
     <section class="wrStack wrStack--tight"><div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.advice.advice'))}</div></div>
     ${adviceCarsHtml(now, v.cars)}</section>
     <div class="noteLine" id="wrReason">${esc(t('weekrooster.reason.prefix'))} ${reasonText(v.reasons)}</div>
-    <div class="actionBar"><button type="button" class="btn" id="wrAccept"${dirs.some(k => adv.directions[k].variants[variant].noSolution) ? ' disabled' : ''}>${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button></div></div>`;
+    <div class="actionBar"><button type="button" class="btn secondary" id="wrSelf">${esc(t('weekrooster.edit.self'))}</button><button type="button" class="btn" id="wrAccept"${dirs.some(k => adv.directions[k].variants[variant].noSolution) ? ' disabled' : ''}>${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button></div></div>`;
 }
 
 function doneHtml(done) {
@@ -122,6 +122,7 @@ export function wireAdvice(box) {
     });
     rerender();
   };
+  const self = document.getElementById('wrSelf'); if (self) self.onclick = () => { hapticTap(); openDayEditor(S.wrAdvice.day); };
   const close = document.getElementById('wrDoneClose'); if (close) close.onclick = () => { hapticTap(); S.wrDone = null; renderSchedule(); };
   wireWhatsAppButton('conclusieBtn', () => buildConclusieMessage(S.wrDone ? S.wrDone.day : S.scheduleDay));
 }

@@ -11,7 +11,7 @@ import './test-support.js';
 import {
   WEEKROOSTER_MODES, REQUEST_DAYS, REQUEST_STATUSES, REQUEST_FIELDS,
   normalizeWeekrooster, weekroosterDoc, weekroosterVisible, requestId, isValidRequest, decideMode, buildRequests,
-  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf, decidedDays, actionCounts, recentChanges,
+  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf, decidedDays, actionCounts, recentChanges, selfChanges,
 } from '../weekrooster.js';
 
 console.log('=== the feature switch ===');
@@ -245,5 +245,11 @@ test('the log of a day: what is in force, newest first, with its state', () => {
 import { assertNoUnusedImports } from './test-support.js';
 test('weekrooster.js imports nothing it does not use', () => assertNoUnusedImports('weekrooster.js'));
 
+test('selfChanges: only a deviation of this week and day, changed by hand by someone who does not decide, newest data per direction', () => {
+  const dev = { Do_heen: { weekKey: '2026-W40', selfBy: 'f2', selfAt: 5 }, Do_terug: { weekKey: '2026-W40', selfBy: 'f3', selfAt: 6 }, Vr_heen: { weekKey: '2026-W40', selfBy: 'f2', selfAt: 7 }, Ma_heen: { weekKey: '2026-W39', selfBy: 'f2', selfAt: 8 }, Di_heen: { weekKey: '2026-W40' }, Di_terug: { weekKey: '2026-W40', selfBy: 'f2' } };
+  assert.deepEqual(selfChanges(dev, '2026-W40', 'Do', 'f3'), [{ id: 'dev_Do_heen', familyId: 'f2', direction: 'heen', updatedAt: 5, state: 'self' }], 'the decider\'s own change is not "Zelf gewijzigd"');
+  assert.deepEqual(selfChanges(dev, '2026-W40', 'Ma', 'f3'), [], 'another week'); assert.deepEqual(selfChanges(dev, '2026-W40', 'Di', 'f3'), [], 'no mark / no time');
+  assert.deepEqual(selfChanges(null, '2026-W40', 'Do', 'f3'), []);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -102,6 +102,10 @@ await testAsync('the "Actie nodig" block has the button "Advies bekijken" for th
   await asDecider(); const html = rooster();
   assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Advies bekijken/);
 });
+await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
+  await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };
+  const s = text(rooster()); assert.match(s, /Zelf gewijzigd/); assert.match(s, /heen zelf aangepast/);
+});
 test('ui-weekrooster-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-rooster.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

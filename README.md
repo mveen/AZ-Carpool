@@ -89,6 +89,20 @@ Wijzigen heeft bovenaan een segment *Wijzigen | Ritten ruilen (n)*. Alleen zicht
 - **Code:** `ritbeurs.js` (regels, puur), `ritbeurs-data.js` (database), `ui-ritbeurs.js` (schermen + Beheer-kaart). Tests: `ritbeurs.test.js`, `ritbeurs-data.test.js`, `ui-ritbeurs.test.js`; de regels zijn getest met de Firestore-emulator (`firebase/rules-test/ritbeurs-rules.test.mjs`, handmatig: emulator starten en `node` draaien met `@firebase/rules-unit-testing`).
 - **`firestore.rules` is gewijzigd**: plak de nieuwe regels in de Firebase-console → Rules, anders werkt aanbieden/overnemen niet. Service worker cache `az-carpool-v42`.
 
+## Afwijkend weekrooster (aanvragen, advies, akkoord)
+
+Een ouder geeft per dag de tijden van de eigen dochter door voor deze of volgende week (Wijzigen → weekformulier). De dagcoördinator van die weekdag ziet de aanvraag, krijgt een advies voor de auto's en neemt dat over of deelt zelf in. Het vaste rooster blijft gelden tot er akkoord is.
+
+- **Schakelaar.** `settings/weekrooster = { mode: 'uit' | 'test' | 'aan', updatedAt }` (Beheer → Berichten). Ontbrekend of onbekend = uit: dan is de app identiek aan vroeger. In *test* ziet alleen de echte coördinator het (met "Bekijk als" ook als ouder of dagcoördinator); in *aan* iedereen met een gekoppelde dochter.
+- **Gegevens (alleen additief).** `weekRequests/<week>_<dag>_<gezin>` met `weekKey, day, familyId, rides, heen, terug, status (pending|direct|accepted|withdrawn), createdAt, updatedAt, [decidedAt, decidedBy], [test]`. Daarnaast op `deviations/<Dag>_<richting>` drie optionele velden: `times` (afgesproken eenmalige tijden, '' = rijdt die kant niet), `selfBy` en `selfAt` (een wijziging van iemand die die dag niet beslist). Er wordt nergens een reden of vrije tekst opgeslagen.
+- **Wie doet wat.** "Rijdt niet mee" geldt direct. Een dagcoördinator die zijn eigen dag aanpast, doet dat via een aanvraag die hij zelf overneemt. De dagcoördinator van een dag (anders de echte coördinator) beslist; `weekrooster-data.js` (`deciderFamilyOf`).
+- **Advies.** `weekrooster-impact.js` (`buildAdvice`): *Zuinigst* (via `planShift`) en *Minste gedoe* (bestaande auto's blijven). De reden wordt uit de planning gemaakt. *Eerlijkst* is niet gebouwd.
+- **Overnemen en Ongedaan.** `acceptDay` schrijft alle wijzig-shifts én alle aanvragen van die dag in één batch; `undo` zet beide terug. De rules staan dat terugzetten (accepted → pending) alleen de beslisser toe.
+- **Zelf indelen / Toch zelf wijzigen.** De ritkaart-editor van Wijzigen staat bij actieve gebruikers in Rooster ("Deze week"). De beslisser opent hem direct; een ouder krijgt eerst de waarschuwing "Dagcoördinator beslist" met de naam van die dag. Zo'n wijziging staat daarna als "Zelf gewijzigd" in het logboek van de dagcoördinator. Geen push, geen inbox.
+- **Opruimen.** De browser van de echte coördinator verwijdert, bij de weekwissel en alleen als de schakelaar niet uit staat, aanvragen van oudere weken (testaanvragen ook): `purgeStaleWeekRequests`.
+- **Uitrollen.** Eerst `firebase/firestore.rules` publiceren (zonder rules weigert de database de aanvragen), daarna pas `mode` op test of aan. Rules-tests: `firebase/rules-test/weekrooster-rules.test.mjs` (Firestore-emulator).
+- **Bestanden:** `weekrooster.js` (pure logica), `weekrooster-data.js` (opslag), `weekrooster-impact.js` (impact en advies), `ui-weekrooster*.js` (Beheer-kaart, formulier, Rooster, advies, editor).
+
 ## Run the tests
 
     npm test

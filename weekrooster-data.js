@@ -288,3 +288,18 @@ function applyLocal(devDocs, reqPairs) {
   reqPairs.forEach(([id, doc]) => { if (id in others) others[id] = doc; else own[id] = doc; });
   S.weekRequests = own; S.dayRequests = others;
 }
+
+// Tidying up (the real coordinator's browser only, and never while the switch is off): requests of OLDER weeks are removed, test requests included.
+// Their week is over, the fixed rooster stayed as it was and nothing else reads them. Returns how many were removed.
+export async function purgeStaleWeekRequests() {
+  if (!db || !isRealCoordinator() || !weekroosterOn()) return 0;
+  let n = 0;
+  try {
+    const snap = await db.collection('weekRequests').get();
+    for (const d of snap.docs) {
+      const r = d.data();
+      if (r && typeof r.weekKey === 'string' && r.weekKey < S.currentWeekKey) { await db.doc('weekRequests/' + d.id).delete(); n++; }
+    }
+  } catch (e) { /* best effort: tidying up never blocks the app */ }
+  return n;
+}

@@ -17,6 +17,7 @@ import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
 import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-rooster.js';
+import { openDayEditor } from './ui-weekrooster-edit.js';
 import { myWeekWeekroosterHtml, requestPillHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
@@ -252,6 +253,7 @@ export function renderMyWeek(){
 
 // Jump to the Wijzigen tab, optionally straight into one day.
 export function goToWijzigen(day){
+  if(day && weekroosterActive()) return openDayEditor(day);   // the day-by-day editor moved to Rooster (planners straight in, others after a warning)
   if(day) S.deviationDay = day; // no day given: keep the day that was open
   S.openMatchCarpoolForm = null;
   renderDeviationTab(); activateTab('deviation'); hapticTap();

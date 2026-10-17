@@ -187,3 +187,11 @@ export function recentChanges(requests, weekKey, day, nowMs, dayEnd) {
     .sort((a, b) => b[1].updatedAt - a[1].updatedAt || (a[0] < b[0] ? -1 : 1))
     .map(([id, r]) => ({ id, ...r, state: requestState(r, nowMs, dayEnd) }));
 }
+
+// "Zelf gewijzigd": a deviation of this week and day that someone who does not decide that day changed by hand (selfBy, selfAt on the deviation).
+// For the log of the day coordinator; one entry per direction, newest first by the caller.
+export function selfChanges(deviations, weekKey, day, deciderFamilyId) {
+  return ['heen', 'terug'].map(direction => ({ direction, d: (deviations || {})[day + '_' + direction] }))
+    .filter(({ d }) => d && d.weekKey === weekKey && d.selfBy && d.selfBy !== deciderFamilyId && typeof d.selfAt === 'number')
+    .map(({ direction, d }) => ({ id: 'dev_' + day + '_' + direction, familyId: d.selfBy, direction, updatedAt: d.selfAt, state: 'self' }));
+}

@@ -332,5 +332,10 @@ test('the Afwijkend weekrooster article explains the advice: variants, the reaso
   assert.doesNotMatch(s, /Overnemen volgt/);
 });
 
+test('the Afwijkend weekrooster article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
+  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+  assert.match(s, /Zelf indelen/); assert.match(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
