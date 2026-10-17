@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { fam } from './rides.js';
 import { updateStatusLine } from './ui-common.js';
 
-// Who's making this change right now, for the "laatst bijgewerkt door" footers.
+// Who's making this change right now (the name is stored with period entries, backups and time changes).
 export function myDisplayInfo(){
   const linked = !!(S.links[S.me] && S.links[S.me].familyId) || !!S.impersonateFamilyId;
   if(linked){

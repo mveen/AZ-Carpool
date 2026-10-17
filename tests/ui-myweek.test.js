@@ -24,6 +24,13 @@ const MON = '2026-09-28T10:00:00+02:00';   // Monday of the same week: its rides
 function renderAt(iso, patch) { withFakeNow(iso, () => { sampleParentState(patch); renderMyWeek(); }); return dom.html('tab-myweek'); }
 function render(patch) { withFakeNow(NOW, () => { sampleParentState(patch); renderMyWeek(); }); return dom.html('tab-myweek'); }
 
+const NOW_MS = new Date(NOW).getTime();
+test('no "Rest van de week" label and no "Laatst bijgewerkt" footer, even when update info exists', () => {
+  const h = text(render({ lastUpdateRooster: { by: 'Jan', at: NOW_MS }, lastUpdateDeviation: { by: 'Piet', at: NOW_MS } }));
+  assert.doesNotMatch(h, /Rest van de week|Laatst bijgewerkt/i);
+  assert.ok(h.length > 100, 'the cards still render');
+});
+
 console.log('=== who is looking ===');
 test('an unrecognised visitor is asked to reload', () => {
   assert.match(text(render({ me: null })), /Mijn week Kon je account niet herkennen\. Herlaad de pagina\./);

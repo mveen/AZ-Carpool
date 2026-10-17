@@ -87,6 +87,10 @@ test('isRealCoordinator / isMemberNow / needsGate / myFamilyId / myLinkedFamilyI
   resetState({ me: 'coord', coordinatorConfig: cfg, links: {} });
   assert.equal(myLinkedFamilyId(), null, 'a coordinator who is not linked to a family has no own family');
 });
+test('myDisplayInfo for the coordinator without a family: the coordinator label, no phone', () => {
+  resetState(); S.canEdit = true; S.me = 'coord'; S.links = {};
+  assert.deepEqual(myDisplayInfo(), { name: 'Coördinator', phone: '' });
+});
 test('myDisplayInfo: the linked parent\'s name and phone', () => {
   resetState({ me: 'p1', links: { p1: { familyId: 'f2' } }, families: sampleFamilies() });
   assert.deepEqual(myDisplayInfo(), { name: 'Piet Pieters', phone: '0622222222' });

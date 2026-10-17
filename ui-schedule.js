@@ -5,7 +5,7 @@ import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
 import { driverNameHtml, isFlex, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
-import { esc, hapticTap, lastUpdateFooter, locationsCfg, openSheet, phIcon, setStatus, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, locationsCfg, openSheet, phIcon, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
@@ -69,17 +69,13 @@ export function renderSchedule(){
       ? t('schedule.het_standaardrooster_met_de_wijzigingen', { p1: weekRangeLabel() })
       : mode==='period'? periodModeInfoHtml()
       : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span>${mode!=='period'? `<button type="button" class="btn secondary chipBtn pill" id="ovOpen">${phIcon('table')}${t('overview.open')}</button>` : ''}</div>`;
-  const footer = mode==='week'
-    ? lastUpdateFooter([S.lastUpdateRooster,S.lastUpdateDeviation].filter(Boolean).sort((a,b)=>(b.at||0)-(a.at||0))[0])
-    : lastUpdateFooter(S.lastUpdateRooster);
   box.innerHTML = dayCoordinatorHtml()
     + timeChangesCardHtml()
     + periodOverviewHtml()
     + segHtml
     + (mode==='period'
       ? periodViewHtml()
-      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label))
-    + footer;
+      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + renderDay(S.scheduleDay, label));
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
   });

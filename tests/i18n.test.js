@@ -147,7 +147,7 @@ test('the wording from the user stories is exact', () => {
   assert.equal(t('dayCoord.label', { when: 'morgen', name: 'Merel' }), 'Dagcoördinator morgen: Merel');
   assert.equal(t('dayCoord.label', { when: t('dayCoord.monday'), name: 'Merel' }), 'Dagcoördinator maandag: Merel');
   assert.equal(t('oneOnOne.label'), 'Stem 1-op-1 af, de dagcoördinator deelt het besluit.');
-  assert.equal(t('wa.conclusie.onSchedule', { dayLabel: 'Donderdag', url: 'U' }), 'Donderdag: volgens schema. Zie Mijn week: U');
+  assert.equal(t('wa.conclusie.onSchedule', { dayLabel: 'Donderdag' }), 'Donderdag: volgens schema.');
   assert.equal(t('flex.speelsterChauffeur'), 'speelster-chauffeur');
 });
 
@@ -306,6 +306,7 @@ test('the not-linked status line points to the gate (phone number + code), not t
 test('WhatsApp login intro texts start with "Hi!" and carry the app link', () => {
   assert.match(t('profile.wa_intro_text', { url: 'U', code: 'C' }), /^Hi! .*U[\s\S]*C/);
   assert.match(t('profile.wa_intro_text_nocode', { url: 'U' }), /^Hi! /);
+  assert.doesNotMatch(t('wa.conclusie.onSchedule', { dayLabel: 'Di' }), /https?:|azcarpool/);
   assert.equal(t('profile.tel_nr_1_wa'), 'Tel.nr. 1 (ontvangt WhatsApp-berichtjes)');
 });
 
@@ -328,10 +329,8 @@ test('the family-type buttons use short labels', () => {
   assert.equal(t('profile.gezinstype.vast'), 'Vast (volgens schema)');
   assert.equal(t('profile.gezinstype.flex'), 'Flex (zelf plannen)');
 });
-test('the texts about one-off changes say they disappear on Friday at 19:00', () => {
-  assert.match(t('deviation.eenmalige_ritaanpassing_voor_deze_week'), /elke vrijdag om 19:00/);
-  assert.match(t('deviation.deze_week_en_verdwijnen_dit'), /vrijdag om 19:00/);
-  assert.doesNotMatch(t('deviation.deze_week_en_verdwijnen_dit') + t('deviation.eenmalige_ritaanpassing_voor_deze_week'), /weekend/);
+test('the text about one-off changes says they disappear on Friday at 19:00', () => {
+  assert.equal(t('deviation.eenmalige_ritaanpassing_voor_deze_week'), 'Eenmalige ritaanpassing voor deze week. Het standaardrooster blijft intact; wijzigingen worden elke vrijdag om 19:00 automatisch gewist.');
 });
 test('the agenda update text names Proton and points to Mijn week', () => {
   assert.match(t('agenda.bijwerken'), /Google of Proton/); assert.match(t('agenda.bijwerken'), /Mijn week/);
