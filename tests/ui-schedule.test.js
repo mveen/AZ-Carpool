@@ -309,5 +309,10 @@ await (async () => {
 })();
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
 
+test('Rooster shows the spinner while the data is loading', () => {
+  assert.match(render(() => sampleParentState({ familiesLoaded: false })), /class="spinner"/);
+  assert.doesNotMatch(render(() => sampleParentState({})), /class="spinner"/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -508,18 +508,19 @@ export function startDataListeners(){
   db.setListenerSink(S.dataUnsubs);
   try{
     db.collection("families").onSnapshot(snap=>{
+        S.familiesLoaded=true;
         S.families={}; S.serverSchedules={};
         snap.docs.forEach(d=>{ S.families[d.id]=d.data(); S.serverSchedules[d.id]=JSON.parse(JSON.stringify(d.data().schedule||{})); });
         notifyCoordinatorOfNewTimeChanges();
         if(isRealCoordinator()) migrateLegacyFamilySecrets();
         renderAll(); },
-      err=>{ setStatus(t('data.fout_bij_laden_gezinnen')+(err&&err.message||err), true); });
-    db.collection("groups").onSnapshot(snap=>{ S.groups={}; snap.docs.forEach(d=>S.groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
-      err=>{ setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); });
+      err=>{ S.familiesLoaded=true; setStatus(t('data.fout_bij_laden_gezinnen')+(err&&err.message||err), true); renderMyWeek(); });
+    db.collection("groups").onSnapshot(snap=>{ S.groupsLoaded=true; S.groups={}; snap.docs.forEach(d=>S.groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
+      err=>{ S.groupsLoaded=true; setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); renderMyWeek(); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) S.settings={...S.settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ S.periodCarsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/notice").onSnapshot(snap=>{ S.notice = snap.exists? normalizeNotice(snap.data()) : null; renderNoticeBanner(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/maintenance").onSnapshot(snap=>{ S.maintenance = snap.exists? normalizeMaintenance(snap.data()) : null; renderMaintenance(); renderBeheer(); },
@@ -535,9 +536,9 @@ export function startDataListeners(){
     db.collection("backupMoments").onSnapshot(snap=>{ S.moments={}; snap.docs.forEach(d=>S.moments[d.id]=d.data()); renderDeviationTab(); },
       err=>{});
     db.collection("periods").onSnapshot(snap=>{
-      S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
+      S.periodsLoaded=true; S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
       rebuildPeriods(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
-    }, err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    }, err=>{ S.periodsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // The first version stored ONE period in settings/period: still read, and moved into periods/ by the coordinator's app.
     db.doc("settings/period").onSnapshot(snap=>{
       S.legacyPeriod = snap.exists? storedPeriod(snap.data()) : null;
@@ -545,7 +546,7 @@ export function startDataListeners(){
     }, err=>{});
     db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); renderBeheer(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
-    db.collection("periodCars").onSnapshot(snap=>{ S.periodCars={}; snap.docs.forEach(d=>S.periodCars[d.id]=d.data()); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
+    db.collection("periodCars").onSnapshot(snap=>{ S.periodCarsLoaded=true; S.periodCars={}; snap.docs.forEach(d=>S.periodCars[d.id]=d.data()); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
       err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
@@ -556,7 +557,7 @@ export function startDataListeners(){
       S.deviationsLoaded = true;
       purgeStaleDeviations();
       renderSchedule(); renderMyWeek(); renderDeviationTab();
-    }, err=>{ setStatus(t('data.fout_bij_laden_wijzigingen')+(err&&err.message||err), true); });
+    }, err=>{ S.deviationsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_wijzigingen')+(err&&err.message||err), true); });
     db.collection("matchCarpools").onSnapshot(snap=>{
       S.matchCarpools={}; snap.docs.forEach(d=>S.matchCarpools[d.id]=d.data());
       purgeStaleMatchCarpools();
@@ -607,7 +608,7 @@ export function startDataListeners(){
 export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
-  S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   stopPushListeners();
   renderNoticeBanner();

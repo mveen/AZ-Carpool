@@ -5,7 +5,7 @@ import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
 import { driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
-import { esc, hapticTap, locationsCfg, openSheet, phIcon, setStatus, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, locationsCfg, openSheet, phIcon, renderLoadingIfNeeded, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
@@ -45,6 +45,7 @@ export function dayCoordinatorHtml(){
 export function renderSchedule(){
   const box=document.getElementById('tab-schedule');
   if(!box) return;
+  if(renderLoadingIfNeeded(box)) return;
   // The third view (temporary rooster of the period) only exists while there is one to show.
   const periodMode = periodModeAvailable();
   if(S.roosterMode==='period' && !periodMode) S.roosterMode = 'week';
