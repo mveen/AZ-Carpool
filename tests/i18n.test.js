@@ -306,6 +306,10 @@ test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeh
   assert.doesNotMatch(Object.entries(nl).filter(([k]) => k.startsWith('weekrooster.')).map(([, v]) => v).join(' '), /reden|toelichting/i, 'no reason is ever asked');
 });
 
+test('Mijn week loading texts exist: spinner line, slow line and reload button', () => {
+  assert.match(t('myweek.laden'), /geladen/); assert.match(t('myweek.laden_traag'), /langer dan normaal/); assert.equal(t('myweek.opnieuw_laden'), 'Opnieuw laden');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

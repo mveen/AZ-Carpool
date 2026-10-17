@@ -1003,5 +1003,15 @@ test('Afwijkend weekrooster: leaving (stopDataListeners) closes the request list
   assert.match(src, /settings\/weekrooster[\s\S]{0,200}syncWeekRequests\(\)/);
 });
 
+test('the ride listeners mark themselves loaded (also on error) and stopDataListeners resets the flags', async () => {
+  const { stopDataListeners } = await import('../data.js');
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  for (const k of ['familiesLoaded', 'groupsLoaded', 'periodsLoaded', 'periodCarsLoaded', 'deviationsLoaded']) {
+    assert.ok((src.match(new RegExp('S\\.' + k + '\\s*=\\s*true', 'g')) || []).length >= 2, k + ' is set on a snapshot and on an error');
+  }
+  sampleParentState({}); stopDataListeners();
+  for (const k of ['familiesLoaded', 'groupsLoaded', 'periodsLoaded', 'periodCarsLoaded', 'deviationsLoaded']) assert.equal(S[k], false, k);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

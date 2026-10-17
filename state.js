@@ -16,6 +16,10 @@ export const S = {
   links: {},
   deviations: {},
   deviationsLoaded: false,
+  familiesLoaded: false,   // the first answer of the families / groups / periods / periodCars listeners has arrived (also on error, so the spinner never hangs)
+  groupsLoaded: false,
+  periodsLoaded: false,
+  periodCarsLoaded: false,
   linksLoaded: false,
   invitesByCode: {},
   inviteByFamily: {},
@@ -141,3 +145,6 @@ export const S = {
   coordEditId: undefined,
   selectedShiftKey: 'Ma_heen',
 };
+
+// Mijn week is only drawn once everything a ride depends on has answered; before that a ride would wrongly read "nog geen rit".
+export const rideDataLoaded = () => !!(S.familiesLoaded && S.groupsLoaded && S.deviationsLoaded && S.periodsLoaded && S.periodCarsLoaded);

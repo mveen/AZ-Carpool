@@ -119,5 +119,13 @@ test('Afwijkend weekrooster: no requests, no listeners and no form open at start
   assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrBusy, false); assert.equal(S.weekrooster, null);
 });
 
+test('Mijn week loading flags: all start false, so rideDataLoaded() is false until every listener has answered', async () => {
+  const { rideDataLoaded } = await import('../state.js');
+  for (const k of ['familiesLoaded', 'groupsLoaded', 'deviationsLoaded', 'periodsLoaded', 'periodCarsLoaded']) assert.equal(S[k], false, k);
+  assert.equal(rideDataLoaded(), false);
+  Object.assign(S, { familiesLoaded: true, groupsLoaded: true, deviationsLoaded: true, periodsLoaded: true, periodCarsLoaded: true });
+  assert.equal(rideDataLoaded(), true);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
