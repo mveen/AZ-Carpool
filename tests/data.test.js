@@ -247,10 +247,24 @@ await testAsync('syncListeners: only the coordinator listens to all links and in
 await testAsync('syncListeners: only the coordinator listens to the error log, and entries older than 30 days are removed at the first load', async () => {
   const now = Date.now(), DAY = 24 * 60 * 60 * 1000;
   const fake = useFakeDb({ ...sampleDbSeed(), 'errorLog/u1_0': { at: now - DAY, where: 'gate', code: 'link-denied', msg: '', v: 'v88', ua: 'iOS Safari 17' }, 'errorLog/u2_0': { at: now - 40 * DAY, where: 'gate', code: 'old', msg: '', v: 'v80', ua: '?' } });
-  sampleCoordinatorState({ links: {}, families: {} });
+  sampleCoordinatorState({ links: {}, families: {}, beheerOpened: true });
   syncListeners(); await tick(); await tick(); await tick();
   assert.deepEqual(Object.keys(S.errorLog), ['u1_0']); assert.equal(S.errorLogLoaded, true);
   assert.deepEqual(fake.collection('errorLog').map(r => r[0]), ['u1_0']);
+  stopDataListeners();
+});
+await testAsync('syncListeners: the coordinator does not read the ride log, error log and back-ups (reads cost quota) until Beheer has been opened', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'errorLog/u1_0': { at: Date.now() }, 'periodBackups/b1': { periodFirstDay: '2026-10-26' }, 'rideLog/2026-09-21_heen': { date: '2026-09-21', day: 'Ma', direction: 'heen', cars: [] } });
+  sampleCoordinatorState({ links: {}, families: {}, rideLog: {}, rideLogLoaded: false });
+  assert.equal(S.beheerOpened, false);
+  syncListeners(); await tick(); await tick(); await tick();
+  assert.equal(S.errorLogUnsub, null); assert.equal(S.rideLogUnsub, null); assert.equal(S.periodBackupsUnsub, null);
+  assert.deepEqual(S.errorLog, {}); assert.deepEqual(S.rideLog, {}); assert.deepEqual(S.periodBackups, {});
+  assert.ok(S.linksCollUnsub && S.sessionsUnsub && S.invitesUnsub, 'the small coordinator lists stay live');
+  assert.equal(S.rideLogLoaded, false); assert.equal(fake.collection('rideLog').length, 1, 'nothing was logged either');
+  S.beheerOpened = true; syncListeners(); await tick(); await tick(); await tick();
+  assert.equal(typeof S.errorLogUnsub, 'function'); assert.equal(typeof S.rideLogUnsub, 'function'); assert.equal(typeof S.periodBackupsUnsub, 'function');
+  assert.deepEqual(Object.keys(S.errorLog), ['u1_0']); assert.deepEqual(Object.keys(S.periodBackups), ['b1']); assert.equal(S.rideLogLoaded, true);
   stopDataListeners();
 });
 await testAsync('syncListeners: a parent never listens to the error log', async () => {
@@ -732,7 +746,7 @@ await testAsync('syncListeners: only the coordinator reads the back-ups; a paren
   useFakeDb({ ...sampleDbSeed(), 'periodBackups/2026-10-26_1': mk });
   sampleParentState({ families: {}, groups: {} }); syncListeners(); await tick(); await tick();
   assert.equal(S.periodBackupsUnsub, null); assert.deepEqual(S.periodBackups, {}); stopDataListeners();
-  sampleCoordinatorState({ links: {}, families: {} }); syncListeners(); await tick(); await tick();
+  sampleCoordinatorState({ links: {}, families: {}, beheerOpened: true }); syncListeners(); await tick(); await tick();
   assert.deepEqual(Object.keys(S.periodBackups), ['2026-10-26_1']); assert.equal(typeof S.periodBackupsUnsub, 'function');
   S.canEdit = false; S.coordinatorConfig = null; S.coordinatorExists = true; syncListeners();
   assert.equal(S.periodBackupsUnsub, null); assert.deepEqual(S.periodBackups, {}); stopDataListeners();
@@ -859,7 +873,7 @@ await testAsync('the notice for everyone is loaded live and cleared when listene
 
 await testAsync('the coordinator reads the ride log and writes what is new; a parent never listens to it', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'rideLog/2026-09-21_heen': { date: '2026-09-21', day: 'Ma', direction: 'heen', cars: [{ familyId: 'f1', name: 'x', girls: 1 }] } });
-  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: false, deviationsLoaded: false });
+  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: false, deviationsLoaded: false, beheerOpened: true });
   syncListeners(); startDataListeners(); await tick(); await tick(); await tick();
   assert.ok(S.rideLogUnsub, 'coordinator listens'); assert.equal(S.rideLogLoaded, true); assert.equal(S.deviationsLoaded, true);
   assert.equal(S.rideLog['2026-09-21_heen'].cars[0].name, 'x', 'the stored one is kept');

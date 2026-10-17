@@ -363,6 +363,37 @@ await test('a run in test mode announces and sends in one go; with the switch on
   assert.equal(off.data.get('offers/o1').uncoveredAt, undefined);
 });
 
+console.log('\n=== reads (quota) ===');
+// The free plan allows 50,000 reads a day for the whole app, so a run must not read what it does not need.
+const spied = fs => { const reads = []; const l = fs.listDocuments, g = fs.getDocument; fs.listDocuments = async c => { reads.push(c); return l(c); }; fs.getDocument = async p => { reads.push(p); return g(p); }; fs.reads = reads; return fs; };
+await test('an empty queue: devices and families are not read, the status still says the server is alive (without device counts)', async () => {
+  const db = base({ 'settings/ritbeurs': { on: true } }); delete db['testNotifications/n1']; delete db['pushQueue/testNotifications__n1'];
+  const fs = spied(fakeFirestore(db)), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.sent, 0); assert.equal(send.sent.length, 0);
+  assert.ok(!fs.reads.includes('pushDevices') && !fs.reads.includes('families'), 'read: ' + fs.reads.join(', '));
+  assert.ok(fs.reads.includes('pushQueue') && fs.reads.includes('offers'));
+  const st = fs.data.get('settings/pushStatus');
+  assert.equal(st.lastRunAt, T10); assert.equal(st.sent, 0); assert.equal(st.pending, 0); assert.ok(!('devices' in st)); assert.ok(!('familyDevices' in st));
+  assert.match(r.log[r.log.length - 1], /queue empty/);
+});
+await test('a queue with an entry: devices and families are read, as before, and the status carries the device counts', async () => {
+  const fs = spied(fakeFirestore(base())), send = sender();
+  const r = await run(fs, send);
+  assert.equal(r.sent, 1);
+  assert.ok(fs.reads.includes('pushDevices') && fs.reads.includes('families'));
+  assert.equal(fs.data.get('settings/pushStatus').devices, 1);
+});
+await test('no offer that is due: the families and the day coordinators are not read; one that is due reads them', async () => {
+  const fs1 = spied(fakeFirestore(ritOn()));
+  assert.equal(await unc(fs1, T10), 0);
+  assert.deepEqual(fs1.reads.filter(r => r === 'families' || r === 'settings/dayCoordinators'), []);
+  assert.ok(fs1.reads.includes('offers'));
+  const fs2 = spied(fakeFirestore(ritOn()));
+  assert.equal(await unc(fs2, T1805), 1);
+  assert.ok(fs2.reads.includes('families') && fs2.reads.includes('settings/dayCoordinators'));
+});
+
 console.log('\n=== the lock ===');
 await test('a run that finds another one busy skips; the lock is released after a run, also after an error; an old lock is taken over', async () => {
   const lock = join(tmp, 'data', 'push.lock'); let ran = 0;

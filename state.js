@@ -107,6 +107,7 @@ export const S = {
   periodBackups: {},       // periodBackups/*: back-ups of a period (coordinator only), by document id (see period-backup.js)
   periodBackupsUnsub: null,
   rideLog: {},             // rideLog/*: the rides that were driven, by '<date>_<heen|terug>' (coordinator only, see ride-log.js)
+  beheerOpened: false,     // Beheer has been opened this session: only then the coordinator listens to the ride log, the error log and the period back-ups (they cost reads)
   rideLogLoaded: false,    // the log has been read, so logPassedShifts can tell what is new
   rideLogUnsub: null,
   rideLogView: null,       // Beheer, Gereden shifts: { mode:'month'|'year', year, month } while the coordinator looks at it (null = the current month)

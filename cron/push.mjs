@@ -22,6 +22,11 @@ import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { ensureVapidFile, sendPush } from './lib/webpush.mjs';
 import { dataDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
+import { skipReason } from './lib/run-window.mjs';
+
+// Reads cost quota (Firestore free plan: 50,000 a day for the whole app). So: no runs at night (the quiet hours of a family are 22:00-06:00 by
+// default, so nothing is lost: an entry that was due waits and goes out from 05:00), and only read what a run really needs.
+export const PUSH_QUIET = { fromHour: 0, toHour: 5 };
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const PUSH_APP_MODULES = ['push.js', 'notif-text.js', 'ritbeurs.js', 'dates.js', 'state.js'];
@@ -67,15 +72,18 @@ export async function ensureVapid({ firestore, file, subject, now = Date.now(), 
 export async function runUncovered({ firestore, app, now = Date.now(), log = console.log }) {
   const sw = await readDoc(firestore, 'settings/ritbeurs');
   if (!app.normalizeRitbeurs(sw && sw.data).on) return 0;
-  const [offers, families, dcDoc] = await Promise.all([readCollection(firestore, 'offers'), readCollection(firestore, 'families'), readDoc(firestore, 'settings/dayCoordinators')]);
-  const fams = Object.fromEntries(families.map(f => [f.id, f.data]));
-  const dayCoordinators = dcDoc ? dcDoc.data : {};
+  const offers = await readCollection(firestore, 'offers');
   app.refreshWeekKey();
   const weekKey = app.S.currentWeekKey;
+  // Only an offer that is open, from this week, not announced yet and past its 18:00 deadline needs anything else. Without one (almost always)
+  // the families and the day coordinators are not read at all.
+  const due = offers.filter(({ data: o }) => o && o.status === 'open' && o.weekKey === weekKey && !o.uncoveredAt && app.urgency(o.date, now) === 'late' && app.rideStartMs(o.date, o.time) > now);
+  if (!due.length) return 0;
+  const [families, dcDoc] = await Promise.all([readCollection(firestore, 'families'), readDoc(firestore, 'settings/dayCoordinators')]);
+  const fams = Object.fromEntries(families.map(f => [f.id, f.data]));
+  const dayCoordinators = dcDoc ? dcDoc.data : {};
   let announced = 0;
-  for (const { id, data: o, updateTime } of offers) {
-    if (!o || o.status !== 'open' || o.weekKey !== weekKey || o.uncoveredAt) continue;
-    if (app.urgency(o.date, now) !== 'late' || app.rideStartMs(o.date, o.time) <= now) continue;
+  for (const { id, data: o, updateTime } of due) {
     const dc = dayCoordinators[o.day];
     const recipients = [...new Set([o.offeredBy, dc].filter(to => to && fams[to]))];
     const writes = [{ update: 'offers/' + id, fields: { uncoveredAt: now }, updateTime }];
@@ -100,11 +108,17 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
   const vapid = await ensureVapid({ firestore, file: vapidFile, subject, now, log });
   const announced = await runUncovered({ firestore, app, now, log });
 
-  const [deviceDocs, queue, familyDocs] = await Promise.all([readCollection(firestore, 'pushDevices'), readCollection(firestore, 'pushQueue'), readCollection(firestore, 'families')]);
-  const fams = Object.fromEntries(familyDocs.map(f => [f.id, f.data]));
-  // Only real push addresses. The database rules decide who may store one: the coordinator (a test device, owner 'coordinator') and a member
-  // for the own family (familyId, only while live is on). devicesFor picks the ones an entry may go to.
-  const devices = Object.fromEntries(deviceDocs.filter(d => app.isPushEndpoint(d.data.endpoint)).map(d => [d.id, d.data]));
+  // The queue first: when it is empty (almost always) there is nothing to send, and the devices and the families are not read at all.
+  const queue = await readCollection(firestore, 'pushQueue');
+  const looked = queue.length > 0;
+  let fams = {}, devices = {};
+  if (looked) {
+    const [deviceDocs, familyDocs] = await Promise.all([readCollection(firestore, 'pushDevices'), readCollection(firestore, 'families')]);
+    fams = Object.fromEntries(familyDocs.map(f => [f.id, f.data]));
+    // Only real push addresses. The database rules decide who may store one: the coordinator (a test device, owner 'coordinator') and a member
+    // for the own family (familyId, only while live is on). devicesFor picks the ones an entry may go to.
+    devices = Object.fromEntries(deviceDocs.filter(d => app.isPushEndpoint(d.data.endpoint)).map(d => [d.id, d.data]));
+  }
   app.refreshWeekKey();
   const nameOf = id => (fams[id] && (fams[id].parentName || fams[id].girlName)) || '';
 
@@ -158,10 +172,11 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
     await firestore.commit([{ update: 'pushQueue/' + key, fields: { sentTo, failedTo }, updateTime }]);
   }
 
+  // The device counts are only known when the devices were read (a non-empty queue); the app only uses lastRunAt, sent and pending.
   const testDevices = Object.values(devices).filter(d => d.owner === 'coordinator').length;
   const familyDevices = Object.values(devices).filter(d => typeof d.familyId === 'string' && d.familyId).length;
-  await firestore.setDocument('settings/pushStatus', { lastRunAt: now, mode, live, sent, failed, pending, devices: testDevices, familyDevices, announced });
-  log(`Push (test ${mode === 'test' ? 'on' : 'off'}, live ${live ? 'on' : 'off'}): ${sent} sent, ${failed} failed, ${pending} waiting, ${removed} removed, ${announced} offer(s) announced, ${testDevices} test device(s), ${familyDevices} family device(s)`);
+  await firestore.setDocument('settings/pushStatus', { lastRunAt: now, mode, live, sent, failed, pending, ...(looked ? { devices: testDevices, familyDevices } : {}), announced });
+  log(`Push (test ${mode === 'test' ? 'on' : 'off'}, live ${live ? 'on' : 'off'}): ${sent} sent, ${failed} failed, ${pending} waiting, ${removed} removed, ${announced} offer(s) announced${looked ? `, ${testDevices} test device(s), ${familyDevices} family device(s)` : ', queue empty'}`);
   return { mode, live, sent, failed, pending, removed, announced };
 }
 
@@ -184,6 +199,8 @@ export async function withLock(file, fn, { now = Date.now(), staleMs = 5 * 60 * 
 
 if (isMainModule(import.meta.url)) {
   try {
+    const why = skipReason({ nowMs: Date.now(), quiet: PUSH_QUIET });
+    if (why) { console.log('Push: ' + why + ', nothing done'); process.exit(0); }
     const { projectId, referer } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));
     const firestore = createFirestore({ projectId, getToken: tokenProvider({ account }) });
