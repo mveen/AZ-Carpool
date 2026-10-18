@@ -1,11 +1,19 @@
 name: Deploy azcarpool.nl
 
 # Runs after every merge to main (and by hand: Actions -> Deploy azcarpool.nl -> Run workflow).
+# Order: tests -> put it on the TEST site -> robot smoke test on the test site -> only then LIVE.
+# If a step fails, everything after it is skipped: live stays exactly as it was.
+# By hand you can tick "skip_smoke" to go live even when the robot is red (emergency only).
 # GitHub Pages is not touched by this: it keeps deploying from main on its own.
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      skip_smoke:
+        description: 'Emergency only: skip the smoke test and go live straight after the test site'
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-azcarpool
@@ -14,24 +22,116 @@ concurrency:
 permissions:
   contents: read
 
+env:
+  # Not secret. The server's public identity is pinned in .github/deploy/known_hosts for exactly this host and port.
+  SSH_HOST: h70.mijn.host
+  SSH_PORT: '26'
+
 jobs:
-  deploy:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Run tests (never upload a broken app)
+        run: npm test
+
+  deploy-test:
+    needs: tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
-      SITE: https://azcarpool.nl
-      TARGET_DIR: domains/azcarpool.nl/public_html/
-      # Not secret. The server's public identity is pinned in .github/deploy/known_hosts for exactly this host and port.
-      SSH_HOST: h70.mijn.host
-      SSH_PORT: '26'
+      SITE: https://test.azcarpool.nl
+      TARGET_DIR: domains/test.azcarpool.nl/public_html/
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
 
-      - name: Run tests (never upload a broken app)
-        run: npm test
+      - name: Build the test upload folder (own database, test banner)
+        run: npm run build:deploy:test
+
+      - name: Check that the secrets are set
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          missing=0
+          for name in DEPLOY_USER DEPLOY_KEY; do
+            if [ -z "${!name}" ]; then echo "::error::GitHub secret $name is not set (repo Settings -> Secrets and variables -> Actions)"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Upload to the test site
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cp .github/deploy/known_hosts ~/.ssh/known_hosts
+          head -1 ~/.ssh/deploy_key | grep -q 'BEGIN OPENSSH PRIVATE KEY' || { echo "::error::DEPLOY_KEY does not start with -----BEGIN OPENSSH PRIVATE KEY-----"; exit 1; }
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_KEY is not a valid private key"; exit 1; }
+          export RSYNC_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
+          bash scripts/deploy-rsync.sh dist-test/ "$user@$SSH_HOST:$TARGET_DIR"
+
+      - name: Check that the new version is on the test site
+        run: |
+          expected=$(grep -oE "CACHE_NAME *= *'[^']+'" dist-test/service-worker.js | head -1)
+          echo "Expected: $expected"
+          for attempt in 1 2 3 4 5 6; do
+            now=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
+            echo "Attempt $attempt, test site: ${now:-nothing}"
+            if [ "$now" = "$expected" ]; then break; fi
+            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve the new service worker"; exit 1; fi
+            sleep 10
+          done
+          curl -fsS --max-time 20 "$SITE/" | grep -q 'class="envBar"' || { echo "::error::the test banner is missing: this is not the test build"; exit 1; }
+          if curl -fsS --max-time 20 "$SITE/firebase-config.js" | grep -q 'projectId: "az-carpool"'; then echo "::error::the test site points to the LIVE database"; exit 1; fi
+          echo "OK: $SITE serves $expected"
+
+  smoke:
+    needs: deploy-test
+    if: ${{ !inputs.skip_smoke }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install the robot browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.0
+          npx playwright install --with-deps chromium
+      - name: Smoke test the test site (coordinator and parent)
+        env:
+          SMOKE_SITE: https://test.azcarpool.nl
+          SMOKE_PHONE: ${{ secrets.SMOKE_PHONE }}
+          SMOKE_CODE_COORD: ${{ secrets.SMOKE_CODE_COORD }}
+          SMOKE_CODE_PARENT: ${{ secrets.SMOKE_CODE_PARENT }}
+        run: node scripts/smoke-test.mjs
+
+  deploy-live:
+    needs: [deploy-test, smoke]
+    # Runs when the smoke test is green, or when it was skipped on purpose by hand. Never when anything failed.
+    if: ${{ !cancelled() && needs.deploy-test.result == 'success' && (needs.smoke.result == 'success' || (needs.smoke.result == 'skipped' && inputs.skip_smoke)) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE: https://azcarpool.nl
+      TARGET_DIR: domains/azcarpool.nl/public_html/
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
 
       - name: Build the upload folder
         run: npm run build:deploy
