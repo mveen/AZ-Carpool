@@ -10,7 +10,7 @@ import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { activateTab } from './app.js';
 import { attachDeviationHandlers, conclusieCardHtml, renderDevDirection } from './ui-deviation.js';
 import { renderSchedule } from './ui-schedule.js';
-import { myDeciderDays } from './weekrooster-data.js';
+import { adviceForDay, myDeciderDays } from './weekrooster-data.js';
 import { dayName, deciderLabel, weekroosterActive } from './ui-weekrooster-form.js';
 import { actionCardHtml } from './ui-weekrooster-rooster.js';
 
@@ -45,6 +45,9 @@ function askOverride(day) {
   document.getElementById('wrOverrideGo').onclick = () => { hapticTap(); closeSheet(); startEdit(day, true); };
 }
 
+// Is there still an advice to look at for this day? Only for who decides the day: from the editor there is a way back to the Advies.
+const hasAdvice = day => mayPlanDay(day) && Object.keys(adviceForDay(day).directions).length > 0;
+
 // The editor, in place of the day. Empty when closed or when the switch is off for this person.
 export function scheduleEditHtml() {
   if (!weekroosterActive() || !S.wrEdit) return '';
@@ -56,7 +59,7 @@ export function scheduleEditHtml() {
     ${override ? `<p class="noteLine">${esc(t('weekrooster.edit.override', { p1: deciderLabel(day) }))}</p>` : ''}
     ${actionCardHtml(day, { advice: false })}
     <div class="daysection"><h3 class="srOnly">${esc(dayName(day))}</h3>${renderDevDirection(day, 'heen')}${renderDevDirection(day, 'terug')}${conclusieCardHtml(day)}</div>
-    <div class="actionBar"><button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
+    <div class="actionBar">${hasAdvice(day) ? `<button type="button" class="btn secondary" id="wrEditAdvice">${esc(t('weekrooster.advice.look'))}</button>` : ''}<button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
 }
 
 // Under the day in Rooster "Deze week": the way into the editor. A planner: "Zelf indelen". Everybody else: the small link "Toch zelf wijzigen".
@@ -70,6 +73,7 @@ export function scheduleDayFootHtml(day) {
 export function wireEdit(box) {
   box.querySelectorAll('[data-wredit]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wredit); });
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
+  const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day }; S.wrDone = null; renderSchedule(); };
   for (const id of ['wrEditBack', 'wrEditDone']) { const b = document.getElementById(id); if (b) b.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); }; }
   if (S.wrEdit && weekroosterActive()) attachDeviationHandlers();
 }

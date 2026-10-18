@@ -262,7 +262,7 @@ export function renderDevDirection(day,direction){
   const roomOf = c => c.driverFamilyId? seats(fam(c.driverFamilyId)) - (c.girlIds||[]).length : 0;
   const quickRows = unplaced.map(([id])=>{
     const btns = cars.map((c,idx)=>roomOf(c)>0? `<button type="button" class="btn small secondary" data-devquick="${day}|${direction}|${idx}|${id}" aria-label="${esc(t('deviation.quick_aria',{ name: girlName(id), driver: fam(c.driverFamilyId).parentName||'?' }))}">${phIcon('plus-circle')}<span class="quickAssign__time">${esc(c.departureTime||'--:--')}</span><span class="quickAssign__room">${esc(t(roomOf(c)===1? 'deviation.plek_een' : 'deviation.plekken',{p1:roomOf(c)}))}</span></button>` : '').join('');
-    return btns? `<div class="quickAssign"><span class="quickAssign__who">${girlName(id)}</span>${btns}</div>` : '';
+    return btns? `<div class="quickAssign">${unplaced.length>1? `<span class="quickAssign__who">${girlName(id)}</span>` : ''}${btns}</div>` : '';
   }).join('');
   const unplacedHtml = unplaced.length? `<div class="dashBox"><b>${t('schedule.niet_ingedeeld_box')}</b> ${unplaced.map(([id])=>girlName(id)).join(', ')}${quickRows? `<span class="dashBox__hint"> · ${t('deviation.kies_een_auto')}</span>${quickRows}` : `<br><span class="dashBox__hint">${t('deviation.niet_ingedeeld_hint')}</span>`}</div>` : '';
   const notRiding = ovGirlsFor(day,undefined,direction);
