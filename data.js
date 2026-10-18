@@ -722,6 +722,8 @@ export async function setReturnByPublicTransport(day,girlId,on,direction='terug'
   try{
     const { doc } = returnByPublicTransportDoc(day,girlId,on,direction);
     await writeDeviation(day,direction,doc.cars,{ ...(doc.ovGirlIds? {ovGirlIds:doc.ovGirlIds, ovFrom:doc.ovFrom} : {}), ...(doc.times? {times:doc.times} : {}) });
+    // What was just saved counts at once (the live listener confirms it a moment later): a screen drawn right after must not read the old mark.
+    S.deviations = { ...S.deviations, [deviationKey(day,direction)]: doc };
     return true;
   }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); return false; }
 }

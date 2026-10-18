@@ -70,6 +70,29 @@ export function decideMode({ ownDaughter, rides, isDayCoordinator }) {
   return isDayCoordinator ? 'direct' : 'pending';
 }
 
+// Which shifts of a form day say "rijdt niet mee": the unticked day, or an emptied time. Only a shift she has in the fixed rooster can be off
+// (an empty time on a shift she does not have is just that). all = every shift she has is off, so the whole day is "rijdt niet mee".
+//   f: { rides, heen, terug } as filled in   std: { heen, terug } the fixed times
+export function offOf(f, std) {
+  const sH = (std && std.heen) || '', sT = (std && std.terug) || '';
+  const rides = f.rides !== false;
+  const heen = sH !== '' && (!rides || String(f.heen || '').trim() === '');
+  const terug = sT !== '' && (!rides || String(f.terug || '').trim() === '');
+  return { heen, terug, all: (heen || terug) && (sH === '' || heen) && (sT === '' || terug) };
+}
+
+// The marks (per shift) a filled-in form asks for, for the days that are still open: { Wo: { heen: true, terug: false } }.
+export function desiredMarks({ days, standard, isPast }) {
+  const out = {};
+  for (const day of REQUEST_DAYS) {
+    const f = days && days[day];
+    if (!f || (isPast && isPast(day))) continue;
+    const { heen, terug } = offOf(f, (standard && standard[day]) || { heen: '', terug: '' });
+    out[day] = { heen, terug };
+  }
+  return out;
+}
+
 // Turns the filled-in week form into the documents to write.
 //   weekKey, familyId: who and which week
 //   days: { Do: { rides: true, heen: '16:30', terug: '17:45' }, ... }  (only the days the form shows as changed)
@@ -81,16 +104,27 @@ export function decideMode({ ownDaughter, rides, isDayCoordinator }) {
 // and a day that equals what is already handed in or applied ('unchanged').
 // directTimes (default true): may new times be applied at once on the own day of a day coordinator? The caller passes false for next week
 // (its cars do not exist yet), so there it stays a request. "Rijdt niet mee" is always direct.
-export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, test, directTimes = true }) {
+export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, test, directTimes = true, shiftOff = false }) {
   const writes = [], skipped = [];
   for (const day of REQUEST_DAYS) {
     const f = days && days[day];
     if (!f) continue;
     if (isPast && isPast(day)) { skipped.push({ day, why: 'past' }); continue; }
-    const rides = f.rides !== false;
     const std = (standard && standard[day]) || { heen: '', terug: '' };
-    const heen = rides ? String(f.heen || '').trim() : '';
-    const terug = rides ? String(f.terug || '').trim() : '';
+    let rides = f.rides !== false;
+    let heen = rides ? String(f.heen || '').trim() : '';
+    let terug = rides ? String(f.terug || '').trim() : '';
+    if (shiftOff) {
+      // This week: an emptied time (or an unticked day) is "rijdt niet mee" on that shift and is applied at once as a mark (see offOf), not as a
+      // request. A request is only made for the whole day off, or for a time that really differs on a shift she still rides.
+      const off = offOf(f, std);
+      if (off.all) { rides = false; heen = ''; terug = ''; }
+      else {
+        if (off.heen) heen = '';
+        if (off.terug) terug = '';
+        if ((off.heen || heen === std.heen) && (off.terug || terug === std.terug)) { skipped.push({ day, why: 'same' }); continue; }
+      }
+    }
     if (rides && heen === std.heen && terug === std.terug) { skipped.push({ day, why: 'same' }); continue; }
     if (rides && ((heen !== '' && !isTime(heen)) || (terug !== '' && !isTime(terug)) || (heen === '' && terug === ''))) { skipped.push({ day, why: 'time' }); continue; }
     const id = requestId(weekKey, day, familyId);
@@ -120,12 +154,23 @@ export function nextWeekKey(weekKey) {
 
 // The form as it opens: per day what is handed in (a pending, direct or accepted request of this family) or else the fixed rooster.
 //   standard: { Ma: { heen, terug }, ... }   requests: { <id>: doc }   Returns { Ma: { rides, heen, terug, requested } }
-export function weekFormFrom({ weekKey, familyId, standard, requests }) {
+// marks (this week only): { Wo: { heen: true, terug: false } } = the shifts marked "rijdt niet mee" now. They are the truth for riding or not:
+// a marked shift shows an empty time, a day with every shift marked shows "Rijdt mee" unticked. A "rijdt niet mee" request without marks is ignored.
+export function weekFormFrom({ weekKey, familyId, standard, requests, marks }) {
   const out = {};
   for (const day of REQUEST_DAYS) {
     const std = (standard && standard[day]) || { heen: '', terug: '' };
     const r = requests && requests[requestId(weekKey, day, familyId)];
-    const live = r && (r.status === 'pending' || r.status === 'direct' || r.status === 'accepted');
+    const live = r && (r.status === 'pending' || r.status === 'direct' || r.status === 'accepted') && !(marks && r.rides === false);
+    if (marks) {
+      const m = marks[day] || {};
+      const markH = !!m.heen && !!std.heen, markT = !!m.terug && !!std.terug;
+      if (markH || markT) {
+        if ((std.heen === '' || markH) && (std.terug === '' || markT)) { out[day] = { rides: false, heen: std.heen, terug: std.terug, requested: r && live ? r.status : '' }; continue; }
+        out[day] = { rides: true, heen: markH ? '' : (live ? r.heen : std.heen), terug: markT ? '' : (live ? r.terug : std.terug), requested: live ? r.status : '' };
+        continue;
+      }
+    }
     out[day] = live
       ? { rides: r.rides !== false, heen: r.rides === false ? std.heen : r.heen, terug: r.rides === false ? std.terug : r.terug, requested: r.status }
       : { rides: true, heen: std.heen, terug: std.terug, requested: '' };

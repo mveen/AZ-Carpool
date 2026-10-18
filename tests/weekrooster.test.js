@@ -11,7 +11,7 @@ import './test-support.js';
 import {
   WEEKROOSTER_MODES, REQUEST_DAYS, REQUEST_STATUSES, REQUEST_FIELDS,
   normalizeWeekrooster, weekroosterDoc, weekroosterVisible, requestId, isValidRequest, decideMode, buildRequests,
-  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf, decidedDays, actionCounts, recentChanges, selfChanges,
+  requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf, offOf, desiredMarks, decidedDays, actionCounts, recentChanges, selfChanges,
 } from '../weekrooster.js';
 
 console.log('=== the feature switch ===');
@@ -259,6 +259,52 @@ test('what is already handed in or applied is not written again ("unchanged"), s
   });
   assert.equal(buildRequests({ ...base, existing: live('withdrawn'), days: { Do: { rides: true, heen: '16:30', terug: '17:45' } } }).writes.length, 1, 'a withdrawn one is asked again');
   assert.equal(buildRequests({ ...base, existing: live('accepted'), days: { Do: { rides: true, heen: '16:30', terug: '18:00' } } }).writes[0].doc.status, 'pending', 'a changed one starts over');
+});
+console.log('=== this week: shifts that are off (toggles and form are two views of the same marks) ===');
+test('offOf: an emptied time or an unticked day is off, but only on a shift she has in the fixed rooster; all = the whole day', () => {
+  const std = { heen: '16:00', terug: '17:00' };
+  assert.deepEqual(offOf({ rides: true, heen: '', terug: '17:00' }, std), { heen: true, terug: false, all: false });
+  assert.deepEqual(offOf({ rides: true, heen: '16:00', terug: ' ' }, std), { heen: false, terug: true, all: false });
+  assert.deepEqual(offOf({ rides: true, heen: '', terug: '' }, std), { heen: true, terug: true, all: true });
+  assert.deepEqual(offOf({ rides: false, heen: '16:00', terug: '17:00' }, std), { heen: true, terug: true, all: true });
+  assert.deepEqual(offOf({ rides: true, heen: '16:00', terug: '17:00' }, std), { heen: false, terug: false, all: false });
+  // no heen in the fixed rooster: an empty heen is just that, and the day is "all off" as soon as the one shift she has is off
+  assert.deepEqual(offOf({ rides: true, heen: '', terug: '17:00' }, { heen: '', terug: '17:00' }), { heen: false, terug: false, all: false });
+  assert.deepEqual(offOf({ rides: true, heen: '', terug: '' }, { heen: '', terug: '17:00' }), { heen: false, terug: true, all: true });
+  assert.deepEqual(offOf({ rides: false }, { heen: '', terug: '' }), { heen: false, terug: false, all: false }, 'a day without rides has nothing to switch off');
+});
+test('desiredMarks: per open day which shifts the form asks to be off; days that are over are left alone', () => {
+  const days = { Wo: { rides: true, heen: '', terug: '17:00' }, Do: { rides: false }, Vr: { rides: true, heen: '15:00', terug: '16:00' }, Ma: { rides: false } };
+  const r = desiredMarks({ days, standard, isPast: d => d === 'Ma' });
+  assert.deepEqual(r, { Wo: { heen: true, terug: false }, Do: { heen: true, terug: true }, Vr: { heen: false, terug: false } });
+});
+test('weekFormFrom with marks: a marked shift is an empty time, every shift marked unticks the day, no marks = the fixed rooster', () => {
+  const f = marks => weekFormFrom({ weekKey: WK, familyId: 'f2', standard, requests: {}, marks });
+  const m = f({ Wo: { heen: true, terug: false }, Do: { heen: true, terug: true } });
+  assert.deepEqual([m.Wo.rides, m.Wo.heen, m.Wo.terug], [true, '', '17:00']);
+  assert.deepEqual([m.Do.rides, m.Do.heen, m.Do.terug], [false, '16:00', '17:00'], 'unticked day keeps the fixed times (the inputs are hidden)');
+  assert.deepEqual([m.Ma.rides, m.Ma.heen, m.Ma.terug], [true, '16:00', '17:00']);
+  const t2 = f({ Wo: { heen: false, terug: true } }); assert.deepEqual([t2.Wo.rides, t2.Wo.heen, t2.Wo.terug], [true, '16:00', '']);
+});
+test('weekFormFrom with marks: the marks win over a "rijdt niet mee" request (an old request without marks shows the day as riding); other requests keep their times', () => {
+  const off = { [requestId(WK, 'Wo', 'f2')]: { weekKey: WK, day: 'Wo', familyId: 'f2', rides: false, heen: '', terug: '', status: 'direct', createdAt: 1, updatedAt: 1 } };
+  const timed = { [requestId(WK, 'Do', 'f2')]: { weekKey: WK, day: 'Do', familyId: 'f2', rides: true, heen: '16:30', terug: '17:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
+  const a = weekFormFrom({ weekKey: WK, familyId: 'f2', standard, requests: off, marks: {} });
+  assert.deepEqual([a.Wo.rides, a.Wo.heen, a.Wo.terug, a.Wo.requested], [true, '16:00', '17:00', '']);
+  const b = weekFormFrom({ weekKey: WK, familyId: 'f2', standard, requests: timed, marks: { Do: { heen: false, terug: true } } });
+  assert.deepEqual([b.Do.rides, b.Do.heen, b.Do.terug, b.Do.requested], [true, '16:30', '', 'pending'], 'her own time stays, the marked shift is empty');
+  const c = weekFormFrom({ weekKey: WK, familyId: 'f2', standard, requests: off });
+  assert.equal(c.Wo.rides, false, 'without marks (next week) the request is all there is, as before');
+});
+test('buildRequests shiftOff: only the whole day off, or a time that really differs on a shift she still rides, becomes a request', () => {
+  const b = days => buildRequests({ ...base, shiftOff: true, days });
+  assert.deepEqual(b({ Do: { rides: true, heen: '', terug: '17:00' } }), { writes: [], skipped: [{ day: 'Do', why: 'same' }] }, 'one emptied time: a mark only');
+  const all = b({ Do: { rides: true, heen: '', terug: '' } }).writes[0].doc;
+  assert.deepEqual([all.rides, all.heen, all.terug, all.status], [false, '', '', 'direct'], 'both empty = the whole day off');
+  const mixed = b({ Do: { rides: true, heen: '', terug: '18:00' } }).writes[0].doc;
+  assert.deepEqual([mixed.rides, mixed.heen, mixed.terug, mixed.status], [true, '', '18:00', 'pending'], 'a real time on the other shift is still a request');
+  assert.ok(isValidRequest(mixed) && isValidRequest(all));
+  assert.equal(buildRequests({ ...base, days: { Do: { rides: true, heen: '', terug: '' } } }).skipped[0].why, 'time', 'next week (no shiftOff): both empty is still refused');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
