@@ -7,4 +7,5 @@ preview.html
 .preview-tmp.html
 .preview-data.json
 dist/
+dist-test/
 dist-cron/

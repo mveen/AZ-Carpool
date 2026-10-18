@@ -240,6 +240,14 @@ Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {place
 4. Open the app once online. The service worker (cache `az-carpool-v16`) then replaces the old cache.
 5. **Always bump `CACHE_NAME` in `service-worker.js` on every deploy.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
 
+### Test environment (`test.azcarpool.nl`)
+A second copy of the app with its own database, so trying things never touches live data.
+- **Own database:** a separate Firebase project (not `az-carpool`). Its public config goes in `deploy/test/firebase-config.js`; the build refuses the placeholder (`VUL-IN`) and refuses the live project. Same `firebase/firestore.rules` as live (paste them in the test project), anonymous sign-in on.
+- **Build:** `npm run build:deploy:test` writes `dist-test/`: test config instead of `firebase-config.js`, every link points to `https://test.azcarpool.nl/`, a dark "TESTOMGEVING" bar on top of every screen, tab title `TEST – …`, installed name "AZ Carpool TEST". A live build is byte-for-byte what it was (plus a `.deploy-target` marker that is never uploaded).
+- **Deploy:** GitHub -> Actions -> *Deploy test.azcarpool.nl* -> Run workflow -> pick the branch. It runs `npm test` first, uploads only to `domains/test.azcarpool.nl/public_html/` (`deploy-rsync.sh` refuses any other folder for a test build, and the test folder for a live build), and fails when the test site would use the live database. Same two secrets as the live deploy. Only by hand: merging to `main` never touches the test site.
+- **No cron jobs on test** (push, agenda links, back-up, purge and match calendar cache do not run there; the app fetches match calendars itself). Add a test copy of them only when a test needs it.
+- Add `https://test.azcarpool.nl/*` to the allowed referrers of the Google Calendar API key.
+
 ### Cron jobs on the host (`cron/`)
 Five jobs run on the mijn.host account (the code is outside the web folder; only the calendar files of the agenda job are written inside it). The fifth, the push job, is only for the test phase: see *Meldingen (testfase)* above. The deploy workflow uploads `cron/` (plus a generated `config.json` with the public project id and Calendar key) to `~/azcarpool-cron/` and runs `run.sh selftest` there; it fails when the host has no Node.js 20+ or an uploaded key does not log in.
 - **Back-up** (`bash ~/azcarpool-cron/run.sh backup`, nightly): reads the whole database and writes `~/azcarpool-data/backups/firestore-YYYY-MM-DD.jsonl.gz` (Firestore's own format, one document per line, mode 600). Keeps the last 30 and the 1st of each month for a year. Needs the key `~/azcarpool-secrets/backup-key.json` of a service account with the role *Cloud Datastore Viewer* (read only).

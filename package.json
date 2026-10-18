@@ -9,6 +9,7 @@
     "lock": "node run-tests.js --lock",
     "preview": "node scripts/preview.mjs",
     "build:deploy": "node scripts/build-deploy.mjs",
+    "build:deploy:test": "node scripts/build-deploy.mjs --env test",
     "build:cron": "node scripts/build-cron.mjs"
   }
 }
