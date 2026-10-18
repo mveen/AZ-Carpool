@@ -337,7 +337,11 @@ test('Afwijkend weekrooster (phase 5): the warning sheet says who decides, with 
   assert.equal(t('weekrooster.override.title'), 'Dagcoördinator beslist');
   assert.equal(t('weekrooster.override.text', { p1: 'Piet' }), 'De dagcoördinator is Piet. Hij/zij bepaalt de wijziging. Weet je zeker dat je wilt doorgaan?');
   assert.equal(t('weekrooster.edit.override_link'), 'Toch zelf wijzigen'); assert.equal(t('weekrooster.tag.self'), 'Zelf gewijzigd');
+});test('Zelf indelen: the legend and the recalculate hint exist', () => {
+  assert.equal(t('weekrooster.edit.legend'), 'Heeft een aanvraag voor deze dag');
+  assert.equal(t('weekrooster.edit.recalc'), 'Je hebt het rooster aangepast. Advies bekijken rekent opnieuw met jouw wijzigingen als start.');
 });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
