@@ -15,7 +15,7 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { activateTab } from './app.js';
 import { REQUEST_DAYS, requestId, requestState, weekFormFrom, openRequestsOf } from './weekrooster.js';
 import { expectedImpact } from './weekrooster-impact.js';
-import { dayEndMs, deciderFamilyOf, isDayPast, standardTimes, submitWeekRequests, weekKeyFor, weekroosterOn, withdrawWeekRequests } from './weekrooster-data.js';
+import { currentMarks, dayEndMs, deciderFamilyOf, isDayPast, standardTimes, submitWeekRequests, weekKeyFor, weekroosterOn, withdrawWeekRequests } from './weekrooster-data.js';
 
 export const dayName = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
 export const lower = s => String(s || '').toLowerCase();
@@ -45,10 +45,15 @@ export function summaryOf(r) {
 }
 
 // ---------- the form ----------
+// What the form opens from (this week: the marks per shift and the requests; next week: the requests). When it changes under a form nobody has
+// typed in yet (a toggle in Mijn week, another phone), that form is rebuilt; a form that is being filled in is never replaced.
+const sourceOf = w => { const fid = myFamilyId(), wk = weekKeyFor(w); return JSON.stringify([w === 'this' ? currentMarks(fid) : null, REQUEST_DAYS.map(d => S.weekRequests[requestId(wk, d, fid)] || null)]); };
 function formFor(w) {
-  if (!S.wrForm || S.wrForm.which !== w) {
+  const sig = sourceOf(w);
+  if (!S.wrForm || S.wrForm.which !== w || (!S.wrForm.touched && S.wrForm.sig !== sig)) {
     const wk = weekKeyFor(w), fid = myFamilyId();
-    S.wrForm = { which: w, days: weekFormFrom({ weekKey: wk, familyId: fid, standard: standardTimes(fid, w), requests: S.weekRequests }) };
+    // This week the marks per shift (what Mijn week shows) are the truth; next week has no marks yet, there the requests are all there is.
+    S.wrForm = { which: w, sig, touched: false, days: weekFormFrom({ weekKey: wk, familyId: fid, standard: standardTimes(fid, w), requests: S.weekRequests, marks: w === 'this' ? currentMarks(fid) : undefined }) };
   }
   return S.wrForm;
 }
@@ -193,8 +198,8 @@ export async function submitWeekForm() {
 // has to be the last word on their handlers.
 export function wireWeekrooster() {
   document.querySelectorAll('[data-wrweek]').forEach(b => b.onclick = () => { hapticTap(); S.wrWeek = b.dataset.wrweek === 'next' ? 'next' : 'this'; S.wrForm = null; renderDeviationTab(); });
-  document.querySelectorAll('.wrTime').forEach(el => el.oninput = () => { readForm(); markChanged(); });
-  document.querySelectorAll('.wrRideInput').forEach(el => el.onchange = () => { readForm(); renderDeviationTab(); });
+  document.querySelectorAll('.wrTime').forEach(el => el.oninput = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); markChanged(); });
+  document.querySelectorAll('.wrRideInput').forEach(el => el.onchange = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); renderDeviationTab(); });
   const cancel = document.getElementById('wrCancel'); if (cancel) cancel.onclick = () => { hapticTap(); S.wrForm = null; renderDeviationTab(); };
   const submit = document.getElementById('wrSubmit'); if (submit) submit.onclick = () => { hapticTap(); return submitWeekForm(); };
   const edit = document.getElementById('wrEdit'); if (edit) edit.onclick = () => { hapticTap(); S.wrForm = null; formFor(which()); renderDeviationTab(); };

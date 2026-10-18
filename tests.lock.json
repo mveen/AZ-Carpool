@@ -12,7 +12,7 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "bed25a44b44cda29b1d8e9d198d8b749dbc9a1e55a457a655bbfda6053df3f34",
+    "module": "0d07cfd13551415e9686ff9fb96fabc13c6297731450366db246e2a066e60ec5",
     "test": "904f6368cf69435f990d1e6184d938d671edaa9dd0b6717cdb2efa88d00ca160"
   },
   "coordinator.js": {
@@ -20,8 +20,8 @@
     "test": "88f8a7468d4de0bd6f9e155fb8ca961bb66e842867e3387516f74d9a37d60f1b"
   },
   "data.js": {
-    "module": "8d97d782fb0859cd25e4f6175ec7fd56ad97eac8a24cab25f2d20f2db80cc93c",
-    "test": "0a0d67d76fa635e08b7fc2295b229bbfdd183853372da0b924b4c9cc968c60a9"
+    "module": "af173e7d7398512f117ca6c3e7c165518e086c9d5d7a03a446b4b3369bebbdad",
+    "test": "48db234af3e19809aa4d0500804627fe4b58520b8127c61981607bbbe87b0bbe"
   },
   "dates.js": {
     "module": "ed5a2dd1459bb0f037672976b5b45e4feb5cfb2ae8524ed77a93cec890de6a46",
@@ -196,8 +196,8 @@
     "test": "81ca0b8757398ec8ea87ba83f2e72bc1dbf81a6aad6c9dbf1c66202398fe49bd"
   },
   "ui-myweek.js": {
-    "module": "739447538482f09bb0f124b3a425dea386c743dca7d568673c91bcf9f55b4fea",
-    "test": "82a5beff9c7f647dcd2c12386135c9a077e3f82a3973d88f1c1822bc64fbf3e6"
+    "module": "f9b9f95028dd58fc493f88352168462732f876c9451d3785aa0a124ead7e90ff",
+    "test": "399d28263f705dfedce2ff9d033ced7d97aa8f8e0d5fdd6c09ce1ab021dead72"
   },
   "ui-notice.js": {
     "module": "7d865a1452c65c3f140e18eceba721b8a37985a8ccb709de53877d070af42554",
@@ -252,8 +252,8 @@
     "test": "501166cebd81a6c65e91aacc1a5acc77a78f306f486f34ca84ad09bc3f48232d"
   },
   "ui-weekrooster-form.js": {
-    "module": "f135895baacbc3d6901cba696161e6a95bfcaa02d0dc70db45cf6dbe4135aea4",
-    "test": "1bfe65a983cd17ad58cb4ebc780e56929c4d5f1ef2b0ef45dd3655990c2d6289"
+    "module": "fac8b89d46163fa8a030638d127746057e49393c9705b2ca9863e4018f67d6b3",
+    "test": "8e7436ea8cd672576fad076e0ecec7eab44b638880ac3382fa762fe18fff9782"
   },
   "ui-weekrooster-rooster.js": {
     "module": "2079c963969ea15b23010c4265b64b17e090b66c62a0c546d65d5efcd09b011d",
@@ -264,15 +264,15 @@
     "test": "7719b80d8505e3e1b5cd91752fcb429c6e6f8c6d7c7a870d2ee3181767290c9d"
   },
   "weekrooster-data.js": {
-    "module": "8b4591a7a80f026043873b44bfc83a2207afd8a795e7383c795dacba12110c68",
-    "test": "e431f414597207126f161122ab19eb0af9929ec12a9de60aea86f01c2190034a"
+    "module": "0704a0bcaa2354863103d6d682c979c4a7451b0310378262982cbbb5b9d8d567",
+    "test": "30ab7db95f5f015db307a9f89bd7d11b4345e8194de4719e1c0d9e7d8b5e1996"
   },
   "weekrooster-impact.js": {
     "module": "640722dd48387c311a1d48c7386252540ab23651b06cbe4722750ae7289f6fd8",
     "test": "b847d3fe115a05d067e0aa546bf290b34b50513ee7b63240ada5cb1098d6a68e"
   },
   "weekrooster.js": {
-    "module": "bfce1d9d45ddd90de287416b73ff87db0bb120279aa0e93a9b565eee7e30bd5f",
-    "test": "6df612e44986e04ba1c459e25b909671fa966e4b29ecb30f704edfeedd8ca245"
+    "module": "88aaf55610ae941ba760754131d9d0cddb0fd058656405f5707426b5954119d5",
+    "test": "cef6ab924330ffd746f72843a8c4560469c422e97bc8468aff0d06c96bf37946"
   }
 }
