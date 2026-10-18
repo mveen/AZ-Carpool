@@ -997,6 +997,8 @@ export default {
   "deviation.kies_een_auto": "kies een auto",
   "deviation.plek_een": "1 plek",
   "deviation.plekken": "{p1} plekken",
+  "weekrooster.edit.recalc": "Je hebt het rooster aangepast. Advies bekijken rekent opnieuw met jouw wijzigingen als start.",
+  "weekrooster.edit.legend": "Heeft een aanvraag voor deze dag",
   "deviation.quick_aria": "{name} indelen bij {driver}",
   "deviation.toast_vertrektijd": "Vertrektijd opgeslagen",
   "deviation.toast_chauffeur": "Chauffeur gewijzigd",

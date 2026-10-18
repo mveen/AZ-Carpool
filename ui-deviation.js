@@ -14,6 +14,7 @@ import { flexSuffix, renderSchedule } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
 import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs, wireRitbeursSegment } from './ui-ritbeurs.js';
 import { weekroosterActive, weekroosterBodyHtml, wireWeekrooster } from './ui-weekrooster-form.js';
+import { pendingOfDay } from './weekrooster-data.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
 export function sendWhatsAppUpdate(buildFn){
@@ -101,16 +102,25 @@ export function renderDeviationTab(){
 
 // US-03: the auto-drafted "conclusie-appje" for the open day. Highlighted for that day's coordinator (US-02);
 // every other parent can use it too. The button only opens WhatsApp with the text filled in: nothing is sent.
-export function conclusieCardHtml(day){
+export function conclusieCardHtml(day, { collapsed = false } = {}){
   const dayLabel = DAYS.find(([k])=>k===day)[1];
   const dc = dayCoordinatorFor(S, day);
   const me = myLinkedFamilyId();
   const forYou = !!(dc && me && dc.familyId===me);
+  const share = `<button type="button" class="btn${collapsed? ' secondary' : ''}" id="conclusieBtn">${phIcon('whatsapp-logo-fill')}${t('conclusie.button')}</button>`;
+  if(collapsed){
+    // Zelf indelen: only the title and the share button; the text opens on a tap, so Klaar is not pushed far down.
+    const open = !!S.wrMsgOpen;
+    return `<div class="card conclusieCard conclusieCard--bar${forYou?' forYou':''}" id="conclusieCard">
+    <div class="conclusieBar"><button type="button" class="conclusieBar__toggle" id="conclusieToggle" aria-expanded="${open}">${t('conclusie.title', { dayLabel })}${phIcon(open? 'caret-up' : 'caret-down')}</button>${share}</div>
+    ${open? `<div class="conclusiePreview" aria-label="${t('conclusie.previewLabel')}">${esc(buildConclusieMessage(day))}</div>` : ''}
+  </div>`;
+  }
   return `<div class="card conclusieCard${forYou?' forYou':''}" id="conclusieCard">
     <h2>${t('conclusie.title', { dayLabel })}</h2>
     <p class="noteLine" style="margin:0">${forYou? t('conclusie.forYou', { day: dayLabel.toLowerCase() }) : t('conclusie.intro')}</p>
     <div class="conclusiePreview" aria-label="${t('conclusie.previewLabel')}">${esc(buildConclusieMessage(day))}</div>
-    <button type="button" class="btn" id="conclusieBtn" style="width:100%">${phIcon('whatsapp-logo-fill')}${t('conclusie.button')}</button>
+    ${share.replace('id="conclusieBtn"','id="conclusieBtn" style="width:100%"')}
   </div>`;
 }
 
@@ -188,6 +198,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
   const dest = destinationFor(c, locCfg);
   const route = routeLabel(c, direction, locCfg, day);
   const mine = id => id===myIdDev;
+  const reqIds = ctx.requestIds || new Set();
   const girls = sortGirlIds(c.girlIds);
   const undo = S.devUndo && S.devUndo.key===key? S.devUndo : null;
   const head = `<button type="button" class="devRideHead" data-devtoggle="${key}" aria-expanded="${open}">
@@ -197,7 +208,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
     </button>`;
   let body;
   if(!open){
-    body = `<div class="chips">${girls.map(id=>`<span class="chip${mine(id)?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}${flexSuffix(id)}</span>`).join('') || `<span class="muted">${t('deviation.geen_passagiers')}</span>`}</div>`;
+    body = `<div class="chips">${girls.map(id=>`<span class="chip${mine(id)?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}${reqIds.has(id)?' chip--req':''}">${girlName(id)}${flexSuffix(id)}</span>`).join('') || `<span class="muted">${t('deviation.geen_passagiers')}</span>`}</div>`;
   } else {
     // One-off pickup/drop-off place (US-15): a place from Beheer, or free input (an address or a point of interest).
     // Empty = the standard place of this shift. Free input lives on this ride only and is never stored as a place.
@@ -253,7 +264,9 @@ export function renderDevDirection(day,direction){
   const assignedIds = new Set(cars.flatMap(c=>c.girlIds));
   const unassigned = sortFamEntriesByGirl(allFamilies.filter(([id])=>!assignedIds.has(id)));
 
-  const ctx = { allFamilies, myIdDev: myFamilyId(), locCfg: locationsCfg(), unassigned };
+  // In Zelf indelen a child with a request for this day gets an amber dot, so the coordinator sees who still has to be arranged.
+  const requestIds = S.wrEdit && weekroosterActive()? new Set(pendingOfDay(day).map(r=>r.familyId)) : new Set();
+  const ctx = { allFamilies, myIdDev: myFamilyId(), locCfg: locationsCfg(), unassigned, requestIds };
   const cardsHtml = cars.map((c,idx)=>devRideHtml(day,direction,idx,cars,ctx)).join('') || `<p class="muted">${t('deviation.geen_ritten_gepland_in_het')}</p>`;
 
   // Who still has no car on this shift, and who has been marked as not riding along (design v2).
@@ -261,7 +274,7 @@ export function renderDevDirection(day,direction){
   // One tap puts her in a car that still has room (no need to open a car first); without such a car the old hint stays.
   const roomOf = c => c.driverFamilyId? seats(fam(c.driverFamilyId)) - (c.girlIds||[]).length : 0;
   const quickRows = unplaced.map(([id])=>{
-    const btns = cars.map((c,idx)=>roomOf(c)>0? `<button type="button" class="btn small secondary" data-devquick="${day}|${direction}|${idx}|${id}" aria-label="${esc(t('deviation.quick_aria',{ name: girlName(id), driver: fam(c.driverFamilyId).parentName||'?' }))}">${phIcon('plus-circle')}<span class="quickAssign__time">${esc(c.departureTime||'--:--')}</span><span class="quickAssign__room">${esc(t(roomOf(c)===1? 'deviation.plek_een' : 'deviation.plekken',{p1:roomOf(c)}))}</span></button>` : '').join('');
+    const btns = cars.map((c,idx)=>roomOf(c)>0? `<button type="button" class="btn small secondary" data-devquick="${day}|${direction}|${idx}|${id}" aria-label="${esc(t('deviation.quick_aria',{ name: girlName(id), driver: fam(c.driverFamilyId).parentName||'?' }))}">${phIcon('plus-circle')}<span class="quickAssign__time">${esc(c.departureTime||'--:--')}</span><span class="quickAssign__driver">${esc(fam(c.driverFamilyId).parentName||'?')}</span><span class="quickAssign__room">${esc(t(roomOf(c)===1? 'deviation.plek_een' : 'deviation.plekken',{p1:roomOf(c)}))}</span></button>` : '').join('');
     return btns? `<div class="quickAssign">${unplaced.length>1? `<span class="quickAssign__who">${girlName(id)}</span>` : ''}${btns}</div>` : '';
   }).join('');
   const unplacedHtml = unplaced.length? `<div class="dashBox"><b>${t('schedule.niet_ingedeeld_box')}</b> ${unplaced.map(([id])=>girlName(id)).join(', ')}${quickRows? `<span class="dashBox__hint"> · ${t('deviation.kies_een_auto')}</span>${quickRows}` : `<br><span class="dashBox__hint">${t('deviation.niet_ingedeeld_hint')}</span>`}</div>` : '';

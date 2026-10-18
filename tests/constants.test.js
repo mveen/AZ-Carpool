@@ -83,7 +83,7 @@ test('the week is over on Friday at 19:00 (not at midnight), and then nothing is
 test('the avatar library icons all exist in PH_PATHS', () => {
   for (const k of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
-test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 131); });
+test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 132); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
@@ -93,6 +93,7 @@ test('APP_VERSION always equals the cache name of the service worker', () => {
   const sw = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
   assert.equal(sw.match(/const CACHE_NAME = 'az-carpool-(v\d+)'/)[1], APP_VERSION);
 });
+test('the caret icons for folding exist', () => { for (const k of ['caret-up', 'caret-down']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

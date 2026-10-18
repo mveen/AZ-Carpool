@@ -90,12 +90,12 @@ export function adviceLineOf(day) {
 // The amber card "Actie nodig voor {dag}": what waits (and what came in directly) and the advice in one line.
 // Mijn week shows it with buttons. The Advies and Zelf indelen views show the same card on top, without buttons, so the requests stay
 // in sight while the day is planned. Empty when nothing waits.
-export function actionCardHtml(day, { buttons = false, advice = true } = {}) {
+export function actionCardHtml(day, { buttons = false, advice = true, dots = false } = {}) {
   const now = Date.now();
   const pending = pendingForDay(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
   if (!pending.length) return '';
   const direct = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state === 'direct');
-  const row = (r, tag) => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span>${tag}</div>`;
+  const row = (r, tag) => `<div class="alertCard__row"><span${dots ? ' class="reqDot"' : ''}>${esc(requestLine(r))}</span>${tag}</div>`;
   const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
     .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
   const line = buttons || advice ? adviceLineOf(day) : null;
