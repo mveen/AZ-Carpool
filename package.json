@@ -10,6 +10,7 @@
     "preview": "node scripts/preview.mjs",
     "build:deploy": "node scripts/build-deploy.mjs",
     "build:deploy:test": "node scripts/build-deploy.mjs --env test",
+    "seed:test": "node scripts/seed-test-data.mjs",
     "build:cron": "node scripts/build-cron.mjs"
   }
 }
