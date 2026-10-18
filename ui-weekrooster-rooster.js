@@ -87,21 +87,26 @@ export function adviceLineOf(day) {
   return n === 1 ? t('weekrooster.action.adviceMore1') : t('weekrooster.action.adviceMoreN', { p1: n });
 }
 
+// The amber card "Actie nodig voor {dag}": what waits (and what came in directly) and the advice in one line.
+// Mijn week shows it with buttons. The Advies and Zelf indelen views show the same card on top, without buttons, so the requests stay
+// in sight while the day is planned. Empty when nothing waits.
+export function actionCardHtml(day, { buttons = false, advice = true } = {}) {
+  const now = Date.now();
+  const pending = pendingForDay(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
+  if (!pending.length) return '';
+  const direct = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state === 'direct');
+  const row = (r, tag) => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span>${tag}</div>`;
+  const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
+    .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
+  const line = buttons || advice ? adviceLineOf(day) : null;
+  return `<div class="alertCard alertCard--stack"${buttons ? ` data-wraction="${day}"` : ''}><div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>${rows}
+    ${line && advice ? `<div class="alertCard__text">${esc(line)}</div>` : ''}
+    ${buttons ? `<div class="formActions"><button type="button" class="btn small secondary" data-wrlook="${day}">${esc(t('weekrooster.action.look'))}</button>${line ? `<button type="button" class="btn small" data-wrtake="${day}">${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button>` : ''}</div>` : ''}</div>`;
+}
+
 export function myWeekActionCardsHtml() {
   if (!weekroosterActive()) return '';
-  const now = Date.now();
-  return myDeciderDays().map(day => {
-    const pending = pendingForDay(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
-    if (!pending.length) return '';
-    const direct = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state === 'direct');
-    const row = (r, tag) => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span>${tag}</div>`;
-    const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
-      .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
-    const line = adviceLineOf(day);
-    return `<div class="alertCard alertCard--stack" data-wraction="${day}"><div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>${rows}
-      ${line ? `<div class="alertCard__text">${esc(line)}</div>` : ''}
-      <div class="formActions"><button type="button" class="btn small secondary" data-wrlook="${day}">${esc(t('weekrooster.action.look'))}</button>${line ? `<button type="button" class="btn small" data-wrtake="${day}">${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button>` : ''}</div></div>`;
-  }).join('');
+  return myDeciderDays().map(day => actionCardHtml(day, { buttons: true })).join('');
 }
 
 export function wireMyWeekActions(box) {

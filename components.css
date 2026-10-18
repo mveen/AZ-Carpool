@@ -458,6 +458,7 @@ button.chip{cursor:pointer;font-family:inherit}
 .carCard__head{display:flex;align-items:center;gap:var(--space-5)}
 .carCard__time{font:800 20px/1 var(--font-mono);letter-spacing:var(--track-time)}
 .carCard__who{flex:1;min-width:0}
+.carCard__who .tag{margin-left:var(--space-3)}
 .carCard__driver{font:var(--type-card-title);color:var(--text-1);border:0;background:none;padding:0;text-align:left;cursor:pointer}
 .carCard__driver--me{color:var(--ok-ink)}
 .carCard__driver--none{color:var(--warn-icon)}
@@ -466,6 +467,11 @@ button.chip{cursor:pointer;font-family:inherit}
 .carCard__note{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
 .carCard select{margin-top:var(--space-3)}
 .dashBox{margin-top:var(--space-3);border:2px dashed var(--warn-icon);border-radius:var(--radius-car);padding:var(--space-4) var(--space-6);font:var(--type-small);color:var(--warn-ink)}
+.quickAssign{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-3);margin-top:var(--space-3)}
+.quickAssign__who{flex:1 0 100%;font:var(--type-small);font-weight:700;color:var(--warn-ink)}
+.quickAssign .btn{flex:1;width:auto;min-height:var(--hit-min);gap:var(--space-3);margin:0}
+.quickAssign__time{font:var(--type-time-sm)}
+.quickAssign__room{font:var(--type-caption);color:var(--text-muted)}
 .wrStack{display:flex;flex-direction:column;gap:var(--space-5);margin-bottom:var(--space-5)}
 .wrStack--tight{gap:var(--space-3);margin-bottom:0}
 .wrStack>*,.wrStack .carCard{margin-top:0;margin-bottom:0}

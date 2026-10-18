@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import { t } from '../i18n.js';
-import { syncWeekRequests } from '../weekrooster-data.js';
+import { adviceForDay, syncWeekRequests } from '../weekrooster-data.js';
 import { scheduleAdviceHtml, wireAdvice } from '../ui-weekrooster-advice.js';
 import { renderSchedule } from '../ui-schedule.js';
 
@@ -32,19 +32,23 @@ const view = () => withFakeNow(NOW, () => scheduleAdviceHtml());
 const click = id => { wireAdvice({ querySelectorAll: () => [] }); return dom.doc.getElementById(id).onclick(); };
 
 console.log('=== the view ===');
-await testAsync('nothing open: nothing shown; open: header, variants, tags, both card lists, the reason and Overnemen', async () => {
+await testAsync('nothing open: nothing shown; open: the request card on top, the cars of the advice and one Overnemen; no reason, no variants', async () => {
   await setup(); assert.equal(view(), '');
-  S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
+  S.wrAdvice = { day: 'Do' };
   const html = view(), s = text(html);
-  assert.match(s, /Advies · donderdag 1 okt · heen/); assert.doesNotMatch(html, /class="card" id="wrAdvice"/); assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/);
-  assert.match(s, /Nu · vaste rooster/); assert.match(s, /Reden:/); assert.match(s, /Overnemen/);
-  assert.match(s, /1 auto \(\+1\)/); assert.match(html, /id="wrAccept"/); assert.match(html, /chip/);
+  assert.match(s, /Advies · donderdag 1 okt/); assert.doesNotMatch(html, /class="card" id="wrAdvice"/);
+  assert.match(html, /alertCard alertCard--stack"/); assert.match(s, /Actie nodig voor donderdag/); assert.match(s, /Aanvraag/); assert.match(s, /Advies: /);
+  assert.doesNotMatch(html, /data-wrtake|data-wrlook/);   // the same card as in Mijn week, but its buttons live below
+  assert.match(html, /id="wrAccept"/); assert.match(s, /Overnemen/); assert.match(html, /chip/);
+  assert.doesNotMatch(s, /Reden:|Zuinigst|Minste gedoe|Nu · vaste rooster/); assert.doesNotMatch(html, /data-wrdir|data-wrvariant|id="wrReason"/);
   assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
 });
-await testAsync('the second variant is shown on choice and the reason follows the planning', async () => {
-  await setup(); S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'gedoe' };
-  assert.match(text(view()), /Reden:.*zoveel mogelijk/);
-  S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'nonsense' }; assert.match(view(), /id="wrAccept"/);
+await testAsync('the whole day is one screen: every direction with advice has its own block, and old values in the state do not matter', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', direction: 'nonsense', variant: 'nonsense' };
+  const html = view(), dirs = withFakeNow(NOW, () => Object.keys(adviceForDay('Do').directions));
+  assert.ok(dirs.length >= 1);
+  for (const k of dirs) assert.match(html, new RegExp('sectionHead__title">' + (k === 'heen' ? 'Heen' : 'Terug') + '<'));
+  assert.equal((html.match(/id="wrAccept"/g) || []).length, 1); assert.match(html, /id="wrAccept"/);
 });
 await testAsync('nothing to advise (no open request): the view closes itself', async () => {
   await setup({ 'weekRequests/2026-W40_Do_f3': doc('Do', 'f3', { status: 'accepted' }) });

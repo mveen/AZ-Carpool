@@ -160,7 +160,7 @@ export function backupHtml(day,direction,cars){
 }
 
 // The title of one direction: "Heen" / "Terug" with where it goes to. It follows the arrival place of the rides (AFC '34 = Alkmaar, ATC = Wijdewormer).
-function devDirHeader(direction,cars){
+export function devDirHeader(direction,cars){
   const cfg = locationsCfg();
   const cities = arrivalPlaces(cars,cfg).map(p=>p.city);
   return `<div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div><div class="sectionHead__sub">${esc(t(direction==='heen'? 'dir.heenTo' : 'dir.terugFrom', { city: cities.join(' / ') }))}</div></div>`;
@@ -258,7 +258,13 @@ export function renderDevDirection(day,direction){
 
   // Who still has no car on this shift, and who has been marked as not riding along (design v2).
   const unplaced = unplacedFor(day,direction,'week');
-  const unplacedHtml = unplaced.length? `<div class="dashBox"><b>${t('schedule.niet_ingedeeld_box')}</b> ${unplaced.map(([id])=>girlName(id)).join(', ')}<br><span class="dashBox__hint">${t('deviation.niet_ingedeeld_hint')}</span></div>` : '';
+  // One tap puts her in a car that still has room (no need to open a car first); without such a car the old hint stays.
+  const roomOf = c => c.driverFamilyId? seats(fam(c.driverFamilyId)) - (c.girlIds||[]).length : 0;
+  const quickRows = unplaced.map(([id])=>{
+    const btns = cars.map((c,idx)=>roomOf(c)>0? `<button type="button" class="btn small secondary" data-devquick="${day}|${direction}|${idx}|${id}" aria-label="${esc(t('deviation.quick_aria',{ name: girlName(id), driver: fam(c.driverFamilyId).parentName||'?' }))}">${phIcon('plus-circle')}<span class="quickAssign__time">${esc(c.departureTime||'--:--')}</span><span class="quickAssign__room">${esc(t(roomOf(c)===1? 'deviation.plek_een' : 'deviation.plekken',{p1:roomOf(c)}))}</span></button>` : '').join('');
+    return btns? `<div class="quickAssign"><span class="quickAssign__who">${girlName(id)}</span>${btns}</div>` : '';
+  }).join('');
+  const unplacedHtml = unplaced.length? `<div class="dashBox"><b>${t('schedule.niet_ingedeeld_box')}</b> ${unplaced.map(([id])=>girlName(id)).join(', ')}${quickRows? `<span class="dashBox__hint"> · ${t('deviation.kies_een_auto')}</span>${quickRows}` : `<br><span class="dashBox__hint">${t('deviation.niet_ingedeeld_hint')}</span>`}</div>` : '';
   const notRiding = ovGirlsFor(day,undefined,direction);
   const notRidingHtml = notRiding.length? `<div class="noteLine">${t('schedule.rijdt_niet_mee')} ${sortGirlIds(notRiding).map(id=>girlName(id)).join(', ')}</div>` : '';
 
@@ -400,8 +406,9 @@ export function attachDeviationHandlers(){
     if(ok){ S.devUndo=null; renderDeviationTab(); }
   });
   document.querySelectorAll('[data-devpicktoggle]').forEach(btn=>btn.onclick=()=>{ const k=btn.dataset.devpicktoggle; S.devPick[k]=!S.devPick[k]; hapticTap(); renderDeviationTab(); });
-  document.querySelectorAll('[data-devaddpick]').forEach(btn=>btn.onclick=async ()=>{
-    const [day,direction,idxStr,girl]=btn.dataset.devaddpick.split('|'); const toIdx=+idxStr;
+  // "+ Passagier toevoegen" (the pick list in an open car) and the quick buttons of "Niet ingedeeld" both end here: day|direction|car|girl.
+  const addToCar = async spec=>{
+    const [day,direction,idxStr,girl]=spec.split('|'); const toIdx=+idxStr;
     const prev=snapshotCars(day,direction);
     const cars=effectiveCars(day,direction);
     const newTo=[...cars[toIdx].girlIds, girl];
@@ -412,7 +419,9 @@ export function attachDeviationHandlers(){
     const ok = await saveWithUndo(day,direction,prev,cars,girlName(girl)+t('deviation.toegevoegd'));
     if(ok && overfull) showToast(t('deviation.deze_auto_zit_nu_vol_2', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
     renderDeviationTab();
-  });
+  };
+  document.querySelectorAll('[data-devaddpick]').forEach(btn=>btn.onclick=()=>addToCar(btn.dataset.devaddpick));
+  document.querySelectorAll('[data-devquick]').forEach(btn=>btn.onclick=()=>{ hapticTap(); addToCar(btn.dataset.devquick); });
   function flexCtx(btn, attr){
     const [day,direction,id]=btn.dataset[attr].split('|');
     const timeEl=document.getElementById(`flexTime_${day}|${direction}|${id}`);

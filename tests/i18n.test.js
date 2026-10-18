@@ -322,10 +322,15 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
 });
 
 test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {
-  ['look', 'headline', 'zuinig', 'gedoe', 'accept', 'now', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
-  assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.carsMany', { p1: 2, p2: '−1' }), "2 auto's (−1)");
+  ['look', 'headline', 'accept', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
+  assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.headline', { p1: 'vrijdag 23 okt' }), 'Advies · vrijdag 23 okt');
   assert.equal(t('weekrooster.advice.doneMany', { p1: 3 }), '3 wijzigingen doorgevoerd');
-  assert.match(t('weekrooster.reason.out', { p1: 'Noor' }), /Noor rijdt niet mee/);
+  // the screen has no reason, no variant switch and no counters any more: those texts are gone
+  ['weekrooster.reason.prefix', 'weekrooster.reason.out', 'weekrooster.advice.zuinig', 'weekrooster.advice.gedoe', 'weekrooster.advice.carsMany', 'weekrooster.advice.now'].forEach(k => assert.equal(hasKey(k), false, k));
+});
+test('the quick buttons under "Niet ingedeeld" have their texts', () => {
+  assert.equal(t('deviation.plek_een'), '1 plek'); assert.equal(t('deviation.plekken', { p1: 2 }), '2 plekken'); assert.equal(t('deviation.kies_een_auto'), 'kies een auto');
+  assert.equal(t('deviation.quick_aria', { name: 'Loïs', driver: 'Piet' }), 'Loïs indelen bij Piet');
 });
 test('Afwijkend weekrooster (phase 5): the warning sheet says who decides, with the exact words', () => {
   ['title', 'text', 'go', 'back'].forEach(k => assert.ok(hasKey('weekrooster.override.' + k), k));
