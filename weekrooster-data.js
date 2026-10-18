@@ -196,7 +196,7 @@ export async function submitWeekRequests(which, days) {
     // "Rijdt niet mee" counts at once, for the current week (the cars of next week do not exist yet): the deviations go in the SAME batch,
     // so the request and the cars are saved together or not at all.
     if (which === 'this') {
-      built.writes.forEach(w => { if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) { const r = returnByPublicTransportDoc(w.doc.day, familyId, false, dir); if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } } });
+      built.writes.forEach(w => { if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) { const r = returnByPublicTransportDoc(w.doc.day, familyId, true, dir); if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } } });
     }
     // Days back on the fixed rooster: withdraw what was open (pending, direct or accepted), undo an earlier "rijdt niet mee" and take the
     // one-off times of this family off the cars again.
@@ -207,7 +207,7 @@ export async function submitWeekRequests(which, days) {
       const { decidedAt, decidedBy, ...rest } = withdrawRequest(old, nowMs);   // a withdrawn request carries no decision (the rules want that for an accepted one)
       localWithdrawn[id] = rest; batch.set('weekRequests/' + id, rest);
       if (which !== 'this') return;
-      const docs = old.rides === false ? ['heen', 'terug'].map(dir => returnByPublicTransportDoc(s.day, familyId, true, dir)) : revertedTimesDocs(s.day, familyId);
+      const docs = old.rides === false ? ['heen', 'terug'].map(dir => returnByPublicTransportDoc(s.day, familyId, false, dir)) : revertedTimesDocs(s.day, familyId);
       docs.forEach(r => { if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } });
     });
     if (!built.writes.length && !Object.keys(localWithdrawn).length) return { ok: false, written: [], skipped: built.skipped };
