@@ -355,5 +355,22 @@ await testAsync('Wijzigen "Rijdt niet mee" for a day: Mijn week shows both rides
   rows.forEach(r => { assert.match(r, /aria-checked="false"/); assert.doesNotMatch(r, /class="switch on"/); assert.match(text(r), /rijdt niet mee/); });
   assert.doesNotMatch(h, /data-gowijzig="Do"/, 'no "heeft nog geen rit" warning for a day she does not ride');
 });
+await testAsync('switching a "Rijdt niet mee" day back on in Mijn week withdraws the request too, once no shift of that day is off', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } }));
+  const press = async dir => {
+    const btn = { dataset: { ovtoggle: 'Do', ovon: '0', ovdir: dir } };
+    const box = dom.el('tab-myweek'); const q = box.querySelectorAll;
+    box.querySelectorAll = sel => sel === '[data-ovtoggle]' ? [btn] : q(sel);
+    try { await withFakeNowAsync(NOW, async () => { renderMyWeek(); await btn.onclick(); }); } finally { box.querySelectorAll = q; }
+    S.deviations = Object.fromEntries([...fake.store.keys()].filter(k => k.startsWith('deviations/')).map(k => [k.slice(11), fake.get(k)]));   // what the live listener does a moment later
+  };
+  await press('heen');
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'direct', 'terug is still off: the request stays');
+  await press('terug');
+  const d = fake.get('weekRequests/2026-W40_Do_f2');
+  assert.equal(d.status, 'withdrawn'); assert.ok(!('decidedBy' in d) && !('decidedAt' in d));
+  assert.equal(S.weekRequests['2026-W40_Do_f2'].status, 'withdrawn', 'the form reads it at once');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

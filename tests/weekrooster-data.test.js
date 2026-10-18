@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime, ovGirlsFor } from '../rides.js';
-import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests, directPlan } from '../weekrooster-data.js';
+import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests, directPlan, releaseNotRidingRequest } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -286,6 +286,22 @@ await testAsync('"rijdt niet mee" marks her as not riding on both directions, an
     assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: std.heen, terug: std.terug } })).ok, true);
     for (const dir of ['heen', 'terug']) assert.deepEqual(ovGirlsFor('Do', undefined, dir), [], dir + ': marks gone after putting it back');
   });
+});
+await testAsync('releaseNotRidingRequest: withdraws a "rijdt niet mee" request only when the other shift is not off either; other requests are left alone', async () => {
+  const fake = await asDay({}, {});
+  await withFakeNowAsync(NOW, async () => {
+    assert.equal(await releaseNotRidingRequest('Do', 'heen'), false, 'no request: nothing to withdraw');
+    await submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } });
+    assert.equal(await releaseNotRidingRequest('Do', 'heen'), false, 'terug is still marked: the request stays');
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'direct');
+    S.deviations = { ...S.deviations, Do_terug: { ...S.deviations.Do_terug, ovGirlIds: [] } };
+    assert.equal(await releaseNotRidingRequest('Do', 'heen'), true);
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'withdrawn');
+    assert.equal(await releaseNotRidingRequest('Do', 'heen'), false, 'already withdrawn');
+  });
+  const other = await asDay({ 'weekRequests/2026-W40_Do_f2': advDoc('Do', 'f2', { status: 'pending' }) }, {});
+  await withFakeNowAsync(NOW, async () => { assert.equal(await releaseNotRidingRequest('Do', 'heen'), false, 'a request with times is not touched'); });
+  assert.equal(other.get('weekRequests/2026-W40_Do_f2').status, 'pending');
 });
 await testAsync('an accepted request put back to the fixed rooster is withdrawn (no decision kept) and her one-off time leaves the cars', async () => {
   const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') }, { dayCoordinators: { Do: 'f2' } });
