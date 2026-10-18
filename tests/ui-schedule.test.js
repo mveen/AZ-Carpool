@@ -332,5 +332,11 @@ test('the Rooster week view shows the Advies view in place of the day when S.wrA
   sampleParentState({ scheduleDay: 'Do', roosterMode: 'week' }); S.wrAdvice = null;
   withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAdvice|wrAccept/);
 });
+test('Advies and Zelf indelen replace the whole Rooster header block: no coordinator line, tabs, Weekoverzicht or day pills', () => {
+  const state = edit => () => { sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); S.wrAdvice = null; S.wrEdit = edit; };
+  const normal = render(state(null)); assert.match(normal, /data-rmode="week"/); assert.match(normal, /dayPills/); assert.match(normal, /id="ovOpen"/);
+  const focus = render(state({ day: 'Do', override: false })); assert.match(focus, /id="wrEdit"/); assert.doesNotMatch(focus, /data-rmode|dayPills|id="ovOpen"|coordLine/);
+  S.wrEdit = null;
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

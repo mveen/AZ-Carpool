@@ -1,4 +1,5 @@
-// ui-weekrooster-edit.js — Afwijkend weekrooster, phase 5: planning a day by hand in Rooster "Deze week".
+// ui-weekrooster-edit.js — Afwijkend weekrooster, phase 5: planning a day by hand in Rooster "Deze week" (one screen: the request card on top,
+// heen and terug, "Klaar" at the bottom; every change saves at once).
 // "Zelf indelen" (the day coordinator, the real coordinator) and "Toch zelf wijzigen" (any parent, after a warning) open the SAME car
 // editor Wijzigen always had (devRide / devForm, renderDevDirection) — only its place moved. Nothing new is stored except that a change
 // by someone who does not decide that day is marked on the deviation (selfBy, selfAt), so the day coordinator sees "Zelf gewijzigd".
@@ -11,6 +12,7 @@ import { attachDeviationHandlers, conclusieCardHtml, renderDevDirection } from '
 import { renderSchedule } from './ui-schedule.js';
 import { myDeciderDays } from './weekrooster-data.js';
 import { dayName, deciderLabel, weekroosterActive } from './ui-weekrooster-form.js';
+import { actionCardHtml } from './ui-weekrooster-rooster.js';
 
 // Who may plan a day directly: the day coordinator of that day and the real coordinator.
 export const mayPlanDay = day => !!S.canEdit || myDeciderDays().includes(day);
@@ -52,7 +54,9 @@ export function scheduleEditHtml() {
     <button type="button" class="linkbtn" id="wrEditBack">${phIcon('arrow-left')}${esc(t('weekrooster.advice.back'))}</button>
     <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.edit.headline', { p1: `${dayName(day).toLowerCase()} ${isoDayLabel(iso, '')}` }))}</div></div>
     ${override ? `<p class="noteLine">${esc(t('weekrooster.edit.override', { p1: deciderLabel(day) }))}</p>` : ''}
-    <div class="daysection"><h3 class="srOnly">${esc(dayName(day))}</h3>${renderDevDirection(day, 'heen')}${renderDevDirection(day, 'terug')}${conclusieCardHtml(day)}</div></div>`;
+    ${actionCardHtml(day, { advice: false })}
+    <div class="daysection"><h3 class="srOnly">${esc(dayName(day))}</h3>${renderDevDirection(day, 'heen')}${renderDevDirection(day, 'terug')}${conclusieCardHtml(day)}</div>
+    <div class="actionBar"><button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
 }
 
 // Under the day in Rooster "Deze week": the way into the editor. A planner: "Zelf indelen". Everybody else: the small link "Toch zelf wijzigen".
@@ -66,6 +70,6 @@ export function scheduleDayFootHtml(day) {
 export function wireEdit(box) {
   box.querySelectorAll('[data-wredit]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wredit); });
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
-  const back = document.getElementById('wrEditBack'); if (back) back.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); };
+  for (const id of ['wrEditBack', 'wrEditDone']) { const b = document.getElementById(id); if (b) b.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); }; }
   if (S.wrEdit && weekroosterActive()) attachDeviationHandlers();
 }

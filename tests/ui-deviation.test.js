@@ -116,6 +116,12 @@ test('girls who are in no car can be added with "+ Passagier toevoegen" (design 
   assert.match(open, /Annuleren/); assert.match(dom.html('tab-deviation'), /data-devaddpick="Ma\|heen\|0\|f5"/);
   S.devPick = {};
 });
+test('"Niet ingedeeld" offers one-tap buttons for every car that still has room (time and free places), no car needs to be opened first', () => {
+  const html = withFakeNow(NOW, () => { sampleCoordinatorState({ deviations: {} }); S.devOpen = {}; return renderDevDirection('Ma', 'heen'); });
+  assert.match(html, /data-devquick="Ma\|heen\|0\|f5"/); assert.match(html, /quickAssign__room">\d+ plek/); assert.match(html, /aria-label="[^"]+ indelen bij Jan Jansen"/);
+  const s = text(html); assert.match(s, /Niet ingedeeld: .* · kies een auto/); assert.doesNotMatch(s, /Open een auto met plek/);
+  assert.match(html, /<button type="button" class="btn small secondary" data-devquick/);
+});
 test('Monday: the standard cars are the starting point (Eline and Jahaimy with Jan)', () => {
   const s = text(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }));
   assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen/);

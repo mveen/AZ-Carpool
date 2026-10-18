@@ -17,7 +17,7 @@ import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
 import { updateTimeChangesBadge } from '../ui-beheer.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
-import { weekroosterActionCount, weekroosterDayDot, scheduleDayExtrasHtml, myWeekActionCardsHtml, wireMyWeekActions } from '../ui-weekrooster-rooster.js';
+import { weekroosterActionCount, weekroosterDayDot, scheduleDayExtrasHtml, myWeekActionCardsHtml, actionCardHtml, wireMyWeekActions } from '../ui-weekrooster-rooster.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -33,6 +33,19 @@ const tick = () => new Promise(r => setImmediate(r));
 const asDecider = async (patch = {}) => { useFakeDb(seed()); sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', ...patch }); syncWeekRequests(); await tick(); };
 const rooster = () => { withFakeNow(NOW, () => renderSchedule()); return dom.html('tab-schedule'); };
 const mijnWeek = () => { withFakeNow(NOW, () => renderMyWeek()); return dom.html('tab-myweek'); };
+
+console.log('=== the card, also without buttons ===');
+await testAsync('actionCardHtml: the same card with or without its buttons and its advice line; nothing when nothing waits', async () => {
+  await asDecider();
+  withFakeNow(NOW, () => {
+    const full = actionCardHtml('Do', { buttons: true }), plain = actionCardHtml('Do');
+    assert.match(full, /data-wraction="Do"/); assert.match(full, /data-wrtake="Do"/); assert.match(full, /data-wrlook="Do"/);
+    assert.doesNotMatch(plain, /data-wraction|data-wrtake|data-wrlook|<button/); assert.match(text(plain), /Actie nodig voor donderdag.*Advies: /);
+    assert.doesNotMatch(actionCardHtml('Do', { advice: false }), /Advies: /);
+    assert.equal(actionCardHtml('Vr', { buttons: true }), '');
+    assert.equal(myWeekActionCardsHtml(), full);
+  });
+});
 
 console.log('=== the day coordinator ===');
 await testAsync('Rooster on his day: "Actie nodig", the day coordinator line, the log (newest first) with tags and times', async () => {

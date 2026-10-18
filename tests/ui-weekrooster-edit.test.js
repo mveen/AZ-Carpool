@@ -33,6 +33,18 @@ const setup = async (patch = {}, extra = {}) => {
 };
 const sheet = () => dom.doc.body.children[dom.doc.body.children.length - 1];   // the sheet that was just opened
 
+console.log('=== one screen ===');
+await testAsync('Zelf indelen is one screen: the request card on top (no buttons), no coordinator line or tabs, and Klaar at the bottom closes it', async () => {
+  await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
+  S.wrEdit = { day: 'Do', override: false };
+  const html = rooster(), s = text(html);
+  assert.match(html, /id="wrEdit"/); assert.match(s, /Actie nodig voor donderdag/); assert.match(s, /Aanvraag/); assert.doesNotMatch(s, /Advies: /);
+  assert.doesNotMatch(html, /data-wrtake|data-wrlook|dayPills|data-rmode|coordLine/);
+  assert.match(html, /id="wrEditDone"/); assert.match(html, /id="wrEditDone">Klaar</);
+  wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditDone').onclick());
+  assert.equal(S.wrEdit, null); assert.match(rooster(), /dayPills/);
+});
+
 console.log('=== a parent: Toch zelf wijzigen ===');
 await testAsync('under the day there is only the small link; no editor is open', async () => {
   await setup(); const html = rooster();
