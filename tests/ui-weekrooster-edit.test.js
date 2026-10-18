@@ -45,6 +45,20 @@ await testAsync('Zelf indelen is one screen: the request card on top (no buttons
   assert.equal(S.wrEdit, null); assert.match(rooster(), /dayPills/);
 });
 
+await testAsync('from Zelf indelen there is a way back to the Advies (next to Klaar), for who decides the day and only while an advice exists', async () => {
+  const req = { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
+  await setup({ dayCoordinators: { Do: 'f2' } }, req); S.wrEdit = { day: 'Do', override: false };
+  let html = rooster(); assert.match(text(html.slice(html.indexOf('<div class="actionBar"'))), /^ *Advies bekijken Klaar/);
+  wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditAdvice').onclick());
+  assert.equal(S.wrEdit, null); assert.deepEqual(S.wrAdvice, { day: 'Do' }); html = rooster(); assert.match(html, /id="wrAdvice"/); assert.match(html, /id="wrSelf"/);   // and on to Zelf indelen again
+  S.wrAdvice = null;
+  await setup({ dayCoordinators: { Do: 'f3' } }, req); S.wrEdit = { day: 'Do', override: true };   // a parent after the warning: no advice of his own
+  assert.doesNotMatch(rooster(), /wrEditAdvice/); assert.match(rooster(), /id="wrEditDone"/);
+  await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };   // nothing waits: no advice to go back to
+  assert.doesNotMatch(rooster(), /wrEditAdvice/);
+  S.wrEdit = null;
+});
+
 console.log('=== a parent: Toch zelf wijzigen ===');
 await testAsync('under the day there is only the small link; no editor is open', async () => {
   await setup(); const html = rooster();
