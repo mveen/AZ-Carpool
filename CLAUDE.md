@@ -7,3 +7,4 @@
 - **Database:** shared live Firestore. Changes are additive only (new optional fields). Never rename, delete or migrate existing data without asking.
 - **Rollback:** tag `v1-stable` = the app before the v2 redesign. Redesign work happens on `feat/redesign-v2`, one PR per phase; nothing reaches `main` without the owner's approval.
 - **Try a branch locally:** `npm run preview` (opens nothing; go to http://localhost:8777/). Uses the real database.
+- **Test environment:** `test.azcarpool.nl` has its own Firebase project. Put a branch there with GitHub Actions -> *Deploy test.azcarpool.nl* (by hand). Try risky changes there, not on live. See README (*Test environment*).

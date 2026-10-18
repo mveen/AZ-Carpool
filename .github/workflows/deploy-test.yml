@@ -1,0 +1,78 @@
+name: Deploy test.azcarpool.nl
+
+# Only by hand: Actions -> Deploy test.azcarpool.nl -> Run workflow -> pick the branch you want to try.
+# Puts that branch on the TEST site, which has its own database (own Firebase project). The live site, the live
+# database and the cron jobs are not touched. (GitHub only lists this workflow once it is on main.)
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-test-azcarpool
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE: https://test.azcarpool.nl
+      TARGET_DIR: domains/test.azcarpool.nl/public_html/
+      # Not secret. The server's public identity is pinned in .github/deploy/known_hosts for exactly this host and port.
+      SSH_HOST: h70.mijn.host
+      SSH_PORT: '26'
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Run tests (never upload a broken app)
+        run: npm test
+
+      - name: Build the test upload folder (own database, test banner)
+        run: npm run build:deploy:test
+
+      - name: Check that the secrets are set
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          missing=0
+          for name in DEPLOY_USER DEPLOY_KEY; do
+            if [ -z "${!name}" ]; then echo "::error::GitHub secret $name is not set (repo Settings -> Secrets and variables -> Actions)"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Upload to mijn.host (test folder only)
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          cp .github/deploy/known_hosts ~/.ssh/known_hosts
+          head -1 ~/.ssh/deploy_key | grep -q 'BEGIN OPENSSH PRIVATE KEY' || { echo "::error::DEPLOY_KEY does not start with -----BEGIN OPENSSH PRIVATE KEY-----"; exit 1; }
+          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_KEY is not a valid private key"; exit 1; }
+          export RSYNC_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
+          bash scripts/deploy-rsync.sh dist-test/ "$user@$SSH_HOST:$TARGET_DIR"
+
+      - name: Check that the test version is live, with the test database
+        run: |
+          expected=$(grep -oE "CACHE_NAME *= *'[^']+'" dist-test/service-worker.js | head -1)
+          echo "Expected: $expected"
+          for attempt in 1 2 3 4 5 6; do
+            live=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
+            echo "Attempt $attempt, live: ${live:-nothing}"
+            if [ "$live" = "$expected" ]; then break; fi
+            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve the new service worker"; exit 1; fi
+            sleep 10
+          done
+          curl -fsS --max-time 20 "$SITE/" | grep -q "$SITE/app.js" || { echo "::error::start page does not point to $SITE/app.js"; exit 1; }
+          curl -fsS --max-time 20 "$SITE/" | grep -q 'class="envBar"' || { echo "::error::test banner is missing on the start page"; exit 1; }
+          if curl -fsS --max-time 20 "$SITE/firebase-config.js" | grep -q 'projectId: *"az-carpool"'; then echo "::error::the test site uses the LIVE database"; exit 1; fi
+          echo "OK: $SITE serves $expected with its own database"
