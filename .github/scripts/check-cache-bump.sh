@@ -8,7 +8,7 @@ mb=$(git merge-base "$base" HEAD)
 
 # Files that do not need a bump: tests, docs, CI, repo housekeeping.
 changed=$(git diff --name-only "$mb" HEAD \
-  | grep -vE '^(tests/|\.github/|README\.md$|\.gitignore$|package\.json$|tests\.lock\.json$|run-tests\.js$|test-count\.js$|scripts/|deploy/|cron/)' || true)
+  | grep -vE '^(tests/|\.github/|README\.md$|CLAUDE\.md$|\.gitignore$|package\.json$|tests\.lock\.json$|run-tests\.js$|test-count\.js$|scripts/|deploy/|cron/)' || true)
 
 if [ -z "$changed" ]; then
   echo "No app files changed: no CACHE_NAME bump needed."
