@@ -8,7 +8,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { showToast } from './ui-common.js';
-import { effectiveCars, rideTime, famTime, computeRideDeparture } from './rides.js';
+import { effectiveCars, rideTime, famTime, computeRideDeparture, ovGirlsFor } from './rides.js';
 import { keepOv } from './ov.js';
 import { buildAdvice } from './weekrooster-impact.js';
 import { deviationExpiryMs, deviationKey, weekKeyDayIso } from './dates.js';
@@ -239,6 +239,22 @@ export async function withdrawWeekRequests(which) {
     return true;
   } catch (e) { showToast(t('data.opslaan_mislukt') + (e && e.message || e)); return false; }
   finally { S.wrBusy = false; }
+}
+
+// Mijn week switched her back on for one shift (direction): when the OTHER shift of that day is not marked "rijdt niet mee" either, the direct
+// "rijdt niet mee" request of that day is withdrawn too (the shift just saved is not read from S.deviations: the listener has not answered yet), so Tijden wijzigen shows "Rijdt mee" again. Returns true when a request was withdrawn.
+export async function releaseNotRidingRequest(day, direction) {
+  if (!db || !weekroosterOn() || !myLinkedFamilyId()) return false;
+  const familyId = myFamilyId(), id = requestId(weekKeyFor('this'), day, familyId), old = S.weekRequests[id];
+  if (!old || old.rides !== false || !['direct', 'accepted'].includes(old.status)) return false;
+  const other = direction === 'heen' ? 'terug' : 'heen';
+  if (ovGirlsFor(day, undefined, other).includes(familyId)) return false;   // the other shift of that day is still off
+  const { decidedAt, decidedBy, ...rest } = withdrawRequest(old, Date.now());
+  try {
+    await db.doc('weekRequests/' + id).set(rest);
+    S.weekRequests = { ...S.weekRequests, [id]: rest };
+    return true;
+  } catch (e) { showToast(t('data.opslaan_mislukt') + (e && e.message || e)); return false; }
 }
 
 // ---------- the advice and the agreement (phase 4) ----------
