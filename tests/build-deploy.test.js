@@ -24,6 +24,12 @@ await test('contains every file of the ASSETS list, the service worker and the s
   for (const f of assetList(repo)) assert.ok(r.files.includes(f), f);
   for (const f of ['index.html', 'service-worker.js', '.htaccess', 'robots.txt']) assert.ok(r.files.includes(f), f);
 });
+await test('contains the explanation page from deploy/uitleg-weekrooster/ with its fonts, and not deploy/test/', () => {
+  for (const f of ['index.html', 'tokens.css', 'components.css', 'icon.svg']) assert.ok(r.files.includes('uitleg-weekrooster/' + f), f);
+  assert.ok(r.files.some(f => /^uitleg-weekrooster\/fonts\/.+\.woff2$/.test(f)), 'fonts');
+  assert.ok(r.files.every(f => !f.startsWith('test/')), 'deploy/test/ must not be uploaded');
+  assert.ok(!assetList(repo).some(f => f.startsWith('uitleg-weekrooster/')), 'must not be in ASSETS (phones would cache it)');
+});
 await test('does not contain tests, docs, repo files or secrets-style files', () => {
   for (const f of r.files) assert.ok(!/^(tests|scripts|firebase|\.github|\.git)\//.test(f) && !/(\.md|\.mjs|\.lock\.json|package\.json)$/.test(f) && f !== 'CLAUDE.md', f);
 });
