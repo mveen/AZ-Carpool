@@ -8,10 +8,13 @@ import { S } from './state.js';
 import { closeSheet, esc, hapticTap, phIcon } from './ui-common.js';
 import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { activateTab } from './app.js';
-import { attachDeviationHandlers, conclusieCardHtml, renderDevDirection } from './ui-deviation.js';
+import { attachDeviationHandlers, conclusieCardHtml, renderDevDirection, wireWhatsAppButton } from './ui-deviation.js';
 import { renderSchedule } from './ui-schedule.js';
 import { adviceForDay, myDeciderDays } from './weekrooster-data.js';
 import { dayName, deciderLabel, weekroosterActive } from './ui-weekrooster-form.js';
+import { activeDeviation } from './rides.js';
+import { pendingOfDay } from './weekrooster-data.js';
+import { buildConclusieMessage } from './message-texts.js';
 import { actionCardHtml } from './ui-weekrooster-rooster.js';
 
 // Who may plan a day directly: the day coordinator of that day and the real coordinator.
@@ -57,8 +60,9 @@ export function scheduleEditHtml() {
     <button type="button" class="linkbtn" id="wrEditBack">${phIcon('arrow-left')}${esc(t('weekrooster.advice.back'))}</button>
     <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.edit.headline', { p1: `${dayName(day).toLowerCase()} ${isoDayLabel(iso, '')}` }))}</div></div>
     ${override ? `<p class="noteLine">${esc(t('weekrooster.edit.override', { p1: deciderLabel(day) }))}</p>` : ''}
-    ${actionCardHtml(day, { advice: false })}
-    <div class="daysection"><h3 class="srOnly">${esc(dayName(day))}</h3>${renderDevDirection(day, 'heen')}${renderDevDirection(day, 'terug')}${conclusieCardHtml(day)}</div>
+    ${actionCardHtml(day, { advice: false, dots: true })}
+    <div class="daysection"><h3 class="srOnly">${esc(dayName(day))}</h3>${renderDevDirection(day, 'heen')}${renderDevDirection(day, 'terug')}${pendingOfDay(day).length ? `<p class="noteLine reqDot">${esc(t('weekrooster.edit.legend'))}</p>` : ''}${conclusieCardHtml(day, { collapsed: true })}</div>
+    ${hasAdvice(day) && (activeDeviation(day, 'heen') || activeDeviation(day, 'terug')) ? `<p class="noteCard" id="wrEditRecalc">${phIcon('info')}<span>${esc(t('weekrooster.edit.recalc'))}</span></p>` : ''}
     <div class="actionBar">${hasAdvice(day) ? `<button type="button" class="btn secondary" id="wrEditAdvice">${esc(t('weekrooster.advice.look'))}</button>` : ''}<button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
 }
 
@@ -75,5 +79,7 @@ export function wireEdit(box) {
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
   const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day }; S.wrDone = null; renderSchedule(); };
   for (const id of ['wrEditBack', 'wrEditDone']) { const b = document.getElementById(id); if (b) b.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); }; }
+  const tg = document.getElementById('conclusieToggle'); if (tg) tg.onclick = () => { hapticTap(); S.wrMsgOpen = !S.wrMsgOpen; renderSchedule(); };
+  if (S.wrEdit) wireWhatsAppButton('conclusieBtn', () => buildConclusieMessage(S.wrEdit.day));
   if (S.wrEdit && weekroosterActive()) attachDeviationHandlers();
 }

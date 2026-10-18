@@ -133,6 +133,7 @@ test('Afwijkend weekrooster (day coordinator): no requests of other families and
 
 test('Afwijkend weekrooster (phase 4): no Advies view and no finished Overnemen open at start', () => { assert.equal(S.wrAdvice, null); assert.equal(S.wrDone, null); });
 test('Afwijkend weekrooster (phase 5): no car editor open in Rooster at start', () => { assert.equal(S.wrEdit, null); });
-test('Beheer has not been opened at start, so the coordinator does not read the ride log, error log and back-ups yet (quota)', () => { assert.equal(S.beheerOpened, false); });
+test('Beheer has not been opened at start, so the coordinator does not read the ride log, error log and back-ups yet (quota)', () => { assert.equal(S.beheerOpened, false); });test('Zelf indelen: the Dagbericht starts folded', () => { assert.equal(S.wrMsgOpen, false); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

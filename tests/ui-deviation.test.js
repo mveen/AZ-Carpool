@@ -123,6 +123,15 @@ test('"Niet ingedeeld" offers one-tap buttons for every car that still has room 
   assert.match(html, /<button type="button" class="btn small secondary" data-devquick/);
   assert.match(html, /quickAssign__who/);   // several children without a car: each row says whose buttons they are (with one child the name is not repeated)
 });
+test('the quick-assign button names the driver (two cars can leave at the same time), the places stand at the right', () => {
+  const html = withFakeNow(NOW, () => { sampleCoordinatorState({ deviations: {} }); S.devOpen = {}; return renderDevDirection('Ma', 'heen'); });
+  assert.match(html, /quickAssign__driver">Jan Jansen</); assert.ok(html.indexOf('quickAssign__time') < html.indexOf('quickAssign__driver') && html.indexOf('quickAssign__driver') < html.indexOf('quickAssign__room'));
+});
+test('the Dagbericht card can be drawn folded (title + share button) or full', () => {
+  const full = conclusieCardHtml('Ma'), bar = conclusieCardHtml('Ma', { collapsed: true });
+  assert.match(full, /class="card conclusieCard/); assert.match(full, /conclusiePreview/); assert.doesNotMatch(full, /conclusieToggle/);
+  assert.match(bar, /conclusieCard--bar/); assert.match(bar, /conclusieToggle/); assert.match(bar, /id="conclusieBtn"/); assert.doesNotMatch(bar, /conclusiePreview/);
+});
 test('Monday: the standard cars are the starting point (Eline and Jahaimy with Jan)', () => {
   const s = text(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }));
   assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen/);
