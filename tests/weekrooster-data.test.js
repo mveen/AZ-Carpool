@@ -9,7 +9,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
-import { rideTime } from '../rides.js';
+import { rideTime, ovGirlsFor } from '../rides.js';
 import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests, directPlan } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
@@ -273,6 +273,19 @@ await testAsync('"rijdt niet mee" saved: request direct and the girl is out of t
   assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'direct');
   assert.ok(fake.get('deviations/Do_heen') && fake.get('deviations/Do_terug'), 'both directions are written with the request');
   assert.ok(!fake.get('deviations/Do_heen').cars.some(c => (c.girlIds || []).includes('f2')));
+});
+await testAsync('"rijdt niet mee" marks her as not riding on both directions, and putting the day back removes the marks again', async () => {
+  const fake = await asDay({}, {});
+  await withFakeNowAsync(NOW, async () => {
+    assert.equal((await submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } })).ok, true);
+    for (const dir of ['heen', 'terug']) {
+      assert.deepEqual(fake.get('deviations/Do_' + dir).ovGirlIds, ['f2'], dir + ': stored as "rijdt niet mee"');
+      assert.deepEqual(ovGirlsFor('Do', undefined, dir), ['f2'], dir + ': the app reads her as not riding');
+    }
+    const std = standardTimes('f2', 'this').Do;
+    assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: std.heen, terug: std.terug } })).ok, true);
+    for (const dir of ['heen', 'terug']) assert.deepEqual(ovGirlsFor('Do', undefined, dir), [], dir + ': marks gone after putting it back');
+  });
 });
 await testAsync('an accepted request put back to the fixed rooster is withdrawn (no decision kept) and her one-off time leaves the cars', async () => {
   const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') }, { dayCoordinators: { Do: 'f2' } });

@@ -14,6 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderMyWeek, matchInfoHtml, goToWijzigen } from '../ui-myweek.js';
+import { submitWeekRequests, syncWeekRequests } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -343,6 +344,16 @@ test('Afwijkend weekrooster: Mijn week shows "Tijden wijzigen" only while the sw
 
 test('goToWijzigen with the switch off still opens the Wijzigen tab on that day', () => {
   sampleParentState({}); withFakeNow(NOW, () => goToWijzigen('Di')); assert.equal(S.deviationDay, 'Di'); assert.equal(S.wrEdit, null);
+});
+await testAsync('Wijzigen "Rijdt niet mee" for a day: Mijn week shows both rides switched off, no "geen rit" line and no warning banner for that day', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNow(NOW, () => submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } }));
+  withFakeNow(NOW, () => renderMyWeek());
+  const h = dom.html('tab-myweek');
+  const rows = [...h.matchAll(/<div class="rideRow rideRow--off"[^>]*data-rideday="Do"[\s\S]*?<\/button>/g)].map(m => m[0]);
+  assert.equal(rows.length, 2, 'Thursday heen and terug are both drawn as "rijdt niet mee"');
+  rows.forEach(r => { assert.match(r, /aria-checked="false"/); assert.doesNotMatch(r, /class="switch on"/); assert.match(text(r), /rijdt niet mee/); });
+  assert.doesNotMatch(h, /data-gowijzig="Do"/, 'no "heeft nog geen rit" warning for a day she does not ride');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
