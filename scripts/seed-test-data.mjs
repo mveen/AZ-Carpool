@@ -4,6 +4,7 @@
 //   - every phone number replaced by one test number, and every family gets a NEW invite code (the old ones never leave the back-up);
 //   - left out: the history (ride log), who-is-linked-to-which-browser, sessions, calendar links, push data, the API key, notices and the
 //     maintenance switch (see DROP_*): the test browsers link again with the new codes.
+// --fixed-code familyId=CODE (repeatable) keeps a family's code the same at every refresh, for the automatic smoke test.
 // Without --write nothing is written and no key is needed (dry run: only the report). It writes ONLY to the project az-carpool-test: the key file must belong to
 // that project, and the project id is fixed in this file. The back-up and the key file stay on your computer (folder backups/ is in .gitignore).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -72,16 +73,31 @@ export function findLeaks(docs, { secrets, testKey }) {
   return leaks;
 }
 
-export function transformBackup(rows, { phone = TEST_PHONE, makeCode = randomCode } = {}) {
+// Some families can get a code that stays the same at every refresh (the automatic smoke test logs in with them): { familyId: code }.
+export function checkFixedCodes(fixedCodes, familyIds, oldCodes = new Set()) {
+  const seen = new Set();
+  for (const [fam, code] of Object.entries(fixedCodes)) {
+    if (!familyIds.includes(fam)) throw new Error(`Fixed code for "${fam}": there is no such family in the back-up.`);
+    if (!/^[A-Za-z0-9-]{8,32}$/.test(code)) throw new Error(`Fixed code for "${fam}" must be 8 to 32 letters, digits or dashes.`);
+    if (oldCodes.has(code)) throw new Error(`Fixed code for "${fam}" is a code that is used in the live app. Pick another one.`);
+    if (seen.has(code)) throw new Error('Two families cannot have the same fixed code.');
+    seen.add(code);
+  }
+}
+
+export function transformBackup(rows, { phone = TEST_PHONE, makeCode = randomCode, fixedCodes = {} } = {}) {
   const testKey = normalizePhone(phone);
   const secrets = new Set(); const kept = []; const dropped = {}; const codes = [];
   const oldCodes = new Set(rows.filter(r => /^invites\/[^/]+$/.test(r.path)).map(r => r.path.split('/')[1]));
-  const used = new Set(oldCodes);
+  const familyIds = rows.filter(r => /^invites\/[^/]+$/.test(r.path)).map(r => decodeFields(r.fields).familyId);
+  checkFixedCodes(fixedCodes, familyIds, oldCodes);
+  const used = new Set([...oldCodes, ...Object.values(fixedCodes)]);
   for (const r of rows) {
     const parts = r.path.split('/'); const data = decodeFields(r.fields);
     if (parts[0] === 'invites' && parts.length === 2) {
-      let code; do { code = makeCode(); } while (used.has(code));
-      used.add(code); codes.push({ familyId: data.familyId, code });
+      let code = fixedCodes[data.familyId];
+      if (!code) { do { code = makeCode(); } while (used.has(code)); used.add(code); }
+      codes.push({ familyId: data.familyId, code });
       kept.push({ path: `invites/${code}`, data: { familyId: data.familyId } });
       continue;
     }
@@ -138,10 +154,12 @@ export async function seed({ fs, docs }) {
 async function main() {
   const arg = n => { const i = process.argv.indexOf(n); return i > -1 ? process.argv[i + 1] : undefined; };
   const backup = arg('--backup'), keyFile = arg('--key'), write = process.argv.includes('--write');
-  if (!backup || (write && !keyFile)) { console.error('Usage: npm run seed:test -- --backup backups/firestore-DATE.jsonl.gz [--key backups/test-key.json --write]   (the key is only needed with --write)'); process.exit(1); }
+  if (!backup || (write && !keyFile)) { console.error('Usage: npm run seed:test -- --backup backups/firestore-DATE.jsonl.gz [--key backups/test-key.json --write] [--fixed-code familyId=CODE ...]   (the key is only needed with --write)'); process.exit(1); }
   const account = write ? readServiceAccount(resolve(keyFile)) : null;
   if (write) assertTestProject(account);
-  const res = transformBackup(readBackup(resolve(backup)));
+  const fixedCodes = {};
+  process.argv.forEach((a, i) => { if (a === '--fixed-code') { const [fam, code] = String(process.argv[i + 1] || '').split('='); fixedCodes[fam] = code; } });
+  const res = transformBackup(readBackup(resolve(backup)), { fixedCodes });
   console.log(`Back-up: ${res.docs.length} documents will be copied (${res.codes.length} families with a new code).`);
   console.log('Copied per collection:', Object.entries(res.counts).map(([k, v]) => `${k} ${v}`).join(', '));
   console.log('Left out:', Object.entries(res.dropped).map(([k, v]) => `${v}× ${k}`).join('; ') || 'nothing');
