@@ -107,10 +107,17 @@ export function buildDeploy({ rootDir = root, out = join(root, 'dist'), env = 'l
   }
   if (env === 'test' && !configSwapped) throw new Error('firebase-config.js is not in the ASSETS list of service-worker.js, so the test config cannot replace it.');
   // Server settings (.htaccess, robots.txt) live in deploy/.
+  // Subfolders of deploy/ (e.g. uitleg-weekrooster/) are copied as they are; deploy/test/ is only the test config.
   const serverDir = join(rootDir, 'deploy');
-  for (const name of existsSync(serverDir) ? readdirSync(serverDir) : []) {
-    if (statSync(join(serverDir, name)).isFile()) put(name, readFileSync(join(serverDir, name)));
-  }
+  const copyDir = (dir, prefix) => {
+    for (const name of readdirSync(dir)) {
+      const full = join(dir, name);
+      const rel = prefix + name;
+      if (statSync(full).isDirectory()) { if (rel !== 'test') copyDir(full, rel + '/'); }
+      else put(rel, readFileSync(full));
+    }
+  };
+  if (existsSync(serverDir)) copyDir(serverDir, '');
 
   // The Content-Security-Policy in .htaccess allows exactly the inline scripts that index.html has now (their hashes), nothing else.
   if (written.includes('.htaccess') && written.includes('index.html')) {
