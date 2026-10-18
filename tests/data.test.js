@@ -786,6 +786,13 @@ await testAsync('marking takes the girl out of her terug car and stores the mark
   assert.deepEqual(d.ovGirlIds, ['f6']); assert.deepEqual(d.ovFrom, { f6: 'f2' });
   assert.equal(d.weekKey, WEEK_KEY); assert.equal(d.cars[0].baseGroupId, undefined);
 });
+await testAsync('what was just marked counts at once in the app state, without waiting for the live listener (a screen drawn right after reads the new mark)', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState();
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true));
+  assert.deepEqual(S.deviations['Ma_terug'].ovGirlIds, ['f6']); assert.deepEqual(S.deviations['Ma_terug'], fake.get('deviations/Ma_terug'));
+  await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', false));
+  assert.ok(!('ovGirlIds' in S.deviations['Ma_terug']), 'and the mark is gone at once when it is taken off');
+});
 await testAsync('unmarking puts her back in the same car and removes every trace of the mark', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState();
   await withFakeNowAsync(NOW, () => setReturnByPublicTransport('Ma', 'f6', true));

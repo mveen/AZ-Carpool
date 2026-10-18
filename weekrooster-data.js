@@ -16,7 +16,7 @@ import { cleanCars, currentDeviationDoc, db, recordLastUpdate, returnByPublicTra
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderSchedule } from './ui-schedule.js';
-import { REQUEST_DAYS, acceptRequest, buildRequests, pendingForDay, decidedDays, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
+import { REQUEST_DAYS, acceptRequest, buildRequests, desiredMarks, pendingForDay, decidedDays, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
 
 export function weekroosterMode() { return normalizeWeekrooster(S.weekrooster).mode; }
 // Does THIS person see and use the new flow? "test": only the real coordinator (Testweergave does not change that). "aan": everybody.
@@ -164,8 +164,17 @@ function revertedTimesDocs(day, familyId) {
   return out;
 }
 
+// The shifts of this week the own daughter is marked "rijdt niet mee" on: { Ma: { heen: false, terug: true }, ... }. This is what Mijn week shows
+// and what the planning uses, so it is also what the week form opens with (a toggle in Mijn week and the form are two views of the same marks).
+export function currentMarks(familyId) {
+  const out = {};
+  REQUEST_DAYS.forEach(day => { out[day] = { heen: ovGirlsFor(day, undefined, 'heen').includes(familyId), terug: ovGirlsFor(day, undefined, 'terug').includes(familyId) }; });
+  return out;
+}
+
 // A family hands in the week form (one document per changed day, in one batch). days: { Do: { rides, heen, terug } } for every day of the form.
-// - New times wait for the day coordinator ('pending'); "rijdt niet mee" is applied at once on the current week ('direct').
+// - New times wait for the day coordinator ('pending'); "rijdt niet mee" is applied at once on the current week ('direct'): the whole day as a request
+//   plus a mark per shift, one emptied time (or the unticked day) only as the mark of that shift (the database only takes 'direct' for a whole day off).
 // - A day put back to the fixed rooster withdraws the request that was open for it (and puts a "rijdt niet mee" back).
 // Returns { ok, written, skipped } (ok false = nothing was saved).
 export async function submitWeekRequests(which, days) {
@@ -178,26 +187,26 @@ export async function submitWeekRequests(which, days) {
   try {
     const built = buildRequests({
       weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs, directTimes: which === 'this',   // next week has no cars yet: there it stays a request
-      test: weekroosterMode() === 'test',
+      test: weekroosterMode() === 'test', shiftOff: which === 'this',
       isPast: day => isDayPast(weekKey, day),
       deciderOf: deciderFamilyOf,
     });
+    // This week the marks per shift follow the form: only the shifts whose mark really changes are written.
+    const wanted = which === 'this' ? desiredMarks({ days, standard: standardTimes(familyId, which), isPast: day => isDayPast(weekKey, day) }) : {};
+    const markChanges = {};
+    Object.entries(wanted).forEach(([day, m]) => ['heen', 'terug'].forEach(dir => { if (m[dir] !== ovGirlsFor(day, undefined, dir).includes(familyId)) (markChanges[day] = markChanges[day] || []).push(dir); }));
     // The own day of a day coordinator is direct: the cars change at once (same change as Overnemen). Without a sound arrangement it stays a request.
     const devDocs = {};
     built.writes.forEach(w => {
       if (w.doc.status !== 'direct' || w.doc.rides === false) return;
+      // A day whose marks change in the same save stays a request: the cars of this day are changed by the marks, not planned twice.
+      if (markChanges[w.doc.day]) { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; return; }
       const plan = directPlan(w.doc.day, { ...w.doc, id: w.id });
       if (plan) Object.assign(devDocs, plan);
       else { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; }
     });
     const batch = db.batch();
     built.writes.forEach(w => batch.set('weekRequests/' + w.id, w.doc));
-    Object.entries(devDocs).forEach(([key, d]) => batch.set('deviations/' + key, d));
-    // "Rijdt niet mee" counts at once, for the current week (the cars of next week do not exist yet): the deviations go in the SAME batch,
-    // so the request and the cars are saved together or not at all.
-    if (which === 'this') {
-      built.writes.forEach(w => { if (w.doc.status === 'direct' && w.doc.rides === false) for (const dir of ['heen', 'terug']) { const r = returnByPublicTransportDoc(w.doc.day, familyId, true, dir); if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } } });
-    }
     // Days back on the fixed rooster: withdraw what was open (pending, direct or accepted), undo an earlier "rijdt niet mee" and take the
     // one-off times of this family off the cars again.
     const localWithdrawn = {};
@@ -207,10 +216,22 @@ export async function submitWeekRequests(which, days) {
       const { decidedAt, decidedBy, ...rest } = withdrawRequest(old, nowMs);   // a withdrawn request carries no decision (the rules want that for an accepted one)
       localWithdrawn[id] = rest; batch.set('weekRequests/' + id, rest);
       if (which !== 'this') return;
-      const docs = old.rides === false ? ['heen', 'terug'].map(dir => returnByPublicTransportDoc(s.day, familyId, false, dir)) : revertedTimesDocs(s.day, familyId);
-      docs.forEach(r => { if (r) { batch.set('deviations/' + r.key, r.doc); devDocs[r.key] = r.doc; } });
+      const docs = old.rides === false ? [] : revertedTimesDocs(s.day, familyId);   // a "rijdt niet mee" day: its marks come off through the marks below
+      docs.forEach(r => { if (r) devDocs[r.key] = r.doc; });
     });
-    if (!built.writes.length && !Object.keys(localWithdrawn).length) return { ok: false, written: [], skipped: built.skipped };
+    // The marks per shift, built on top of what this save already changes to the same shifts (one-off times, cars), so nothing is lost.
+    const markDocs = {};
+    const kept = S.deviations;
+    try {
+      S.deviations = { ...S.deviations, ...devDocs };
+      Object.entries(markChanges).forEach(([day, dirs]) => dirs.forEach(dir => {
+        const r = returnByPublicTransportDoc(day, familyId, wanted[day][dir], dir);
+        markDocs[r.key] = r.doc; S.deviations = { ...S.deviations, [r.key]: r.doc };
+      }));
+    } finally { S.deviations = kept; }
+    Object.assign(devDocs, markDocs);
+    Object.entries(devDocs).forEach(([key, d]) => batch.set('deviations/' + key, d));
+    if (!built.writes.length && !Object.keys(localWithdrawn).length && !Object.keys(markDocs).length) return { ok: false, written: [], skipped: built.skipped };
     await batch.commit();
     // What was just saved shows at once, also when the live listeners are not running (yet).
     S.weekRequests = { ...S.weekRequests, ...Object.fromEntries(built.writes.map(w => [w.id, w.doc])), ...localWithdrawn };
@@ -241,14 +262,12 @@ export async function withdrawWeekRequests(which) {
   finally { S.wrBusy = false; }
 }
 
-// Mijn week switched her back on for one shift (direction): when the OTHER shift of that day is not marked "rijdt niet mee" either, the direct
-// "rijdt niet mee" request of that day is withdrawn too (the shift just saved is not read from S.deviations: the listener has not answered yet), so Tijden wijzigen shows "Rijdt mee" again. Returns true when a request was withdrawn.
-export async function releaseNotRidingRequest(day, direction) {
+// Mijn week switched her back on for a shift: she is no longer off the whole day, so the "rijdt niet mee" request of that day (a whole day off)
+// is withdrawn. What is still off lives on as the mark of that shift (the week form reads the marks). Returns true when a request was withdrawn.
+export async function releaseNotRidingRequest(day) {
   if (!db || !weekroosterOn() || !myLinkedFamilyId()) return false;
   const familyId = myFamilyId(), id = requestId(weekKeyFor('this'), day, familyId), old = S.weekRequests[id];
   if (!old || old.rides !== false || !['direct', 'accepted'].includes(old.status)) return false;
-  const other = direction === 'heen' ? 'terug' : 'heen';
-  if (ovGirlsFor(day, undefined, other).includes(familyId)) return false;   // the other shift of that day is still off
   const { decidedAt, decidedBy, ...rest } = withdrawRequest(old, Date.now());
   try {
     await db.doc('weekRequests/' + id).set(rest);

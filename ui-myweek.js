@@ -240,12 +240,14 @@ export function renderMyWeek(){
     const on = b.dataset.ovon==='1';
     const day = b.dataset.ovtoggle, direction = b.dataset.ovdir;
     if(await setReturnByPublicTransport(day, myId, on, direction)){
-      // Back on: a "Rijdt niet mee" handed in through Wijzigen is withdrawn as well, so Tijden wijzigen shows "Rijdt mee" again.
-      if(!on) await releaseNotRidingRequest(day, direction);
+      // The week form in Wijzigen reads the marks again the next time it opens. Back on: a whole-day "Rijdt niet mee" request is withdrawn too.
+      S.wrForm = null;
+      if(!on) await releaseNotRidingRequest(day);
       // Toast with an Undo action: one tap puts it back the way it was.
       showToast(t(on? 'ov.on' : 'ov.off', { p1: plainGirlName(myId) }), { action: { label: t('ov.toastUndo'), run: async ()=>{
         if(await setReturnByPublicTransport(day, myId, !on, direction)){
-          if(on) await releaseNotRidingRequest(day, direction);
+          S.wrForm = null;
+          if(on) await releaseNotRidingRequest(day);
           showToast(t(on? 'ov.off' : 'ov.on', { p1: plainGirlName(myId) }));
         }
       } } });
