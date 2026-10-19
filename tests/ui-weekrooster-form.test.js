@@ -34,7 +34,7 @@ const fillInputs = (pastDays = ['Ma', 'Di']) => {
     Object.assign(dom.el('wrTerug_' + day), { value: d.terug || '', disabled: past });
   });
 };
-const switchOn = (html, day, dir) => new RegExp('class="switch on" role="switch" aria-checked="true" aria-label="[^"]*" data-wrtoggle="' + day + '" data-wrdir="' + dir + '"').test(html);
+const switchOn = (html, day, dir) => new RegExp('class="switch switch--sm on" role="switch" aria-checked="true" aria-label="[^"]*" data-wrtoggle="' + day + '" data-wrdir="' + dir + '"').test(html);
 const tick = () => new Promise(r => setImmediate(r));
 const parentOn = async (mode = 'aan') => { const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode } }); syncWeekRequests(); await tick(); return fake; };
 
@@ -60,7 +60,7 @@ await testAsync('Deze week: five days, past days locked, a switch per ride and t
   assert.match(s, /Tijden deze week/); assert.match(s, /Heen: aankomsttijd/); assert.match(s, /Terug: klaar om op te halen/);
   assert.equal([...html.matchAll(/data-wrday="(\w\w)"/g)].map(m => m[1]).join(','), 'Ma,Di,Wo,Do,Vr');
   assert.equal((html.match(/periodDay--past/g) || []).length, 2, 'Monday and Tuesday are over');
-  assert.match(html, /class="switch on" role="switch" aria-checked="true" aria-label="Rijdt mee Heen Donderdag" data-wrtoggle="Do" data-wrdir="heen"/);
+  assert.match(html, /class="switch switch--sm on" role="switch" aria-checked="true" aria-label="Rijdt mee Heen Donderdag" data-wrtoggle="Do" data-wrdir="heen"/);
   assert.match(html, /aria-label="Rijdt mee Terug Donderdag" data-wrtoggle="Do" data-wrdir="terug"/); assert.doesNotMatch(html, /wrRide_/);
   assert.doesNotMatch(noStyle(html), /style="/);
   assert.match(html, /id="wrHeen_Do"[^>]*value="10:15"/); assert.match(html, /id="wrTerug_Do"[^>]*value="18:00"/);
@@ -74,7 +74,7 @@ await testAsync('Volgende week: nothing is over, the title says next week', asyn
 await testAsync('a day that does not ride: both switches off, no time fields, "Rijdt niet mee" in both cells', async () => {
   await parentOn(); wijzigen(); S.wrForm.days.Do.rides = false; const html = wijzigen();
   assert.doesNotMatch(html, /id="wrHeen_Do"/); assert.doesNotMatch(html, /id="wrTerug_Do"/);
-  assert.match(html, /class="switch" role="switch" aria-checked="false" aria-label="Rijdt mee Heen Donderdag"/);
+  assert.match(html, /class="switch switch--sm" role="switch" aria-checked="false" aria-label="Rijdt mee Heen Donderdag"/);
   assert.equal((html.match(/aria-checked="false" aria-label="Rijdt mee (Heen|Terug) Donderdag"/g) || []).length, 2);
 });
 await testAsync('a switch off turns that ride off and keeps the other; both off = the day off; on again brings the time back', async () => {

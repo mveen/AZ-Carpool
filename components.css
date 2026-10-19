@@ -187,9 +187,17 @@ table.avail th,table.avail td{padding:6px 4px}
 .logItem__main{flex:1;font:var(--type-small);color:var(--text-1)}
 .logItem__side{display:flex;flex-direction:column;align-items:flex-end;gap:var(--space-2)}
 .logItem__when{font:var(--type-caption);color:var(--text-muted)}
-.wrCell{display:flex;flex-direction:column;min-width:0}
-.wrCell__head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);font:var(--type-caption);color:var(--text-2)}
-.wrCell__off{min-height:var(--hit-min);display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:var(--radius-control);font:var(--type-small);color:var(--text-muted)}
+.switch.switch--sm{width:var(--hit-min);justify-content:center}
+.switch--sm .switch__track{width:40px;height:24px;border-radius:var(--radius-pill);padding:2px}
+.switch--sm .switch__knob{width:20px;height:20px;font-size:12px}
+.switch--sm .switch__knob svg{width:12px;height:12px}
+.wrCell{display:flex;align-items:center;gap:var(--space-1);min-width:0}
+.wrCell>input,.wrPastDay{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3)}
+.wrPastDay p{margin:0}
+@media (max-width:23.75rem){.wrCell>input[type=time]::-webkit-calendar-picker-indicator{display:none}}
+.wrCell__off{flex:1;min-width:0}
+.wrCell>input[type=time]{padding-inline:var(--space-3)}
+.wrCell__off{min-height:var(--hit-min);display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:var(--radius-control);font:var(--type-caption);color:var(--text-muted)}
 .periodRide{display:flex;align-items:center;gap:8px;min-height:44px;font-size:14px;font-weight:600;margin:0}
 .periodRide input{width:22px;height:22px;margin:0}
 input[type=time].periodTime.changed{border-color:var(--warn-icon);background:var(--warn-soft)}

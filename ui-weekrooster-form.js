@@ -75,18 +75,18 @@ function formHtml(w) {
     const d = f.days[day], past = isDayPast(wk, day), iso = weekKeyDayIso(wk, day);
     const changed = !past && !sameAsStandard(d, std[day]);
     const input = (dir, label) => `<input type="time" class="periodTime wrTime${(d[dir] || '') !== (std[day][dir] || '') ? ' changed' : ''}" id="${dir === 'heen' ? 'wrHeen_' : 'wrTerug_'}${day}" value="${esc(d[dir] || '')}" aria-label="${esc(label)} ${esc(dayName(day))}">`;
-    // One cell per ride: its name and a switch (the same switch as in Mijn week), then the time, or "Rijdt niet mee" while it is off.
+    // One cell per ride, on one line: the switch (small version of the one in Mijn week), then the time, or "Rijdt niet mee" while it is off.
     const cell = (dir, label) => {
       const on = isOn(d, dir), name = t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
       return `<div class="wrCell">
-          <div class="wrCell__head"><span>${esc(name)}</span><button type="button" class="switch${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(t('ov.switchLabel', { p1: name, p2: dayName(day) }))}" data-wrtoggle="${day}" data-wrdir="${dir}"><span class="switch__track"><span class="switch__knob">${phIcon(on ? 'car-profile-bold' : 'x-bold')}</span></span></button></div>
+          <button type="button" class="switch switch--sm${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(t('ov.switchLabel', { p1: name, p2: dayName(day) }))}" data-wrtoggle="${day}" data-wrdir="${dir}"><span class="switch__track"><span class="switch__knob">${phIcon(on ? 'car-profile-bold' : 'x-bold')}</span></span></button>
           ${on ? input(dir, label) : `<div class="wrCell__off">${t('weekrooster.form.notRiding')}</div>`}
         </div>`;
     };
     const body = past
       ? `<p class="muted">${t('weekrooster.form.past')}</p>`
       : `<div class="grid2">${cell('heen', t('weekrooster.form.heenAria'))}${cell('terug', t('weekrooster.form.terugAria'))}</div>`;
-    return `<div class="periodDay${changed ? ' changed' : ''}${past ? ' periodDay--past' : ''}" data-wrday="${day}">
+    return `<div class="periodDay${changed ? ' changed' : ''}${past ? ' periodDay--past wrPastDay' : ''}" data-wrday="${day}">
         <div class="periodDayHead">
           <span><strong>${esc(dayUp(day))}</strong> <span class="muted">${esc(isoDayLabel(iso, ''))}</span></span>
         </div>

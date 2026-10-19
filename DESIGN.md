@@ -112,3 +112,8 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - **Request card:** `actionCardHtml(day, { buttons, advice })` in `ui-weekrooster-rooster.js` is THE amber card of Mijn week (`.alertCard--stack` + `.alertCard__row`). Mijn week uses it with buttons; Advies (with the advice line) and Zelf indelen (rows only) show it without buttons, so the requests stay in view.
 - **Whole day at once:** Advies shows heen and terug under each other with one Overnemen (Zuinigst; no variant switch, no reason line). Zelf indelen ends with one ink Klaar button (every change already saves at once).
 - **Quick assign:** `.quickAssign` (`__who`, `__time`, `__room`) in the dashed "Niet ingedeeld" box: one tap puts the child in a car that still has room (`data-devquick`, same save and Ongedaan toast as "+ Passagier toevoegen"). Also in Wijzigen.
+
+## Components added for the week form on one line per ride
+
+- **Small switch** `.switch--sm`: the `.switch` of Mijn week at 40 x 24 (the tap area stays 44 px), for places where a switch sits next to a field.
+- **Ride cell** `.wrCell` (+ `.wrCell__off`): in "Tijden deze week" per ride (heen, terug) the small switch and the time field on one line; while the ride is off the dashed `.wrCell__off` ("Rijdt niet mee") takes the place of the field. **Past day** `.wrPastDay`: day name and "Voorbij" on one line.
