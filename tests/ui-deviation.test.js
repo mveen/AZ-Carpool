@@ -412,7 +412,7 @@ test('open: the button says Klaar and shows time, driver, pickup, arrival (AFC \
   const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
   const s = text(html);
   assert.match(s, /Jan Jansen Busstation → AFC (?:'|&#39;)34 Klaar/);
-  assert.match(s, /Vertrek Chauffeur .* Ophalen \(alleen deze rit\) .* Aankomst AFC (?:'|&#39;)34 Alkmaar ATC Wijdewormer Kinderen Eline ··· Jahaimy ···/);
+  assert.match(s, /Vertrek Chauffeur .* Ophalen \(alleen deze rit\) .* Aankomst AFC (?:'|&#39;)34 Alkmaar ATC Wijdewormer Kinderen Eline \d\d:\d\d Jahaimy \d\d:\d\d/);
   assert.doesNotMatch(s, /AZ Trainingscomplex/);              // the arrival button says ATC
   assert.match(html, /data-devdest="AFC"[^>]*aria-pressed="true"/); assert.match(html, /data-devdest="ATC"[^>]*aria-pressed="false"/);
   assert.match(html, /<option value="__free" >Ander adres…<\/option>/);
@@ -455,7 +455,8 @@ await testAsync('arrival: when the standard rooster car has ATC as standard, cho
 });
 await testAsync('removing a child shows the result with "Ongedaan" in the card; Ongedaan puts her back', async () => {
   const fake = useFakeDb(sampleDbSeed()); renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
-  await fire('[data-devkid]', { dataset: { devkid: 'Ma|heen|0|f1' } });
+  // One car: no ··· menu, the trash is in the line at once.
+  assert.doesNotMatch(dom.html('tab-deviation'), /devKidMore/);
   assert.match(dom.html('tab-deviation'), /data-devremove="1"[^>]*data-girl="f1"|data-girl="f1"[^>]*data-devremove="1"/);
   const before = fake.get('deviations/Ma_heen');
   await fire('.devRemoveBtn', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', girl: 'f1' } });
@@ -495,8 +496,7 @@ await testAsync('moving a child offers one button per other car and shows "Onged
   const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }, { driverFamilyId: 'f3', girlIds: ['f6'], departureTime: '07:30' }];
   const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen }); const d = { ...dev1(cars) };
   renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: d });
-  await fire('[data-devkid]', { dataset: { devkid: 'Ma|heen|0|f2' } });
-  assert.match(text(dom.html('tab-deviation')), /Naar Kees de Vries/);
+  assert.match(dom.html('tab-deviation'), /devKidMoveBtn[^>]*title="Naar Kees de Vries"/);   // one other car: the move icon sits in the line
   assert.match(dom.html('tab-deviation'), /class="devKidBtn danger devRemoveBtn"[^>]*>\s*<svg[^>]*>[^]*?<\/svg>\s*<\/button>/);   // trash icon only, no text
   await fire('[data-devmove]', { dataset: { day: 'Ma', direction: 'heen', caridx: '0', girl: 'f2', devmove: '1' } });
   const saved = fake.get('deviations/Ma_heen').cars;
@@ -565,3 +565,21 @@ test('Wijzigen shows the spinner while the data is loading', () => {
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
+
+test('a child shows her time: Heen = present at, Terug = ready at (title says which)', () => {
+  const heen = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
+  assert.match(heen, /class="devKidTime" title="Aanwezig om \d\d:\d\d">\d\d:\d\d</);
+  assert.match(heen, /class="devKidTime" title="Klaar om \d\d:\d\d">\d\d:\d\d</);
+});
+test('with two cars (one other car) the move icon and the trash sit in the line, no ··· menu', () => {
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }, { driverFamilyId: 'f3', girlIds: ['f6'], departureTime: '07:30' }];
+  useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen });
+  const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars) });
+  assert.doesNotMatch(html, /devKidMore/); assert.match(html, /devKidMoveBtn/); assert.match(html, /devRemoveBtn/);
+});
+test('with three cars the ··· menu stays (several cars to move to), with the time in the line', () => {
+  const cars = [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30' }, { driverFamilyId: 'f3', girlIds: ['f6'], departureTime: '07:30' }, { driverFamilyId: '', girlIds: [], departureTime: '07:30' }];
+  useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen });
+  const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars) });
+  assert.match(html, /devKidMore/); assert.match(html, /devKidTime/);
+});

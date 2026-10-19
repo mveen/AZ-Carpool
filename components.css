@@ -559,6 +559,9 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .devKidLine{display:flex;align-items:center;gap:var(--space-4);min-height:48px}
 .devKidName{flex:1;font:var(--type-body);color:var(--text-1)}
 .devKidName.mine{font-weight:800;color:var(--accent-ink)}
+.devKidTime{font:var(--type-body);color:var(--text-muted);font-variant-numeric:tabular-nums}
+.devKidLine .devKidBtn{flex:0 0 var(--hit-min);width:var(--hit-min);height:40px;min-height:0;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.devKidLine .devKidBtn svg{width:20px;height:20px}
 .devKidMore{width:var(--hit-min);height:40px;border:1px solid var(--line);border-radius:var(--radius-chip);background:var(--surface-card);font:800 18px/1 var(--font-sans);color:var(--text-muted);cursor:pointer}
 .devKidMore.on{background:var(--surface-soft)}
 .devKidActions{display:flex;flex-wrap:wrap;gap:var(--space-3);padding-bottom:var(--space-4)}

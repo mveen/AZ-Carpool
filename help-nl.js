@@ -108,7 +108,7 @@ export default [
       'Ga naar Wijzigen. Daar pas je de ritten van alleen deze week aan. Het vaste rooster blijft zoals het was. Op vrijdag om 19:00 zijn alle wijzigingen vanzelf weer weg.',
       '1. Kies de dag bovenaan. Dagen met een wijziging hebben een stip.',
       '2. Elke rit is één regel: tijd, chauffeur en route, met daaronder de meisjes die meerijden. Tik op Wijzig om de rit open te klappen.',
-      '3. Pas aan wat nodig is: vertrektijd, chauffeur, ophaalplek en aankomst (AFC \'34 of ATC). Bij Kinderen tik je op de drie puntjes om een meisje naar een andere auto te verplaatsen of uit de auto te halen. Een wijziging wordt meteen opgeslagen.',
+      '3. Pas aan wat nodig is: vertrektijd, chauffeur, ophaalplek en aankomst (AFC \'34 of ATC). Achter elk meisje bij Kinderen staat haar tijd (heen: aanwezig om, terug: klaar om). Met de prullenbak haal je haar uit de auto. Is er nog één andere auto, dan verplaatst het pijltjes-icoon haar daarnaartoe. Zijn er meer auto\'s, dan tik je op de drie puntjes om te kiezen naar welke auto ze gaat. Een wijziging wordt meteen opgeslagen.',
       '4. Tik op Klaar om de rit weer dicht te klappen. Per ongeluk iets gewijzigd? Tik direct op Ongedaan.',
       'Wil je alles van die dag terugzetten? Tik op Terug naar standaard rooster. Tik twee keer om het zeker te weten.',
       'Stem een wijziging altijd eerst af met de chauffeur. Tik op de naam van de chauffeur en kies WhatsApp of Bellen.',

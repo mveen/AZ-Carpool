@@ -1012,6 +1012,8 @@ export default {
   "deviation.aankomst": "Aankomst",
   "deviation.kinderen": "Kinderen",
   "deviation.opties": "Opties",
+  "deviation.aanwezig_om": "Aanwezig om {time}",
+  "deviation.klaar_om": "Klaar om {time}",
   "deviation.naar_auto": "Naar {name}",
   "deviation.verwijder": "Verwijder",
   "deviation.ongedaan": "Ongedaan",

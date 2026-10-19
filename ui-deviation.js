@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { esc, foldHtml, hapticTap, locationsCfg, phIcon, renderLoadingIfNeeded, showToast, twoStepConfirm } from './ui-common.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, FREE_TEXT_MAX, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
-import { activeDeviation, computeRideDeparture, ownCarWarning, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
+import { activeDeviation, computeRideDeparture, ownCarWarning, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, rideTime, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, reserveAskText } from './message-texts.js';
@@ -227,14 +227,30 @@ function devRideHtml(day,direction,idx,cars,ctx){
     const kidRows = girls.map(id=>{
       const active = S.devKid===`${key}|${id}`;
       const ctl = `data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}"`;
+      // Her time on this shift: Heen = when she has to be there, Terug = when she is ready to be picked up.
+      const kidTime = rideTime(id, day, direction);
+      const timeHtml = kidTime? `<span class="devKidTime" title="${esc(t(direction==='heen'? 'deviation.aanwezig_om' : 'deviation.klaar_om',{time:kidTime}))}">${esc(kidTime)}</span>` : '';
+      const removeBtn = `<button type="button" class="devKidBtn danger devRemoveBtn" data-devremove="1" ${ctl} title="${t('deviation.verwijder_uit_auto')}" aria-label="${esc(t('deviation.verwijder_uit_auto'))}: ${girlName(id)}">${phIcon('trash')}</button>`;
+      // No ··· menu when it would only hold one or two icons: with one car (nothing to move to) the trash goes straight in the line,
+      // with exactly one other car the move icon ("Naar {name}") and the trash both do. Three or more cars keep the menu.
+      if(otherIdxs.length<2){
+        const moveName = otherIdxs.length? (fam(cars[otherIdxs[0]].driverFamilyId).parentName||'?') : '';
+        const moveBtn = otherIdxs.length? `<button type="button" class="devKidBtn devKidMoveBtn" data-devmove="${otherIdxs[0]}" ${ctl} title="${esc(t('deviation.naar_auto',{name:moveName}))}" aria-label="${esc(t('deviation.naar_auto',{name:moveName}))}: ${girlName(id)}">${phIcon('arrows-left-right')}</button>` : '';
+        return `<div class="devKidRow">
+        <div class="devKidLine">
+          <span class="devKidName${mine(id)?' mine':''}">${girlName(id)}</span>${isFlex(fam(id))? `<span class="tag tag--flex">${t('flex.chip')}</span>` : ''}${timeHtml}
+          ${moveBtn}${removeBtn}
+        </div>
+      </div>`;
+      }
       return `<div class="devKidRow">
         <div class="devKidLine">
-          <span class="devKidName${mine(id)?' mine':''}">${girlName(id)}</span>${isFlex(fam(id))? `<span class="tag tag--flex">${t('flex.chip')}</span>` : ''}
+          <span class="devKidName${mine(id)?' mine':''}">${girlName(id)}</span>${isFlex(fam(id))? `<span class="tag tag--flex">${t('flex.chip')}</span>` : ''}${timeHtml}
           <button type="button" class="devKidMore${active?' on':''}" data-devkid="${key}|${id}" aria-expanded="${active}" aria-label="${esc(t('deviation.opties'))}">···</button>
         </div>
         ${active? `<div class="devKidActions">
           ${otherIdxs.map(i=>`<button type="button" class="devKidBtn" data-devmove="${i}" ${ctl}>${esc(t('deviation.naar_auto',{name: fam(cars[i].driverFamilyId).parentName||'?'}))}</button>`).join('')}
-          <button type="button" class="devKidBtn danger devRemoveBtn" data-devremove="1" ${ctl} title="${t('deviation.verwijder_uit_auto')}" aria-label="${esc(t('deviation.verwijder_uit_auto'))}: ${girlName(id)}">${phIcon('trash')}</button>
+          ${removeBtn}
         </div>` : ''}
       </div>`;
     }).join('') || `<p class="muted" style="margin:0">${t('deviation.geen_passagiers')}</p>`;

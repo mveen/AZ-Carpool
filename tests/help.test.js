@@ -349,6 +349,10 @@ test('there is an article for drivers, found by the words a driver would use, an
   assert.equal(searchHelp('ik wil later vertrekken met mijn auto', { canEdit: false })[0].id, 'chauffeur-tijd-plek');
   assert.match(articles.find(x => x.id === 'mijn-week').body.join(' '), /knop Tijd en plek/);
 });
+test('the Help explains the child time and the trash in Wijzigen', () => {
+  const all = JSON.stringify(articles);
+  assert.ok(all.includes('aanwezig om') && all.includes('klaar om') && all.includes('prullenbak'));
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
