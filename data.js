@@ -684,7 +684,7 @@ export async function clearDeviation(day,direction){
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return false; }
 }
 
-async function writeDeviation(day,direction,cars,extra){
+export async function writeDeviation(day,direction,cars,extra){
   refreshWeekKey();
   await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:cleanCars(cars),...(extra||{})});
   S.lastDeviationEditDay = day;

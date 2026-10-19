@@ -171,5 +171,11 @@ await test('the push files are part of the offline copy (ASSETS)', async () => {
   for (const f of ['notif-text.js', 'push.js', 'push-access.js', 'push-scenarios.js', 'push-data.js', 'ui-push.js']) assert.ok(src.includes(`'./${f}'`), f);
 });
 
+await test('the files of "Tijd en plek van de chauffeur" are part of the offline copy (ASSETS)', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../service-worker.js', import.meta.url), 'utf8');
+  for (const f of ['driver-car.js', 'driver-car-data.js', 'ui-driver-car.js']) assert.ok(src.includes(`'./${f}'`), f);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

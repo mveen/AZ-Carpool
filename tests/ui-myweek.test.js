@@ -293,7 +293,7 @@ test('outside the days with a temporary rooster the week is exactly as before', 
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd J Aanwezig om 12:00/);
+  assert.match(s, /12:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd Vertrektijd gewijzigd: was 12:00, nu 12:30 J Aanwezig om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {
@@ -374,5 +374,15 @@ await testAsync('switching a ride of a "Rijdt niet mee" day back on in Mijn week
   await press('terug');
   assert.ok(!(fake.get('deviations/Do_terug').ovGirlIds || []).length);
 });
+console.log('\n=== the driver\'s button "Tijd en plek" ===');
+await testAsync('a driver sees "Tijd en plek" under the own ride when the new flow is on, and nobody else does', async () => {
+  const { sampleDeviations } = await import('./test-support.js');
+  const DRV = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: [], departureTime: '18:00' }] } };
+  const on = render({ weekrooster: { mode: 'aan' }, deviations: { ...sampleDeviations(), ...DRV } });
+  assert.match(on, /data-drivercar="Do\|terug"/); assert.match(text(on), /Tijd en plek/);
+  assert.doesNotMatch(render({ weekrooster: { mode: 'uit' }, deviations: { ...sampleDeviations(), ...DRV } }), /data-drivercar/, 'switch off: Mijn week is as before');
+  assert.doesNotMatch(render({ weekrooster: { mode: 'aan' }, links: { p1: { familyId: 'f4' } }, deviations: { ...sampleDeviations(), ...DRV } }), /data-drivercar/, 'not my car');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

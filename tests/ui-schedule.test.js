@@ -338,5 +338,16 @@ test('Advies and Zelf indelen replace the whole Rooster header block: no coordin
   const focus = render(state({ day: 'Do', override: false })); assert.match(focus, /id="wrEdit"/); assert.doesNotMatch(focus, /data-rmode|dayPills|id="ovOpen"|coordLine/);
   S.wrEdit = null;
 });
+console.log('\n=== the driver\'s button "Tijd en plek" ===');
+await testAsync('in Rooster "Deze week" the driver gets the button on the own car only, and only while the new flow is on', async () => {
+  const { sampleDeviations } = await import('./test-support.js');
+  const DRV = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: [], departureTime: '18:00' }] } };
+  const mk = patch => () => sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', deviations: { ...sampleDeviations(), ...DRV }, ...patch });
+  const on = render(mk({ weekrooster: { mode: 'aan' } }));
+  assert.equal((on.match(/data-drivercar=/g) || []).length, 1); assert.match(text(on), /Tijd en plek/);
+  assert.doesNotMatch(render(mk({ weekrooster: { mode: 'uit' } })), /data-drivercar/);
+  assert.doesNotMatch(render(mk({ weekrooster: { mode: 'aan' }, links: { p1: { familyId: 'f4' } } })), /data-drivercar/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

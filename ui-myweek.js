@@ -19,6 +19,8 @@ import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
 import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-rooster.js';
 import { openDayEditor } from './ui-weekrooster-edit.js';
+import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
+import { timeChangeOf } from './driver-car.js';
 import { myWeekWeekroosterHtml, requestPillHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
@@ -108,7 +110,7 @@ export function renderMyWeek(){
       if(ownCar.driverFamilyId===myId){
         // Full passenger list, including your own daughter — not just "everyone else".
         const passengers = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
-        status = `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span>${changedTag}</div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}`;
+        status = `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span>${changedTag}</div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}${driverCarButtonHtml(day,direction)}`;
       } else {
         status = driverButtonHtml(ownCar.driverFamilyId, changedTag);
       }
@@ -118,11 +120,14 @@ export function renderMyWeek(){
       status = `<div class="rideRow__none">${esc(t('myweek.nog_geen_rit'))}</div>`;
     }
     if(!ownCar && changedTag) status += `<div class="rideRow__drives">${changedTag}</div>`;
+    // The departure time of the car changed compared with the standard rooster: said in words, with the old and the new time.
+    const timeChangedLine = c => { const x = timeChangeOf(baseCars(day,direction), c); return x? `<div class="rideRow__extra">${phIcon('clock')} ${esc(t('driverCar.tijdGewijzigd',{p1:x.from,p2:x.to}))}</div>` : ''; };
+    if(ownCar) status += timeChangedLine(ownCar);
     // Own driving duty in a DIFFERENT car than the daughter's own ride — shown as a second line.
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg = cars[drivingIdx];
       const names = sortGirlIds(dg.girlIds).map(id=>girlName(id)).join(', ');
-      status += `<div class="rideRow__extra">${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</div>`;
+      status += `<div class="rideRow__extra">${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</div>${timeChangedLine(dg)}${driverCarButtonHtml(day,direction)}`;
     }
     // Her own time: when she has to be there (heen) / when she is done (terug).
     const daughterLine = s ? `<div class="daughterTime"><span class="daughterTime__initial">${initial}</span><span>${direction==='heen' ? esc(t('myweek.daughter_heen')) : esc(t('myweek.daughter_terug'))} <b>${esc(s)}</b></span></div>` : '';
@@ -234,7 +239,7 @@ export function renderMyWeek(){
     ${matchTiles}${matchFailNote}${matchStatusNote}
     ${dayCoordinatorHtml()}
   `;
-  wireMyWeekWeekrooster(box); wireMyWeekActions(box);
+  wireMyWeekWeekrooster(box); wireMyWeekActions(box); wireDriverCar(box, renderMyWeek);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';
