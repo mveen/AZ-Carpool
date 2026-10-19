@@ -19,6 +19,7 @@ import { myDeciderDays } from './weekrooster-data.js';
 import { weekroosterActive } from './ui-weekrooster-form.js';
 import { scheduleAdviceHtml, wireAdvice } from './ui-weekrooster-advice.js';
 import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
+import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
@@ -100,6 +101,7 @@ export function renderSchedule(){
   wireTimeChangesCard();
   wireAdvice(box);
   wireEdit(box);
+  wireDriverCar(box, ()=>{ renderSchedule(); renderMyWeek(); });
   updateTimeChangesBadge();
   attachScheduleHandlers();
   wirePeriodRooster();
@@ -214,7 +216,7 @@ export function renderDirectionWeek(day,direction){
         ${driver? `<span class="tag" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${c.girlIds.length}/${seats(driver)}</span>` : ''}
       </div>
       <div class="chips">${pillsHtml(c.girlIds,myId)}</div>
-      ${neededTimesHtml(day,direction,c.girlIds,rideTime,c)}
+      ${neededTimesHtml(day,direction,c.girlIds,rideTime,c)}${myId && c.driverFamilyId===myId? driverCarButtonHtml(day,direction) : ''}
     </div>`;
   }).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`;
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.

@@ -1072,5 +1072,15 @@ await testAsync('saveDeviationCars marks a change made by "Toch zelf wijzigen" (
   await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
   assert.equal('selfBy' in fake.get('deviations/Di_heen'), false); S.wrEdit = null;
 });
+console.log('=== writeDeviation (also used by the driver\'s "Tijd en plek") ===');
+await testAsync('writeDeviation stores the cars of a shift with the week, the expiry and the extra marks, without internal markers', async () => {
+  const { writeDeviation } = await import('../data.js');
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({});
+  await withFakeNowAsync(NOW, () => writeDeviation('Do', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f1'], departureTime: '18:30', pinnedBy: 'f2', baseGroupId: 'g1', locationId: undefined }], { selfBy: 'f2', selfKind: 'chauffeur' }));
+  const d = fake.get('deviations/Do_terug');
+  assert.deepEqual(d.cars, [{ driverFamilyId: 'f2', girlIds: ['f1'], departureTime: '18:30', pinnedBy: 'f2' }]);
+  assert.equal(d.weekKey, '2026-W40'); assert.ok(d.expiresAt); assert.equal(d.selfKind, 'chauffeur');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

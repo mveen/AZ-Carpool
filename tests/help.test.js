@@ -341,5 +341,14 @@ test('the privacy item tells that the phone keeps a copy of the carpool data for
   const s = JSON.stringify(articles.find(x => /privacy/.test(x.id)) || {});
   assert.match(s, /een kopie van de carpoolgegevens, zodat de app sneller opent/); assert.match(s, /Opnieuw beginnen.{1,6} wist die kopie/); assert.match(s, /geen cookiebanner/);
 });
+console.log('\n=== Tijd en plek van de chauffeur ===');
+test('there is an article for drivers, found by the words a driver would use, and Mijn week points to the button', () => {
+  const a = articles.find(x => x.id === 'chauffeur-tijd-plek');
+  assert.ok(a); assert.equal(a.tab, 'myweek'); assert.ok(!a.coordinatorOnly);
+  assert.match(a.body.join(' '), /Tijd en plek/); assert.match(a.body.join(' '), /Ongedaan/); assert.match(a.body.join(' '), /Weer automatisch berekenen/);
+  assert.equal(searchHelp('ik wil later vertrekken met mijn auto', { canEdit: false })[0].id, 'chauffeur-tijd-plek');
+  assert.match(articles.find(x => x.id === 'mijn-week').body.join(' '), /knop Tijd en plek/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -342,6 +342,13 @@ test('Afwijkend weekrooster (phase 5): the warning sheet says who decides, with 
   assert.equal(t('weekrooster.edit.recalc'), 'Je hebt het rooster aangepast. Advies bekijken rekent opnieuw met jouw wijzigingen als start.');
 });
 
+test('Tijd en plek van de chauffeur has its texts (button, sheet, warnings, changed time)', () => {
+  assert.equal(t('driverCar.knop'), 'Tijd en plek');
+  assert.equal(t('driverCar.sub', { p1: 'donderdag', p2: 'terug', p3: '18:00', p4: 'Eline' }), 'donderdag terug. Berekende tijd: 18:00. In de auto: Eline.');
+  assert.match(t('driverCar.warn.laat', { p1: '07:00' }), /berekende tijd is 07:00\. Later vertrekken/);
+  assert.equal(t('driverCar.tijdGewijzigd', { p1: '12:00', p2: '12:30' }), 'Vertrektijd gewijzigd: was 12:00, nu 12:30');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

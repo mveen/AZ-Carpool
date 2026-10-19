@@ -95,5 +95,7 @@ test('APP_VERSION always equals the cache name of the service worker', () => {
 });
 test('the caret icons for folding exist', () => { for (const k of ['caret-up', 'caret-down']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k); });
 
+test('APP_VERSION looks like the cache name of the service worker: v and a number', () => { assert.match(APP_VERSION, /^v\d+$/); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
