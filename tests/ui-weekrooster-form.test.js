@@ -15,7 +15,7 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, myWeekWeekroosterHtml, requestPillHtml, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestPillHtml, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
 
@@ -30,11 +30,11 @@ const setField = (id, v) => { dom.el(id).value = v; };
 const fillInputs = (pastDays = ['Ma', 'Di']) => {
   ['Ma', 'Di', 'Wo', 'Do', 'Vr'].forEach(day => {
     const d = S.wrForm.days[day], past = pastDays.includes(day);
-    Object.assign(dom.el('wrRide_' + day), { checked: d.rides !== false, disabled: past });
     Object.assign(dom.el('wrHeen_' + day), { value: d.heen || '', disabled: past });
     Object.assign(dom.el('wrTerug_' + day), { value: d.terug || '', disabled: past });
   });
 };
+const switchOn = (html, day, dir) => new RegExp('class="switch on" role="switch" aria-checked="true" aria-label="[^"]*" data-wrtoggle="' + day + '" data-wrdir="' + dir + '"').test(html);
 const tick = () => new Promise(r => setImmediate(r));
 const parentOn = async (mode = 'aan') => { const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode } }); syncWeekRequests(); await tick(); return fake; };
 
@@ -55,12 +55,14 @@ test('uit: Wijzigen and Mijn week show nothing of the new flow and no pill', asy
 });
 
 console.log('=== the week form ===');
-await testAsync('Deze week: five days, past days locked, "Rijdt mee" and the two time columns, tokens only (no inline style)', async () => {
+await testAsync('Deze week: five days, past days locked, a switch per ride and the two time columns, tokens only (no inline style)', async () => {
   await parentOn(); const html = wijzigen(), s = text(html);
   assert.match(s, /Tijden deze week/); assert.match(s, /Heen: aankomsttijd/); assert.match(s, /Terug: klaar om op te halen/);
   assert.equal([...html.matchAll(/data-wrday="(\w\w)"/g)].map(m => m[1]).join(','), 'Ma,Di,Wo,Do,Vr');
   assert.equal((html.match(/periodDay--past/g) || []).length, 2, 'Monday and Tuesday are over');
-  assert.match(html, /id="wrRide_Do" checked/); assert.doesNotMatch(noStyle(html), /style="/);
+  assert.match(html, /class="switch on" role="switch" aria-checked="true" aria-label="Rijdt mee Heen Donderdag" data-wrtoggle="Do" data-wrdir="heen"/);
+  assert.match(html, /aria-label="Rijdt mee Terug Donderdag" data-wrtoggle="Do" data-wrdir="terug"/); assert.doesNotMatch(html, /wrRide_/);
+  assert.doesNotMatch(noStyle(html), /style="/);
   assert.match(html, /id="wrHeen_Do"[^>]*value="10:15"/); assert.match(html, /id="wrTerug_Do"[^>]*value="18:00"/);
   assert.match(html, /id="wrSubmit"/); assert.match(html, /id="wrCancel"/);
 });
@@ -69,9 +71,33 @@ await testAsync('Volgende week: nothing is over, the title says next week', asyn
   assert.match(text(html), /Tijden volgende week/); assert.doesNotMatch(html, /periodDay--past/);
   assert.match(html, /data-wrweek="next" aria-pressed="true"/);
 });
-await testAsync('"Rijdt niet mee" hides the time fields of that day', async () => {
+await testAsync('a day that does not ride: both switches off, no time fields, "Rijdt niet mee" in both cells', async () => {
   await parentOn(); wijzigen(); S.wrForm.days.Do.rides = false; const html = wijzigen();
-  assert.match(html, /id="wrRide_Do"><span>|id="wrRide_Do">/); assert.doesNotMatch(html, /id="wrHeen_Do"/);
+  assert.doesNotMatch(html, /id="wrHeen_Do"/); assert.doesNotMatch(html, /id="wrTerug_Do"/);
+  assert.match(html, /class="switch" role="switch" aria-checked="false" aria-label="Rijdt mee Heen Donderdag"/);
+  assert.equal((html.match(/aria-checked="false" aria-label="Rijdt mee (Heen|Terug) Donderdag"/g) || []).length, 2);
+});
+await testAsync('a switch off turns that ride off and keeps the other; both off = the day off; on again brings the time back', async () => {
+  await parentOn(); wijzigen(); fillInputs();
+  toggleRide('Do', 'terug'); let d = S.wrForm.days.Do, html = dom.html('tab-deviation');
+  assert.deepEqual([d.rides, d.heen, d.terug], [true, '10:15', '']); assert.doesNotMatch(html, /id="wrTerug_Do"/); assert.match(html, /id="wrHeen_Do"/);
+  fillInputs(); toggleRide('Do', 'heen'); d = S.wrForm.days.Do;
+  assert.deepEqual([d.rides, d.heen, d.terug], [false, '', '']);
+  fillInputs(); toggleRide('Do', 'terug'); d = S.wrForm.days.Do;
+  assert.deepEqual([d.rides, d.heen, d.terug], [true, '', '18:00'], 'only the ride that was switched on comes back, with its own time');
+  fillInputs(); toggleRide('Do', 'heen'); d = S.wrForm.days.Do;
+  assert.deepEqual([d.rides, d.heen, d.terug], [true, '10:15', '18:00']); assert.equal(S.wrForm.touched, true);
+});
+await testAsync('a ride the fixed rooster does not have (Wednesday): the switch opens an empty time to fill in', async () => {
+  await parentOn(); wijzigen(); fillInputs();
+  assert.equal(switchOn(dom.html('tab-deviation'), 'Wo', 'heen'), false); assert.doesNotMatch(dom.html('tab-deviation'), /id="wrHeen_Wo"/);
+  toggleRide('Wo', 'heen'); const html = dom.html('tab-deviation');
+  assert.match(html, /id="wrHeen_Wo"[^>]*value=""/); assert.equal(switchOn(html, 'Wo', 'heen'), true); assert.equal(S.wrForm.days.Wo.rides, true);
+});
+await testAsync('the switches hand in the same thing as an emptied time: Thursday terug off = a mark at once, no request', async () => {
+  const fake = await parentOn(); wijzigen(); fillInputs(); toggleRide('Do', 'terug'); fillInputs();
+  assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), true);
+  assert.deepEqual(fake.get('deviations/Do_terug').ovGirlIds, ['f2']); assert.ok(!fake.get('weekRequests/2026-W40_Do_f2') || fake.get('weekRequests/2026-W40_Do_f2').status !== 'pending');
 });
 
 console.log('=== handing in ===');
@@ -163,13 +189,13 @@ await testAsync('Mijn week: the button spans the width with an icon, in one stac
 console.log('=== this week: the toggles of Mijn week and the form are two views of the same marks ===');
 const marksIn = fake => { S.deviations = Object.fromEntries([...fake.store.keys()].filter(k => k.startsWith('deviations/')).map(k => [k.slice(11), fake.get(k)])); };   // what the live listener does
 const toggle = async (fake, day, dir, off) => { await withFakeNowAsync(NOW, () => setReturnByPublicTransport(day, 'f2', off, dir)); marksIn(fake); };
-const rideTicked = day => new RegExp('id="wrRide_' + day + '" checked').test(wijzigen());
+const rideTicked = day => { const h = wijzigen(); return switchOn(h, day, 'heen') || switchOn(h, day, 'terug'); };
 await testAsync('a toggle of one ride off in Mijn week: the form shows that time empty, the other time and "Rijdt mee" stay', async () => {
   const fake = await parentOn(); await toggle(fake, 'Do', 'heen', true); S.wrForm = null;
   const html = wijzigen();
-  assert.match(html, /id="wrHeen_Do" value=""/); assert.match(html, /id="wrTerug_Do" value="18:00"/); assert.equal(rideTicked('Do'), true);
+  assert.doesNotMatch(html, /id="wrHeen_Do"/); assert.equal(switchOn(html, 'Do', 'heen'), false); assert.match(html, /id="wrTerug_Do"[^>]*value="18:00"/); assert.equal(switchOn(html, 'Do', 'terug'), true);
   S.wrForm = null; await toggle(fake, 'Do', 'heen', false); await toggle(fake, 'Do', 'terug', true); S.wrForm = null;
-  const h2 = wijzigen(); assert.match(h2, /id="wrHeen_Do" value="10:15"/); assert.match(h2, /id="wrTerug_Do" value=""/);
+  const h2 = wijzigen(); assert.match(h2, /id="wrHeen_Do"[^>]*value="10:15"/); assert.doesNotMatch(h2, /id="wrTerug_Do"/); assert.equal(switchOn(h2, 'Do', 'terug'), false);
 });
 await testAsync('both rides off in Mijn week: "Rijdt mee" is unticked in the form for that day, the other days are not touched', async () => {
   const fake = await parentOn(); await toggle(fake, 'Do', 'heen', true); await toggle(fake, 'Do', 'terug', true); S.wrForm = null;
