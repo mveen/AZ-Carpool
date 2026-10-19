@@ -57,6 +57,8 @@ function formFor(w) {
   }
   return S.wrForm;
 }
+// One ride (heen or terug) of a day is "on" while the day rides and it has a time (or was just switched on and waits for one).
+const isOn = (d, dir) => d.rides !== false && ((d[dir] || '') !== '' || !!(d.want && d.want[dir]));
 const sameAsStandard = (d, std) => d.rides !== false && (d.heen || '') === (std.heen || '') && (d.terug || '') === (std.terug || '');
 
 function weekSegmentHtml() {
@@ -72,14 +74,21 @@ function formHtml(w) {
   const rows = REQUEST_DAYS.map(day => {
     const d = f.days[day], past = isDayPast(wk, day), iso = weekKeyDayIso(wk, day);
     const changed = !past && !sameAsStandard(d, std[day]);
-    const input = (dir, label) => `<input type="time" class="periodTime wrTime${(d[dir] || '') !== (std[day][dir] || '') ? ' changed' : ''}" id="${dir === 'heen' ? 'wrHeen_' : 'wrTerug_'}${day}" value="${esc(d[dir] || '')}" aria-label="${esc(label)} ${esc(dayName(day))}"${past ? ' disabled' : ''}>`;
+    const input = (dir, label) => `<input type="time" class="periodTime wrTime${(d[dir] || '') !== (std[day][dir] || '') ? ' changed' : ''}" id="${dir === 'heen' ? 'wrHeen_' : 'wrTerug_'}${day}" value="${esc(d[dir] || '')}" aria-label="${esc(label)} ${esc(dayName(day))}">`;
+    // One cell per ride, on one line: the switch (small version of the one in Mijn week), then the time, or "Rijdt niet mee" while it is off.
+    const cell = (dir, label) => {
+      const on = isOn(d, dir), name = t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
+      return `<div class="wrCell">
+          <button type="button" class="switch switch--sm${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(t('ov.switchLabel', { p1: name, p2: dayName(day) }))}" data-wrtoggle="${day}" data-wrdir="${dir}"><span class="switch__track"><span class="switch__knob">${phIcon(on ? 'car-profile-bold' : 'x-bold')}</span></span></button>
+          ${on ? input(dir, label) : `<div class="wrCell__off">${t('weekrooster.form.notRiding')}</div>`}
+        </div>`;
+    };
     const body = past
       ? `<p class="muted">${t('weekrooster.form.past')}</p>`
-      : d.rides === false ? '' : `<div class="grid2">${input('heen', t('weekrooster.form.heenAria'))}${input('terug', t('weekrooster.form.terugAria'))}</div>`;
-    return `<div class="periodDay${changed ? ' changed' : ''}${past ? ' periodDay--past' : ''}" data-wrday="${day}">
+      : `<div class="grid2">${cell('heen', t('weekrooster.form.heenAria'))}${cell('terug', t('weekrooster.form.terugAria'))}</div>`;
+    return `<div class="periodDay${changed ? ' changed' : ''}${past ? ' periodDay--past wrPastDay' : ''}" data-wrday="${day}">
         <div class="periodDayHead">
           <span><strong>${esc(dayUp(day))}</strong> <span class="muted">${esc(isoDayLabel(iso, ''))}</span></span>
-          <label class="periodRide" for="wrRide_${day}"><input type="checkbox" class="wrRideInput" id="wrRide_${day}"${d.rides === false ? '' : ' checked'}${past ? ' disabled' : ''}> <span>${t('weekrooster.form.rides')}</span></label>
         </div>
         ${body}
       </div>`;
@@ -161,8 +170,6 @@ export function weekroosterBodyHtml() {
 function readForm() {
   const f = S.wrForm; if (!f) return;
   REQUEST_DAYS.forEach(day => {
-    const ride = document.getElementById('wrRide_' + day);
-    if (ride && !ride.disabled) f.days[day].rides = !!ride.checked;
     ['heen', 'terug'].forEach(dir => {
       const el = document.getElementById((dir === 'heen' ? 'wrHeen_' : 'wrTerug_') + day);
       if (el && !el.disabled) f.days[day][dir] = el.value || '';
@@ -183,6 +190,27 @@ function markChanged() {
   });
 }
 
+// A switch of one ride: off empties the time (what an emptied time always meant: "rijdt niet mee" on that ride) and remembers it, on brings it back.
+// Both rides off = the whole day off. Nothing new is stored: the form hands in the same fields as before.
+export function toggleRide(day, dir) {
+  const f = S.wrForm; if (!f || !f.days[day]) return;
+  readForm();
+  const d = f.days[day], std = standardTimes(myFamilyId(), f.which)[day] || {}, other = dir === 'heen' ? 'terug' : 'heen';
+  f.touched = true;
+  d.keep = d.keep || {}; d.want = d.want || {};
+  if (isOn(d, dir)) {
+    d.keep[dir] = d[dir] || ''; d[dir] = ''; d.want[dir] = false;
+    if (!isOn(d, other)) d.rides = false;
+  } else {
+    if (d.rides === false) { d.keep[other] = d[other] || ''; d[other] = ''; d.want[other] = false; }   // a day that was off comes back with only this ride
+    d.rides = true; d[dir] = d.keep[dir] || std[dir] || ''; d.want[dir] = true;
+  }
+  const needsTime = !d[dir];
+  renderDeviationTab();
+  const el = needsTime && document.getElementById((dir === 'heen' ? 'wrHeen_' : 'wrTerug_') + day);
+  if (el && el.focus) el.focus();
+}
+
 export async function submitWeekForm() {
   const f = S.wrForm; if (!f) return false;
   readForm();
@@ -199,7 +227,7 @@ export async function submitWeekForm() {
 export function wireWeekrooster() {
   document.querySelectorAll('[data-wrweek]').forEach(b => b.onclick = () => { hapticTap(); S.wrWeek = b.dataset.wrweek === 'next' ? 'next' : 'this'; S.wrForm = null; renderDeviationTab(); });
   document.querySelectorAll('.wrTime').forEach(el => el.oninput = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); markChanged(); });
-  document.querySelectorAll('.wrRideInput').forEach(el => el.onchange = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); renderDeviationTab(); });
+  document.querySelectorAll('[data-wrtoggle]').forEach(b => b.onclick = () => { hapticTap(); toggleRide(b.dataset.wrtoggle, b.dataset.wrdir); });
   const cancel = document.getElementById('wrCancel'); if (cancel) cancel.onclick = () => { hapticTap(); S.wrForm = null; renderDeviationTab(); };
   const submit = document.getElementById('wrSubmit'); if (submit) submit.onclick = () => { hapticTap(); return submitWeekForm(); };
   const edit = document.getElementById('wrEdit'); if (edit) edit.onclick = () => { hapticTap(); S.wrForm = null; formFor(which()); renderDeviationTab(); };
