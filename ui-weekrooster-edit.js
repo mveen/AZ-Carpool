@@ -5,12 +5,13 @@
 // by someone who does not decide that day is marked on the deviation (selfBy, selfAt), so the day coordinator sees "Zelf gewijzigd".
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { closeSheet, esc, hapticTap, phIcon } from './ui-common.js';
+import { closeSheet, esc, hapticTap, phIcon, showToast } from './ui-common.js';
 import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { activateTab } from './app.js';
 import { attachDeviationHandlers, conclusieCardHtml, renderDevDirection, wireWhatsAppButton } from './ui-deviation.js';
 import { renderSchedule } from './ui-schedule.js';
-import { adviceForDay, myDeciderDays } from './weekrooster-data.js';
+import { adviceForDay, closeDayRequests, myDeciderDays } from './weekrooster-data.js';
+import { renderMyWeek } from './ui-myweek.js';
 import { dayName, deciderLabel, weekroosterActive } from './ui-weekrooster-form.js';
 import { activeDeviation } from './rides.js';
 import { pendingOfDay } from './weekrooster-data.js';
@@ -74,11 +75,28 @@ export function scheduleDayFootHtml(day) {
     : `<button type="button" class="linkbtn" data-wroverride="${day}">${esc(t('weekrooster.edit.override_link'))}</button>`;
 }
 
+async function settleDay(day) {
+  const r = await closeDayRequests(day);
+  if (!r.ok || !r.n) return;
+  showToast(t(r.n === 1 ? 'weekrooster.edit.settledOne' : 'weekrooster.edit.settledMany', { p1: r.n }), {
+    action: { label: t('deviation.ongedaan'), run: async () => { if (await r.undo()) { showToast(t('weekrooster.advice.undone')); renderSchedule(); renderMyWeek(); } } },
+  });
+  renderSchedule(); renderMyWeek();
+}
+
 export function wireEdit(box) {
   box.querySelectorAll('[data-wredit]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wredit); });
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
   const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day }; S.wrDone = null; renderSchedule(); };
-  for (const id of ['wrEditBack', 'wrEditDone']) { const b = document.getElementById(id); if (b) b.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); }; }
+  const back = document.getElementById('wrEditBack'); if (back) back.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); };
+  // Klaar = the day coordinator is done: the open requests of the day are settled. Not for "Toch zelf wijzigen" (a parent who does not decide).
+  const done = document.getElementById('wrEditDone');
+  if (done) done.onclick = () => {
+    hapticTap();
+    const { day, override } = S.wrEdit || {};
+    S.wrEdit = null; renderSchedule();
+    if (day && !override && mayPlanDay(day)) settleDay(day);
+  };
   const tg = document.getElementById('conclusieToggle'); if (tg) tg.onclick = () => { hapticTap(); S.wrMsgOpen = !S.wrMsgOpen; renderSchedule(); };
   if (S.wrEdit) wireWhatsAppButton('conclusieBtn', () => buildConclusieMessage(S.wrEdit.day));
   if (S.wrEdit && weekroosterActive()) attachDeviationHandlers();
