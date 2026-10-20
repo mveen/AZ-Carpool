@@ -325,6 +325,7 @@ test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is bui
   ['look', 'headline', 'accept', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
   assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.headline', { p1: 'vrijdag 23 okt' }), 'Advies · vrijdag 23 okt');
   assert.equal(t('weekrooster.advice.doneMany', { p1: 3 }), '3 wijzigingen doorgevoerd');
+  assert.equal(t('weekrooster.edit.settledOne'), '1 aanvraag afgehandeld'); assert.equal(t('weekrooster.edit.settledMany', { p1: 3 }), '3 aanvragen afgehandeld');
   // the screen has no reason, no variant switch and no counters any more: those texts are gone
   ['weekrooster.reason.prefix', 'weekrooster.reason.out', 'weekrooster.advice.zuinig', 'weekrooster.advice.gedoe', 'weekrooster.advice.carsMany', 'weekrooster.advice.now'].forEach(k => assert.equal(hasKey(k), false, k));
 });
