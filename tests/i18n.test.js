@@ -349,6 +349,10 @@ test('Tijd en plek van de chauffeur has its texts (button, sheet, warnings, chan
   assert.match(t('driverCar.warn.laat', { p1: '07:00' }), /berekende tijd is 07:00\. Later vertrekken/);
   assert.equal(t('driverCar.tijdGewijzigd', { p1: '12:00', p2: '12:30' }), 'Vertrektijd gewijzigd: was 12:00, nu 12:30');
 });
+test('child time titles: Heen = Aanwezig om, Terug = Klaar om', () => {
+  assert.equal(t('deviation.aanwezig_om', { time: '07:30' }), 'Aanwezig om 07:30');
+  assert.equal(t('deviation.klaar_om', { time: '16:45' }), 'Klaar om 16:45');
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
