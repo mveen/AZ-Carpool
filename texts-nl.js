@@ -1242,6 +1242,8 @@ export default {
   "weekrooster.advice.doneOne": "1 wijziging doorgevoerd",
   "weekrooster.advice.doneMany": "{p1} wijzigingen doorgevoerd",
   "weekrooster.advice.undone": "Teruggezet",
+  "weekrooster.edit.settledOne": "1 aanvraag afgehandeld",
+  "weekrooster.edit.settledMany": "{p1} aanvragen afgehandeld",
   "weekrooster.advice.applied": "Doorgevoerd voor {p1}",
   "weekrooster.advice.closeDone": "Sluiten",
   "weekrooster.advice.noSolution": "Hier is geen indeling voor te maken. Pas het rooster zelf aan.",

@@ -359,6 +359,37 @@ export async function acceptDay(day, variant) {
     return { ok: false };
   } finally { S.wrBusy = false; }
 }
+// "Klaar" after the day coordinator planned a day by hand (Zelf indelen): the plan IS the decision, so the pending requests of that day
+// become 'accepted' (the same as Overnemen, but the cars stay as they are). Without this the amber card in Mijn week of the askers would
+// stay until the day is over. ONE batch; returns { ok, n, undo } (n = 0 when nothing was waiting).
+export async function closeDayRequests(day) {
+  if (!db || !weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return { ok: false, n: 0 };
+  const open = pendingOfDay(day);
+  if (!open.length) return { ok: true, n: 0 };
+  const nowMs = Date.now(), me = myFamilyId();
+  S.wrBusy = true;
+  try {
+    const batch = db.batch();
+    const agreed = open.map(r => ({ id: r.id, before: stripId(r), after: acceptRequest(stripId(r), me, nowMs) }));
+    agreed.forEach(a => batch.set('weekRequests/' + a.id, a.after));
+    await batch.commit();
+    applyLocal({}, agreed.map(a => [a.id, a.after]));
+    const undo = async () => {
+      if (!db) return false;
+      try {
+        const b = db.batch();
+        agreed.forEach(a => b.set('weekRequests/' + a.id, a.before));
+        await b.commit();
+        applyLocal({}, agreed.map(a => [a.id, a.before]));
+        return true;
+      } catch (e) { showToast(t('data.mislukt') + (e && e.message || e)); return false; }
+    };
+    return { ok: true, n: agreed.length, undo };
+  } catch (e) {
+    showToast(t('data.opslaan_mislukt') + (e && e.message || e));
+    return { ok: false, n: 0 };
+  } finally { S.wrBusy = false; }
+}
 const stripId = r => { const { id, ...doc } = r; return doc; };
 // What was just saved shows at once (the live listeners confirm it a moment later).
 function applyLocal(devDocs, reqPairs) {

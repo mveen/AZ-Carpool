@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime, ovGirlsFor } from '../rides.js';
-import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, purgeStaleWeekRequests, directPlan, releaseNotRidingRequest, currentMarks } from '../weekrooster-data.js';
+import { weekroosterMode, weekroosterOn, setWeekrooster, weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, directPlan, releaseNotRidingRequest, currentMarks } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -221,6 +221,27 @@ await testAsync('after Overnemen the accepted time shows in the ride; Ongedaan p
     assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending'); assert.equal(S.dayRequests['2026-W40_Do_f3'] ? S.dayRequests['2026-W40_Do_f3'].status : S.weekRequests['2026-W40_Do_f3'].status, 'pending');
     assert.equal(fake.get('deviations/Do_heen').times, undefined);
   });
+});
+await testAsync('closeDayRequests settles the pending requests of the day without touching the cars; Ongedaan puts them back', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3'), 'weekRequests/2026-W40_Vr_f3': advDoc('Vr', 'f3') });
+  await withFakeNowAsync(NOW, async () => {
+    const r = await closeDayRequests('Do'); assert.equal(r.ok, true); assert.equal(r.n, 1);
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'accepted'); assert.equal(fake.get('weekRequests/2026-W40_Do_f3').decidedBy, 'f2');
+    assert.equal(fake.get('weekRequests/2026-W40_Vr_f3').status, 'pending', 'another day is not touched');
+    assert.equal(fake.get('deviations/Do_heen'), undefined);
+    assert.equal(adviceForDay('Do').requests.length, 0);
+    assert.equal((await closeDayRequests('Do')).n, 0, 'nothing left: no write, no toast');
+    assert.equal(await r.undo(), true); assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending');
+  });
+});
+await testAsync('closeDayRequests: a failed write changes nothing, and it does nothing while the switch is off', async () => {
+  const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') });
+  fake.failWrites('weekRequests', 'denied');
+  await withFakeNowAsync(NOW, async () => { assert.equal((await closeDayRequests('Do')).ok, false); assert.equal(S.wrBusy, false); });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending');
+  const off = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') }, { weekrooster: { mode: 'uit' } });
+  await withFakeNowAsync(NOW, async () => { assert.equal((await closeDayRequests('Do')).ok, false); });
+  assert.equal(off.get('weekRequests/2026-W40_Do_f3').status, 'pending');
 });
 await testAsync('a failed batch writes nothing and a second tap while busy does nothing', async () => {
   const fake = await asDay({ 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3') });

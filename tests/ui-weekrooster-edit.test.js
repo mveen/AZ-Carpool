@@ -45,6 +45,24 @@ await testAsync('Zelf indelen is one screen: the request card on top (no buttons
   assert.equal(S.wrEdit, null); assert.match(rooster(), /dayPills/);
 });
 
+const pendingDoc = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+await testAsync('Klaar after Zelf indelen settles the open requests of the day (the cars stay), Ongedaan puts them back', async () => {
+  const fake = await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': pendingDoc });
+  S.wrEdit = { day: 'Do', override: false }; rooster();
+  wireEdit({ querySelectorAll: () => [] });
+  await withFakeNowAsync(NOW, async () => { dom.doc.getElementById('wrEditDone').onclick(); await tick(); await tick(); });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'accepted'); assert.equal(fake.get('weekRequests/2026-W40_Do_f3').decidedBy, 'f2');
+  assert.equal(fake.get('deviations/Do_heen'), undefined, 'no cars were touched');
+});
+await testAsync('Terug (and Toch zelf wijzigen) leave the requests open: only the day coordinator settles by Klaar', async () => {
+  const fake = await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': pendingDoc });
+  S.wrEdit = { day: 'Do', override: false }; rooster(); wireEdit({ querySelectorAll: () => [] });
+  await withFakeNowAsync(NOW, async () => { dom.doc.getElementById('wrEditBack').onclick(); await tick(); await tick(); });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending');
+  S.wrEdit = { day: 'Do', override: true }; rooster(); wireEdit({ querySelectorAll: () => [] });
+  await withFakeNowAsync(NOW, async () => { dom.doc.getElementById('wrEditDone').onclick(); await tick(); await tick(); });
+  assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending');
+});
 await testAsync('from Zelf indelen there is a way back to the Advies (next to Klaar), for who decides the day and only while an advice exists', async () => {
   const req = { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
   await setup({ dayCoordinators: { Do: 'f2' } }, req); S.wrEdit = { day: 'Do', override: false };
