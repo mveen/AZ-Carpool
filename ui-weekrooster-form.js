@@ -252,6 +252,15 @@ function askedLine(labelKey, doc, dir, day) {
   const was = now && now !== asked ? `<s>${esc(now)}</s> ` : '';
   return `<div class="reqBlock__line">${esc(t(labelKey))} ${was}${asked ? `<b>${esc(asked)}</b>` : `<span>${esc(t('weekrooster.done.out'))}</span>`}</div>`;
 }
+// The time the family itself asked for on one ride of this week while the request is still open ('' when nothing is open or the ride is not asked).
+// Her own time ("aanwezig om" / "klaar om") is a fact about her, not a decision of the day coordinator: it shows at once. Only the car (departure,
+// which car) waits for the coordinator, so rideTime() (the planning input) stays on the time that holds now.
+export function openAskedTime(day, dir) {
+  if (!weekroosterActive()) return '';
+  const wk = weekKeyFor('this'), doc = S.weekRequests[requestId(wk, day, myFamilyId())];
+  if (!doc || doc.rides === false || requestState(doc, Date.now(), dayEndMs(wk, day)) !== 'pending') return '';
+  return doc[dir] || '';
+}
 // The dashed amber block in the card of a day of THIS week that has an open request: what was asked ("aanwezig" and "klaar", each on its own line,
 // the time that holds now struck through), who decides, and Intrekken (that day only).
 export function requestBlockHtml(day) {

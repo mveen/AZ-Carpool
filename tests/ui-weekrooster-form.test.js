@@ -15,7 +15,7 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { syncWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
 
@@ -295,6 +295,19 @@ await testAsync('the form: one time emptied and the other really changed = marks
 await testAsync('the form opens fresh after a toggle in Mijn week (no old copy of the form is kept)', async () => {
   const fake = await parentOn(); wijzigen(); assert.equal(S.wrForm.days.Do.heen, '10:15');
   await toggle(fake, 'Do', 'heen', true); S.wrForm = null; wijzigen(); assert.equal(S.wrForm.days.Do.heen, '');
+});
+await testAsync('Mijn week: an open request already counts for HER own time ("aanwezig om" / "klaar om"); only the car waits for the coordinator, and the other days keep the standard time', async () => {
+  await parentOn(); await submitThis([['Do', '12:30', '19:00']]);
+  const html = mijnWeek(), card = html.slice(html.indexOf('Donderdag')), s = text(card);
+  assert.match(s, /aanwezig om 12:30/, 'her asked arrival time, not the standard 10:15'); assert.match(s, /klaar om 19:00/);
+  assert.doesNotMatch(card.slice(0, card.indexOf('reqBlock')), /aanwezig om 10:15/, 'the standard time is no longer shown as hers');
+  const other = html.slice(html.indexOf('Vrijdag')); assert.doesNotMatch(text(other), /aanwezig om 12:30/, 'another day is not touched');
+  assert.equal(openAskedTime('Do', 'heen'), '12:30'); assert.equal(openAskedTime('Vr', 'heen'), '');
+});
+await testAsync('Mijn week: her own time follows the request the moment it is withdrawn (back to the standard time)', async () => {
+  await parentOn(); await submitThis([['Do', '12:30', '19:00']]);
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), true); await tick();
+  const s = text(mijnWeek()); assert.doesNotMatch(s, /aanwezig om 12:30|klaar om 19:00/); assert.match(s, /aanwezig om 10:15/);
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

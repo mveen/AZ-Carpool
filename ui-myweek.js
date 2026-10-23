@@ -21,7 +21,7 @@ import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-roost
 import { openDayEditor } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { timeChangeOf } from './driver-car.js';
-import { myWeekNextWeekHtml, myWeekWeekroosterHtml, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
+import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
 export function matchDistanceText(m){
@@ -130,7 +130,8 @@ export function renderMyWeek(){
       status += `<div class="rideRow__extra">${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</div>${timeChangedLine(dg)}${driverCarButtonHtml(day,direction)}`;
     }
     // Her own time: when she has to be there (heen) / when she is done (terug).
-    const daughterLine = s ? `<div class="daughterTime"><span>${esc(t(direction==='heen' ? 'myweek.daughter_heen' : 'myweek.daughter_terug', { name: daughterName }))} <b>${esc(s)}</b></span></div>` : '';
+    const ownTime = openAskedTime(day,direction) || s;   // an open request already counts for HER time; the car waits for the coordinator
+    const daughterLine = ownTime ? `<div class="daughterTime"><span>${esc(t(direction==='heen' ? 'myweek.daughter_heen' : 'myweek.daughter_terug', { name: daughterName }))} <b>${esc(ownTime)}</b></span></div>` : '';
     // US-06: parent switch "Rijdt niet mee" (no reason needed), not for days already past, and not for Flex.
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const sw = !dayPassed && !isFlex(myFam)

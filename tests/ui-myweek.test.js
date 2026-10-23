@@ -424,5 +424,14 @@ test('design B: "terug" says "klaar om", "heen" says "aanwezig om"', () => {
   assert.match(s, /Jahaimy aanwezig om 08:30/); assert.match(s, /Jahaimy klaar om 17:30/);
 });
 
+await testAsync('an open request changes HER time in the ride row at once ("klaar om" is hers, not the coordinator\'s); the car and the other days stay as they were', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '12:30', terug: '19:00' } }));
+  withFakeNow(NOW, () => renderMyWeek());
+  const h = dom.html('tab-myweek'), card = text(h.slice(h.indexOf('Donderdag'), h.indexOf('Vrijdag')));
+  assert.match(card, /aanwezig om 12:30/); assert.match(card, /klaar om 19:00/); assert.doesNotMatch(card, /aanwezig om 10:15/);
+  assert.match(text(h.slice(h.indexOf('Vrijdag'))), /aanwezig om 11:00/, 'Friday keeps the standard time');
+  assert.ok(!fake.get('deviations/Do_heen'), 'no car was changed: that waits for the day coordinator');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
