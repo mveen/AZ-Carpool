@@ -15,6 +15,7 @@ import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow
 import { S } from '../state.js';
 import { renderMyWeek, matchInfoHtml, goToWijzigen } from '../ui-myweek.js';
 import { submitWeekRequests, syncWeekRequests } from '../weekrooster-data.js';
+import { PH_PATHS } from '../constants.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -78,14 +79,14 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
   assert.match(s, /Vandaag maandag 28 sep 07:30 vertrek Heen · Busstation → AFC (&#39;|')34 Jan Jansen Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar Jahaimy aanwezig om 17:30/);
+  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
 });
 test('a ride with a deviation this week is tagged "Gewijzigd", also when she has no car yet', () => {
   const s = text(renderAt(MON, {}));
-  assert.match(s, /Dinsdag 29 sep 10:15 vertrek Heen · Busstation → AFC (&#39;|')34 Nog geen rit Gewijzigd/);
+  assert.match(s, /Dinsdag 29 sep 10:15 vertrek Gewijzigd Heen · Busstation → AFC (&#39;|')34 Nog geen rit/);
 });
 test('days without any time for this girl are not shown (Wednesday)', () => {
   assert.ok(!/WO 30/.test(text(render({}))));
@@ -147,12 +148,12 @@ test('a Flex daughter has no "not planned" alerts, and sees only the days she si
   assert.match(s, /maandag 28 sep/); assert.match(s, /Jan Jansen/); assert.doesNotMatch(s, /09:00|16:00|Aanwezig om/, 'no fixed times for a Flex daughter');
   assert.doesNotMatch(s, /Donderdag 1 okt/);
 });
-test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', () => {
+test('a Flex driver in a parent\'s ride line is shown by name, without a pill', () => {
   const fams = sampleParentState().families;
   fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', schedule: {}, availability: {} };
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f9', girlIds: ['f9', 'f2'], departureTime: '07:30' }] } };
   const html = renderAt(MON, { families: fams, deviations: dev });
-  assert.match(html, /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+  assert.match(html, /Lotte Flex/); assert.doesNotMatch(html, /flexBadge|speelster-chauffeur/);
 });
 
 console.log('\n=== Terug met OV, places, distance, route link (US-06, US-15, US-21, US-22) ===');
@@ -223,8 +224,20 @@ test('US-22: matchInfoHtml(geo) makes the location a route link (Wedstrijd tab);
   const html = withUserAgent(ANDROID, () => render({ matchesSource: 'live', matches: [m], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
   assert.match(html, /<div role="button" tabindex="0" class="matchTile" data-gomatchcarpool="1">/);
   assert.match(text(html), /za 3 okt · AZ O15-1 \(Uit\) · Ajax O15-1 De Toekomst, Amsterdam Aftrap 10:00 · carpool nog niet geregeld/);
-  assert.doesNotMatch(text(html), /Wedstrijden deze week/);                     // design v2: no label above the tile
+  assert.match(text(html), /Wedstrijden deze week za 3 okt/);                    // the tile has its own heading, "Wedstrijden · deze week"
   assert.match(html, /matchTile__title.*<div class="matchTile__loc"><a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam".*matchTile__sub/s);   // US-22: the route link stays in Mijn week, directly under the title
+});
+await testAsync('the matches of this week come right after the day cards, under their own heading; "Volgende week" is last', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNowAsync(NOW, () => submitWeekRequests('next', { Ma: { rides: true, heen: '08:15', terug: '17:00' } }));
+  const m = { calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') };
+  Object.assign(S, { matchesSource: 'live', matches: [m], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });   // keep the request that was just handed in
+  withFakeNow(NOW, () => renderMyWeek());
+  assert.match(dom.html('tab-myweek'), /sectionHead__title">Volgende week/, 'the next-week block is on the page');
+  const html = dom.html('tab-myweek');
+  const iDay = html.indexOf('rideCard'), iHead = html.indexOf('sectionHead__title">Wedstrijden'), iTile = html.indexOf('class="matchTile"'), iNext = html.indexOf('sectionHead__title">Volgende week');
+  assert.ok(iDay >= 0 && iHead > iDay, 'the heading follows the day cards'); assert.ok(iTile > iHead, 'the tile follows its heading');
+  assert.ok(iNext > iTile, '"Volgende week" comes after the matches, not before them');
 });
 test('US-22: the location of a stored match ride is a link too', () => {
   const html = withUserAgent(ANDROID, () => render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
@@ -278,8 +291,8 @@ const period40 = () => ({
 });
 test('a day shows the handed-in times and the car of the temporary rooster', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
-  assert.match(s, /Dinsdag 29 sep 08:00 vertrek Heen · Busstation → AFC (&#39;|')34 Kees de Vries Jahaimy aanwezig om 09:00/);
-  assert.match(s, /12:00 vertrek Terug · AFC (&#39;|')34 → Busstation Kees de Vries Jahaimy aanwezig om 12:00/);
+  assert.match(s, /Dinsdag 29 sep Kees de Vries rijdt heen en terug 08:00 vertrek Heen · Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 09:00/);
+  assert.match(s, /12:00 vertrek Terug · AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
 });
 test('a day she does not ride is gone, and is not reported as "niet ingepland"', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
@@ -290,10 +303,22 @@ test('outside the days with a temporary rooster the week is exactly as before', 
   assert.match(s, /Do heen · aankomst 10:15/); assert.match(s, /Vr heen · aankomst 11:00/);
   assert.equal(text(render({ periods: {} })), text(render({})));
 });
+test('the pill "Gewijzigd" sits in the time column of the ride, under "vertrek", and not next to the driver', () => {
+  const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
+  const html = renderAt(MON, { ...period40(), deviations: dev });
+  assert.match(html, /<div class="rideRow__sub">was <s>12:00<\/s><\/div><span class="tag tag--warn">Gewijzigd<\/span><\/div>/);
+  const driverBtn = html.slice(html.indexOf('class="rideRow__driver"'), html.indexOf('</button>', html.indexOf('class="rideRow__driver"')));
+  assert.doesNotMatch(driverBtn, /tag/, 'no pill inside the driver button');
+});
+test('the driver button ends in a (neutral) phone icon, not in ">"', () => {
+  const html = renderAt(MON, { ...period40() });
+  const btn = html.slice(html.indexOf('class="rideRow__driver"'), html.indexOf('</button>', html.indexOf('class="rideRow__driver"')));
+  assert.ok(btn.includes(PH_PATHS['phone']), 'phone icon'); assert.ok(!btn.includes(PH_PATHS['caret-right']), 'no caret');
+});
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd Vertrektijd gewijzigd: was 12:00, nu 12:30 Jahaimy aanwezig om 12:00/);
+  assert.match(s, /12:30 was 12:00 Gewijzigd Terug · AFC (&#39;|')34 → Busstation Jan Jansen Jahaimy klaar om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {
@@ -390,5 +415,23 @@ test('finding 8: the red initial circle is gone; the line names her ("Jahaimy aa
   assert.match(text(h), /Jahaimy aanwezig om 08:30/); assert.doesNotMatch(text(h), /Aanwezig om/);
 });
 
+test('design B: the switch says in words what it does ("rijdt mee")', () => {
+  const h = renderAt(MON, {});
+  assert.match(h, /class="swWrap"/); assert.match(text(h), /rijdt mee/);
+});
+test('design B: "terug" says "klaar om", "heen" says "aanwezig om"', () => {
+  const s = text(renderAt(MON, {}));
+  assert.match(s, /Jahaimy aanwezig om 08:30/); assert.match(s, /Jahaimy klaar om 17:30/);
+});
+
+await testAsync('an open request changes HER time in the ride row at once ("klaar om" is hers, not the coordinator\'s); the car and the other days stay as they were', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '12:30', terug: '19:00' } }));
+  withFakeNow(NOW, () => renderMyWeek());
+  const h = dom.html('tab-myweek'), card = text(h.slice(h.indexOf('Donderdag'), h.indexOf('Vrijdag')));
+  assert.match(card, /aanwezig om 12:30/); assert.match(card, /klaar om 19:00/); assert.doesNotMatch(card, /aanwezig om 10:15/);
+  assert.match(text(h.slice(h.indexOf('Vrijdag'))), /aanwezig om 11:00/, 'Friday keeps the standard time');
+  assert.ok(!fake.get('deviations/Do_heen'), 'no car was changed: that waits for the day coordinator');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

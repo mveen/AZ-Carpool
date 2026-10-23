@@ -70,8 +70,8 @@ export const S = {
   wrDone: null,            // right after Overnemen: { day } (shows the Dagbericht)
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
-  myWeekReqOpen: false,    // Mijn week: the next-week requests are unfolded in the amber request card
   wrBusy: false,           // a request is being saved (a double tap makes no double request)
+  myWeekNextOpen: false,   // Mijn week: the block "Volgende week" (open requests) is unfolded; closed by default
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id
   notifications: {},       // families/<my family>/notifications/*: my in-app notifications, by document id

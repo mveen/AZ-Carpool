@@ -221,7 +221,7 @@ function devRideHtml(day,direction,idx,cars,ctx){
       `<option value="__free" ${showFree?'selected':''}>${esc(t('loc.freeOption'))}</option>`;
     const driverOk = c.driverFamilyId? (isFlex(fam(c.driverFamilyId)) || isAvailable(fam(c.driverFamilyId),day,direction)) : true;
     const driverOptions = `<option value="" ${!c.driverFamilyId?'selected':''}>${t('deviation.geen_chauffeur')}</option>` +
-      allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isFlex(f)? ' ('+t('flex.speelsterChauffeur')+')' : (isAvailable(f,day,direction)?'':t('deviation.geen_beschikbaarheid'))}</option>`).join('');
+      allFamilies.map(([id,f])=>`<option value="${id}" ${id===c.driverFamilyId?'selected':''}>${esc(f.parentName)}${isFlex(f) || isAvailable(f,day,direction)? '' : t('deviation.geen_beschikbaarheid')}</option>`).join('');
     const otherIdxs = cars.map((_,i)=>i).filter(i=>i!==idx);
     const destBtn = (k,name,city)=>`<button type="button" class="devDest${dest.key===k?' on':''}" data-devdest="${k}" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" aria-pressed="${dest.key===k}"><span class="devDestName">${esc(name)}</span><span class="devDestCity">${esc(city)}</span></button>`;
     const kidRows = girls.map(id=>{

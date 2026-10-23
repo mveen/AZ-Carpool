@@ -243,11 +243,11 @@ export async function submitWeekRequests(which, days) {
   } finally { S.wrBusy = false; }
 }
 
-// The family takes back all its open (pending) requests of one week. Returns true when something was withdrawn.
-export async function withdrawWeekRequests(which) {
+// The family takes back its open (pending) requests of one week, or of one day when onlyDay is given. Returns true when something was withdrawn.
+export async function withdrawWeekRequests(which, onlyDay) {
   if (!db || !weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return false;
   const familyId = myFamilyId(), weekKey = weekKeyFor(which), nowMs = Date.now();
-  const open = REQUEST_DAYS.map(day => S.weekRequests[requestId(weekKey, day, familyId)]).filter(r => r && r.status === 'pending');
+  const open = REQUEST_DAYS.map(day => S.weekRequests[requestId(weekKey, day, familyId)]).filter(r => r && r.status === 'pending' && (!onlyDay || r.day === onlyDay));
   if (!open.length) return false;
   S.wrBusy = true;
   try {

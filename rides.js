@@ -144,17 +144,14 @@ export function plainGirlName(id, st=S){ const f=fam(id, st); return f.girlName|
 // (standaard or back-up) for a shift IS a possible driver there (a "speelster-chauffeur"), like any other driver.
 export function isFlex(f){ return !!f && f.familyType==='flex'; }
 
-// A Flex driver is a player who drives herself: marked "speelster-chauffeur" wherever her name shows.
+// The driver's name; a Flex driver (a player who drives herself) is shown like any other driver, without a badge.
 export function plainDriverName(id, st=S){
   if(!id) return t('driver.none');
-  const f = fam(id, st);
-  return (f.parentName||'?') + (isFlex(f)? ' ('+t('flex.speelsterChauffeur')+')' : '');
+  return fam(id, st).parentName||'?';
 }
-// Same, as HTML: escaped name plus a small badge for a Flex driver.
+// Same, as HTML (escaped).
 export function driverNameHtml(id, st=S){
-  if(!id) return esc(t('driver.none'));
-  const f = fam(id, st);
-  return esc(f.parentName||'?') + (isFlex(f)? ` <span class="badge flexBadge">${esc(t('flex.speelsterChauffeur'))}</span>` : '');
+  return esc(plainDriverName(id, st));
 }
 
 // ---------- Rooster tab ----------
