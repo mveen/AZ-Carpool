@@ -11,7 +11,7 @@ import { myFamilyId } from './coordinator.js';
 import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
 import { dayChanges } from './day-changes.js';
 import { DAYS, KM_COST_EUR, todayKeyNow } from './constants.js';
-import { dateForWeekday, effectivePlanningDate, startOfWeek } from './dates.js';
+import { dateForWeekday } from './dates.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { activateTab } from './app.js';
@@ -191,14 +191,14 @@ export function renderMyWeek(){
   const dayCardHtml = d => `<div class="rideCard"><div class="rideCard__head">${esc(d.label)} <small>${dateText(d.date)}</small></div>${d.rows}</div>`;
 
   // Match rides on days outside Ma–Vr of the planning week (the weekend) get their own card.
-  const planningMonday = startOfWeek(effectivePlanningDate());
   const extraKeys = Object.keys(matchRidesByDate).filter(k=>!weekdayDates.has(k)).sort((a,b)=>matchDateByKey[a]-matchDateByKey[b]);
   const extraCard = key => {
     const d = matchDateByKey[key];
     const name = d.toLocaleDateString(locale(),{weekday:'long'});
     return `<div class="rideCard${key===todayStr?' rideCard--match':''}"><div class="rideCard__head">${esc(name.charAt(0).toUpperCase()+name.slice(1))} <small>${dateText(d)}</small></div>${matchRowsFor(d)}</div>`;
   };
-  const afterCards = extraKeys.filter(k=>matchDateByKey[k]>=planningMonday).map(extraCard).join('');
+  // myMatchRides already starts at today, so after Friday 19:00 this weekend's matches stay (until they are played) next to next week's days.
+  const afterCards = extraKeys.map(extraCard).join('');
 
   const todayDay = dayInfo.find(d=>d.isToday);
   const todayCardHtml = todayDay ? `<div class="rideCard rideCard--today">
