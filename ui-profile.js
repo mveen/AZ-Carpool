@@ -44,7 +44,7 @@ export function stopImpersonate(){
   recomputeCanEdit();
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=S.canEdit?'':'none';
   showToast(t('profile.terug_naar_coordinatorweergave'));
-  S.roosterMode='standard';
+  S.roosterMode='week';
   renderAll();
   activateTab('beheer');
 }

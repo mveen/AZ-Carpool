@@ -139,7 +139,7 @@ export function activateTab(tab){
 export function chooseDefaultTab(){
   if(S.defaultTabChosen || !S.appReady) return;
   S.defaultTabChosen = true;
-  S.roosterMode = S.canEdit? 'standard' : 'week';
+  S.roosterMode = 'week'; // everyone, coordinator included, opens Rooster on "Deze week" (changes to this week)
   if(!S.hashTabApplied) activateTab('myweek'); // Mijn week is the home page for everyone
   renderSchedule();
 }

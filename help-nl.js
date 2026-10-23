@@ -171,7 +171,7 @@ export default [
     keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen tijdelijk rooster vakantie periode weekoverzicht pdf afdrukken printen',
     body: [
       'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Bij elke rit staat waar de auto ophaalt en heen gaat.',
-      'Kies bovenaan Deze week (met eventuele wijzigingen) of Vast rooster (zoals het elke week is).',
+      'Het Rooster opent op Deze week (met eventuele wijzigingen). Kies bovenaan Vast rooster voor hoe het elke week is.',
       'Mag jij de dag indelen (coördinator of dagcoördinator)? Dan staat rechts op de regel Dagcoördinator de knop Zelf indelen. Daarmee verplaats je meisjes en wissel je chauffeurs voor die dag. Staat er een gele kaart Actie nodig met aanvragen? Dan staat de knop Zelf indelen daar naast Advies bekijken.',
       'Bij elk meisje in een auto staat haar eigen tijd: heen wanneer ze er moet zijn, terug wanneer ze klaar is. De meisjes staan op tijd (de vroegste eerst) en bij dezelfde tijd op alfabet. Is de vertrektijd van een auto gewijzigd, dan staat onder de tijd klein "was" met de oude tijd. Komt de auto bij Heen later aan dan een meisje er moet zijn, of is ze bij Terug pas klaar nadat de auto vertrekt, dan staat er een gele waarschuwing.',
       'Onder de auto\'s staat één regel: Rijdt niet mee en Back-up, elk met het aantal. Tik erop om de namen te zien. Tik op de naam van een back-up om die chauffeur te vragen via WhatsApp of Bellen.',
