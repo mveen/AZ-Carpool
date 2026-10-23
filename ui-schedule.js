@@ -238,9 +238,9 @@ export function renderDirectionWeek(day,direction){
   const base = baseCars(day,direction);
   const cardsHtml = cars.map(c=>{
     const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
-    const change = timeChangeOf(base,c);   // "was 15:30", the same as in Mijn week
+    const change = timeChangeOf(base,c);   // "was 15:30" (no strike-through: the word "was" says it)
     const own = myId && c.driverFamilyId===myId;
-    const timeHtml = `<div class="timeCol"><span class="carCard__time">${esc(c.departureTime||'--:--')}</span>${change? `<span class="wasTime">${esc(t('myweek.was'))} <s>${esc(change.from)}</s></span>` : ''}</div>`;
+    const timeHtml = `<div class="timeCol"><span class="carCard__time">${esc(c.departureTime||'--:--')}</span>${change? `<span class="wasTime">${esc(t('myweek.was'))} ${esc(change.from)}</span>` : ''}</div>`;
     const carBtn = own? driverCarButtonHtml(day,direction,'btn secondary small') : '';
     return `<div class="carCard${change? ' carCard--changed' : ''}">
       <div class="carCard__head">

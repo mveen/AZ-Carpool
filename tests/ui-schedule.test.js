@@ -14,6 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
+import { groupsFor } from '../rides.js';
 import { moveGirlToGroup, renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
 const dom = installFakeDom();
@@ -80,6 +81,15 @@ test('Deze week: a girl who is ready after the car leaves gets an amber warning 
   });
   assert.match(html, /carCard__note--warn/);
   assert.match(text(html), /is pas klaar om \d\d:\d\d/);
+});
+test('Deze week: a changed departure shows "was <old time>" as plain text (no strike-through) and an amber card edge', () => {
+  const html = render(() => {
+    sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Ma' });
+    const [, g] = groupsFor('Ma', 'heen')[0];
+    S.deviations = { ...S.deviations, Ma_heen: { day: 'Ma', direction: 'heen', weekKey: S.currentWeekKey, ovGirlIds: [], cars: [{ ...g, departureTime: g.departureTime === '05:11' ? '05:12' : '05:11' }] } };
+    return S;
+  });
+  assert.match(html, /carCard carCard--changed/); assert.match(html, /<span class="wasTime">was \d\d:\d\d<\/span>/); assert.doesNotMatch(html, /wasTime[^>]*><s>|<s>\d\d:\d\d<\/s>/);
 });
 test('a day without any cars says so', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' })));
