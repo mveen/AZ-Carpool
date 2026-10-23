@@ -78,7 +78,7 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
   assert.match(s, /Vandaag maandag 28 sep 07:30 vertrek Heen · Busstation → AFC (&#39;|')34 Jan Jansen Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar Jahaimy aanwezig om 17:30/);
+  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
@@ -278,8 +278,8 @@ const period40 = () => ({
 });
 test('a day shows the handed-in times and the car of the temporary rooster', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
-  assert.match(s, /Dinsdag 29 sep 08:00 vertrek Heen · Busstation → AFC (&#39;|')34 Kees de Vries Jahaimy aanwezig om 09:00/);
-  assert.match(s, /12:00 vertrek Terug · AFC (&#39;|')34 → Busstation Kees de Vries Jahaimy aanwezig om 12:00/);
+  assert.match(s, /Dinsdag 29 sep Kees de Vries rijdt heen en terug 08:00 vertrek Heen · Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 09:00/);
+  assert.match(s, /12:00 vertrek Terug · AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
 });
 test('a day she does not ride is gone, and is not reported as "niet ingepland"', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
@@ -293,7 +293,7 @@ test('outside the days with a temporary rooster the week is exactly as before', 
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd Vertrektijd gewijzigd: was 12:00, nu 12:30 Jahaimy aanwezig om 12:00/);
+  assert.match(s, /12:30 was 12:00 Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd Jahaimy klaar om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {
@@ -388,6 +388,15 @@ test('finding 8: the red initial circle is gone; the line names her ("Jahaimy aa
   const h = renderAt(MON, {});
   assert.doesNotMatch(h, /daughterTime__initial/);
   assert.match(text(h), /Jahaimy aanwezig om 08:30/); assert.doesNotMatch(text(h), /Aanwezig om/);
+});
+
+test('design B: the switch says in words what it does ("rijdt mee")', () => {
+  const h = renderAt(MON, {});
+  assert.match(h, /class="swWrap"/); assert.match(text(h), /rijdt mee/);
+});
+test('design B: "terug" says "klaar om", "heen" says "aanwezig om"', () => {
+  const s = text(renderAt(MON, {}));
+  assert.match(s, /Jahaimy aanwezig om 08:30/); assert.match(s, /Jahaimy klaar om 17:30/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -107,13 +107,13 @@ await testAsync('a change by a driver shows in "Recente wijzigingen" as a change
 });
 
 console.log('=== Mijn week says it ===');
-await testAsync('a changed departure time is said in words at my ride, with the old and the new time; an unchanged one says nothing', async () => {
+await testAsync('a changed departure time shows "was 18:00" under the new time at my ride; an unchanged one says nothing', async () => {
   await setup([{ ...MINE, departureTime: '18:45' }], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } } });
-  assert.match(text(myweek()), /Vertrektijd gewijzigd: was 18:00, nu 18:45/);
+  assert.match(text(myweek()), /18:45 was 18:00/);
   await setup([MINE], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } } });
-  assert.doesNotMatch(text(myweek()), /Vertrektijd gewijzigd/);
+  assert.doesNotMatch(text(myweek()), /was 18:00/);
   await setup([{ ...MINE, departureTime: '18:45' }], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } }, links: { p1: { familyId: 'f1' } } });
-  assert.match(text(myweek()), /Vertrektijd gewijzigd: was 18:00, nu 18:45/, 'the parent of a girl in that car sees it too');
+  assert.match(text(myweek()), /18:45 was 18:00/, 'the parent of a girl in that car sees it too');
 });
 
 await testAsync('ui-driver-car.js imports nothing it does not use', async () => assertNoUnusedImports('ui-driver-car.js'));

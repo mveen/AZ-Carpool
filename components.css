@@ -511,16 +511,26 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .carCard__edit select,.carCard__edit input{margin:0}
 .alertCard__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--warn-edge);font:var(--type-small)}
 .alertCard--stack .alertCard__text{flex:none}
-/* The one amber request card of Mijn week: title, a row per day (day + times, who decides), next week folded under one line. */
-.reqHead{display:flex;align-items:center;gap:var(--space-3)}
-.reqLine{align-items:flex-start}
-.reqLine[hidden]{display:none}
-.reqLine__what{display:flex;flex-direction:column;gap:var(--space-1)}
-.reqLine__times{font:var(--type-time-sm);color:var(--text-2)}
-.reqLine__who{font:var(--type-caption);color:var(--warn-ink);text-align:right;max-width:44%}
-.reqGroup{width:100%;min-height:var(--hit-min);background:none;border-width:1px 0 0;color:var(--text-1);text-align:left;cursor:pointer}
-.reqGroup__caret{display:inline-flex;font-size:18px;transition:transform var(--motion-fast)}
-.reqGroup[aria-expanded="true"] .reqGroup__caret{transform:rotate(180deg)}
+/* Mijn week, design B: an open request sits in the card of its day (dashed amber block); next week is one compact card. */
+.reqBlock{margin:var(--space-3) var(--space-5) var(--space-5) 0;padding:var(--space-5);border:1px dashed var(--warn-edge);border-radius:var(--radius-panel);background:var(--warn-soft)}
+.reqBlock__head{display:flex;align-items:center;gap:var(--space-3);font-size:18px;color:var(--warn-ink)}
+.reqBlock__head svg{color:var(--warn-icon)}
+.reqBlock__head b{font:var(--type-small);font-weight:700}
+.reqBlock__times{font:var(--type-caption);margin:var(--space-2) 0 0 var(--space-9);color:var(--text-2)}
+.reqBlock__foot{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);margin:var(--space-1) 0 calc(var(--space-3) * -1) var(--space-9);font:var(--type-caption);color:var(--warn-ink)}
+.reqBlock__foot .linkbtn{font-size:13px}
+.card.nextWeek{padding:var(--space-3) var(--space-7)}
+.nwRow{display:flex;align-items:baseline;gap:var(--space-5);padding:var(--space-4) 0;border-top:1px solid var(--line)}
+.nwRow:first-child{border-top:0}
+.nwRow__day{width:var(--space-9);font:var(--type-card-title)}
+.nwRow__times{flex:1;font:var(--type-time-sm);white-space:nowrap}
+.nwRow__who{font:var(--type-caption);color:var(--text-muted);text-align:right}
+.driverOnce{width:100%;margin:var(--space-3) 0 0;padding:var(--space-3) 0 var(--space-2);border-bottom:1px solid var(--line)}
+.rideRow__sub s{color:var(--text-muted)}
+.rideRow__extra--changed{color:var(--warn-ink)}
+.swWrap{display:flex;flex-direction:column;align-items:center;flex:none}
+.swCap{font:var(--type-micro);letter-spacing:0;text-transform:none;white-space:nowrap;margin-top:calc(var(--space-2) * -1);color:var(--ok-ink)}
+.switch:not(.on)+.swCap{color:var(--text-muted)}
 .shiftLocBtn{display:inline-flex;align-items:center;gap:var(--space-2);max-width:100%;padding:0 var(--space-4);min-height:34px;margin-top:var(--space-1);border:1px dashed var(--text-muted);border-radius:var(--radius-pill);background:transparent;color:inherit;font:var(--type-caption);cursor:pointer;text-align:left}
 .shiftLocBtn svg{width:14px;height:14px;fill:currentColor;flex:none}
 .shiftLocBtn{box-sizing:border-box;padding-block:var(--space-2)}

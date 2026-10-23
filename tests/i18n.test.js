@@ -95,7 +95,7 @@ test('the agenda texts exist and fill their placeholders (card in Profiel and th
 });
 test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
   assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
-  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('weekrooster.note.other', { p1: 'Noor', p2: 'heen 16:30', p3: 'Kees' }), 'Noor: aanvraag heen 16:30. Kees beslist.'); assert.equal(t('myweek.daughter_heen', { name: 'Eva' }), 'Eva aanwezig om'); assert.equal(t('myweek.daughter_terug', { name: 'Eva' }), 'Eva aanwezig om'); assert.equal(t('myweek.daughter_unknown'), 'Je dochter'); assert.equal(t('weekrooster.myweek.requestsOne'), '1 aanvraag wacht op antwoord'); assert.equal(t('weekrooster.myweek.requestsMany', { p1: 6 }), '6 aanvragen wachten op antwoord'); assert.equal(t('weekrooster.myweek.nextGroup', { p1: 5 }), 'Volgende week · 5 dagen'); assert.equal(t('weekrooster.myweek.nextWeek', { p1: 'Maandag' }), 'Maandag volgende week');
+  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('weekrooster.note.other', { p1: 'Noor', p2: 'heen 16:30', p3: 'Kees' }), 'Noor: aanvraag heen 16:30. Kees beslist.'); assert.equal(t('myweek.daughter_heen', { name: 'Eva' }), 'Eva aanwezig om'); assert.equal(t('myweek.daughter_terug', { name: 'Eva' }), 'Eva klaar om'); assert.equal(t('myweek.was'), 'was'); assert.equal(t('myweek.switch_on'), 'rijdt mee'); assert.equal(t('myweek.switch_off'), 'rijdt niet mee'); assert.equal(t('myweek.rijdt_heen_terug'), 'rijdt heen en terug'); assert.equal(t('myweek.daughter_unknown'), 'Je dochter'); assert.equal(t('weekrooster.myweek.requestsOne'), '1 aanvraag wacht op antwoord'); assert.equal(t('weekrooster.myweek.requestsMany', { p1: 6 }), '6 aanvragen wachten op antwoord'); assert.equal(t('weekrooster.myweek.nextTitle'), 'Volgende week'); assert.equal(t('weekrooster.myweek.blockTitle'), 'Aanvraag in behandeling'); assert.equal(t('weekrooster.myweek.blockWithdraw'), 'Intrekken');
   assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', time: '17:00' }), 'Noor aanwezig 17:00');
   assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });
@@ -302,7 +302,7 @@ test('the Afwijkend-weekrooster texts exist for every mode and no text asks for 
 });
 
 test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeholders, and say what a parent needs to know', () => {
-  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.line', 'myweek.change', 'myweek.requestsOne', 'myweek.requestsMany', 'myweek.nextWeek', 'myweek.nextGroup', 'pill.request']
+  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.line', 'myweek.change', 'myweek.requestsOne', 'myweek.requestsMany', 'myweek.nextTitle', 'myweek.blockTitle', 'myweek.blockWithdraw']
     .forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.done.title', { p1: 40 }), 'Doorgegeven · week 40');
   assert.equal(t('weekrooster.tag.wait', { p1: 'Piet' }), 'Wacht op Piet');

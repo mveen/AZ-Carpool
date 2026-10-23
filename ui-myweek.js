@@ -21,7 +21,7 @@ import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-roost
 import { openDayEditor } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { timeChangeOf } from './driver-car.js';
-import { myWeekWeekroosterHtml, requestPillHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
+import { myWeekNextWeekHtml, myWeekWeekroosterHtml, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
 export function matchDistanceText(m){
@@ -87,7 +87,8 @@ export function renderMyWeek(){
   const daughterName = plainGirlName(myId) || t('myweek.daughter_unknown');
 
   // One ride row: departure time, route, who drives, her own time, and the "rides along" switch.
-  function rideRow(day,direction){
+  // opts.sharedDriver: heen and terug have the same driver, said once above the two rows (dayRows), so not here.
+  function rideRow(day,direction,opts={}){
     let s = rideTime(myId, day, direction);   // the handed-in time where the temporary rooster applies, else the standard time
     const cars = effectiveCars(day,direction);
     const isOvMe = ovGirlsFor(day,undefined,direction).includes(myId);   // US-06: marked "Rijdt niet mee" on this shift
@@ -102,7 +103,7 @@ export function renderMyWeek(){
     const dep = ownCar ? (ownCar.departureTime||s) : s;
     // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
     const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), cars).length>0;
-    const changedTag = ((differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '') + requestPillHtml(day);
+    const changedTag = ((differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '');
     const route = `${dirName(direction)} · ${routeLabel(ownCar||{},direction,cfg,day)}`;
 
     let status;
@@ -112,7 +113,7 @@ export function renderMyWeek(){
         const passengers = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
         status = `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span>${changedTag}</div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}${driverCarButtonHtml(day,direction)}`;
       } else {
-        status = driverButtonHtml(ownCar.driverFamilyId, changedTag);
+        status = opts.sharedDriver ? '' : driverButtonHtml(ownCar.driverFamilyId, changedTag);
       }
     } else if(isOvMe){
       status = `<div class="rideRow__off">${esc(t('myweek.rijdt_niet_mee', { name: plainGirlName(myId) }))}</div>`;
@@ -121,8 +122,8 @@ export function renderMyWeek(){
     }
     if(!ownCar && changedTag) status += `<div class="rideRow__drives">${changedTag}</div>`;
     // The departure time of the car changed compared with the standard rooster: said in words, with the old and the new time.
-    const timeChangedLine = c => { const x = timeChangeOf(baseCars(day,direction), c); return x? `<div class="rideRow__extra">${phIcon('clock')} ${esc(t('driverCar.tijdGewijzigd',{p1:x.from,p2:x.to}))}</div>` : ''; };
-    if(ownCar) status += timeChangedLine(ownCar);
+    const timeChangedLine = c => { const x = timeChangeOf(baseCars(day,direction), c); return x? `<div class="rideRow__extra rideRow__extra--changed">${phIcon('clock')} ${esc(t('driverCar.tijdGewijzigd',{p1:x.from,p2:x.to}))}</div>` : ''; };
+    const ownTimeChange = ownCar ? timeChangeOf(baseCars(day,direction), ownCar) : null;   // shown as "was 07:00" under the time
     // Own driving duty in a DIFFERENT car than the daughter's own ride — shown as a second line.
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg = cars[drivingIdx];
@@ -134,12 +135,24 @@ export function renderMyWeek(){
     // US-06: parent switch "Rijdt niet mee" (no reason needed), not for days already past, and not for Flex.
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const sw = !dayPassed && !isFlex(myFam)
-      ? `<button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button>` : '';
+      ? `<span class="swWrap"><button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button><span class="swCap">${esc(t(isOvMe?'myweek.switch_off':'myweek.switch_on'))}</span></span>` : '';
     return `<div class="rideRow${isOvMe?' rideRow--off':''}" data-rideday="${day}" data-ridedir="${direction}">
-      <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(t('myweek.vertrek'))}</div></div>
+      <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${ownTimeChange ? `${esc(t('myweek.was'))} <s>${esc(ownTimeChange.from)}</s>` : esc(t('myweek.vertrek'))}</div></div>
       <div class="rideRow__main"><div class="rideRow__route">${esc(route)}</div>${status}${daughterLine}</div>
       ${sw}
     </div>`;
+  }
+
+  // The rows of one day. When heen and terug have the same driver (not me) it is said ONCE above the two rows, not twice with the same tags.
+  const ownCarOf = (day,direction) => effectiveCars(day,direction).find(c=>(c.girlIds||[]).includes(myId)) || null;
+  const changedFlag = (day,direction) => { const c = ownCarOf(day,direction); return !!c && ((!!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), effectiveCars(day,direction)).length>0) || isOverride(c,direction,cfg,day)); };
+  function dayRows(day){
+    const heen = rideRow(day,'heen'), terug = rideRow(day,'terug');
+    const a = ownCarOf(day,'heen'), b = ownCarOf(day,'terug');
+    const id = a && b && a.driverFamilyId && a.driverFamilyId===b.driverFamilyId && a.driverFamilyId!==myId && S.families[a.driverFamilyId] && S.families[a.driverFamilyId].parentName ? a.driverFamilyId : '';
+    if(!(id && heen && terug)) return heen + terug;
+    const tag = (changedFlag(day,'heen') || changedFlag(day,'terug')) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '';
+    return `<button type="button" class="rideRow__driver driverOnce" data-contact="${esc(id)}">${driverNameHtml(id)} ${esc(t('myweek.rijdt_heen_terug'))}${phIcon('caret-right')}${tag}</button>` + rideRow(day,'heen',{sharedDriver:true}) + rideRow(day,'terug',{sharedDriver:true});
   }
 
   // Wedstrijdcarpool rides (spontaneous, per match) — violet + football so they never get
@@ -173,7 +186,7 @@ export function renderMyWeek(){
   const todayStr = new Date().toDateString();
   const weekdayDates = new Set(DAYS.map(([k])=>dateForWeekday(k).toDateString()));
   const dayInfo = DAYS.map(([k,label])=>{
-    const rows = rideRow(k,'heen') + rideRow(k,'terug') + matchRowsFor(dateForWeekday(k));
+    const rows = dayRows(k) + requestBlockHtml(k) + matchRowsFor(dateForWeekday(k));
     return { key:k, label, date:dateForWeekday(k), rows, isToday: k===todayKeyNow() };
   }).filter(d=>d.rows);
   const dateText = d => d.toLocaleDateString(locale(),{day:'numeric',month:'short'});
@@ -235,11 +248,11 @@ export function renderMyWeek(){
   });
 
   box.innerHTML = `
-    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}
+    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}${myWeekNextWeekHtml()}
     ${matchTiles}${matchFailNote}${matchStatusNote}
     ${dayCoordinatorHtml()}
   `;
-  wireMyWeekWeekrooster(box); wireMyWeekActions(box); wireDriverCar(box, renderMyWeek);
+  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireDriverCar(box, renderMyWeek);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';

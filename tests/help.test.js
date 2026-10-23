@@ -349,7 +349,7 @@ test('there is an article for drivers, found by the words a driver would use, an
   assert.equal(searchHelp('ik wil later vertrekken met mijn auto', { canEdit: false })[0].id, 'chauffeur-tijd-plek');
   assert.match(articles.find(x => x.id === 'mijn-week').body.join(' '), /knop Tijd en plek/);
 });
-test('the Help tells about the one yellow request card of Mijn week',() => { assert.match(JSON.stringify(articles), /één gele kaart met al je aanvragen/); });
+test('the Help tells where an open request shows in Mijn week: in the card of its day, with Intrekken',() => { const all = JSON.stringify(articles); assert.match(all, /gestippeld geel blok/); assert.match(all, /klaar om/); });
 test('the Help explains the child time and the trash in Wijzigen', () => {
   const all = JSON.stringify(articles);
   assert.ok(all.includes('aanwezig om') && all.includes('klaar om') && all.includes('prullenbak'));

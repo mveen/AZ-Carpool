@@ -159,6 +159,17 @@ await testAsync('withdrawing takes back the open requests of one week only', asy
     assert.equal(await withdrawWeekRequests('this'), false, 'nothing open any more');
   });
 });
+await testAsync('withdrawing one day takes back only the request of that day (design B: Intrekken in the card of a day)', async () => {
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests();
+  await withFakeNowAsync(NOW, async () => {
+    await submitWeekRequests('this', { Do: { rides: true, heen: '11:00', terug: '18:00' }, Vr: { rides: true, heen: '10:00', terug: '16:00' } });
+    await new Promise(x => setImmediate(x));
+    assert.equal(await withdrawWeekRequests('this', 'Do'), true);
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f2').status, 'withdrawn'); assert.equal(fake.get('weekRequests/2026-W40_Vr_f2').status, 'pending');
+    await new Promise(x => setImmediate(x));
+    assert.equal(await withdrawWeekRequests('this', 'Do'), false, 'that day has nothing open any more');
+  });
+});
 
 console.log('=== phase 3: the day coordinator reads the requests of his days ===');
 const WK = '2026-W40';

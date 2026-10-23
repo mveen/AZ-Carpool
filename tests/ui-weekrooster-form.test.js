@@ -15,8 +15,8 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestPillHtml, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
-import { syncWeekRequests } from '../weekrooster-data.js';
+import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, myWeekNextWeekHtml, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { syncWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
 
 const dom = installFakeDom();
@@ -51,7 +51,7 @@ test('only with the switch on for this person, with a daughter of their own, and
 test('uit: Wijzigen and Mijn week show nothing of the new flow and no pill', async () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'uit' } });
   assert.doesNotMatch(wijzigen(), /wrForm|data-wrweek|Tijden deze week/); assert.doesNotMatch(mijnWeek(), /wrChange|Tijden wijzigen|Aanvraag/);
-  assert.equal(myWeekWeekroosterHtml(), ''); assert.equal(requestPillHtml('Do'), '');
+  assert.equal(myWeekWeekroosterHtml(), ''); assert.equal(requestBlockHtml('Do'), ''); assert.equal(myWeekNextWeekHtml(), '');
 });
 
 console.log('=== the week form ===');
@@ -113,32 +113,37 @@ await testAsync('new times become a request: "Doorgegeven", waiting for the day 
   assert.equal((html.match(/class="card"/g) || []).length, 0, 'one card, not two');
   assert.match(html, /id="wrEdit"/); assert.match(html, /id="wrWithdraw"/); assert.doesNotMatch(noStyle(html), /style="/);
 });
-await testAsync('Mijn week: the button, ONE amber card with a count title and a row per day (day, times, decider capitalised), and the pill on the ride', async () => {
-  await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:00'); setField('wrTerug_Do', '18:00');
-  await withFakeNowAsync(NOW, () => submitWeekForm()); await tick();
+const submitThis = async days => { wijzigen(); fillInputs(); days.forEach(([d, h, tr]) => { setField('wrHeen_' + d, h); setField('wrTerug_' + d, tr); }); await withFakeNowAsync(NOW, () => submitWeekForm()); await tick(); };
+const submitNext = async days => { S.wrWeek = 'next'; S.wrForm = null; wijzigen(); fillInputs([]); days.forEach(([d, h, tr]) => { setField('wrHeen_' + d, h); setField('wrTerug_' + d, tr); }); await withFakeNowAsync(NOW, () => submitWeekForm()); await tick(); };
+await testAsync('design B, Mijn week: the button is secondary and there is no amber card per request; the request sits as a block in the card of its day', async () => {
+  await parentOn(); await submitThis([['Do', '11:00', '18:00']]);
   const html = mijnWeek(), s = text(html);
-  assert.match(html, /id="wrChange"/); assert.match(s, /Tijden wijzigen/);
-  assert.equal((html.match(/class="alertCard alertCard--stack"/g) || []).length, 1, 'one card');
-  assert.match(s, /1 aanvraag wacht op antwoord/); assert.match(s, /Donderdag heen 11:00 · terug 18:00 [A-Z]/);
-  assert.doesNotMatch(s, /Aanvraag voor|beslist\./, 'the old sentence is gone');
-  assert.match(html, /tag tag--warn">Aanvraag</);
+  assert.match(html, /class="btn secondary" id="wrChange"/); assert.match(s, /Tijden wijzigen/);
+  assert.doesNotMatch(html, /alertCard alertCard--stack/); assert.doesNotMatch(s, /Aanvraag voor|beslist\./);
+  const card = html.slice(html.indexOf('Donderdag'));
+  assert.match(card, /class="reqBlock"/); assert.match(card, /data-wrwithdraw="Do"/);
+  assert.match(text(card), /Aanvraag in behandeling heen 11:00 · terug 18:00 Wacht op [^ ]+/); assert.match(text(card), /Intrekken/);
+  assert.doesNotMatch(html, /tag tag--warn">Aanvraag</, 'the tag "Aanvraag" is gone from the ride');
+  assert.equal((html.match(/class="reqBlock"/g) || []).length, 1, 'only the day with the request');
 });
-await testAsync('Mijn week: many requests stay ONE card; a single request of next week is a row that says so, two or more fold under one line', async () => {
-  await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:00'); setField('wrTerug_Do', '18:00'); setField('wrHeen_Vr', '10:00'); setField('wrTerug_Vr', '16:00');
-  await withFakeNowAsync(NOW, () => submitWeekForm()); await tick();
-  let html = mijnWeek(); assert.match(text(html), /2 aanvragen wachten op antwoord/);
-  const nextWeek = async (days) => { S.wrWeek = 'next'; S.wrForm = null; wijzigen(); fillInputs([]); days.forEach(([d, h, tr]) => { setField('wrHeen_' + d, h); setField('wrTerug_' + d, tr); }); await withFakeNowAsync(NOW, () => submitWeekForm()); await tick(); };
-  await nextWeek([['Ma', '08:15', '17:00']]);
-  html = mijnWeek(); assert.match(text(html), /3 aanvragen wachten op antwoord/); assert.match(text(html), /Maandag volgende week heen 08:15 · terug 17:00/);
-  assert.doesNotMatch(html, /reqGroup/, 'one request of next week: no fold');
-  await parentOn();   // a fresh start: two days of next week handed in at once
-  await nextWeek([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]);
-  html = mijnWeek();
-  assert.equal((html.match(/class="alertCard alertCard--stack"/g) || []).length, 1, 'still one card');
-  assert.match(text(html), /2 aanvragen wachten op antwoord/); assert.match(text(html), /Volgende week · 2 dagen/);
-  assert.match(html, /id="wrReqGroup" aria-expanded="false"/); assert.equal((html.match(/data-reqnext hidden/g) || []).length, 2, 'next week folded: both rows hidden');
-  S.myWeekReqOpen = true; html = mijnWeek();
-  assert.match(html, /id="wrReqGroup" aria-expanded="true"/); assert.doesNotMatch(html, /data-reqnext hidden/, 'unfolded stays unfolded after a redraw'); S.myWeekReqOpen = false;
+await testAsync('design B, Mijn week: Intrekken withdraws that day only', async () => {
+  await parentOn(); await submitThis([['Do', '11:00', '18:00'], ['Vr', '10:00', '16:00']]);
+  assert.equal((mijnWeek().match(/class="reqBlock"/g) || []).length, 2);
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), true);
+  const html = mijnWeek();
+  assert.equal((html.match(/class="reqBlock"/g) || []).length, 1); assert.match(html, /data-wrwithdraw="Vr"/); assert.doesNotMatch(html, /data-wrwithdraw="Do"/);
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), false, 'nothing left of that day to withdraw');
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this')), true); assert.doesNotMatch(mijnWeek(), /reqBlock/);
+});
+await testAsync('design B, Mijn week: the requests for next week are ONE compact card under the days (day, times, who decides)', async () => {
+  await parentOn(); await submitNext([['Ma', '08:15', '17:00']]);
+  let html = mijnWeek(), s = text(html);
+  assert.match(s, /Volgende week 1 aanvraag wacht op antwoord/); assert.match(s, /Ma 08:15 → 17:00 [^ ]+/); assert.equal((html.match(/class="nwRow"/g) || []).length, 1);
+  assert.doesNotMatch(html, /alertCard alertCard--stack/);
+  await parentOn(); await submitNext([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]);
+  html = mijnWeek(); s = text(html);
+  assert.match(s, /2 aanvragen wachten op antwoord/); assert.equal((html.match(/class="nwRow"/g) || []).length, 2); assert.match(s, /Di 08:15 → 17:30/);
+  assert.equal((html.match(/class="card nextWeek"/g) || []).length, 1, 'one card for all');
 });
 await testAsync('nothing changed: nothing is written and the parent is told', async () => {
   const fake = await parentOn(); wijzigen(); fillInputs();
@@ -203,7 +208,7 @@ test('ui-weekrooster-form.js imports nothing it does not use', () => assertNoUnu
 await testAsync('Mijn week: the button spans the width with an icon, in one stack with the request note (a clock, no bold text)', async () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });
   const html = myWeekWeekroosterHtml();
-  assert.match(html, /^<div class="wrStack"><button type="button" class="btn" id="wrChange"><svg/); assert.doesNotMatch(html, /<b>/);
+  assert.match(html, /^<div class="wrStack"><button type="button" class="btn secondary" id="wrChange"><svg/); assert.doesNotMatch(html, /<b>/);
 });
 console.log('=== this week: the toggles of Mijn week and the form are two views of the same marks ===');
 const marksIn = fake => { S.deviations = Object.fromEntries([...fake.store.keys()].filter(k => k.startsWith('deviations/')).map(k => [k.slice(11), fake.get(k)])); };   // what the live listener does
