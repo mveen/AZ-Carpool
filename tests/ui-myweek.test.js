@@ -107,6 +107,12 @@ test('after Friday 19:00 the match carpool of this weekend stays in Mijn week (t
   const s = text(renderAt('2026-10-02T19:02:00+02:00', { matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
   assert.match(s, /Zaterdag 3 okt 09:15 vertrek Wedstrijd AZ O15-1/);
 });
+test('the cards run in date order: this weekend\'s match comes before next Monday', () => {
+  const h = renderAt('2026-10-02T19:02:00+02:00', { matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });
+  const sat = h.indexOf('Zaterdag'), mon = h.indexOf('Maandag');
+  assert.ok(sat > -1, 'Saturday card is there');
+  assert.ok(mon === -1 || sat < mon, 'Saturday before Monday');
+});
 test('matchInfoHtml: team, home/away, opponent, date, time and location (HTML-escaped)', () => {
   resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ <O15>' }] });
   const html = matchInfoHtml({ calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'A&B', start: new Date(kick) });
