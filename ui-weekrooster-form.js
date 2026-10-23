@@ -238,18 +238,18 @@ export function wireWeekrooster() {
 }
 
 // ---------- Mijn week ----------
-// "Tijden wijzigen" (ink) at the top, and an amber card per open request of the own daughter (this week and next week).
+// "Tijden wijzigen" (ink) at the top, then ONE amber card for every open request of the own daughter: the days of this week as rows,
+// the days of next week folded under one line (two or more; one request is just a row). The fold stays as the parent left it (S.myWeekReqOpen).
 export function myWeekWeekroosterHtml() {
   if (!weekroosterActive()) return '';
-  const cards = [];
-  ['this', 'next'].forEach(w => {
-    mine(w).filter(r => r.status === 'pending').forEach(r => {
-      const when = w === 'next' ? t('weekrooster.myweek.nextWeek', { p1: lower(dayName(r.day)) }) : lower(dayName(r.day));
-      cards.push(`<div class="alertCard"><span class="alertCard__icon">${phIcon('clock')}</span>
-        <div class="alertCard__text">${esc(t('weekrooster.myweek.request', { p1: when, p2: lower(summaryOf(r)), p3: upperFirst(deciderLabel(r.day)) }))}</div></div>`);
-    });
-  });
-  return `<div class="wrStack"><button type="button" class="btn" id="wrChange">${phIcon('pencil')}${t('weekrooster.myweek.change')}</button>${cards.join('')}</div>`;
+  const pending = w => mine(w).filter(r => r.status === 'pending');
+  const now = pending('this'), next = pending('next'), n = now.length + next.length, fold = next.length >= 2, open = S.myWeekReqOpen === true;
+  const row = (r, label, extra = '') => `<div class="alertCard__row reqLine"${extra}><span class="reqLine__what"><b>${esc(label)}</b><span class="reqLine__times">${esc(lower(summaryOf(r)))}</span></span><span class="reqLine__who">${esc(upperFirst(deciderLabel(r.day)))}</span></div>`;
+  const nextRows = next.map(r => row(r, fold ? dayName(r.day) : t('weekrooster.myweek.nextWeek', { p1: dayName(r.day) }), fold && !open ? ' data-reqnext hidden' : fold ? ' data-reqnext' : '')).join('');
+  const group = fold ? `<button type="button" class="alertCard__row reqGroup" id="wrReqGroup" aria-expanded="${open}"><b>${esc(t('weekrooster.myweek.nextGroup', { p1: next.length }))}</b><span class="reqGroup__caret">${phIcon('caret-down')}</span></button>` : '';
+  const title = n === 1 ? t('weekrooster.myweek.requestsOne') : t('weekrooster.myweek.requestsMany', { p1: n });
+  const card = n ? `<div class="alertCard alertCard--stack"><div class="alertCard__text reqHead"><span class="alertCard__icon">${phIcon('clock')}</span><b>${esc(title)}</b></div>${now.map(r => row(r, dayName(r.day))).join('')}${group}${nextRows}</div>` : '';
+  return `<div class="wrStack"><button type="button" class="btn" id="wrChange">${phIcon('pencil')}${t('weekrooster.myweek.change')}</button>${card}</div>`;
 }
 // The pill "Aanvraag" on the ride of a day with an open request of this week.
 export function requestPillHtml(day) {
@@ -260,4 +260,12 @@ export function requestPillHtml(day) {
 export function wireMyWeekWeekrooster(box) {
   const b = box.querySelector('#wrChange');
   if (b) b.onclick = () => { hapticTap(); S.wrWeek = 'this'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };
+  // The fold of next week's requests: no re-render, so nothing jumps; the choice is kept for the next time Mijn week is drawn.
+  const g = box.querySelector('#wrReqGroup');
+  if (g) g.onclick = () => {
+    const open = g.getAttribute('aria-expanded') !== 'true';
+    S.myWeekReqOpen = open; g.setAttribute('aria-expanded', String(open));
+    box.querySelectorAll('[data-reqnext]').forEach(r => { r.hidden = !open; });
+    hapticTap();
+  };
 }

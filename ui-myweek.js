@@ -84,7 +84,7 @@ export function renderMyWeek(){
   const myId = myFamilyId();
   const myFam = fam(myId);
   const cfg = locationsCfg();
-  const initial = esc((plainGirlName(myId)||'?').trim().charAt(0).toUpperCase());
+  const daughterName = plainGirlName(myId) || t('myweek.daughter_unknown');
 
   // One ride row: departure time, route, who drives, her own time, and the "rides along" switch.
   function rideRow(day,direction){
@@ -130,7 +130,7 @@ export function renderMyWeek(){
       status += `<div class="rideRow__extra">${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</div>${timeChangedLine(dg)}${driverCarButtonHtml(day,direction)}`;
     }
     // Her own time: when she has to be there (heen) / when she is done (terug).
-    const daughterLine = s ? `<div class="daughterTime"><span class="daughterTime__initial">${initial}</span><span>${direction==='heen' ? esc(t('myweek.daughter_heen')) : esc(t('myweek.daughter_terug'))} <b>${esc(s)}</b></span></div>` : '';
+    const daughterLine = s ? `<div class="daughterTime"><span>${esc(t(direction==='heen' ? 'myweek.daughter_heen' : 'myweek.daughter_terug', { name: daughterName }))} <b>${esc(s)}</b></span></div>` : '';
     // US-06: parent switch "Rijdt niet mee" (no reason needed), not for days already past, and not for Flex.
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const sw = !dayPassed && !isFlex(myFam)

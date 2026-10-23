@@ -113,13 +113,32 @@ await testAsync('new times become a request: "Doorgegeven", waiting for the day 
   assert.equal((html.match(/class="card"/g) || []).length, 0, 'one card, not two');
   assert.match(html, /id="wrEdit"/); assert.match(html, /id="wrWithdraw"/); assert.doesNotMatch(noStyle(html), /style="/);
 });
-await testAsync('Mijn week: the button, an amber card with the request (decider capitalised) and the pill on the ride', async () => {
+await testAsync('Mijn week: the button, ONE amber card with a count title and a row per day (day, times, decider capitalised), and the pill on the ride', async () => {
   await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:00'); setField('wrTerug_Do', '18:00');
   await withFakeNowAsync(NOW, () => submitWeekForm()); await tick();
   const html = mijnWeek(), s = text(html);
   assert.match(html, /id="wrChange"/); assert.match(s, /Tijden wijzigen/);
-  assert.match(html, /alertCard/); assert.match(s, /Aanvraag voor donderdag: heen 11:00 · terug 18:00\. [A-Z][^.]* beslist\./);
+  assert.equal((html.match(/class="alertCard alertCard--stack"/g) || []).length, 1, 'one card');
+  assert.match(s, /1 aanvraag wacht op antwoord/); assert.match(s, /Donderdag heen 11:00 · terug 18:00 [A-Z]/);
+  assert.doesNotMatch(s, /Aanvraag voor|beslist\./, 'the old sentence is gone');
   assert.match(html, /tag tag--warn">Aanvraag</);
+});
+await testAsync('Mijn week: many requests stay ONE card; a single request of next week is a row that says so, two or more fold under one line', async () => {
+  await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:00'); setField('wrTerug_Do', '18:00'); setField('wrHeen_Vr', '10:00'); setField('wrTerug_Vr', '16:00');
+  await withFakeNowAsync(NOW, () => submitWeekForm()); await tick();
+  let html = mijnWeek(); assert.match(text(html), /2 aanvragen wachten op antwoord/);
+  const nextWeek = async (days) => { S.wrWeek = 'next'; S.wrForm = null; wijzigen(); fillInputs([]); days.forEach(([d, h, tr]) => { setField('wrHeen_' + d, h); setField('wrTerug_' + d, tr); }); await withFakeNowAsync(NOW, () => submitWeekForm()); await tick(); };
+  await nextWeek([['Ma', '08:15', '17:00']]);
+  html = mijnWeek(); assert.match(text(html), /3 aanvragen wachten op antwoord/); assert.match(text(html), /Maandag volgende week heen 08:15 · terug 17:00/);
+  assert.doesNotMatch(html, /reqGroup/, 'one request of next week: no fold');
+  await parentOn();   // a fresh start: two days of next week handed in at once
+  await nextWeek([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]);
+  html = mijnWeek();
+  assert.equal((html.match(/class="alertCard alertCard--stack"/g) || []).length, 1, 'still one card');
+  assert.match(text(html), /2 aanvragen wachten op antwoord/); assert.match(text(html), /Volgende week · 2 dagen/);
+  assert.match(html, /id="wrReqGroup" aria-expanded="false"/); assert.equal((html.match(/data-reqnext hidden/g) || []).length, 2, 'next week folded: both rows hidden');
+  S.myWeekReqOpen = true; html = mijnWeek();
+  assert.match(html, /id="wrReqGroup" aria-expanded="true"/); assert.doesNotMatch(html, /data-reqnext hidden/, 'unfolded stays unfolded after a redraw'); S.myWeekReqOpen = false;
 });
 await testAsync('nothing changed: nothing is written and the parent is told', async () => {
   const fake = await parentOn(); wijzigen(); fillInputs();
