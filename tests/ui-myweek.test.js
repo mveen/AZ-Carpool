@@ -103,6 +103,10 @@ test('a Saturday match carpool appears under its own day with the ride details',
   assert.match(s, /Zaterdag 3 okt 09:15 vertrek Wedstrijd AZ O15-1 \(Thuis\) vs Hoorn O15-2 Jan Jansen Vertrek vanaf Busstation Aftrap 10:30 · Sportpark Hoorn/);
   expectSnapshot('ui-myweek', 'parent with match carpool', dom.html('tab-myweek'));
 });
+test('after Friday 19:00 the match carpool of this weekend stays in Mijn week (the week rolls over, the weekend match does not vanish)', () => {
+  const s = text(renderAt('2026-10-02T19:02:00+02:00', { matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
+  assert.match(s, /Zaterdag 3 okt 09:15 vertrek Wedstrijd AZ O15-1/);
+});
 test('matchInfoHtml: team, home/away, opponent, date, time and location (HTML-escaped)', () => {
   resetState({ matchFeeds: [{ calendarId: 'c', label: 'AZ <O15>' }] });
   const html = matchInfoHtml({ calendarId: 'c', summary: 'AZ O15-1-Hoorn O15-2', location: 'A&B', start: new Date(kick) });
