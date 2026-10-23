@@ -222,11 +222,28 @@ export async function submitWeekForm() {
   return false;
 }
 
+// While a time field of the form has the focus (on a phone: the time picker is open) the form must not be redrawn: the live data (any change in the
+// database draws Wijzigen again) would replace the field, the picker closes and the chosen time is lost. renderDeviationTab asks this first and,
+// when it is true, skips the redraw; the redraw is done as soon as the field loses the focus (see wireWeekrooster).
+let redrawWaiting = false;
+export function holdFormRedraw() {
+  const a = typeof document !== 'undefined' && document.activeElement;
+  if (!(a && a.classList && a.classList.contains('wrTime'))) return false;
+  redrawWaiting = true; return true;
+}
+export function redrawAfterTyping() {
+  if (!redrawWaiting || holdFormRedraw()) return false;
+  redrawWaiting = false; renderDeviationTab(); return true;
+}
+
 // Called at the end of renderDeviationTab, AFTER wirePeriod: the inputs share the period form's look (class periodTime), so this
 // has to be the last word on their handlers.
 export function wireWeekrooster() {
   document.querySelectorAll('[data-wrweek]').forEach(b => b.onclick = () => { hapticTap(); S.wrWeek = b.dataset.wrweek === 'next' ? 'next' : 'this'; S.wrForm = null; renderDeviationTab(); });
-  document.querySelectorAll('.wrTime').forEach(el => el.oninput = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); markChanged(); });
+  // A picker on a phone gives 'change' (when OK is tapped) and not always 'input': listen to both, and draw again after the field is left.
+  const typed = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); markChanged(); };
+  // Not at once after the blur: a tap on 'Aanvragen' right after must still find its button.
+  document.querySelectorAll('.wrTime').forEach(el => { el.oninput = typed; el.onchange = typed; el.onblur = () => setTimeout(redrawAfterTyping, 700); });
   document.querySelectorAll('[data-wrtoggle]').forEach(b => b.onclick = () => { hapticTap(); toggleRide(b.dataset.wrtoggle, b.dataset.wrdir); });
   const cancel = document.getElementById('wrCancel'); if (cancel) cancel.onclick = () => { hapticTap(); S.wrForm = null; renderDeviationTab(); };
   const submit = document.getElementById('wrSubmit'); if (submit) submit.onclick = () => { hapticTap(); return submitWeekForm(); };

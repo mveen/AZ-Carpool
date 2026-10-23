@@ -563,6 +563,12 @@ test('Wijzigen shows the spinner while the data is loading', () => {
   assert.doesNotMatch(render(sampleParentState, {}), /class="spinner"/);
 });
 
+await testAsync('Wijzigen is not redrawn while a time field of the week form has the focus (the picker on a phone stays open)', async () => {
+  const { holdFormRedraw } = await import('../ui-weekrooster-form.js');
+  document.activeElement = null; assert.equal(holdFormRedraw(), false);
+  document.activeElement = { classList: { contains: c => c === 'wrTime' } }; assert.equal(holdFormRedraw(), true);
+  document.activeElement = null;
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 
