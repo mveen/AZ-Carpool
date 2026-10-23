@@ -97,7 +97,8 @@ test('the texts of the shell, the contact sheet and the ride rows exist and fill
   assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
   assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('weekrooster.note.other', { p1: 'Noor', p2: 'heen 16:30', p3: 'Kees' }), 'Noor: aanvraag heen 16:30. Kees beslist.'); assert.equal(t('myweek.daughter_heen', { name: 'Eva' }), 'Eva aanwezig om'); assert.equal(t('myweek.daughter_terug', { name: 'Eva' }), 'Eva klaar om'); assert.equal(t('myweek.was'), 'was'); assert.equal(t('myweek.switch_on'), 'rijdt mee'); assert.equal(t('myweek.switch_off'), 'rijdt niet mee'); assert.equal(t('myweek.rijdt_heen_terug'), 'rijdt heen en terug'); assert.equal(t('myweek.daughter_unknown'), 'Je dochter'); assert.equal(t('weekrooster.myweek.requestsOne'), '1 aanvraag wacht op antwoord'); assert.equal(t('weekrooster.myweek.requestsMany', { p1: 6 }), '6 aanvragen wachten op antwoord'); assert.equal(t('weekrooster.myweek.nextTitle'), 'Volgende week'); assert.equal(t('weekrooster.myweek.blockTitle'), 'Aanvraag in behandeling'); assert.equal(t('weekrooster.myweek.blockWithdraw'), 'Intrekken'); assert.equal(t('myweek.wedstrijden_title') + ' ' + t('myweek.wedstrijden_sub'), 'Wedstrijden deze week');
   assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', time: '17:00' }), 'Noor aanwezig 17:00');
-  assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
+  assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor klaar 19:15');
+  assert.equal(t('schedule.fold.out'), 'Rijdt niet mee'); assert.equal(t('schedule.fold.backup'), 'Back-up'); assert.equal(t('schedule.klaar_na_vertrek', { p1: 'Eline', p2: '15:30' }), 'Eline is pas klaar om 15:30'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });
 test('the texts of the settings sheet and the Mijn gezin drill-down exist', () => {
   assert.equal(t('agenda.toevoegen_google'), 'Zet in Google Agenda'); assert.match(t('agenda.ios_uitleg'), /iPhone en iPad.*Desktopversie.*Via URL/); assert.match(t('agenda.android_uitleg'), /Android.*ICSx⁵/); assert.equal(t('shell.view_as'), 'Bekijk als'); assert.equal(t('shell.view_parent'), 'Ouder'); assert.equal(t('shell.view_coord'), 'Coördinator');
@@ -319,7 +320,10 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
   ['tag.request', 'tag.accepted', 'action.title', 'action.look', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.alert.titleOne', { p1: 1, p2: 'donderdag' }), 'Actie nodig: 1 wijziging voor donderdag');
   assert.equal(t('weekrooster.alert.titleMany', { p1: 3, p2: 'donderdag' }), 'Actie nodig: 3 wijzigingen voor donderdag');
-  assert.match(t('weekrooster.alert.body'), /Rijdt niet mee/);
+  assert.equal(t('weekrooster.alert.body'), 'Het vaste rooster geldt tot jij akkoord geeft.');
+  assert.equal(t('weekrooster.alert.bodyDirect'), "'Rijdt niet mee' is al verwerkt.");
+  assert.equal(t('weekrooster.coord.you', { p1: 'maandag' }), 'Jij bent dagcoördinator maandag');
+  assert.equal(t('schedule.te_laat_heen', { p1: 'Eline', p2: '07:30', p3: '08:30' }), 'Eline moet er om 07:30 zijn, de auto is er om 08:30');
 });
 
 test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {

@@ -2,10 +2,10 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
-import { driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
+import { baseCars, driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
-import { esc, hapticTap, locationsCfg, openSheet, phIcon, renderLoadingIfNeeded, setStatus, showToast, twoStepConfirm } from './ui-common.js';
+import { esc, foldHtml, hapticTap, locationsCfg, openSheet, phIcon, renderLoadingIfNeeded, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
 import { renderDeviationTab } from './ui-deviation.js';
@@ -15,11 +15,12 @@ import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandar
 import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
-import { myDeciderDays } from './weekrooster-data.js';
-import { weekroosterActive } from './ui-weekrooster-form.js';
+import { openAskedTimeOf, weekroosterActive } from './ui-weekrooster-form.js';
+import { minutesToTime } from './planning.js';
 import { scheduleAdviceHtml, wireAdvice } from './ui-weekrooster-advice.js';
 import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
+import { timeChangeOf } from './driver-car.js';
 import { periodModeAvailable, periodModeInfoHtml, periodModeLabel, periodOverviewHtml, periodViewHtml, wirePeriodRooster } from './ui-period-rooster.js';
 
 // US-02: "Dagcoördinator morgen: <naam>" + WhatsApp button, shown in Rooster and Mijn week.
@@ -78,7 +79,9 @@ export function renderSchedule(){
       : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span>${mode!=='period'? `<button type="button" class="btn secondary chipBtn pill" id="ovOpen">${phIcon('table')}${t('overview.open')}</button>` : ''}</div>`;
   // Advies and Zelf indelen are one task: while one is open it is the whole screen (no coordinator line, tabs or Weekoverzicht).
   const focusHtml = mode==='week' ? (scheduleEditHtml() || scheduleAdviceHtml()) : '';
-  box.innerHTML = focusHtml || dayCoordinatorHtml()
+  // The line about the day coordinator under the days already says it for the day in view, so the banner above the switch is left out then.
+  const bannerDup = mode==='week' && weekroosterActive() && (dayCoordinatorTarget()||{}).day === S.scheduleDay;
+  box.innerHTML = focusHtml || (bannerDup? '' : dayCoordinatorHtml())
     + timeChangesCardHtml()
     + periodOverviewHtml()
     + segHtml
@@ -151,6 +154,47 @@ export function driverLineHtml(driverId,myId,wa){
 // " · flex" after the name of a Flex player (design v2).
 export function flexSuffix(id){ return isFlex(fam(id)) ? ' · '+t('flex.chip') : ''; }
 
+// "Deze week": the passengers of one car with each girl's OWN time on her chip (heen: there at, terug: ready at). An open request already counts
+// for her own time (the car waits for the day coordinator), the rest is the time that holds now.
+// Order: first by that time (earliest first; no time last), then A-Z (sortGirlIds is A-Z and the sort is stable).
+export function pillsTimedHtml(girlIds,myId,day,direction){
+  const timed = sortGirlIds(girlIds).map(id=>({ id, time: openAskedTimeOf(id,day,direction) || rideTime(id,day,direction) }))
+    .sort((a,b)=> a.time===b.time? 0 : !a.time? 1 : !b.time? -1 : a.time<b.time? -1 : 1);
+  return timed.map(({id,time})=>{
+    return `<span class="chip${id===myId?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}${flexSuffix(id)}${time?` <span class="chipTime">${esc(time)}</span>`:''}</span>`;
+  }).join('');
+}
+
+// The car must fit the girls' times, in both directions (a real conflict, never a window):
+//   terug: the car cannot leave before the last girl is ready.
+//   heen:  the car arrives at departure + travel time (travelLeadMinutes); a girl who has to be there earlier is late.
+function lateReadyHtml(car,day,direction){
+  if(!car.departureTime) return '';
+  const dep = timeToMinutes(car.departureTime);
+  const own = id => openAskedTimeOf(id,day,direction) || rideTime(id,day,direction);
+  const nm = id => girlName(id).replace(/&amp;/g,'&');
+  const girls = sortGirlIds(car.girlIds).map(id=>({id, time: own(id)})).filter(x=>x.time);
+  if(direction==='terug') return girls.filter(x=>timeToMinutes(x.time)>dep)
+    .map(x=>`<div class="carCard__note carCard__note--warn">${phIcon('warning')} ${esc(t('schedule.klaar_na_vertrek',{p1:nm(x.id),p2:x.time}))}</div>`).join('');
+  const arrival = dep + ((S.settings && S.settings.travelLeadMinutes) || 60);
+  return girls.filter(x=>timeToMinutes(x.time)<arrival)
+    .map(x=>`<div class="carCard__note carCard__note--warn">${phIcon('warning')} ${esc(t('schedule.te_laat_heen',{p1:nm(x.id),p2:x.time,p3:minutesToTime(arrival)}))}</div>`).join('');
+}
+
+// One fold per direction for everything that is not in a car: who does not ride and who is back-up.
+function restFoldHtml(day,direction,notRiding,cars,askTime){
+  const reserveIds = tripReserveIds(day,direction,cars);
+  if(!notRiding.length && !reserveIds.length) return '';
+  const parts = [];
+  if(notRiding.length) parts.push(`<span>${t('schedule.fold.out')} <b>${notRiding.length}</b></span>`);
+  if(reserveIds.length) parts.push(`<span>${t('schedule.fold.backup')} <b>${reserveIds.length}</b></span>`);
+  const both = notRiding.length>0 && reserveIds.length>0;   // a label inside only when the fold holds two parts
+  const lab = txt => both? `<p class="foldLabel">${txt}</p>` : '';
+  const out = notRiding.length? `${lab(t('schedule.fold.out'))}<div class="chips">${sortGirlIds(notRiding).map(id=>`<span class="chip chip--muted">${girlName(id)}</span>`).join('')}</div>` : '';
+  const back = reserveIds.length? `${lab(t('schedule.fold.backup'))}<div class="chips">${reserveIds.map(id=>contactButtonHtml(id, esc(fam(id).parentName||'?'), reserveAskText(day,direction,askTime), 'chip chip--btn')).join('')}</div>` : '';
+  return foldHtml(`rooster|${day}|${direction}`, parts.join('<span class="sep">·</span>'), out+back, 'fold--quiet');
+}
+
 // The passengers of one car as chips: your own daughter in red, a Flex player dashed.
 export function pillsHtml(girlIds,myId){
   return sortGirlIds(girlIds).map(id=>`<span class="chip${id===myId?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}${flexSuffix(id)}</span>`).join('');
@@ -193,7 +237,7 @@ function directionHeadHtml(day,direction,devTagHtml){
   const myFamId = myLinkedFamilyId();
   let sub = '';
   if(myFamId){
-    const f = fam(myFamId), time = rideTime(myFamId,day,direction);
+    const f = fam(myFamId), time = openAskedTimeOf(myFamId,day,direction) || rideTime(myFamId,day,direction);   // the same time as on her chip
     if(time) sub = direction==='heen'
       ? t('schedule.sub_heen', { name: f.girlName||'', time })
       : t('schedule.sub_terug', { name: f.girlName||'', time });
@@ -206,28 +250,30 @@ export function renderDirectionWeek(day,direction){
   const cars = effectiveCars(day,direction).filter(c=>(c.girlIds||[]).length);
   const dev = activeDeviation(day,direction);
   const myId = myLinkedFamilyId();
+  const base = baseCars(day,direction);
   const cardsHtml = cars.map(c=>{
     const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
-    return `<div class="carCard">
+    const change = timeChangeOf(base,c);   // "was 15:30" (no strike-through: the word "was" says it)
+    const own = myId && c.driverFamilyId===myId;
+    const timeHtml = `<div class="timeCol"><span class="carCard__time">${esc(c.departureTime||'--:--')}</span>${change? `<span class="wasTime">${esc(t('myweek.was'))} ${esc(change.from)}</span>` : ''}</div>`;
+    const carBtn = own? driverCarButtonHtml(day,direction,'btn secondary small') : '';
+    return `<div class="carCard${change? ' carCard--changed' : ''}">
       <div class="carCard__head">
-        <span class="carCard__time">${esc(c.departureTime||'--:--')}</span>
+        ${timeHtml}
         <div class="carCard__who">${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}${carRouteHtml(c,direction,day)}</div>
         ${driver? `<span class="tag" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${c.girlIds.length}/${seats(driver)}</span>` : ''}
       </div>
-      <div class="chips">${pillsHtml(c.girlIds,myId)}</div>
-      ${neededTimesHtml(day,direction,c.girlIds,rideTime,c)}${myId && c.driverFamilyId===myId? driverCarButtonHtml(day,direction) : ''}
+      <div class="chipsRow"><div class="chips">${pillsTimedHtml(c.girlIds,myId,day,direction)}</div>${carBtn}</div>
+      ${lateReadyHtml(c,day,direction)}
     </div>`;
   }).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`;
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
   const askCar = cars.find(c=>myId && c.driverFamilyId===myId) || cars.find(c=>myId && (c.girlIds||[]).includes(myId)) || cars[0];
   const notRiding = ovGirlsFor(day,undefined,direction);
-  // The day coordinator (new weekly request feature on) sees who stays home as struck-through chips; everyone else keeps the plain line.
-  const goneChips = weekroosterActive() && myDeciderDays().includes(day);
-  const notRidingHtml = notRiding.length? (goneChips? `<div class="chips"><span class="noteLine">${t('schedule.rijdt_niet_mee')}</span>${sortGirlIds(notRiding).map(id=>`<span class="chip chip--gone">${girlName(id)}</span>`).join('')}</div>` : `<div class="noteLine">${t('schedule.rijdt_niet_mee')} ${sortGirlIds(notRiding).map(id=>girlName(id)).join(', ')}</div>`) : '';
   return `<div>
     ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>`:'')}
-    ${cardsHtml}${unplacedBoxHtml(day,direction)}${notRidingHtml}
-    ${tripReserveHtml(day,direction,cars,true,askCar&&askCar.departureTime)}
+    ${cardsHtml}${unplacedBoxHtml(day,direction)}
+    ${restFoldHtml(day,direction,notRiding,cars,askCar&&askCar.departureTime)}
   </div>`;
 }
 

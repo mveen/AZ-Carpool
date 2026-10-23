@@ -43,7 +43,7 @@ await testAsync('nobody else sees it: not a passenger\'s parent, not on a shift 
   await setup([MINE], { weekrooster: { mode: 'uit' } });
   assert.doesNotMatch(rooster(), /data-drivercar/); assert.doesNotMatch(myweek(), /data-drivercar/);
   await setup([MINE]);
-  withFakeNow(NOW, () => { assert.equal(driverCarButtonHtml('Do', 'heen'), '', 'I do not drive Thursday heen'); assert.equal(driverCarButtonHtml('Ma', 'terug'), '', 'Monday is over'); assert.match(driverCarButtonHtml('Do', 'terug'), /data-drivercar/); });
+  withFakeNow(NOW, () => { assert.equal(driverCarButtonHtml('Do', 'heen'), '', 'I do not drive Thursday heen'); assert.equal(driverCarButtonHtml('Ma', 'terug'), '', 'Monday is over'); assert.match(driverCarButtonHtml('Do', 'terug'), /data-drivercar/); assert.match(driverCarButtonHtml('Do', 'terug'), /class="linkbtn"/); assert.match(driverCarButtonHtml('Do', 'terug', 'btn secondary small'), /class="btn secondary small" data-drivercar/); });
 });
 await testAsync('the day coordinator gets the button for the own car as well (the car editor stays for the other cars)', async () => {
   await setup([MINE], { dayCoordinators: { Do: 'f2' } });

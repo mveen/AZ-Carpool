@@ -356,5 +356,11 @@ test('the Help explains the child time and the trash in Wijzigen', () => {
   assert.ok(all.includes('aanwezig om') && all.includes('klaar om') && all.includes('prullenbak'));
 });
 
+test('Rooster help explains the time per girl, "was", the warning and the one fold for Rijdt niet mee and Back-up', () => {
+  const r = allText(findArticle('rooster'));
+  assert.ok(r.includes('eigen tijd') && r.includes('"was"') && r.includes('gele waarschuwing'));
+  assert.ok(r.includes('op tijd (de vroegste eerst)')); assert.ok(r.includes('knop Zelf indelen') && r.includes('regel Dagcoördinator')); assert.ok(r.includes('Rijdt niet mee en Back-up') && r.includes('Tik erop om de namen te zien'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

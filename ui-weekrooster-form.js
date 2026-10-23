@@ -272,9 +272,12 @@ function askedLine(labelKey, doc, dir, day) {
 // The time the family itself asked for on one ride of this week while the request is still open ('' when nothing is open or the ride is not asked).
 // Her own time ("aanwezig om" / "klaar om") is a fact about her, not a decision of the day coordinator: it shows at once. Only the car (departure,
 // which car) waits for the coordinator, so rideTime() (the planning input) stays on the time that holds now.
-export function openAskedTime(day, dir) {
-  if (!weekroosterActive()) return '';
-  const wk = weekKeyFor('this'), doc = S.weekRequests[requestId(wk, day, myFamilyId())];
+export function openAskedTime(day, dir) { return openAskedTimeOf(myFamilyId(), day, dir); }
+// The same for any family: the own requests (weekRequests) and, for a day coordinator, the requests of the others (dayRequests).
+export function openAskedTimeOf(familyId, day, dir) {
+  if (!weekroosterActive() || !familyId) return '';
+  const wk = weekKeyFor('this'), id = requestId(wk, day, familyId);
+  const doc = (S.weekRequests && S.weekRequests[id]) || (S.dayRequests && S.dayRequests[id]);
   if (!doc || doc.rides === false || requestState(doc, Date.now(), dayEndMs(wk, day)) !== 'pending') return '';
   return doc[dir] || '';
 }
