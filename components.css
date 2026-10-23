@@ -446,6 +446,9 @@ button.chip{cursor:pointer;font-family:inherit}
 .matchTile__more{color:var(--text-muted);display:inline-flex}
 .matchTile__more svg{width:16px;height:16px;fill:currentColor}
 .coordLine{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-3);margin:var(--space-7) var(--space-1) 0;font:var(--type-caption);color:var(--text-muted)}
+.coordLine--act{flex-wrap:nowrap}
+.coordLine--act>span{flex:1;min-width:0}
+.coordLine--act .btn{flex:none;text-decoration:none}
 .coordLine button{border:0;background:none;padding:0;font:700 12px/1.4 var(--font-sans);color:var(--text-1);cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:var(--hit-min)}
 .nameLink{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 

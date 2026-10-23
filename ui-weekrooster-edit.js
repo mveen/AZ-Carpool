@@ -67,12 +67,11 @@ export function scheduleEditHtml() {
     <div class="actionBar">${hasAdvice(day) ? `<button type="button" class="btn secondary" id="wrEditAdvice">${esc(t('weekrooster.advice.look'))}</button>` : ''}<button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
 }
 
-// Under the day in Rooster "Deze week": the way into the editor. A planner: "Zelf indelen". Everybody else: the small link "Toch zelf wijzigen".
+// Under the day in Rooster "Deze week": the small link "Toch zelf wijzigen" for everybody who does not plan the day.
+// A planner has the button "Zelf indelen" on the line "Dagcoördinator {dag}" at the top (coordLineHtml in ui-weekrooster-rooster.js), so nothing here.
 export function scheduleDayFootHtml(day) {
-  if (!weekroosterActive() || S.wrEdit) return '';
-  return mayPlanDay(day)
-    ? `<button type="button" class="linkbtn" data-wredit="${day}">${esc(t('weekrooster.edit.self'))}</button>`
-    : `<button type="button" class="linkbtn" data-wroverride="${day}">${esc(t('weekrooster.edit.override_link'))}</button>`;
+  if (!weekroosterActive() || S.wrEdit || mayPlanDay(day)) return '';
+  return `<button type="button" class="linkbtn" data-wroverride="${day}">${esc(t('weekrooster.edit.override_link'))}</button>`;
 }
 
 async function settleDay(day) {

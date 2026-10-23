@@ -159,6 +159,8 @@ console.log('=== the one who decides: Zelf indelen ===');
 await testAsync('the day coordinator gets "Zelf indelen" under his day and goes straight into the editor, without a warning', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } });
   const html = rooster(); assert.match(html, /data-wredit="Do"/); assert.doesNotMatch(html, /data-wroverride/); assert.equal(mayPlanDay('Do'), true);
+  assert.match(html, /<div class="coordLine coordLine--act">[^]*?data-wredit="Do"[^]*?<\/div>/, 'the button sits on the line of the day coordinator, at the top');
+  assert.equal(scheduleDayFootHtml('Do'), '', 'no link at the bottom of the day any more');
   const before = dom.doc.body.children.length;
   openDayEditor('Do'); assert.deepEqual(S.wrEdit, { day: 'Do', override: false }); assert.equal(dom.doc.body.children.length, before, 'no sheet');
   assert.doesNotMatch(text(scheduleEditHtml()), /rechtstreeks aan/);

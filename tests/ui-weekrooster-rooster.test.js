@@ -135,6 +135,7 @@ await testAsync('the "Actie nodig" block has the button "Advies bekijken" for th
   await asDecider(); const html = rooster();
   assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Advies bekijken/);
   assert.match(html, /data-wredit="Do"/); assert.match(text(html), /Zelf indelen/);   // next to Advies bekijken, easy to find
+  assert.equal((html.match(/data-wredit="Do"/g) || []).length, 2, 'also on the line of the day coordinator at the top');
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

@@ -33,7 +33,10 @@ const requestLine = r => `${girlName(r.familyId)}: ${summaryOf(r)}`;
 function coordLineHtml(day) {
   const id = deciderFamilyOf(day), name = esc(deciderName(day) || t('weekrooster.decider.unknown'));
   const who = id ? contactButtonHtml(id, name) : `<strong>${name}</strong>`;
-  return `<div class="coordLine">${phIcon('user-circle-gear')} <span>${esc(t('weekrooster.coord.prefix'))} ${esc(lower(dayName(day)))}: ${who}</span></div>`;
+  // Who may plan this day (the coordinator, or the day coordinator) gets "Zelf indelen" here, on the line of the role: always in sight, no extra row.
+  const plan = !!S.canEdit || myDeciderDays().includes(day);
+  const act = plan ? `<button type="button" class="btn secondary small" data-wredit="${day}">${phIcon('pencil')} ${esc(t('weekrooster.edit.self'))}</button>` : '';
+  return `<div class="coordLine${plan ? ' coordLine--act' : ''}">${phIcon('user-circle-gear')} <span>${esc(t('weekrooster.coord.prefix'))} ${esc(lower(dayName(day)))}: ${who}</span>${act}</div>`;
 }
 
 function logHtml(day) {
