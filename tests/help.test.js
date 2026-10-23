@@ -362,5 +362,10 @@ test('Rooster help explains the time per girl, "was", the warning and the one fo
   assert.ok(r.includes('op tijd (de vroegste eerst)')); assert.ok(r.includes('knop Zelf indelen') && r.includes('regel Dagcoördinator')); assert.ok(r.includes('Rijdt niet mee en Back-up') && r.includes('Tik erop om de namen te zien'));
 });
 
+test('the Rooster article says the Rooster opens on Deze week', () => {
+  const r = JSON.stringify(articles.find(a => a.title === 'Wat staat er in het Rooster?'));
+  assert.ok(r.includes('Het Rooster opent op Deze week') && r.includes('Vast rooster'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

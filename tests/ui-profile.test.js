@@ -369,7 +369,7 @@ test('starting the test view drops coordinator rights; stopping restores them', 
   assert.equal(S.impersonateFamilyId, 'f2'); assert.equal(S.canEdit, false); assert.equal(S.roosterMode, 'week');
   assert.equal(dom.el('navBeheer').style.display, 'none');
   withFakeNow(NOW, () => stopImpersonate());
-  assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true); assert.equal(S.roosterMode, 'standard');
+  assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true); assert.equal(S.roosterMode, 'week');
   assert.equal(dom.el('navBeheer').style.display, '');
 });
 test('starting without a family id does nothing', () => {

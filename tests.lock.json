@@ -1,7 +1,7 @@
 {
   "app.js": {
-    "module": "91ffa798d650b93cdd473890a708b6befd3d9172df35c7e500d58f1e0957a46b",
-    "test": "8a1cef017f26405410e83ba1621e765472e2b1d84aca7a50ed20953a018e4e57"
+    "module": "0ad3b61430c69a7158e69687dd15cabdc5902586cc5a5ddc4c7c159a0f0674d3",
+    "test": "2b0e32c5cf212db28a402aa7a2332a17ecdc201fc3fcdcf5abc98ae94fcfd2c5"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "1fd37f873af0677160b2d25ceb4f429330fa0c6077d6998fd77f8adb94617992",
-    "test": "1dc3935336a2315ea9e13f5fb50a618a853880538a68c2651996ef02447e46cf"
+    "module": "f4a760360d059683a6e5f80dea4818dbbc05aedcfde68705828ace4c12decb70",
+    "test": "4b1e401259bfde6d028921913412a85473c503d8682e2eac9c27e81d036f5a21"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -60,12 +60,12 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "47064beb9ec382d9ddda83fa13a2bfa48057380681ad834d086ae44cd2f000b7",
-    "test": "2a56286da32865d68ce51fbbeeb402feed39e8ad8c53b23eec260a6798bdcdff"
+    "module": "2321bcf1e37ef42f9e2330f51ef1cdee35db01d4a3c7818572f94ae30889a832",
+    "test": "e41d9c93c9a8abefee42a80252338b08dea9693c7131a8bf75e48f0dcd34ed4f"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "2a56286da32865d68ce51fbbeeb402feed39e8ad8c53b23eec260a6798bdcdff"
+    "test": "e41d9c93c9a8abefee42a80252338b08dea9693c7131a8bf75e48f0dcd34ed4f"
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
@@ -228,8 +228,8 @@
     "test": "69147c18755a5c5a3fe7373489694d11164c44c24d296489b440cbbd4d252fdf"
   },
   "ui-profile.js": {
-    "module": "1e6b356deae2900019ab54f6ea451e322f111784b165698d1890589da70333ed",
-    "test": "db2888fc0437c581ae11be834ff15662b5baa4b8829ee8e92b29b7f03cbbf695"
+    "module": "f6c8a280fbed6243b1a6f1784d076c8c17d6c05bcf8391e9d1a725788bb9d537",
+    "test": "208f069ccd23dc6bd351da02ca8b85d8cc54ef4a54463094b537099fbbe2a7fa"
   },
   "ui-push-device.js": {
     "module": "74a0b0abe1c320b0b5898e00561959820efaf954049029fcb7265f924aa31587",
