@@ -198,7 +198,8 @@ export function renderMyWeek(){
     return `<div class="rideCard${key===todayStr?' rideCard--match':''}"><div class="rideCard__head">${esc(name.charAt(0).toUpperCase()+name.slice(1))} <small>${dateText(d)}</small></div>${matchRowsFor(d)}</div>`;
   };
   // myMatchRides already starts at today, so after Friday 19:00 this weekend's matches stay (until they are played) next to next week's days.
-  const afterCards = extraKeys.map(extraCard).join('');
+  // Weekend match cards and the weekday cards share one timeline, so this weekend comes before next Monday.
+  const afterEntries = extraKeys.map(k=>({ date: matchDateByKey[k], html: extraCard(k) }));
 
   const todayDay = dayInfo.find(d=>d.isToday);
   const todayCardHtml = todayDay ? `<div class="rideCard rideCard--today">
@@ -206,7 +207,8 @@ export function renderMyWeek(){
       ${todayDay.rows}</div>` : '';
   const todayIdx = DAYS.findIndex(([k])=>k===todayKeyNow());
   const upcoming = dayInfo.filter(d=>!d.isToday && (todayIdx<0 || DAYS.findIndex(([k])=>k===d.key)>todayIdx));
-  const restHtml = (upcoming.length||afterCards) ? `${upcoming.map(dayCardHtml).join('')}${afterCards}` : '';
+  const restEntries = [...upcoming.map(d=>({ date: d.date, html: dayCardHtml(d) })), ...afterEntries].sort((a,b)=>a.date-b.date);
+  const restHtml = restEntries.map(e=>e.html).join('');
   const noRidesHtml = (!todayCardHtml && !restHtml) ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
 
   // This week's matches: one tile each, linking to the Wedstrijd tab where the carpool is arranged.
