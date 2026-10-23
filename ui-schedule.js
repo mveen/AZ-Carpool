@@ -15,7 +15,8 @@ import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandar
 import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
-import { openAskedTimeOf } from './ui-weekrooster-form.js';
+import { openAskedTimeOf, weekroosterActive } from './ui-weekrooster-form.js';
+import { minutesToTime } from './planning.js';
 import { scheduleAdviceHtml, wireAdvice } from './ui-weekrooster-advice.js';
 import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
@@ -78,7 +79,9 @@ export function renderSchedule(){
       : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span>${mode!=='period'? `<button type="button" class="btn secondary chipBtn pill" id="ovOpen">${phIcon('table')}${t('overview.open')}</button>` : ''}</div>`;
   // Advies and Zelf indelen are one task: while one is open it is the whole screen (no coordinator line, tabs or Weekoverzicht).
   const focusHtml = mode==='week' ? (scheduleEditHtml() || scheduleAdviceHtml()) : '';
-  box.innerHTML = focusHtml || dayCoordinatorHtml()
+  // The line about the day coordinator under the days already says it for the day in view, so the banner above the switch is left out then.
+  const bannerDup = mode==='week' && weekroosterActive() && (dayCoordinatorTarget()||{}).day === S.scheduleDay;
+  box.innerHTML = focusHtml || (bannerDup? '' : dayCoordinatorHtml())
     + timeChangesCardHtml()
     + periodOverviewHtml()
     + segHtml
@@ -162,12 +165,20 @@ export function pillsTimedHtml(girlIds,myId,day,direction){
   }).join('');
 }
 
-// Terug: the car cannot leave before the last girl is ready. A girl who is ready later than the departure is a real conflict, not a window.
+// The car must fit the girls' times, in both directions (a real conflict, never a window):
+//   terug: the car cannot leave before the last girl is ready.
+//   heen:  the car arrives at departure + travel time (travelLeadMinutes); a girl who has to be there earlier is late.
 function lateReadyHtml(car,day,direction){
-  if(direction!=='terug' || !car.departureTime) return '';
+  if(!car.departureTime) return '';
   const dep = timeToMinutes(car.departureTime);
-  const late = sortGirlIds(car.girlIds).map(id=>({id, time: openAskedTimeOf(id,day,direction) || rideTime(id,day,direction)})).filter(x=>x.time && timeToMinutes(x.time)>dep);
-  return late.map(x=>`<div class="carCard__note carCard__note--warn">${phIcon('warning')} ${esc(t('schedule.klaar_na_vertrek',{p1:girlName(x.id).replace(/&amp;/g,'&'),p2:x.time}))}</div>`).join('');
+  const own = id => openAskedTimeOf(id,day,direction) || rideTime(id,day,direction);
+  const nm = id => girlName(id).replace(/&amp;/g,'&');
+  const girls = sortGirlIds(car.girlIds).map(id=>({id, time: own(id)})).filter(x=>x.time);
+  if(direction==='terug') return girls.filter(x=>timeToMinutes(x.time)>dep)
+    .map(x=>`<div class="carCard__note carCard__note--warn">${phIcon('warning')} ${esc(t('schedule.klaar_na_vertrek',{p1:nm(x.id),p2:x.time}))}</div>`).join('');
+  const arrival = dep + ((S.settings && S.settings.travelLeadMinutes) || 60);
+  return girls.filter(x=>timeToMinutes(x.time)<arrival)
+    .map(x=>`<div class="carCard__note carCard__note--warn">${phIcon('warning')} ${esc(t('schedule.te_laat_heen',{p1:nm(x.id),p2:x.time,p3:minutesToTime(arrival)}))}</div>`).join('');
 }
 
 // One fold per direction for everything that is not in a car: who does not ride and who is back-up.
@@ -177,8 +188,10 @@ function restFoldHtml(day,direction,notRiding,cars,askTime){
   const parts = [];
   if(notRiding.length) parts.push(`<span>${t('schedule.fold.out')} <b>${notRiding.length}</b></span>`);
   if(reserveIds.length) parts.push(`<span>${t('schedule.fold.backup')} <b>${reserveIds.length}</b></span>`);
-  const out = notRiding.length? `<p class="foldLabel">${t('schedule.fold.out')}</p><div class="chips">${sortGirlIds(notRiding).map(id=>`<span class="chip chip--muted">${girlName(id)}</span>`).join('')}</div>` : '';
-  const back = reserveIds.length? `<p class="foldLabel">${t('schedule.fold.backup')}</p><div class="chips">${reserveIds.map(id=>contactButtonHtml(id, esc(fam(id).parentName||'?'), reserveAskText(day,direction,askTime), 'chip chip--btn')).join('')}</div>` : '';
+  const both = notRiding.length>0 && reserveIds.length>0;   // a label inside only when the fold holds two parts
+  const lab = txt => both? `<p class="foldLabel">${txt}</p>` : '';
+  const out = notRiding.length? `${lab(t('schedule.fold.out'))}<div class="chips">${sortGirlIds(notRiding).map(id=>`<span class="chip chip--muted">${girlName(id)}</span>`).join('')}</div>` : '';
+  const back = reserveIds.length? `${lab(t('schedule.fold.backup'))}<div class="chips">${reserveIds.map(id=>contactButtonHtml(id, esc(fam(id).parentName||'?'), reserveAskText(day,direction,askTime), 'chip chip--btn')).join('')}</div>` : '';
   return foldHtml(`rooster|${day}|${direction}`, parts.join('<span class="sep">·</span>'), out+back, 'fold--quiet');
 }
 
@@ -224,7 +237,7 @@ function directionHeadHtml(day,direction,devTagHtml){
   const myFamId = myLinkedFamilyId();
   let sub = '';
   if(myFamId){
-    const f = fam(myFamId), time = rideTime(myFamId,day,direction);
+    const f = fam(myFamId), time = openAskedTimeOf(myFamId,day,direction) || rideTime(myFamId,day,direction);   // the same time as on her chip
     if(time) sub = direction==='heen'
       ? t('schedule.sub_heen', { name: f.girlName||'', time })
       : t('schedule.sub_terug', { name: f.girlName||'', time });

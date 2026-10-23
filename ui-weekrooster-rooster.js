@@ -5,7 +5,7 @@
 // These are status views, not notifications. Everything here only exists while the switch is on for this person.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, hapticTap, phIcon, showToast } from './ui-common.js';
+import { esc, foldHtml, hapticTap, phIcon, showToast } from './ui-common.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
@@ -30,30 +30,34 @@ const whenLabel = ms => {
 };
 const requestLine = r => `${girlName(r.familyId)}: ${summaryOf(r)}`;
 
-function coordLineHtml(day) {
+// The ONE line about the day coordinator in Rooster "Deze week". It is also "Jij bent dagcoördinator {dag}" when that is you (the line above the
+// switch is then left out, see renderSchedule). Whoever may plan this day gets "Zelf indelen" here, on the line of the role, with no extra row,
+// except when the amber card "Actie nodig" is on screen: that card has the same button next to "Advies bekijken" (withAction = false).
+function coordLineHtml(day, withAction = true) {
   const id = deciderFamilyOf(day), name = esc(deciderName(day) || t('weekrooster.decider.unknown'));
+  const me = !!id && id === myFamilyId();
   const who = id ? contactButtonHtml(id, name) : `<strong>${name}</strong>`;
-  // Who may plan this day (the coordinator, or the day coordinator) gets "Zelf indelen" here, on the line of the role: always in sight, no extra row.
-  const plan = !!S.canEdit || myDeciderDays().includes(day);
+  const plan = withAction && (!!S.canEdit || myDeciderDays().includes(day));
   const act = plan ? `<button type="button" class="btn secondary small" data-wredit="${day}">${phIcon('pencil')} ${esc(t('weekrooster.edit.self'))}</button>` : '';
-  return `<div class="coordLine${plan ? ' coordLine--act' : ''}">${phIcon('user-circle-gear')} <span>${esc(t('weekrooster.coord.prefix'))} ${esc(lower(dayName(day)))}: ${who}</span>${act}</div>`;
+  const text = me ? esc(t('weekrooster.coord.you', { p1: lower(dayName(day)) })) : `${esc(t('weekrooster.coord.prefix'))} ${esc(lower(dayName(day)))}: ${who}`;
+  return `<div class="coordLine${plan ? ' coordLine--act' : ''}">${phIcon(me ? 'star' : 'user-circle-gear')} <span>${text}</span>${act}</div>`;
 }
 
+// "Recente wijzigingen": only what is already settled (accepted, direct, changed by hand). What still waits is a row in the amber card.
+// Folded, because it is history.
 function logHtml(day) {
-  const now = Date.now(), items = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day))
+  const now = Date.now(), items = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state !== 'pending')
     .concat(selfChanges(S.deviations, wk(), day, deciderFamilyOf(day))).sort((a, b) => b.updatedAt - a.updatedAt);
   if (!items.length) return '';
   const rows = items.map(r => {
     if (r.state === 'self') return `<div class="logItem"><span class="logItem__dot logItem__dot--ok" aria-hidden="true"></span>
       <span class="logItem__main">${esc(t(r.direction === 'heen' ? 'weekrooster.log.selfHeen' : 'weekrooster.log.selfTerug', { p1: girlName(r.familyId) }))}</span>
       <span class="logItem__side"><span class="tag">${esc(t('weekrooster.tag.self'))}</span><span class="logItem__when">${esc(whenLabel(r.updatedAt))}</span></span></div>`;
-    const waiting = r.state === 'pending';
-    const tag = waiting ? `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>` : `<span class="tag tag--ok">${esc(t(r.state === 'accepted' ? 'weekrooster.tag.accepted' : 'weekrooster.tag.direct'))}</span>`;
-    return `<div class="logItem"><span class="logItem__dot${waiting ? '' : ' logItem__dot--ok'}" aria-hidden="true"></span>
+    return `<div class="logItem"><span class="logItem__dot logItem__dot--ok" aria-hidden="true"></span>
       <span class="logItem__main">${esc(requestLine(r))}</span>
-      <span class="logItem__side">${tag}<span class="logItem__when">${esc(whenLabel(r.updatedAt))}</span></span></div>`;
+      <span class="logItem__side"><span class="tag tag--ok">${esc(t(r.state === 'accepted' ? 'weekrooster.tag.accepted' : 'weekrooster.tag.direct'))}</span><span class="logItem__when">${esc(whenLabel(r.updatedAt))}</span></span></div>`;
   }).join('');
-  return `<div class="card" id="wrLog"><h2>${esc(t('weekrooster.log.title'))}</h2>${rows}</div>`;
+  return foldHtml('wrlog|' + day, `${esc(t('weekrooster.log.title'))} <b>${items.length}</b>`, rows, 'fold--quiet', 'wrLog');
 }
 
 // Above the day in Rooster "Deze week". Empty when the switch is off for this person.
@@ -62,12 +66,18 @@ export function scheduleDayExtrasHtml(day) {
   const decides = myDeciderDays().includes(day);
   if (decides) {
     const n = counts()[day] || 0;
+    // The requests that wait, as rows in the card (no second list below it). "Rijdt niet mee" is only mentioned when one was really processed.
+    const now = Date.now(), end = dayEndMs(wk(), day);
+    const waiting = pendingForDay(requestsForDeciding(), wk(), day, now, end);
+    const hasDirect = recentChanges(requestsForDeciding(), wk(), day, now, end).some(r => r.state === 'direct');
+    const rows = waiting.map(r => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span><span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span></div>`).join('');
     const alert = n
       ? `<div class="devAlert" id="wrAlert"><p class="devAlertTitle">${phIcon('warning-circle-fill')} ${esc(t(n === 1 ? 'weekrooster.alert.titleOne' : 'weekrooster.alert.titleMany', { p1: n, p2: lower(dayName(day)) }))}</p>
-          <p class="devAlertBody">${esc(t('weekrooster.alert.body'))}</p>
+          ${rows}
+          <p class="devAlertBody">${esc(t('weekrooster.alert.body'))}${hasDirect ? ' ' + esc(t('weekrooster.alert.bodyDirect')) : ''}</p>
           <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button><button type="button" class="btn small secondary" data-wredit="${day}">${esc(t('weekrooster.edit.self'))}</button></div></div>`
       : '';
-    return coordLineHtml(day) + alert + logHtml(day);
+    return coordLineHtml(day, !n) + alert + logHtml(day);
   }
   // A parent: the own open request of this day as a note, and the open requests of the other families.
   const own = openRequestsOf(S.weekRequests, wk(), myFamilyId(), Date.now(), d => dayEndMs(wk(), d)).filter(r => r.day === day && r.status === 'pending');

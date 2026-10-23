@@ -51,9 +51,12 @@ console.log('=== the day coordinator ===');
 await testAsync('Rooster on his day: "Actie nodig", the day coordinator line, the log (newest first) with tags and times', async () => {
   await asDecider(); const html = rooster(), s = text(html);
   assert.match(s, /Actie nodig: 1 wijziging voor donderdag/); assert.match(s, /Het vaste rooster geldt tot jij akkoord geeft/);
-  assert.match(s, /Dagcoördinator donderdag:/); assert.match(s, /Recente wijzigingen/);
-  assert.ok(s.indexOf('Evi: Rijdt niet mee') < s.indexOf('Anouk: Heen 11:00 · Terug 18:00'), 'newest first');
-  assert.match(s, /Direct wo 08:30/); assert.match(s, /Aanvraag wo 07:12/);
+  assert.match(s, /(Dagcoördinator donderdag:|Jij bent dagcoördinator donderdag)/);
+  assert.match(html, /<details class="fold fold--quiet"[^>]*id="wrLog"/); assert.match(s, /Recente wijzigingen 1/);   // folded history: only what is settled
+  assert.match(s, /Evi: Rijdt niet mee Direct wo 08:30/);
+  assert.match(html, /alertCard__row/); assert.match(s, /Anouk: Heen 11:00 · Terug 18:00 Aanvraag/);   // the waiting request is a row in the amber card
+  assert.doesNotMatch(html, /logItem__dot"[^>]*><\/span>\s*<span class="logItem__main">Anouk/, 'and is not listed a second time below');
+  assert.match(s, /'Rijdt niet mee' is al verwerkt\./);   // only because a Rijdt niet mee was really processed
   assert.doesNotMatch(noStyle(html), /style="/);
 });
 await testAsync('a day he does not decide has no action block and no log; the dot sits on his day only', async () => {
@@ -69,6 +72,14 @@ await testAsync('two requests are counted together; with none waiting there is n
   assert.match(text(rooster()), /Actie nodig: 2 wijzigingen voor donderdag/); assert.equal(weekroosterActionCount(), 2);
   await asDecider(); S.dayRequests = { '2026-W40_Do_f4': S.dayRequests['2026-W40_Do_f4'] };
   const html = rooster(); assert.doesNotMatch(html, /id="wrAlert"/); assert.match(html, /id="wrLog"/); assert.equal(weekroosterActionCount(), 0);
+  assert.match(html, /<div class="coordLine coordLine--act">[^]*?data-wredit="Do"/, 'no amber card: the button Zelf indelen sits on the line of the day coordinator');
+});
+await testAsync('the line of the day coordinator says "Jij bent dagcoördinator donderdag" for the day coordinator himself, and the direction titles show her asked time', async () => {
+  useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '07:30', terug: '16:00' }) });
+  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+  const html = rooster(), s = text(html);
+  assert.match(s, /Jij bent dagcoördinator donderdag/); assert.doesNotMatch(s, /Dagcoördinator donderdag:/);
+  assert.match(html, /sectionHead__sub">[^<]*aanwezig 07:30/); assert.match(html, /sectionHead__sub">[^<]*klaar 16:00/);   // the same time as on her chip
 });
 await testAsync('Mijn week: the card "Actie nodig voor donderdag" with the request (Aanvraag), the direct one (Direct) and "Bekijk"', async () => {
   await asDecider(); const html = mijnWeek(), s = text(html);
@@ -135,7 +146,7 @@ await testAsync('the "Actie nodig" block has the button "Advies bekijken" for th
   await asDecider(); const html = rooster();
   assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Advies bekijken/);
   assert.match(html, /data-wredit="Do"/); assert.match(text(html), /Zelf indelen/);   // next to Advies bekijken, easy to find
-  assert.equal((html.match(/data-wredit="Do"/g) || []).length, 2, 'also on the line of the day coordinator at the top');
+  assert.equal((html.match(/data-wredit="Do"/g) || []).length, 1, 'with the amber card on screen the button sits next to Advies bekijken only');
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

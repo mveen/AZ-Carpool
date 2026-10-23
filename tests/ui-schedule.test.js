@@ -62,7 +62,7 @@ test('Tuesday: the deviation replaces the standard rooster and is marked "gewijz
   const s = text(html);
   assert.match(s, /Week 40 · 28 sep – 2 okt · met wijzigingen\./);
   assert.match(s, /Heen gewijzigd 09:15 Kees de Vries Busstation → AFC (&#39;|')34 2\/5 Eline 10:15 Evi 11:00/);   // each girl with her own time
-  assert.match(s, /Back-up 2 Back-up Piet Pieters Mo Bakker/);   // one fold: the count, then the names as buttons
+  assert.match(s, /Back-up 2 Piet Pieters Mo Bakker/);   // one fold: the count, then the names as buttons (no second label when it holds one part)
   assert.doesNotMatch(s, /Klaar om op te halen|Aankomst .* nodig/);   // no window line: the times sit on the chips
   assert.match(s, /Niet ingedeeld: Jahaimy, Lois, Saar Regelen/);   // the dashed box under the cars of that direction
   expectSnapshot('ui-schedule', 'coordinator week Tuesday', html);
@@ -103,6 +103,22 @@ test('Deze week: passengers are ordered by their own time first, then A-Z', () =
   const expected = byName.sort((a, b) => a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0);
   assert.deepEqual(shown.slice(0, 3), expected, 'earliest time first, same time A-Z');
   assert.equal(expected[2][1], '09:00', 'the later girl is last');
+});
+test('Deze week: heen warns when the car arrives later than a girl has to be there', () => {
+  const html = render(() => {
+    sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' });
+    S.deviations = { ...S.deviations, Di_heen: { day: 'Di', direction: 'heen', weekKey: S.currentWeekKey, ovGirlIds: [], times: { f1: '09:00', f2: '12:00' }, cars: [{ driverFamilyId: 'f4', girlIds: ['f1', 'f2'], departureTime: '10:00' }] } };
+    return S;
+  });
+  const s = text(html);
+  assert.match(s, /moet er om 09:00 zijn, de auto is er om \d\d:\d\d/);
+  assert.doesNotMatch(s, /moet er om 12:00 zijn/, 'a girl who has time enough gets no warning');
+});
+test('Deze week: the fold has labels only when it holds two parts (not riding and back-up)', () => {
+  const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));
+  assert.match(html, /data-fold="rooster\|Di\|heen"/); assert.doesNotMatch(html, /foldLabel/);   // Di heen: back-up only
+  const both = render(() => { sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }); S.deviations = { ...S.deviations, Di_heen: { ...S.deviations.Di_heen, ovGirlIds: ['f5'] } }; return S; });
+  assert.match(both, /foldLabel/);
 });
 test('a day without any cars says so', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' })));

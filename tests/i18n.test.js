@@ -320,7 +320,10 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
   ['tag.request', 'tag.accepted', 'action.title', 'action.look', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.alert.titleOne', { p1: 1, p2: 'donderdag' }), 'Actie nodig: 1 wijziging voor donderdag');
   assert.equal(t('weekrooster.alert.titleMany', { p1: 3, p2: 'donderdag' }), 'Actie nodig: 3 wijzigingen voor donderdag');
-  assert.match(t('weekrooster.alert.body'), /Rijdt niet mee/);
+  assert.equal(t('weekrooster.alert.body'), 'Het vaste rooster geldt tot jij akkoord geeft.');
+  assert.equal(t('weekrooster.alert.bodyDirect'), "'Rijdt niet mee' is al verwerkt.");
+  assert.equal(t('weekrooster.coord.you', { p1: 'maandag' }), 'Jij bent dagcoördinator maandag');
+  assert.equal(t('schedule.te_laat_heen', { p1: 'Eline', p2: '07:30', p3: '08:30' }), 'Eline moet er om 07:30 zijn, de auto is er om 08:30');
 });
 
 test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {
