@@ -15,6 +15,7 @@ import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow
 import { S } from '../state.js';
 import { renderMyWeek, matchInfoHtml, goToWijzigen } from '../ui-myweek.js';
 import { submitWeekRequests, syncWeekRequests } from '../weekrooster-data.js';
+import { PH_PATHS } from '../constants.js';
 
 const dom = installFakeDom();
 useFakeDb(sampleDbSeed());
@@ -85,7 +86,7 @@ test('days that are over (Monday and Tuesday on a Wednesday) are not shown any m
 });
 test('a ride with a deviation this week is tagged "Gewijzigd", also when she has no car yet', () => {
   const s = text(renderAt(MON, {}));
-  assert.match(s, /Dinsdag 29 sep 10:15 vertrek Heen · Busstation → AFC (&#39;|')34 Nog geen rit Gewijzigd/);
+  assert.match(s, /Dinsdag 29 sep 10:15 vertrek Gewijzigd Heen · Busstation → AFC (&#39;|')34 Nog geen rit/);
 });
 test('days without any time for this girl are not shown (Wednesday)', () => {
   assert.ok(!/WO 30/.test(text(render({}))));
@@ -147,12 +148,12 @@ test('a Flex daughter has no "not planned" alerts, and sees only the days she si
   assert.match(s, /maandag 28 sep/); assert.match(s, /Jan Jansen/); assert.doesNotMatch(s, /09:00|16:00|Aanwezig om/, 'no fixed times for a Flex daughter');
   assert.doesNotMatch(s, /Donderdag 1 okt/);
 });
-test('a Flex driver is marked "speelster-chauffeur" in a parent\'s ride line', () => {
+test('a Flex driver in a parent\'s ride line is shown by name, without a pill', () => {
   const fams = sampleParentState().families;
   fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', schedule: {}, availability: {} };
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f9', girlIds: ['f9', 'f2'], departureTime: '07:30' }] } };
   const html = renderAt(MON, { families: fams, deviations: dev });
-  assert.match(html, /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+  assert.match(html, /Lotte Flex/); assert.doesNotMatch(html, /flexBadge|speelster-chauffeur/);
 });
 
 console.log('\n=== Terug met OV, places, distance, route link (US-06, US-15, US-21, US-22) ===');
@@ -290,10 +291,22 @@ test('outside the days with a temporary rooster the week is exactly as before', 
   assert.match(s, /Do heen · aankomst 10:15/); assert.match(s, /Vr heen · aankomst 11:00/);
   assert.equal(text(render({ periods: {} })), text(render({})));
 });
+test('the pill "Gewijzigd" sits in the time column of the ride, under "vertrek", and not next to the driver', () => {
+  const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
+  const html = renderAt(MON, { ...period40(), deviations: dev });
+  assert.match(html, /<div class="rideRow__sub">was <s>12:00<\/s><\/div><span class="tag tag--warn">Gewijzigd<\/span><\/div>/);
+  const driverBtn = html.slice(html.indexOf('class="rideRow__driver"'), html.indexOf('</button>', html.indexOf('class="rideRow__driver"')));
+  assert.doesNotMatch(driverBtn, /tag/, 'no pill inside the driver button');
+});
+test('the driver button ends in a (neutral) phone icon, not in ">"', () => {
+  const html = renderAt(MON, { ...period40() });
+  const btn = html.slice(html.indexOf('class="rideRow__driver"'), html.indexOf('</button>', html.indexOf('class="rideRow__driver"')));
+  assert.ok(btn.includes(PH_PATHS['phone']), 'phone icon'); assert.ok(!btn.includes(PH_PATHS['caret-right']), 'no caret');
+});
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 was 12:00 Terug · AFC (&#39;|')34 → Busstation Jan Jansen Gewijzigd Jahaimy klaar om 12:00/);
+  assert.match(s, /12:30 was 12:00 Gewijzigd Terug · AFC (&#39;|')34 → Busstation Jan Jansen Jahaimy klaar om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {

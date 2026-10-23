@@ -135,10 +135,10 @@ test('the day coordinator herself is told so, without a button to herself', () =
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f2' } }));
   assert.match(text(html), /^Jij bent dagcoördinator morgen/); assert.doesNotMatch(html, /dayCoordWa/);
 });
-test('a Flex driver is marked in the "Deze week" driver line', () => {
+test('a Flex driver in the "Deze week" driver line is shown by name, without a pill', () => {
   const fams = sampleParentState().families; fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', schedule: {}, availability: {} };
   const html = withFakeNow(NOW, () => { sampleParentState({ families: fams }); return driverLineHtml('f9', 'f2'); });
-  assert.match(html, /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+  assert.match(html, /Lotte Flex/); assert.doesNotMatch(html, /flexBadge|speelster-chauffeur/);
 });
 
 

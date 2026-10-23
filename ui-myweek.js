@@ -63,11 +63,11 @@ export function matchInfoHtml(m, opts){
   </div>`;
 }
 
-// "Naam >" button that opens the contact sheet; a car without a known driver is an amber problem line instead.
-function driverButtonHtml(driverFamilyId, tagsHtml){
+// "Naam (phone icon)" button that opens the contact sheet (WhatsApp / Bellen); a car without a known driver is an amber problem line instead.
+function driverButtonHtml(driverFamilyId){
   const known = !!(driverFamilyId && S.families[driverFamilyId] && S.families[driverFamilyId].parentName);
   if(!known) return `<div class="rideRow__none">${esc(t('driver.none'))}</div>`;
-  return `<button type="button" class="rideRow__driver" data-contact="${esc(driverFamilyId)}">${driverNameHtml(driverFamilyId)}${phIcon('caret-right')}${tagsHtml||''}</button>`;
+  return `<button type="button" class="rideRow__driver" data-contact="${esc(driverFamilyId)}">${driverNameHtml(driverFamilyId)}${phIcon('phone')}</button>`;
 }
 
 const dirName = direction => direction==='heen' ? t('dir.heenShort') : t('dir.terugShort');
@@ -111,16 +111,15 @@ export function renderMyWeek(){
       if(ownCar.driverFamilyId===myId){
         // Full passenger list, including your own daughter — not just "everyone else".
         const passengers = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
-        status = `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span>${changedTag}</div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}${driverCarButtonHtml(day,direction)}`;
+        status = `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}${driverCarButtonHtml(day,direction)}`;
       } else {
-        status = opts.sharedDriver ? '' : driverButtonHtml(ownCar.driverFamilyId, changedTag);
+        status = opts.sharedDriver ? '' : driverButtonHtml(ownCar.driverFamilyId);
       }
     } else if(isOvMe){
       status = `<div class="rideRow__off">${esc(t('myweek.rijdt_niet_mee', { name: plainGirlName(myId) }))}</div>`;
     } else {
       status = `<div class="rideRow__none">${esc(t('myweek.nog_geen_rit'))}</div>`;
     }
-    if(!ownCar && changedTag) status += `<div class="rideRow__drives">${changedTag}</div>`;
     // The departure time of the car changed compared with the standard rooster: said in words, with the old and the new time.
     const timeChangedLine = c => { const x = timeChangeOf(baseCars(day,direction), c); return x? `<div class="rideRow__extra rideRow__extra--changed">${phIcon('clock')} ${esc(t('driverCar.tijdGewijzigd',{p1:x.from,p2:x.to}))}</div>` : ''; };
     const ownTimeChange = ownCar ? timeChangeOf(baseCars(day,direction), ownCar) : null;   // shown as "was 07:00" under the time
@@ -137,7 +136,7 @@ export function renderMyWeek(){
     const sw = !dayPassed && !isFlex(myFam)
       ? `<span class="swWrap"><button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button><span class="swCap">${esc(t(isOvMe?'myweek.switch_off':'myweek.switch_on'))}</span></span>` : '';
     return `<div class="rideRow${isOvMe?' rideRow--off':''}" data-rideday="${day}" data-ridedir="${direction}">
-      <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${ownTimeChange ? `${esc(t('myweek.was'))} <s>${esc(ownTimeChange.from)}</s>` : esc(t('myweek.vertrek'))}</div></div>
+      <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${ownTimeChange ? `${esc(t('myweek.was'))} <s>${esc(ownTimeChange.from)}</s>` : esc(t('myweek.vertrek'))}</div>${changedTag}</div>
       <div class="rideRow__main"><div class="rideRow__route">${esc(route)}</div>${status}${daughterLine}</div>
       ${sw}
     </div>`;
@@ -145,14 +144,12 @@ export function renderMyWeek(){
 
   // The rows of one day. When heen and terug have the same driver (not me) it is said ONCE above the two rows, not twice with the same tags.
   const ownCarOf = (day,direction) => effectiveCars(day,direction).find(c=>(c.girlIds||[]).includes(myId)) || null;
-  const changedFlag = (day,direction) => { const c = ownCarOf(day,direction); return !!c && ((!!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), effectiveCars(day,direction)).length>0) || isOverride(c,direction,cfg,day)); };
   function dayRows(day){
     const heen = rideRow(day,'heen'), terug = rideRow(day,'terug');
     const a = ownCarOf(day,'heen'), b = ownCarOf(day,'terug');
     const id = a && b && a.driverFamilyId && a.driverFamilyId===b.driverFamilyId && a.driverFamilyId!==myId && S.families[a.driverFamilyId] && S.families[a.driverFamilyId].parentName ? a.driverFamilyId : '';
     if(!(id && heen && terug)) return heen + terug;
-    const tag = (changedFlag(day,'heen') || changedFlag(day,'terug')) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '';
-    return `<button type="button" class="rideRow__driver driverOnce" data-contact="${esc(id)}">${driverNameHtml(id)} ${esc(t('myweek.rijdt_heen_terug'))}${phIcon('caret-right')}${tag}</button>` + rideRow(day,'heen',{sharedDriver:true}) + rideRow(day,'terug',{sharedDriver:true});
+    return `<button type="button" class="rideRow__driver driverOnce" data-contact="${esc(id)}">${driverNameHtml(id)} ${esc(t('myweek.rijdt_heen_terug'))}${phIcon('phone')}</button>` + rideRow(day,'heen',{sharedDriver:true}) + rideRow(day,'terug',{sharedDriver:true});
   }
 
   // Wedstrijdcarpool rides (spontaneous, per match) — violet + football so they never get

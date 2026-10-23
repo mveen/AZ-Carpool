@@ -286,10 +286,10 @@ test('a Flex girl who is signed up sees "Aangemeld" and a sign-off button instea
   const html = withFakeNow(NOW, () => flexSignupHtml('Ma', 'heen', [{ driverFamilyId: 'f1', girlIds: ['f1', 'f9'] }]));
   assert.match(text(html), /Lotte Flex · Aangemeld Afmelden/); assert.match(html, /data-flexoff="Ma\|heen\|f9"/); assert.doesNotMatch(html, /data-flexpass/);
 });
-test('a Flex driver is marked in the driver dropdown and gets no availability warning', () => {
+test('a Flex driver is in the driver dropdown by name only (no pill) and gets no availability warning', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f9', girlIds: ['f9'], departureTime: '08:00' }] } };
   const html = renderOpen(flexParent, { deviationDay: 'Ma', deviations: dev });
-  assert.match(html, /<option value="f9" selected>Lotte Flex \(speelster-chauffeur\)<\/option>/);
+  assert.match(html, /<option value="f9" selected>Lotte Flex<\/option>/);
   assert.doesNotMatch(html, /Deze ouder heeft voor dit moment geen beschikbaarheid/);
 });
 

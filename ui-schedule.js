@@ -138,14 +138,13 @@ export function neededTimesHtml(day,direction,girlIds,timeOf=famTime,car=null){
 }
 
 // Small badge after a Flex driver's name (used where the name is already a button).
-function flexMark(id){ return isFlex(fam(id))? ` <span class="badge flexBadge">${esc(t('flex.speelsterChauffeur'))}</span>` : ''; }
 
 // The driver of one car: "Geen chauffeur" (amber), "Jij rijdt" (green), or the name as a contact button.
 // wa = {day,time}: "Deze week": the contact sheet starts WhatsApp with the question to take over this ride.
 export function driverLineHtml(driverId,myId,wa){
   if(!driverId) return `<div class="carCard__driver carCard__driver--none">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
   if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me">${phIcon('steering-wheel-fill')} ${t('schedule.jij_rijdt')}</div>`;
-  const name = wa? contactButtonHtml(driverId, esc(fam(driverId).parentName||'?'), driverAskText(wa.day, wa.time), 'carCard__driver') + flexMark(driverId) : `<span class="carCard__driver">${driverNameHtml(driverId)}</span>`;
+  const name = wa? contactButtonHtml(driverId, esc(fam(driverId).parentName||'?'), driverAskText(wa.day, wa.time), 'carCard__driver') : `<span class="carCard__driver">${driverNameHtml(driverId)}</span>`;
   return `<div>${name}</div>`;
 }
 

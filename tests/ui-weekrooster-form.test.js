@@ -15,7 +15,7 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, myWeekNextWeekHtml, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { syncWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
 
@@ -35,6 +35,7 @@ const fillInputs = (pastDays = ['Ma', 'Di']) => {
   });
 };
 const switchOn = (html, day, dir) => new RegExp('class="switch switch--sm on" role="switch" aria-checked="true" aria-label="[^"]*" data-wrtoggle="' + day + '" data-wrdir="' + dir + '"').test(html);
+const blocksOf = html => html.split('class="reqBlock"').slice(1).map(b => b.slice(0, b.indexOf('</button>')));   // the request blocks of the days, in order
 const tick = () => new Promise(r => setImmediate(r));
 const parentOn = async (mode = 'aan') => { const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode } }); syncWeekRequests(); await tick(); return fake; };
 
@@ -122,9 +123,19 @@ await testAsync('design B, Mijn week: the button is secondary and there is no am
   assert.doesNotMatch(html, /alertCard alertCard--stack/); assert.doesNotMatch(s, /Aanvraag voor|beslist\./);
   const card = html.slice(html.indexOf('Donderdag'));
   assert.match(card, /class="reqBlock"/); assert.match(card, /data-wrwithdraw="Do"/);
-  assert.match(text(card), /Aanvraag in behandeling heen 11:00 · terug 18:00 Wacht op [^ ]+/); assert.match(text(card), /Intrekken/);
+  assert.match(text(card), /Aanvraag in behandeling aanwezig 10:15 11:00 klaar 18:00 Wacht op .+ Intrekken/);
   assert.doesNotMatch(html, /tag tag--warn">Aanvraag</, 'the tag "Aanvraag" is gone from the ride');
   assert.equal((html.match(/class="reqBlock"/g) || []).length, 1, 'only the day with the request');
+});
+await testAsync('design B, Mijn week: in the request block the time that holds now is struck through, the asked time is normal (no arrow), and "klaar" is always on its own line', async () => {
+  await parentOn(); await submitThis([['Do', '11:00', '18:00'], ['Vr', '', '16:00']]);
+  const [block, blockVr] = blocksOf(mijnWeek());
+  assert.match(block, /aanwezig <s>10:15<\/s> <b>11:00<\/b>/, 'old struck through, new normal');
+  assert.doesNotMatch(block, /<s>18:00/, 'an unchanged time is not struck through');
+  assert.doesNotMatch(text(block), /→|heen 11:00|terug 18:00/, 'no arrow, and "aanwezig" / "klaar" instead of "heen" / "terug"');
+  assert.equal((block.match(/class="reqBlock__line"/g) || []).length, 2, 'aanwezig and klaar are two lines');
+  assert.match(block, /class="reqBlock__line">klaar <b>18:00<\/b>/);
+  assert.match(text(blockVr), /aanwezig 11:00 Rijdt niet mee klaar 17:00 16:00/, 'an emptied time is "rijdt niet mee" on that ride');
 });
 await testAsync('design B, Mijn week: Intrekken withdraws that day only', async () => {
   await parentOn(); await submitThis([['Do', '11:00', '18:00'], ['Vr', '10:00', '16:00']]);
@@ -138,12 +149,29 @@ await testAsync('design B, Mijn week: Intrekken withdraws that day only', async 
 await testAsync('design B, Mijn week: the requests for next week are ONE compact card under the days (day, times, who decides)', async () => {
   await parentOn(); await submitNext([['Ma', '08:15', '17:00']]);
   let html = mijnWeek(), s = text(html);
-  assert.match(s, /Volgende week 1 aanvraag wacht op antwoord/); assert.match(s, /Ma 08:15 → 17:00 [^ ]+/); assert.equal((html.match(/class="nwRow"/g) || []).length, 1);
+  assert.match(s, /Volgende week 5 – 9 okt Wijzigen 1 aanvraag wacht op antwoord Aanwezig Klaar Wacht op Ma 08:15 17:00 [^ ]+/); assert.equal((html.match(/class="nwRow"/g) || []).length, 1);
+  assert.match(html, /class="reqBlock reqBlock--week"/); assert.match(html, /id="wrChangeNext"/); assert.match(html, /data-wrwithdraw-next="Ma"/); assert.doesNotMatch(html.slice(html.indexOf('reqBlock--week')), /→/, 'no arrows in the next-week block');
   assert.doesNotMatch(html, /alertCard alertCard--stack/);
   await parentOn(); await submitNext([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]);
   html = mijnWeek(); s = text(html);
-  assert.match(s, /2 aanvragen wachten op antwoord/); assert.equal((html.match(/class="nwRow"/g) || []).length, 2); assert.match(s, /Di 08:15 → 17:30/);
-  assert.equal((html.match(/class="card nextWeek"/g) || []).length, 1, 'one card for all');
+  assert.match(s, /2 aanvragen wachten op antwoord/); assert.equal((html.match(/class="nwRow"/g) || []).length, 2); assert.match(s, /Di 08:15 17:30/);
+  assert.equal((html.match(/class="reqBlock reqBlock--week"/g) || []).length, 1, 'one block for all');
+});
+await testAsync('design B, Mijn week: next week shows "niet mee" where a ride (or the day) is off, and has an Intrekken per day', async () => {
+  await parentOn(); await submitNext([['Do', '', '18:00'], ['Vr', '10:00', '16:00']]);
+  let s = text(mijnWeek());
+  assert.match(s, /Do niet mee 18:00/); assert.match(s, /Vr 10:00 16:00/); assert.doesNotMatch(s, /Do – /, 'no dash for "niet mee"');
+  assert.equal((mijnWeek().match(/data-wrwithdraw-next="/g) || []).length, 2);
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('next', 'Do')), true);
+  const html = mijnWeek();
+  assert.doesNotMatch(html, /data-wrwithdraw-next="Do"/); assert.match(html, /data-wrwithdraw-next="Vr"/, 'only that day is withdrawn');
+});
+await testAsync('design B, Mijn week: the link "Wijzigen" at next week opens Wijzigen on the tab "Volgende week"', async () => {
+  await parentOn(); await submitNext([['Ma', '08:15', '17:00']]);
+  S.wrWeek = 'this'; const btn = {}; const box = { querySelector: sel => (sel === '#wrChangeNext' ? btn : null), querySelectorAll: () => [] };
+  withFakeNow(NOW, () => wireMyWeekWeekrooster(box));
+  assert.equal(typeof btn.onclick, 'function'); withFakeNow(NOW, () => btn.onclick());
+  assert.equal(S.wrWeek, 'next'); assert.match(text(dom.html('tab-deviation')), /Doorgegeven · week 41/);
 });
 await testAsync('nothing changed: nothing is written and the parent is told', async () => {
   const fake = await parentOn(); wijzigen(); fillInputs();

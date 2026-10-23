@@ -1,15 +1,15 @@
 // ui-weekrooster-form.js — Afwijkend weekrooster, phase 2: what a parent (or a day coordinator for the own daughter) sees.
 //   Wijzigen: the week form (same look as the period form), then the "Doorgegeven" card (days, what others notice, actions) and the day coordinators.
-//   Mijn week: the button "Tijden wijzigen", the amber card of an open request and the pill "Aanvraag" on the ride.
+//   Mijn week: the button "Tijden wijzigen", the amber block of an open request in the card of its day, and next week's open requests as one block.
 // Everything here only shows while the switch is on for this person (weekroosterOn) and the person has a daughter of their own
 // (not Flex). Rules and requests: weekrooster.js; database: weekrooster-data.js.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS } from './constants.js';
-import { dayUp, isoDayLabel, weekKeyDayIso } from './dates.js';
+import { dayUp, isoDayLabel, isoRangeLabel, weekKeyDayIso } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
-import { baseCars, effectiveCars, fam, girlName, isFlex } from './rides.js';
+import { baseCars, effectiveCars, fam, girlName, isFlex, rideTime } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { activateTab } from './app.js';
@@ -244,29 +244,49 @@ export function myWeekWeekroosterHtml() {
   if (!weekroosterActive()) return '';
   return `<div class="wrStack"><button type="button" class="btn secondary" id="wrChange">${phIcon('pencil')}${t('weekrooster.myweek.change')}</button></div>`;
 }
-// The dashed amber block in the card of a day of THIS week that has an open request: what was asked, who decides, and Intrekken (that day only).
+// One line of the request block: the label, the time that holds now (struck through when the request changes it) and the asked time.
+// An empty asked time (or a whole day off) is "rijdt niet mee" on that ride.
+function askedLine(labelKey, doc, dir, day) {
+  const asked = doc.rides === false ? '' : (doc[dir] || '');
+  const now = rideTime(myFamilyId(), day, dir);
+  const was = now && now !== asked ? `<s>${esc(now)}</s> ` : '';
+  return `<div class="reqBlock__line">${esc(t(labelKey))} ${was}${asked ? `<b>${esc(asked)}</b>` : `<span>${esc(t('weekrooster.done.out'))}</span>`}</div>`;
+}
+// The dashed amber block in the card of a day of THIS week that has an open request: what was asked ("aanwezig" and "klaar", each on its own line,
+// the time that holds now struck through), who decides, and Intrekken (that day only).
 export function requestBlockHtml(day) {
   if (!weekroosterActive()) return '';
   const wk = weekKeyFor('this'), doc = S.weekRequests[requestId(wk, day, myFamilyId())];
   if (!doc || requestState(doc, Date.now(), dayEndMs(wk, day)) !== 'pending') return '';
   return `<div class="reqBlock"><div class="reqBlock__head">${phIcon('clock')}<b>${esc(t('weekrooster.myweek.blockTitle'))}</b></div>
-    <div class="reqBlock__times">${esc(lower(summaryOf(doc)))}</div>
+    <div class="reqBlock__times">${askedLine('weekrooster.myweek.at', doc, 'heen', day)}${askedLine('weekrooster.myweek.ready', doc, 'terug', day)}</div>
     <div class="reqBlock__foot"><span>${esc(t('weekrooster.tag.wait', { p1: deciderLabel(day) }))}</span><button type="button" class="linkbtn danger" data-wrwithdraw="${day}">${esc(t('weekrooster.myweek.blockWithdraw'))}</button></div></div>`;
 }
-// Under the days: the open requests for next week as one compact card (day, times, who decides).
+// Under the days: the open requests for next week as ONE dashed block with columns (day, aanwezig, klaar, who decides) and an Intrekken per day.
+// The link "Wijzigen" in the header opens Wijzigen on the tab "Volgende week".
 export function myWeekNextWeekHtml() {
   if (!weekroosterActive()) return '';
   const next = mine('next').filter(r => r.status === 'pending');
   if (!next.length) return '';
-  const rows = next.map(r => `<div class="nwRow"><b class="nwRow__day">${esc(dayName(r.day).slice(0, 2))}</b><span class="nwRow__times">${esc(r.rides === false ? t('weekrooster.done.out') : `${r.heen || '–'} → ${r.terug || '–'}`)}</span><span class="nwRow__who">${esc(upperFirst(deciderLabel(r.day)))}</span></div>`).join('');
+  const wk = weekKeyFor('next');
+  const dates = isoRangeLabel(weekKeyDayIso(wk, REQUEST_DAYS[0]), weekKeyDayIso(wk, REQUEST_DAYS[REQUEST_DAYS.length - 1]));
+  const cell = (r, dir) => { const v = r.rides === false ? '' : (r[dir] || ''); return v ? `<span class="nwRow__t">${esc(v)}</span>` : `<span class="nwRow__t nwRow__t--off">${esc(t('weekrooster.myweek.notRidingShort'))}</span>`; };
+  const rows = next.map(r => `<div class="nwRow"><b class="nwRow__day">${esc(dayName(r.day).slice(0, 2))}</b>${cell(r, 'heen')}${cell(r, 'terug')}<span class="nwRow__who">${esc(upperFirst(deciderLabel(r.day)))}</span><button type="button" class="iconBtn" data-wrwithdraw-next="${r.day}" aria-label="${esc(t('weekrooster.myweek.withdrawDay', { p1: dayName(r.day) }))}">${phIcon('x')}</button></div>`).join('');
   const sub = next.length === 1 ? t('weekrooster.myweek.requestsOne') : t('weekrooster.myweek.requestsMany', { p1: next.length });
-  return `<div class="sectionHead"><span class="sectionHead__title">${esc(t('weekrooster.myweek.nextTitle'))}</span><span class="sectionHead__sub">${esc(sub)}</span></div><div class="card nextWeek">${rows}</div>`;
+  return `<div class="sectionHead"><span class="sectionHead__title">${esc(t('weekrooster.myweek.nextTitle'))} <span class="sectionHead__dates">${esc(dates)}</span></span><button type="button" class="linkbtn" id="wrChangeNext">${phIcon('pencil')}${esc(t('weekrooster.myweek.editNext'))}</button></div>
+    <div class="reqBlock reqBlock--week"><div class="reqBlock__head">${phIcon('clock')}<b>${esc(sub)}</b></div>
+    <div class="nwHead"><span></span><span>${esc(t('weekrooster.myweek.colAt'))}</span><span>${esc(t('weekrooster.myweek.colReady'))}</span><span>${esc(t('weekrooster.myweek.colWho'))}</span><span></span></div>${rows}</div>`;
 }
 export function wireMyWeekWeekrooster(box, rerender) {
   const b = box.querySelector('#wrChange');
   if (b) b.onclick = () => { hapticTap(); S.wrWeek = 'this'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };
-  // Intrekken in the request block of a day: two taps (design rule 9a), only that day's request.
-  box.querySelectorAll('[data-wrwithdraw]').forEach(btn => btn.onclick = () => twoStepConfirm(btn, t('weekrooster.done.withdrawConfirm'), async () => {
-    if (await withdrawWeekRequests('this', btn.dataset.wrwithdraw)) { S.wrForm = null; showToast(t('weekrooster.done.withdrawn')); if (rerender) rerender(); }
-  }));
+  // "Wijzigen" at next week: straight to the tab Volgende week of Wijzigen.
+  const n = box.querySelector('#wrChangeNext');
+  if (n) n.onclick = () => { hapticTap(); S.wrWeek = 'next'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };
+  // Intrekken in the request block of a day (this week) or in a row of next week: two taps (design rule 9a), only that day's request.
+  const withdraw = (btn, w, day, label) => twoStepConfirm(btn, label, async () => {
+    if (await withdrawWeekRequests(w, day)) { S.wrForm = null; showToast(t('weekrooster.done.withdrawn')); if (rerender) rerender(); }
+  });
+  box.querySelectorAll('[data-wrwithdraw]').forEach(btn => btn.onclick = () => withdraw(btn, 'this', btn.dataset.wrwithdraw, t('weekrooster.done.withdrawConfirm')));
+  box.querySelectorAll('[data-wrwithdraw-next]').forEach(btn => btn.onclick = () => withdraw(btn, 'next', btn.dataset.wrwithdrawNext, t('weekrooster.myweek.withdrawSure')));
 }

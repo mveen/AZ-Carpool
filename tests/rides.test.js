@@ -244,11 +244,11 @@ test('a Flex family is a driver when its availability says so, and never a passe
   assert.equal(ids(eligibleDrivers('Ma', 'heen', 1, flexState())).includes('f9'), true);
   assert.equal(ids(girlsFor('Ma', 'heen', flexState())).includes('f9'), false);
 });
-test('a Flex driver is marked "speelster-chauffeur"; a fixed driver is not', () => {
+test('a Flex driver is shown like any other driver: just the name, no "speelster-chauffeur" pill', () => {
   const st = flexState();
-  assert.equal(plainDriverName('f9', st), 'Lotte Flex (speelster-chauffeur)');
+  assert.equal(plainDriverName('f9', st), 'Lotte Flex');
   assert.equal(plainDriverName('f1', st), 'Jan Jansen');
-  assert.match(driverNameHtml('f9', st), /Lotte Flex <span class="badge flexBadge">speelster-chauffeur<\/span>/);
+  assert.equal(driverNameHtml('f9', st), 'Lotte Flex');
   assert.equal(driverNameHtml('f1', st), 'Jan Jansen');
   assert.equal(driverNameHtml(null, st), 'nog geen chauffeur');
 });

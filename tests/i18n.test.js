@@ -156,7 +156,7 @@ test('the wording from the user stories is exact', () => {
   assert.equal(t('dayCoord.label', { when: t('dayCoord.monday'), name: 'Merel' }), 'Dagcoördinator maandag: Merel');
   assert.equal(t('oneOnOne.label'), 'Stem 1-op-1 af, de dagcoördinator deelt het besluit.');
   assert.equal(t('wa.conclusie.onSchedule', { dayLabel: 'Donderdag' }), 'Donderdag: volgens schema.');
-  assert.equal(t('flex.speelsterChauffeur'), 'speelster-chauffeur');
+  assert.equal(t('flex.speelsterChauffeur'), 'flex.speelsterChauffeur', 'the pill "speelster-chauffeur" is gone: its text no longer exists');
 });
 
 test('the texts of the five new stories exist and fill their placeholders', () => {
