@@ -263,23 +263,27 @@ export function requestBlockHtml(day) {
     <div class="reqBlock__foot"><span>${esc(t('weekrooster.tag.wait', { p1: deciderLabel(day) }))}</span><button type="button" class="linkbtn danger" data-wrwithdraw="${day}">${esc(t('weekrooster.myweek.blockWithdraw'))}</button></div></div>`;
 }
 // Under the days: the open requests for next week as ONE dashed block with columns (day, aanwezig, klaar, who decides) and an Intrekken per day.
+// Closed by default: the line "N aanvragen wachten op antwoord" is the button that unfolds the columns (S.myWeekNextOpen).
 // The link "Wijzigen" in the header opens Wijzigen on the tab "Volgende week".
 export function myWeekNextWeekHtml() {
   if (!weekroosterActive()) return '';
   const next = mine('next').filter(r => r.status === 'pending');
-  if (!next.length) return '';
-  const wk = weekKeyFor('next');
+  if (!next.length) { S.myWeekNextOpen = false; return ''; }
+  const open = !!S.myWeekNextOpen, wk = weekKeyFor('next');
   const dates = isoRangeLabel(weekKeyDayIso(wk, REQUEST_DAYS[0]), weekKeyDayIso(wk, REQUEST_DAYS[REQUEST_DAYS.length - 1]));
   const cell = (r, dir) => { const v = r.rides === false ? '' : (r[dir] || ''); return v ? `<span class="nwRow__t">${esc(v)}</span>` : `<span class="nwRow__t nwRow__t--off">${esc(t('weekrooster.myweek.notRidingShort'))}</span>`; };
   const rows = next.map(r => `<div class="nwRow"><b class="nwRow__day">${esc(dayName(r.day).slice(0, 2))}</b>${cell(r, 'heen')}${cell(r, 'terug')}<span class="nwRow__who">${esc(upperFirst(deciderLabel(r.day)))}</span><button type="button" class="iconBtn" data-wrwithdraw-next="${r.day}" aria-label="${esc(t('weekrooster.myweek.withdrawDay', { p1: dayName(r.day) }))}">${phIcon('x')}</button></div>`).join('');
   const sub = next.length === 1 ? t('weekrooster.myweek.requestsOne') : t('weekrooster.myweek.requestsMany', { p1: next.length });
   return `<div class="sectionHead"><span class="sectionHead__title">${esc(t('weekrooster.myweek.nextTitle'))} <span class="sectionHead__dates">${esc(dates)}</span></span><button type="button" class="linkbtn" id="wrChangeNext">${phIcon('pencil')}${esc(t('weekrooster.myweek.editNext'))}</button></div>
-    <div class="reqBlock reqBlock--week"><div class="reqBlock__head">${phIcon('clock')}<b>${esc(sub)}</b></div>
-    <div class="nwHead"><span></span><span>${esc(t('weekrooster.myweek.colAt'))}</span><span>${esc(t('weekrooster.myweek.colReady'))}</span><span>${esc(t('weekrooster.myweek.colWho'))}</span><span></span></div>${rows}</div>`;
+    <div class="reqBlock reqBlock--week${open ? '' : ' reqBlock--closed'}"><button type="button" class="reqBlock__toggle" id="wrNextToggle" aria-expanded="${open}">${phIcon('clock')}<b>${esc(sub)}</b><span class="reqBlock__chev">${phIcon(open ? 'caret-up' : 'caret-down')}</span></button>${open ? `
+    <div class="nwHead"><span></span><span>${esc(t('weekrooster.myweek.colAt'))}</span><span>${esc(t('weekrooster.myweek.colReady'))}</span><span>${esc(t('weekrooster.myweek.colWho'))}</span><span></span></div>${rows}` : ''}</div>`;
 }
 export function wireMyWeekWeekrooster(box, rerender) {
   const b = box.querySelector('#wrChange');
   if (b) b.onclick = () => { hapticTap(); S.wrWeek = 'this'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };
+  // The line "N aanvragen wachten op antwoord" folds the next-week block open and closed.
+  const tg = box.querySelector('#wrNextToggle');
+  if (tg) tg.onclick = () => { hapticTap(); S.myWeekNextOpen = !S.myWeekNextOpen; if (rerender) rerender(); };
   // "Wijzigen" at next week: straight to the tab Volgende week of Wijzigen.
   const n = box.querySelector('#wrChangeNext');
   if (n) n.onclick = () => { hapticTap(); S.wrWeek = 'next'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };

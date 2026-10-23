@@ -224,8 +224,20 @@ test('US-22: matchInfoHtml(geo) makes the location a route link (Wedstrijd tab);
   const html = withUserAgent(ANDROID, () => render({ matchesSource: 'live', matches: [m], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
   assert.match(html, /<div role="button" tabindex="0" class="matchTile" data-gomatchcarpool="1">/);
   assert.match(text(html), /za 3 okt · AZ O15-1 \(Uit\) · Ajax O15-1 De Toekomst, Amsterdam Aftrap 10:00 · carpool nog niet geregeld/);
-  assert.doesNotMatch(text(html), /Wedstrijden deze week/);                     // design v2: no label above the tile
+  assert.match(text(html), /Wedstrijden deze week za 3 okt/);                    // the tile has its own heading, "Wedstrijden · deze week"
   assert.match(html, /matchTile__title.*<div class="matchTile__loc"><a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam".*matchTile__sub/s);   // US-22: the route link stays in Mijn week, directly under the title
+});
+await testAsync('the matches of this week come right after the day cards, under their own heading; "Volgende week" is last', async () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  await withFakeNowAsync(NOW, () => submitWeekRequests('next', { Ma: { rides: true, heen: '08:15', terug: '17:00' } }));
+  const m = { calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') };
+  Object.assign(S, { matchesSource: 'live', matches: [m], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });   // keep the request that was just handed in
+  withFakeNow(NOW, () => renderMyWeek());
+  assert.match(dom.html('tab-myweek'), /sectionHead__title">Volgende week/, 'the next-week block is on the page');
+  const html = dom.html('tab-myweek');
+  const iDay = html.indexOf('rideCard'), iHead = html.indexOf('sectionHead__title">Wedstrijden'), iTile = html.indexOf('class="matchTile"'), iNext = html.indexOf('sectionHead__title">Volgende week');
+  assert.ok(iDay >= 0 && iHead > iDay, 'the heading follows the day cards'); assert.ok(iTile > iHead, 'the tile follows its heading');
+  assert.ok(iNext > iTile, '"Volgende week" comes after the matches, not before them');
 });
 test('US-22: the location of a stored match ride is a link too', () => {
   const html = withUserAgent(ANDROID, () => render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));

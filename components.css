@@ -523,8 +523,13 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .reqBlock__times s{color:var(--text-muted)}
 .reqBlock__foot{display:flex;justify-content:space-between;align-items:center;gap:var(--space-4);margin:0 0 0 var(--space-9);font:var(--type-caption);color:var(--warn-ink)}
 .reqBlock__foot .linkbtn{font-size:13px;margin-right:calc(var(--space-2) * -1)}
-.reqBlock--week{margin:0 0 var(--space-4);padding:var(--space-4) var(--space-5) var(--space-3)}
-.reqBlock--week .reqBlock__head{margin-bottom:var(--space-3)}
+.reqBlock--week{margin:0 0 var(--space-4);padding:var(--space-1) var(--space-5) var(--space-3)}
+.reqBlock--closed{padding-bottom:0}
+.reqBlock__toggle{display:flex;align-items:center;gap:var(--space-3);width:100%;min-height:var(--hit-min);padding:0;border:0;background:none;color:var(--warn-ink);font-size:18px;text-align:left;cursor:pointer}
+.reqBlock__toggle svg{color:var(--warn-icon)}
+.reqBlock__toggle b{flex:1;font:var(--type-small);font-weight:700;color:var(--warn-ink)}
+.reqBlock__chev{display:inline-flex;font-size:20px}
+.reqBlock__chev svg{color:var(--warn-ink)}
 .sectionHead__dates{margin-left:var(--space-3);font:var(--type-caption);font-weight:400;color:var(--text-muted)}
 .sectionHead .linkbtn{gap:var(--space-2)}
 .nwHead,.nwRow{display:grid;grid-template-columns:var(--space-9) 58px 44px 1fr auto;column-gap:var(--space-3);align-items:center}

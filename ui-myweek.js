@@ -223,6 +223,8 @@ export function renderMyWeek(){
       <div class="matchTile__sub">${esc(sub)}</div></span>
       <span class="matchTile__more">${phIcon('caret-right')}</span></div>`;
   }).join('');
+  // The matches of this week follow the day cards (Friday, then Saturday), under their own heading; "Volgende week" comes last.
+  const matchesHtml = matchTiles ? `<div class="sectionHead"><span class="sectionHead__title">${esc(t('myweek.wedstrijden_title'))}</span><span class="sectionHead__sub">${esc(t('myweek.wedstrijden_sub'))}</span></div>${matchTiles}` : '';
   const matchStatusNote = S.matchesSource==='live' ? '' : (S.cachedMatchesAt? `<p class="noteLine">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
   const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
 
@@ -245,8 +247,7 @@ export function renderMyWeek(){
   });
 
   box.innerHTML = `
-    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}${myWeekNextWeekHtml()}
-    ${matchTiles}${matchFailNote}${matchStatusNote}
+    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}${matchesHtml}${matchFailNote}${matchStatusNote}${myWeekNextWeekHtml()}
     ${dayCoordinatorHtml()}
   `;
   wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireDriverCar(box, renderMyWeek);

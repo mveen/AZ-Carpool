@@ -147,24 +147,39 @@ await testAsync('design B, Mijn week: Intrekken withdraws that day only', async 
   assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this')), true); assert.doesNotMatch(mijnWeek(), /reqBlock/);
 });
 await testAsync('design B, Mijn week: the requests for next week are ONE compact card under the days (day, times, who decides)', async () => {
-  await parentOn(); await submitNext([['Ma', '08:15', '17:00']]);
+  await parentOn(); await submitNext([['Ma', '08:15', '17:00']]); S.myWeekNextOpen = true;
   let html = mijnWeek(), s = text(html);
   assert.match(s, /Volgende week 5 – 9 okt Wijzigen 1 aanvraag wacht op antwoord Aanwezig Klaar Wacht op Ma 08:15 17:00 [^ ]+/); assert.equal((html.match(/class="nwRow"/g) || []).length, 1);
   assert.match(html, /class="reqBlock reqBlock--week"/); assert.match(html, /id="wrChangeNext"/); assert.match(html, /data-wrwithdraw-next="Ma"/); assert.doesNotMatch(html.slice(html.indexOf('reqBlock--week')), /→/, 'no arrows in the next-week block');
   assert.doesNotMatch(html, /alertCard alertCard--stack/);
-  await parentOn(); await submitNext([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]);
+  await parentOn(); await submitNext([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]); S.myWeekNextOpen = true;
   html = mijnWeek(); s = text(html);
   assert.match(s, /2 aanvragen wachten op antwoord/); assert.equal((html.match(/class="nwRow"/g) || []).length, 2); assert.match(s, /Di 08:15 17:30/);
   assert.equal((html.match(/class="reqBlock reqBlock--week"/g) || []).length, 1, 'one block for all');
 });
 await testAsync('design B, Mijn week: next week shows "niet mee" where a ride (or the day) is off, and has an Intrekken per day', async () => {
-  await parentOn(); await submitNext([['Do', '', '18:00'], ['Vr', '10:00', '16:00']]);
+  await parentOn(); await submitNext([['Do', '', '18:00'], ['Vr', '10:00', '16:00']]); S.myWeekNextOpen = true;
   let s = text(mijnWeek());
   assert.match(s, /Do niet mee 18:00/); assert.match(s, /Vr 10:00 16:00/); assert.doesNotMatch(s, /Do – /, 'no dash for "niet mee"');
   assert.equal((mijnWeek().match(/data-wrwithdraw-next="/g) || []).length, 2);
   assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('next', 'Do')), true);
   const html = mijnWeek();
   assert.doesNotMatch(html, /data-wrwithdraw-next="Do"/); assert.match(html, /data-wrwithdraw-next="Vr"/, 'only that day is withdrawn');
+});
+await testAsync('design B, Mijn week: Volgende week is closed by default; the line with the number of requests unfolds it, Intrekken keeps it open, and it closes itself when nothing is left', async () => {
+  await parentOn(); await submitNext([['Ma', '08:15', '17:00'], ['Di', '08:15', '17:30']]);
+  let html = mijnWeek(), s = text(html);
+  assert.match(html, /reqBlock--closed/); assert.match(html, /id="wrNextToggle" aria-expanded="false"/); assert.match(s, /2 aanvragen wachten op antwoord/);
+  assert.equal((html.match(/class="nwRow"/g) || []).length, 0, 'no rows while closed'); assert.doesNotMatch(html, /data-wrwithdraw-next/);
+  assert.match(html, /id="wrChangeNext"/, 'the link Wijzigen is there while closed');
+  const tg = {}; let drawn = 0; const box = { querySelector: sel => (sel === '#wrNextToggle' ? tg : null), querySelectorAll: () => [] };
+  withFakeNow(NOW, () => wireMyWeekWeekrooster(box, () => { drawn++; }));
+  withFakeNow(NOW, () => tg.onclick()); assert.equal(S.myWeekNextOpen, true); assert.equal(drawn, 1);
+  html = mijnWeek(); assert.match(html, /aria-expanded="true"/); assert.doesNotMatch(html, /reqBlock--closed/); assert.equal((html.match(/class="nwRow"/g) || []).length, 2);
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('next', 'Ma')), true);
+  html = mijnWeek(); assert.equal((html.match(/class="nwRow"/g) || []).length, 1, 'still open after a withdraw');
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('next', 'Di')), true);
+  assert.equal(mijnWeek().includes('reqBlock--week'), false); assert.equal(S.myWeekNextOpen, false, 'nothing left: the block is gone and the next one starts closed');
 });
 await testAsync('design B, Mijn week: the link "Wijzigen" at next week opens Wijzigen on the tab "Volgende week"', async () => {
   await parentOn(); await submitNext([['Ma', '08:15', '17:00']]);

@@ -313,6 +313,8 @@ export default {
   "myweek.kon_niet_ophalen": "Kon niet ophalen:",
   "myweek.p_class_muted_geen_wedstrijden": "<p class=\"muted\">Geen wedstrijden gevonden.</p>",
   "myweek.wedstrijden_deze_week": "Wedstrijden deze week",
+  "myweek.wedstrijden_title": "Wedstrijden",
+  "myweek.wedstrijden_sub": "deze week",
   "myweek.carpool_regelen": "Carpool regelen",
   "myweek.niet_ingepland": "): niet ingepland",
   "myweek.regelen": "Regelen",

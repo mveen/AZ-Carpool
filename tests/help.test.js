@@ -289,7 +289,7 @@ test('the avatar article quotes names that exist in the app', () => {
 });
 
 test('help reflects the server jobs, the new host and the "Aanwezig om" texts', () => {
-  assert.match(allText(findArticle('mijn-week')), /gele pil "Gewijzigd"/); assert.match(allText(findArticle('mijn-week')), /telefoon-icoon/);
+  assert.match(allText(findArticle('mijn-week')), /gele pil "Gewijzigd"/); assert.match(allText(findArticle('mijn-week')), /telefoon-icoon/); assert.match(allText(articles.find(x => x.id === 'beheer-weekrooster')), /standaard dicht/);
   assert.match(allText(findArticle('mijn-week')), /aanwezig om/); assert.ok(Object.values(nl).includes('{name} aanwezig om'));
   assert.match(allText(findArticle('over-privacy')), /mijn\.host[\s\S]*Back-ups[\s\S]*30 dagen/);
   assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*vrijdag kort na 19:00/);
