@@ -153,9 +153,11 @@ export function flexSuffix(id){ return isFlex(fam(id)) ? ' · '+t('flex.chip') :
 
 // "Deze week": the passengers of one car with each girl's OWN time on her chip (heen: there at, terug: ready at). An open request already counts
 // for her own time (the car waits for the day coordinator), the rest is the time that holds now.
+// Order: first by that time (earliest first; no time last), then A-Z (sortGirlIds is A-Z and the sort is stable).
 export function pillsTimedHtml(girlIds,myId,day,direction){
-  return sortGirlIds(girlIds).map(id=>{
-    const time = openAskedTimeOf(id,day,direction) || rideTime(id,day,direction);
+  const timed = sortGirlIds(girlIds).map(id=>({ id, time: openAskedTimeOf(id,day,direction) || rideTime(id,day,direction) }))
+    .sort((a,b)=> a.time===b.time? 0 : !a.time? 1 : !b.time? -1 : a.time<b.time? -1 : 1);
+  return timed.map(({id,time})=>{
     return `<span class="chip${id===myId?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}">${girlName(id)}${flexSuffix(id)}${time?` <span class="chipTime">${esc(time)}</span>`:''}</span>`;
   }).join('');
 }

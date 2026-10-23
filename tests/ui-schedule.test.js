@@ -91,6 +91,19 @@ test('Deze week: a changed departure shows "was <old time>" as plain text (no st
   });
   assert.match(html, /carCard carCard--changed/); assert.match(html, /<span class="wasTime">was \d\d:\d\d<\/span>/); assert.doesNotMatch(html, /wasTime[^>]*><s>|<s>\d\d:\d\d<\/s>/);
 });
+test('Deze week: passengers are ordered by their own time first, then A-Z', () => {
+  const ids = ['f1', 'f2', 'f3'], times = { f1: '09:00', f2: '08:00', f3: '08:00' };
+  const html = render(() => {
+    sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' });
+    S.deviations = { ...S.deviations, Di_heen: { day: 'Di', direction: 'heen', weekKey: S.currentWeekKey, ovGirlIds: [], times, cars: [{ driverFamilyId: 'f4', girlIds: ids, departureTime: '07:00' }] } };
+    return S;
+  });
+  const shown = [...html.matchAll(/<span class="chip[^"]*">([^<]+?) <span class="chipTime">(\d\d:\d\d)<\/span>/g)].map(m => [m[1].replace(/&amp;/g, '&').trim(), m[2]]);
+  const byName = ids.map(id => [S.families[id].girlName, times[id]]).sort((a, b) => a[0].localeCompare(b[0], 'nl'));
+  const expected = byName.sort((a, b) => a[1] < b[1] ? -1 : a[1] > b[1] ? 1 : 0);
+  assert.deepEqual(shown.slice(0, 3), expected, 'earliest time first, same time A-Z');
+  assert.equal(expected[2][1], '09:00', 'the later girl is last');
+});
 test('a day without any cars says so', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' })));
   assert.match(s, /Terug Geen ritten\./);
