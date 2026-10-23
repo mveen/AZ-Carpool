@@ -98,10 +98,10 @@ await testAsync('the number on the Rooster tab adds the waiting requests to the 
   assert.equal(dom.el('navRoosterBadge').style.display, 'none');
 });
 
-await testAsync('on his own day, children who do not ride along are struck-through chips; on another day the plain line stays', async () => {
+await testAsync('children who do not ride along sit in the quiet fold (muted names, no strike-through), on his own day and on another day', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_terug: { day: 'Do', direction: 'terug', weekKey: S.currentWeekKey, cars: [], ovGirlIds: ['f4'] }, Wo_terug: { day: 'Wo', direction: 'terug', weekKey: S.currentWeekKey, cars: [], ovGirlIds: ['f4'] } };
-  const html = rooster(); assert.match(html, /chip chip--gone/); assert.match(text(html), /Rijdt niet mee:/);
-  S.scheduleDay = 'Wo'; const other = rooster(); assert.doesNotMatch(other, /chip chip--gone/);
+  const html = rooster(); assert.match(html, /chip chip--muted/); assert.doesNotMatch(html, /chip--gone/); assert.match(text(html), /Rijdt niet mee 1/);
+  S.scheduleDay = 'Wo'; const other = rooster(); assert.match(other, /chip chip--muted/); assert.doesNotMatch(other, /chip--gone/);
 });
 
 console.log('=== a parent ===');
@@ -134,6 +134,7 @@ await testAsync('uit (or test for a parent): none of it exists', async () => {
 await testAsync('the "Actie nodig" block has the button "Advies bekijken" for the day coordinator', async () => {
   await asDecider(); const html = rooster();
   assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Advies bekijken/);
+  assert.match(html, /data-wredit="Do"/); assert.match(text(html), /Zelf indelen/);   // next to Advies bekijken, easy to find
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

@@ -15,7 +15,8 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, openAskedTimeOf, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { myFamilyId } from '../coordinator.js';
 import { syncWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
 
@@ -303,6 +304,7 @@ await testAsync('Mijn week: an open request already counts for HER own time ("aa
   assert.doesNotMatch(card.slice(0, card.indexOf('reqBlock')), /aanwezig om 10:15/, 'the standard time is no longer shown as hers');
   const other = html.slice(html.indexOf('Vrijdag')); assert.doesNotMatch(text(other), /aanwezig om 12:30/, 'another day is not touched');
   assert.equal(openAskedTime('Do', 'heen'), '12:30'); assert.equal(openAskedTime('Vr', 'heen'), '');
+  assert.equal(openAskedTimeOf(myFamilyId(), 'Do', 'terug'), '19:00'); assert.equal(openAskedTimeOf('', 'Do', 'terug'), '', 'no family, no time');
 });
 await testAsync('Mijn week: her own time follows the request the moment it is withdrawn (back to the standard time)', async () => {
   await parentOn(); await submitThis([['Do', '12:30', '19:00']]);

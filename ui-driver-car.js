@@ -17,9 +17,9 @@ import { hasOpenOffer } from './ritbeurs.js';
 const dayLabel = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
 
 // The button under the own car. Empty when the new flow is off for this person, when this person does not drive on that shift, or when the day is over.
-export function driverCarButtonHtml(day, direction) {
+export function driverCarButtonHtml(day, direction, cls = 'linkbtn') {
   if (!weekroosterActive() || isDayPast(S.currentWeekKey, day) || !myCarOf(day, direction)) return '';
-  return `<button type="button" class="linkbtn" data-drivercar="${day}|${direction}">${phIcon('map-pin')} ${esc(t('driverCar.knop'))}</button>`;
+  return `<button type="button" class="${cls}" data-drivercar="${day}|${direction}">${phIcon('map-pin')} ${esc(t('driverCar.knop'))}</button>`;
 }
 
 export function wireDriverCar(box, rerender) {

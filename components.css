@@ -475,6 +475,24 @@ button.chip{cursor:pointer;font-family:inherit}
 .carCard__route{font:var(--type-caption);color:var(--text-muted)}
 .carCard .chips{margin-top:var(--space-4)}
 .carCard__note{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
+.carCard__note--warn{color:var(--warn-ink);display:flex;align-items:center;gap:var(--space-2)}
+/* Rooster "Deze week" (compact): own time per chip, "was" under the departure, one quiet fold for Rijdt niet mee + Back-up. */
+.timeCol{display:flex;flex-direction:column;gap:var(--space-1)}
+.wasTime{font:var(--type-caption);color:var(--warn-ink)}
+.chipTime{font-family:var(--font-mono);font-weight:600;color:var(--text-muted)}
+.chip--mine .chipTime{color:inherit;opacity:.8}
+.chip--muted{background:var(--surface-soft);color:var(--text-muted)}
+button.chip--btn{background:var(--surface-soft);color:var(--text-1);border:0;text-decoration:none}
+.chipsRow{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--space-3);margin-top:var(--space-4)}
+.chipsRow .chips{margin:0}
+.chipsRow .btn{flex:none;white-space:nowrap}
+details.fold--quiet{margin-top:var(--space-3);padding:0 var(--space-1)}
+details.fold--quiet>summary{justify-content:flex-start;gap:var(--space-3);font:var(--type-caption);font-weight:600;color:var(--text-2);min-height:var(--hit-min)}
+details.fold--quiet>summary b{color:var(--text-1)}
+details.fold--quiet>summary::after{margin-left:auto}
+details.fold--quiet .sep{color:var(--text-muted)}
+details.fold--quiet .foldLabel{margin:var(--space-3) 0 var(--space-2);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
+details.fold--quiet .foldLabel:first-child{margin-top:0}
 .carCard select{margin-top:var(--space-3)}
 .dashBox{margin-top:var(--space-3);border:2px dashed var(--warn-icon);border-radius:var(--radius-car);padding:var(--space-4) var(--space-6);font:var(--type-small);color:var(--warn-ink)}
 .quickAssign{display:flex;flex-direction:column;align-items:stretch;gap:var(--space-3);margin-top:var(--space-3)}

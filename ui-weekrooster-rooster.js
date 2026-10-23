@@ -62,7 +62,7 @@ export function scheduleDayExtrasHtml(day) {
     const alert = n
       ? `<div class="devAlert" id="wrAlert"><p class="devAlertTitle">${phIcon('warning-circle-fill')} ${esc(t(n === 1 ? 'weekrooster.alert.titleOne' : 'weekrooster.alert.titleMany', { p1: n, p2: lower(dayName(day)) }))}</p>
           <p class="devAlertBody">${esc(t('weekrooster.alert.body'))}</p>
-          <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button></div></div>`
+          <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button><button type="button" class="btn small secondary" data-wredit="${day}">${esc(t('weekrooster.edit.self'))}</button></div></div>`
       : '';
     return coordLineHtml(day) + alert + logHtml(day);
   }

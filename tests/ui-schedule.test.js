@@ -45,11 +45,14 @@ test('an empty day offers a proposal for the girls who have a time', () => {
   assert.match(s, /Optie 1: Nieuwe auto: Kees de Vries Kees de Vries: Anouk \(1\/5 pl\.\)/);
 });
 
-test('own daughter\'s time in the direction title reads "{name} aanwezig {time}" (no place, same for heen and terug)', () => {
+test('own daughter\'s time in the direction title: heen "{name} aanwezig {time}", terug "{name} klaar {time}" (no place)', () => {
   const html = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
   const subs = [...html.matchAll(/sectionHead__sub">([^<]*)</g)].map(m => m[1]).filter(Boolean);
   assert.ok(subs.length >= 1, 'a time line is shown');
-  for (const x of subs) assert.match(x, /^\S+ aanwezig \d\d:\d\d$/);
+  const [heen, terug] = subs;
+  assert.match(heen, /^\S+ aanwezig \d\d:\d\d$/);
+  if (terug) assert.match(terug, /^\S+ klaar \d\d:\d\d$/);
+  assert.ok(!subs.some(x => /^\S+ aanwezig/.test(x) && x === terug), 'terug never says aanwezig');
 });
 
 console.log('\n=== Deze week (with this week\'s changes) ===');
@@ -57,10 +60,26 @@ test('Tuesday: the deviation replaces the standard rooster and is marked "gewijz
   const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));
   const s = text(html);
   assert.match(s, /Week 40 · 28 sep – 2 okt · met wijzigingen\./);
-  assert.match(s, /Heen gewijzigd 09:15 Kees de Vries Busstation → AFC (&#39;|')34 2\/5 Eline Evi/);
-  assert.match(s, /Back-up: Piet Pieters , Mo Bakker/);
+  assert.match(s, /Heen gewijzigd 09:15 Kees de Vries Busstation → AFC (&#39;|')34 2\/5 Eline 10:15 Evi 11:00/);   // each girl with her own time
+  assert.match(s, /Back-up 2 Back-up Piet Pieters Mo Bakker/);   // one fold: the count, then the names as buttons
+  assert.doesNotMatch(s, /Klaar om op te halen|Aankomst .* nodig/);   // no window line: the times sit on the chips
   assert.match(s, /Niet ingedeeld: Jahaimy, Lois, Saar Regelen/);   // the dashed box under the cars of that direction
   expectSnapshot('ui-schedule', 'coordinator week Tuesday', html);
+});
+test('Deze week: Rijdt niet mee and Back-up are ONE quiet fold per direction, names without strike-through', () => {
+  const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));
+  assert.match(html, /<details class="fold fold--quiet"[^>]*data-fold="rooster\|Di\|heen"/);
+  assert.doesNotMatch(html, /chip--gone|line-through/);
+  assert.match(html, /class="chip chip--btn" data-contact=/);   // a back-up name is a real button
+});
+test('Deze week: a girl who is ready after the car leaves gets an amber warning (terug), never a window', () => {
+  const html = render(() => {
+    sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' });
+    S.deviations = { ...S.deviations, Di_terug: { day: 'Di', direction: 'terug', weekKey: S.currentWeekKey, ovGirlIds: [], cars: [{ driverFamilyId: 'f2', girlIds: ['f1'], departureTime: '10:00' }] } };
+    return S;
+  });
+  assert.match(html, /carCard__note--warn/);
+  assert.match(text(html), /is pas klaar om \d\d:\d\d/);
 });
 test('a day without any cars says so', () => {
   const s = text(render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' })));
