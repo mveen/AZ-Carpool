@@ -19,7 +19,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 2. **No colour literals** (`#fff`, `rgb(...)`) and **no radius or shadow literals** in CSS or in `style="..."` of new code. Use `var(--...)`.
 3. **No font sizes in px in screens.** Use a `--type-*` token (`font:var(--type-body)`). Times and counts use `--font-mono`, nothing else does.
 4. **Need something that does not exist?** Add the block to `components.css`, from tokens, and list it below. Then use it. Do not make a one-off.
-5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab, "vandaag", the own daughter's chip and initial, a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
+5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab, "vandaag", the own daughter's chip, a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
 6. **Primary buttons are ink** (`--action-bg`). Selected = ink. Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
 7. **Every tap target is at least 44 px** (`--hit-min`).
 8. **Dark theme comes free** if you only use role tokens (`--surface-card`, `--text-1`, ...). Never use the raw palette (`--ink-900`, `--paper-0`, ...) in components.
@@ -50,6 +50,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 - **Chip** `.chip` (+ `--mine` red = own daughter, `--flex` dashed) in a `.chips` row. **Tag** `.tag` (+ `--ok`, `--warn`, `--match`, `--accent`).
 - **Switch** `.switch` (+ `.on`): `button role=switch`, green + car when she rides along, grey + x when not.
 - **Alert card** `.alertCard` (amber, one action), `--stack` for a list of rows (`__row`).
+- **Request card (Mijn week)**: ONE `.alertCard--stack` for all open requests: `.reqHead` (clock + count title), a `.reqLine` per day (`__what` day + `__times` in the time font, `__who` the decider), and `.reqGroup` (a 44 px fold button, `aria-expanded`) that folds next week's days when there are two or more. `DaughterTime` has no initial circle any more: it is the name and the time ("Eva aanwezig om 08:30").
 - **Ride card / ride row** `.rideCard` (+ `--today`, `--match`), `.rideRow` (+ `--off`, `--match`) with `__time`, `__route`, `__driver` (name button), `__drives`, `__pass`, `__none`, `__off`, `__extra`; **DaughterTime** `.daughterTime`.
 - **Match tile** `.matchTile` (violet icon, links to the Wedstrijd tab). **Coordinator line** `.coordLine`. **Name link** `.nameLink` / `[data-contact]`: every driver or coordinator name is a contact button (see `ui-contact.js`), never a direct WhatsApp link.
 - **Day pills** `.dayPills` > `.dayPill` (`.on` ink, `--today` red label, `__dot` amber = someone without a car).

@@ -95,7 +95,7 @@ test('the agenda texts exist and fill their placeholders (card in Profiel and th
 });
 test('the texts of the shell, the contact sheet and the ride rows exist and fill their placeholders', () => {
   assert.equal(t('shell.theme_light'), 'Licht'); assert.equal(t('contact.parent_of', { name: 'Noor' }), 'Ouder van Noor');
-  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('weekrooster.note.other', { p1: 'Noor', p2: 'heen 16:30', p3: 'Kees' }), 'Noor: aanvraag heen 16:30. Kees beslist.'); assert.equal(t('myweek.daughter_heen'), 'Aanwezig om'); assert.equal(t('myweek.daughter_terug'), 'Aanwezig om');
+  assert.equal(t('myweek.rijdt_niet_mee', { name: 'Noor' }), 'Noor rijdt niet mee'); assert.equal(t('weekrooster.note.other', { p1: 'Noor', p2: 'heen 16:30', p3: 'Kees' }), 'Noor: aanvraag heen 16:30. Kees beslist.'); assert.equal(t('myweek.daughter_heen', { name: 'Eva' }), 'Eva aanwezig om'); assert.equal(t('myweek.daughter_terug', { name: 'Eva' }), 'Eva aanwezig om'); assert.equal(t('myweek.daughter_unknown'), 'Je dochter'); assert.equal(t('weekrooster.myweek.requestsOne'), '1 aanvraag wacht op antwoord'); assert.equal(t('weekrooster.myweek.requestsMany', { p1: 6 }), '6 aanvragen wachten op antwoord'); assert.equal(t('weekrooster.myweek.nextGroup', { p1: 5 }), 'Volgende week · 5 dagen'); assert.equal(t('weekrooster.myweek.nextWeek', { p1: 'Maandag' }), 'Maandag volgende week');
   assert.equal(t('myweek.match_cars', { n: 2 }), "2 auto's gepland"); assert.equal(t('schedule.sub_heen', { name: 'Noor', time: '17:00' }), 'Noor aanwezig 17:00');
   assert.equal(t('schedule.sub_terug', { name: 'Noor', time: '19:15' }), 'Noor aanwezig 19:15'); assert.equal(t('schedule.reserve'), 'Back-up:');
 });
@@ -302,11 +302,12 @@ test('the Afwijkend-weekrooster texts exist for every mode and no text asks for 
 });
 
 test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeholders, and say what a parent needs to know', () => {
-  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.line', 'myweek.change', 'myweek.request', 'pill.request']
+  ['seg.this', 'seg.next', 'form.submit', 'form.past', 'done.title', 'done.withdraw', 'tag.wait', 'who.line', 'myweek.change', 'myweek.requestsOne', 'myweek.requestsMany', 'myweek.nextWeek', 'myweek.nextGroup', 'pill.request']
     .forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.done.title', { p1: 40 }), 'Doorgegeven · week 40');
   assert.equal(t('weekrooster.tag.wait', { p1: 'Piet' }), 'Wacht op Piet');
   assert.match(t('weekrooster.who.line', { p1: 'Piet', p2: 'Eline', p3: '07:00', p4: '07:30' }), /Piet.*Eline.*07:00.*07:30/);
+  assert.ok(!hasKey('weekrooster.myweek.request'), 'the old sentence per request is gone');
   assert.doesNotMatch(Object.entries(nl).filter(([k]) => k.startsWith('weekrooster.') && !k.startsWith('weekrooster.reason.')).map(([, v]) => v).join(' '), /reden|toelichting/i, 'no reason is ever asked');
 });
 

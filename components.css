@@ -432,7 +432,6 @@ button.chip{cursor:pointer;font-family:inherit}
 .rideRow__extra{margin-top:var(--space-3);font:var(--type-caption);color:var(--ok-ink);font-weight:700}
 .rideRow--off .rideRow__time,.rideRow--off .rideRow__main{opacity:.45}
 .daughterTime{display:flex;align-items:center;gap:var(--space-2);margin-top:7px;font:var(--type-caption);color:var(--text-2)}
-.daughterTime__initial{width:18px;height:18px;border-radius:50%;background:var(--accent-soft);color:var(--accent-ink);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
 .daughterTime b{font-family:var(--font-mono);color:var(--text-1)}
 
 /* ---------- Tile that links elsewhere (matches), and the one-line coordinator note ---------- */
@@ -512,6 +511,16 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .carCard__edit select,.carCard__edit input{margin:0}
 .alertCard__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--warn-edge);font:var(--type-small)}
 .alertCard--stack .alertCard__text{flex:none}
+/* The one amber request card of Mijn week: title, a row per day (day + times, who decides), next week folded under one line. */
+.reqHead{display:flex;align-items:center;gap:var(--space-3)}
+.reqLine{align-items:flex-start}
+.reqLine[hidden]{display:none}
+.reqLine__what{display:flex;flex-direction:column;gap:var(--space-1)}
+.reqLine__times{font:var(--type-time-sm);color:var(--text-2)}
+.reqLine__who{font:var(--type-caption);color:var(--warn-ink);text-align:right;max-width:44%}
+.reqGroup{width:100%;min-height:var(--hit-min);background:none;border-width:1px 0 0;color:var(--text-1);text-align:left;cursor:pointer}
+.reqGroup__caret{display:inline-flex;font-size:18px;transition:transform var(--motion-fast)}
+.reqGroup[aria-expanded="true"] .reqGroup__caret{transform:rotate(180deg)}
 .shiftLocBtn{display:inline-flex;align-items:center;gap:var(--space-2);max-width:100%;padding:0 var(--space-4);min-height:34px;margin-top:var(--space-1);border:1px dashed var(--text-muted);border-radius:var(--radius-pill);background:transparent;color:inherit;font:var(--type-caption);cursor:pointer;text-align:left}
 .shiftLocBtn svg{width:14px;height:14px;fill:currentColor;flex:none}
 .shiftLocBtn{box-sizing:border-box;padding-block:var(--space-2)}
