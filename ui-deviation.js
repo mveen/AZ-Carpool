@@ -13,7 +13,7 @@ import { contactButtonHtml } from './ui-contact.js';
 import { flexSuffix, renderSchedule } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
 import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs, wireRitbeursSegment } from './ui-ritbeurs.js';
-import { weekroosterActive, weekroosterBodyHtml, wireWeekrooster } from './ui-weekrooster-form.js';
+import { holdFormRedraw, weekroosterActive, weekroosterBodyHtml, wireWeekrooster } from './ui-weekrooster-form.js';
 import { pendingOfDay } from './weekrooster-data.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
@@ -63,7 +63,7 @@ export function renderDeviationTab(){
   const seg = rbOn? ritbeursSegmentHtml() : '';
   if(rbOn && S.rbView==='ritbeurs'){ box.innerHTML = seg + ritbeursViewHtml(); wireRitbeurs(); markPeriodShown(); return; }
   // Afwijkend weekrooster (only while the switch is on for this person): the week form replaces the day-by-day editor.
-  if(weekroosterActive()){ box.innerHTML = seg + periodCardsHtml() + weekroosterBodyHtml(); wireRitbeursSegment(); wirePeriod(); wireWeekrooster(); markPeriodShown(); return; }
+  if(weekroosterActive()){ if(holdFormRedraw()) return; box.innerHTML = seg + periodCardsHtml() + weekroosterBodyHtml(); wireRitbeursSegment(); wirePeriod(); wireWeekrooster(); markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
   if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKeyNow() || 'Ma';
   const day = S.deviationDay;

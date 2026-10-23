@@ -309,5 +309,14 @@ await testAsync('Mijn week: her own time follows the request the moment it is wi
   assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), true); await tick();
   const s = text(mijnWeek()); assert.doesNotMatch(s, /aanwezig om 12:30|klaar om 19:00/); assert.match(s, /aanwezig om 10:15/);
 });
+await testAsync('a time field with the focus (picker open on a phone): live data does not redraw the form; after the field is left it does', async () => {
+  await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:15');
+  const field = { classList: { contains: c => c === 'wrTime' } };
+  dom.el('tab-deviation').innerHTML = 'MARK';
+  document.activeElement = field;
+  wijzigen(); assert.equal(dom.html('tab-deviation'), 'MARK', 'no redraw while the picker is open');
+  document.activeElement = null;
+  assert.match(wijzigen(), /id="wrForm"/, 'the field is left: it draws again');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
