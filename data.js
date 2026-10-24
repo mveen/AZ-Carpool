@@ -98,10 +98,25 @@ export const db = {
 
 
 
+// Tidying up runs on every snapshot of a collection. A delete that is refused (or still on its way) is not tried again at once: with the local
+// cache the refused delete makes the document vanish and come back, which is a new snapshot, which tries the delete again, and so on: a loop that
+// redraws the screen several times a second (a form being filled in loses its fields) and eats the daily read/write quota.
+const PURGE_RETRY_MS = 10*60*1000;
+const purgeFailed = new Map(), purgeBusy = new Set();
+export function resetPurgeMemory(){ purgeFailed.clear(); purgeBusy.clear(); }
+export async function purgeDelete(path){
+  const failedAt = purgeFailed.get(path);
+  if(purgeBusy.has(path) || (failedAt && Date.now()-failedAt < PURGE_RETRY_MS)) return false;
+  purgeBusy.add(path);
+  try{ await db.doc(path).delete(); purgeFailed.delete(path); return true; }
+  catch(e){ purgeFailed.set(path, Date.now()); return false; }
+  finally{ purgeBusy.delete(path); }
+}
+
 export async function purgeStaleMatchCarpools(){
   const cutoff = Date.now() - 24*60*60*1000; // 1 day grace period after the match
   for(const [slug,d] of Object.entries(S.matchCarpools)){
-    if((d.startMs||0) < cutoff){ try{ await db.doc("matchCarpools/"+slug).delete(); }catch(e){} }
+    if((d.startMs||0) < cutoff) await purgeDelete("matchCarpools/"+slug);
   }
 }
 
@@ -109,7 +124,7 @@ export async function purgeStaleMatchCarpools(){
 export async function purgeStalePracticeMatches(){
   const cutoff = Date.now() - 24*60*60*1000;
   for(const [id,d] of Object.entries(S.practiceMatches||{})){
-    if((d.startMs||0) < cutoff){ try{ await db.doc("practiceMatches/"+id).delete(); }catch(e){} }
+    if((d.startMs||0) < cutoff) await purgeDelete("practiceMatches/"+id);
   }
 }
 
@@ -144,6 +159,7 @@ export async function setRideRemoved(id, index, familyId, removed){
   return true;
 }
 
+let lastRequestsPurge = 0;
 export async function purgeStaleDeviations(){
   refreshWeekKey();
   await logPassedShifts();
@@ -154,10 +170,12 @@ export async function purgeStaleDeviations(){
     const olderWeek = !dev.weekKey || dev.weekKey < S.currentWeekKey;
     const expired = typeof dev.expiresAt!=='number' || dev.expiresAt <= now;
     if(olderWeek && expired){
-      try{ await db.doc("deviations/"+key).delete(); }catch(e){}
+      await purgeDelete("deviations/"+key);
     }
   }
-  purgeStaleWeekRequests();   // Afwijkend weekrooster: old requests go too (only the real coordinator's browser, only while the switch is on)
+  // Afwijkend weekrooster: old requests go too (only the real coordinator's browser, only while the switch is on). They are read in full,
+  // so not on every snapshot: at most every few minutes.
+  if(Date.now()-lastRequestsPurge > 5*60*1000){ lastRequestsPurge = Date.now(); purgeStaleWeekRequests(); }
 }
 
 // Step 2 of "periode met andere tijden": a family hands in its times for the period (once per period; it can be changed until the

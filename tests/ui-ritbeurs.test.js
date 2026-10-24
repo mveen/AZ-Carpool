@@ -301,5 +301,14 @@ test('the intro is an info line and the sections are labels, not amber boxes', (
   const html = ritbeursViewHtml(); assert.match(html, /<div class="infoLine">/); assert.match(html, /<div class="sectionLabel">/); assert.doesNotMatch(html, /devAlert/);
 });
 
+test('a time list of "Nieuw tijdvak" that is open is not redrawn under the finger; after it is left it is', () => {
+  asF3({ offers: { o1: offerBy('f2') } }); S.rbView = 'ritbeurs';
+  withFakeNow(NOW, () => renderDeviationTab());
+  dom.el('tab-deviation').innerHTML = 'MARK';
+  document.activeElement = { classList: { contains: c => c === 'rbSel' } };
+  withFakeNow(NOW, () => renderDeviationTab()); assert.equal(dom.html('tab-deviation'), 'MARK');
+  document.activeElement = null;
+  withFakeNow(NOW, () => renderDeviationTab()); assert.match(dom.html('tab-deviation'), /id="rbmFrom"/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

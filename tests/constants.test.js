@@ -83,7 +83,7 @@ test('the week is over on Friday at 19:00 (not at midnight), and then nothing is
 test('the avatar library icons all exist in PH_PATHS', () => {
   for (const k of ['user','car','steering-wheel','road-horizon','soccer-ball','trophy','medal','megaphone','users-three','handshake']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
-test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 152); });
+test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 153); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });

@@ -567,6 +567,7 @@ await testAsync('Wijzigen is not redrawn while a time field of the week form has
   const { holdFormRedraw } = await import('../ui-weekrooster-form.js');
   document.activeElement = null; assert.equal(holdFormRedraw(), false);
   document.activeElement = { classList: { contains: c => c === 'wrTime' } }; assert.equal(holdFormRedraw(), true);
+  document.activeElement = { classList: { contains: c => c === 'rbSel' } }; assert.equal(holdFormRedraw(), true, 'also the time lists of Ritbeurs');
   document.activeElement = null;
 });
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -12,6 +12,7 @@ import { routeLabel } from './locations.js';
 import { notificationText } from './notif-text.js';
 import { pushVisible } from './push-access.js';
 import { renderDeviationTab } from './ui-deviation.js';
+import { redrawAfterTyping } from './ui-weekrooster-form.js';
 import { renderBeheer } from './ui-beheer.js';
 import { familiesWithPush, serverState } from './push.js';
 import {
@@ -223,7 +224,9 @@ export function wireRitbeurs(){
   $$('[data-rbofferno]', b => b.onclick = () => { S.rbOffering = null; renderDeviationTab(); });
   $$('[data-rboffergo]', b => b.onclick = () => { hapticTap(); offerRide(b.dataset.rboffergo); });
   $$('[data-rbmday]', b => b.onclick = () => { S.rbMomentDraft = { ...readMomentForm(), date: b.dataset.rbmday }; renderDeviationTab(); });
-  ['rbmFrom', 'rbmTo', 'rbmFree'].forEach(id => { const el = document.getElementById(id); if(el) el.onchange = () => { S.rbMomentDraft = readMomentForm(); renderDeviationTab(); }; });
+  ['rbmFrom', 'rbmTo', 'rbmFree'].forEach(id => { const el = document.getElementById(id); if(el) el.onchange = () => { S.rbMomentDraft = readMomentForm(); if(el.blur) el.blur(); renderDeviationTab(); }; });
+  // A list that is open must not be redrawn under the finger (see holdFormRedraw): a held redraw is done after the list is left.
+  $$('.rbSel', el => { el.onblur = () => setTimeout(redrawAfterTyping, 700); });
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });
   const all = document.getElementById('rbReadAll'); if(all) all.onclick = () => { hapticTap(); markNotificationsRead(); };
