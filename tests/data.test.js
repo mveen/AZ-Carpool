@@ -15,7 +15,7 @@ import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY,
 import { createFakeFirestore } from './fake-db.js';
 import { S } from '../state.js';
 import {
-  createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, purgeStaleMatchCarpools, purgeStalePracticeMatches, saveDeviationCars, saveInviteCode,
+  createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, resetPurgeMemory, purgeStaleMatchCarpools, purgeStalePracticeMatches, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
@@ -117,6 +117,21 @@ await testAsync('purgeStaleDeviations removes only OLDER weeks whose expiry has 
   ['old_expired', 'old_no_expiry', 'old_not_expired', 'current', 'newer'].forEach(k => fake.store.set('deviations/' + k, {}));
   await withFakeNowAsync(NOW, () => purgeStaleDeviations());
   assert.deepEqual(fake.collection('deviations').map(e => e[0]).sort(), ['current', 'newer', 'old_not_expired']);
+});
+await testAsync('a refused purge is not tried again at once (no snapshot loop), but is tried again after ten minutes', async () => {
+  resetPurgeMemory();
+  const fake = useFakeDb({});
+  sampleCoordinatorState({ deviations: { old_expired: { weekKey: '2026-W38', expiresAt: 1000 } } });
+  fake.store.set('deviations/old_expired', {});
+  const deletes = () => fake.writes.filter(w => w[0] === 'delete').length;
+  fake.failWrites('deviations/old_expired', 'permission-denied');
+  await withFakeNowAsync(NOW, () => purgeStaleDeviations());
+  assert.equal(fake.store.has('deviations/old_expired'), true, 'the refused delete left it there');
+  await withFakeNowAsync(NOW, () => purgeStaleDeviations()); await withFakeNowAsync('2026-09-30T10:01:00+02:00', () => purgeStaleDeviations());
+  assert.equal(deletes(), 0, 'no second try within ten minutes');
+  await withFakeNowAsync('2026-09-30T10:11:00+02:00', () => purgeStaleDeviations());
+  assert.equal(fake.store.has('deviations/old_expired'), false, 'after ten minutes it is tried again and works');
+  resetPurgeMemory();
 });
 await testAsync('purgeStaleMatchCarpools removes matches more than a day in the past', async () => {
   const fake = useFakeDb({ 'matchCarpools/old': {}, 'matchCarpools/recent': {}, 'matchCarpools/future': {} });

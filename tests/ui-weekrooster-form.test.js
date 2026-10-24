@@ -15,7 +15,7 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, openAskedTimeOf, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
+import { redrawAfterTyping, weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, openAskedTimeOf, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { myFamilyId } from '../coordinator.js';
 import { syncWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
@@ -317,6 +317,7 @@ await testAsync('a time field with the focus (picker open on a phone): live data
   dom.el('tab-deviation').innerHTML = 'MARK';
   document.activeElement = field;
   wijzigen(); assert.equal(dom.html('tab-deviation'), 'MARK', 'no redraw while the picker is open');
+  assert.equal(typeof redrawAfterTyping, 'function');
   document.activeElement = null;
   assert.match(wijzigen(), /id="wrForm"/, 'the field is left: it draws again');
 });

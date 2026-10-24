@@ -222,13 +222,13 @@ export async function submitWeekForm() {
   return false;
 }
 
-// While a time field of the form has the focus (on a phone: the time picker is open) the form must not be redrawn: the live data (any change in the
+// While a time field of the form (or a time list of Ritbeurs: class rbSel) has the focus (on a phone: the picker or list is open) the form must not be redrawn: the live data (any change in the
 // database draws Wijzigen again) would replace the field, the picker closes and the chosen time is lost. renderDeviationTab asks this first and,
 // when it is true, skips the redraw; the redraw is done as soon as the field loses the focus (see wireWeekrooster).
 let redrawWaiting = false;
 export function holdFormRedraw() {
   const a = typeof document !== 'undefined' && document.activeElement;
-  if (!(a && a.classList && a.classList.contains('wrTime'))) return false;
+  if (!(a && a.classList && (a.classList.contains('wrTime') || a.classList.contains('rbSel')))) return false;
   redrawWaiting = true; return true;
 }
 export function redrawAfterTyping() {
