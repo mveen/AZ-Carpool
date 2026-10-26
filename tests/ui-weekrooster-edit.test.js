@@ -56,6 +56,18 @@ await testAsync('Klaar after Zelf indelen settles the open requests of the day (
   const dev = fake.get('deviations/Do_heen');
   assert.ok(!dev || (dev.cars || []).length === 0 || dev.times, 'the cars were not touched; at most the accepted times were added');
 });
+await testAsync('Zelf indelen shows the time a family asked for (open request) on her row, not the standard time', async () => {
+  await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { ...pendingDoc, heen: '07:05', terug: '15:25' } });
+  S.wrEdit = { day: 'Do', override: false };
+  ['heen', 'terug'].forEach(dir => {
+    S.deviations['Do_' + dir] = { day: 'Do', direction: dir, weekKey: S.currentWeekKey, cars: [{ driverFamilyId: 'f2', girlIds: ['f3'], reserveFamilyIds: [], departureTime: '12:00' }] };
+    S.devOpen['Do|' + dir + '|0'] = true;
+  });
+  const html = rooster();
+  assert.match(html, /class="devKidTime"[^>]*>07:05</, 'heen: the asked time is shown');
+  assert.match(html, /class="devKidTime"[^>]*>15:25</, 'terug: the asked time is shown');
+  S.wrEdit = null; S.devOpen = {};
+});
 await testAsync('Terug (and Toch zelf wijzigen) leave the requests open: only the day coordinator settles by Klaar', async () => {
   const fake = await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': pendingDoc });
   S.wrEdit = { day: 'Do', override: false }; rooster(); wireEdit({ querySelectorAll: () => [] });

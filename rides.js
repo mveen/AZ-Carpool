@@ -82,6 +82,15 @@ export function rideTime(id, day, direction, st=S){
   return ps? periodTimeFor(id, ps.iso, direction, st) : famTime(id, day, direction, st);
 }
 
+// The time an OPEN request of the family asks for on a shift ('' when none). The lookup lives in ui-weekrooster-form.js (it needs the request
+// state); it registers itself here, so screens that only import rides.js can show it without an import cycle.
+let askedTimeOf = null;
+export function setAskedTimeOf(fn){ askedTimeOf = fn; }
+// Her own time as the screens show it: an open request counts at once (the car waits for the day coordinator), else the time that holds now.
+export function shownTime(id, day, direction, st=S){
+  return (askedTimeOf && askedTimeOf(id, day, direction)) || rideTime(id, day, direction, st);
+}
+
 // Who needs a ride on a shift of the current planning week (Flex families never do).
 export function girlsForRide(day,direction, st=S){
   return Object.entries(st.families).filter(([id,f])=>!isFlex(f) && rideTime(id,day,direction, st));

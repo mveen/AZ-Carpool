@@ -17,6 +17,7 @@ import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
 import { redrawAfterTyping, weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, openAskedTimeOf, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { myFamilyId } from '../coordinator.js';
+import { shownTime } from '../rides.js';
 import { syncWeekRequests, withdrawWeekRequests } from '../weekrooster-data.js';
 import { setReturnByPublicTransport } from '../data.js';
 
@@ -305,6 +306,7 @@ await testAsync('Mijn week: an open request already counts for HER own time ("aa
   const other = html.slice(html.indexOf('Vrijdag')); assert.doesNotMatch(text(other), /aanwezig om 12:30/, 'another day is not touched');
   assert.equal(openAskedTime('Do', 'heen'), '12:30'); assert.equal(openAskedTime('Vr', 'heen'), '');
   assert.equal(openAskedTimeOf(myFamilyId(), 'Do', 'terug'), '19:00'); assert.equal(openAskedTimeOf('', 'Do', 'terug'), '', 'no family, no time');
+  assert.equal(shownTime(myFamilyId(), 'Do', 'terug'), '19:00', 'the screens that only know rides.js see the asked time too (registered by this module)');
 });
 await testAsync('Mijn week: her own time follows the request the moment it is withdrawn (back to the standard time)', async () => {
   await parentOn(); await submitThis([['Do', '12:30', '19:00']]);

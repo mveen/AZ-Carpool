@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { esc, foldHtml, hapticTap, locationsCfg, phIcon, renderLoadingIfNeeded, showToast, twoStepConfirm } from './ui-common.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, FREE_TEXT_MAX, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
-import { activeDeviation, computeRideDeparture, ownCarWarning, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, rideTime, seats, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
+import { activeDeviation, computeRideDeparture, ownCarWarning, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, shownTime, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, reserveAskText } from './message-texts.js';
@@ -228,7 +228,8 @@ function devRideHtml(day,direction,idx,cars,ctx){
       const active = S.devKid===`${key}|${id}`;
       const ctl = `data-day="${day}" data-direction="${direction}" data-caridx="${idx}" data-girl="${id}"`;
       // Her time on this shift: Heen = when she has to be there, Terug = when she is ready to be picked up.
-      const kidTime = rideTime(id, day, direction);
+      // An open request counts at once (the same as the chips in Rooster): the car waits for the day coordinator, her own time does not.
+      const kidTime = shownTime(id, day, direction);
       const timeHtml = kidTime? `<span class="devKidTime" title="${esc(t(direction==='heen'? 'deviation.aanwezig_om' : 'deviation.klaar_om',{time:kidTime}))}">${esc(kidTime)}</span>` : '';
       const removeBtn = `<button type="button" class="devKidBtn danger devRemoveBtn" data-devremove="1" ${ctl} title="${t('deviation.verwijder_uit_auto')}" aria-label="${esc(t('deviation.verwijder_uit_auto'))}: ${girlName(id)}">${phIcon('trash')}</button>`;
       // No ··· menu when it would only hold one or two icons: with one car (nothing to move to) the trash goes straight in the line,
