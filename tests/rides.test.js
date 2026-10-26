@@ -18,7 +18,7 @@ import {
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
   planOptions, ownCarWarning, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
   baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
-  periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
+  shownTime, setAskedTimeOf, periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
 
 function state(patch = {}) {
@@ -380,6 +380,15 @@ test('periodTimeFor: the handed-in time, "" when not riding, the standard time w
 test('a handed-in direction that is left out means she does not ride that way', () => {
   const st = pst({ periodEntries: { '2026-10-26_f2': entryOf('f2', { '2026-10-27': { heen: '10:15' } }) } });
   assert.equal(periodTimeFor('f2', '2026-10-27', 'heen', st), '10:15'); assert.equal(periodTimeFor('f2', '2026-10-27', 'terug', st), '');
+});
+test('shownTime: an open request (registered lookup) goes first, else the time that holds now', () => {
+  const st = pst();
+  assert.equal(shownTime('f2', 'Di', 'terug', st), rideTime('f2', 'Di', 'terug', st), 'no lookup registered');
+  setAskedTimeOf((id, day, dir) => (id === 'f2' && dir === 'terug' ? '18:45' : ''));
+  try {
+    assert.equal(shownTime('f2', 'Di', 'terug', st), '18:45');
+    assert.equal(shownTime('f2', 'Di', 'heen', st), rideTime('f2', 'Di', 'heen', st), 'nothing asked: the time that holds');
+  } finally { setAskedTimeOf(null); }
 });
 test('rideTime: handed-in times count only on a shift with a temporary rooster', () => {
   const st = pst();

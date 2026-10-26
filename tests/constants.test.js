@@ -97,5 +97,7 @@ test('the caret icons for folding exist', () => { for (const k of ['caret-up', '
 
 test('APP_VERSION looks like the cache name of the service worker: v and a number', () => { assert.match(APP_VERSION, /^v\d+$/); });
 
+test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 155); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

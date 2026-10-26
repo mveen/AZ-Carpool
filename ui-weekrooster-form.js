@@ -9,7 +9,7 @@ import { DAYS } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel, weekKeyDayIso } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
-import { baseCars, effectiveCars, fam, girlName, isFlex, rideTime } from './rides.js';
+import { baseCars, effectiveCars, fam, girlName, isFlex, rideTime, setAskedTimeOf } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { activateTab } from './app.js';
@@ -281,6 +281,7 @@ export function openAskedTimeOf(familyId, day, dir) {
   if (!doc || doc.rides === false || requestState(doc, Date.now(), dayEndMs(wk, day)) !== 'pending') return '';
   return doc[dir] || '';
 }
+setAskedTimeOf(openAskedTimeOf);
 // The dashed amber block in the card of a day of THIS week that has an open request: what was asked ("aanwezig" and "klaar", each on its own line,
 // the time that holds now struck through), who decides, and Intrekken (that day only).
 export function requestBlockHtml(day) {

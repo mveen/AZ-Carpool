@@ -13,6 +13,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP } from './test-support.js';
 import { S } from '../state.js';
+import { setAskedTimeOf } from '../rides.js';
 import { todayKey } from '../constants.js';
 import {
   renderDeviationTab, wireWhatsAppButton, sendWhatsAppUpdate, renderDevDirection,
@@ -573,6 +574,11 @@ await testAsync('Wijzigen is not redrawn while a time field of the week form has
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 
+test('a child shows the time shownTime gives: an open request counts at once', () => {
+  setAskedTimeOf(() => '08:08');
+  try { assert.match(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }), /class="devKidTime"[^>]*>08:08</); }
+  finally { setAskedTimeOf(null); }
+});
 test('a child shows her time: Heen = present at, Terug = ready at (title says which)', () => {
   const heen = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' });
   assert.match(heen, /class="devKidTime" title="Aanwezig om \d\d:\d\d">\d\d:\d\d</);

@@ -361,7 +361,9 @@ export async function acceptDay(day, variant) {
 }
 // "Klaar" after the day coordinator planned a day by hand (Zelf indelen): the plan IS the decision, so the pending requests of that day
 // become 'accepted' (the same as Overnemen, but the cars stay as they are). Without this the amber card in Mijn week of the askers would
-// stay until the day is over. ONE batch; returns { ok, n, undo } (n = 0 when nothing was waiting).
+// stay until the day is over. The accepted times of the askers are stored as one-off times on the shift (deviation.times), as Overnemen does:
+// otherwise the girl keeps her standard time and the planning warns about a time she no longer has. ONE batch; returns { ok, n, undo }
+// (n = 0 when nothing was waiting).
 export async function closeDayRequests(day) {
   if (!db || !weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return { ok: false, n: 0 };
   const open = pendingOfDay(day);
@@ -372,15 +374,35 @@ export async function closeDayRequests(day) {
     const batch = db.batch();
     const agreed = open.map(r => ({ id: r.id, before: stripId(r), after: acceptRequest(stripId(r), me, nowMs) }));
     agreed.forEach(a => batch.set('weekRequests/' + a.id, a.after));
+    // The accepted times per shift. Only a time that differs from the one that holds now is written; '' = she does not ride this way.
+    const prevDocs = {}, nextDocs = {};
+    ['heen', 'terug'].forEach(dir => {
+      const times = {};
+      open.forEach(r => {
+        const want = r.rides !== false && r[dir] ? r[dir] : '';
+        if (want !== (rideTime(r.familyId, day, dir) || '')) times[r.familyId] = want;
+      });
+      if (!Object.keys(times).length) return;
+      const key = deviationKey(day, dir), prev = currentDeviationDoc(day, dir), live = prev && prev.cars && prev.cars.length;
+      // No change there before: Ongedaan writes an empty one back (activeDeviation ignores a change without cars), never a delete.
+      prevDocs[key] = prev ? JSON.parse(JSON.stringify(prev)) : { day, direction: dir, weekKey: S.currentWeekKey, expiresAt: deviationExpiryMs(), cars: [] };
+      nextDocs[key] = live
+        ? { ...prev, times: { ...(prev.times || {}), ...times } }
+        : { day, direction: dir, weekKey: S.currentWeekKey, expiresAt: deviationExpiryMs(), cars: cleanCars(effectiveCars(day, dir)), times };
+      batch.set('deviations/' + key, nextDocs[key]);
+    });
     await batch.commit();
-    applyLocal({}, agreed.map(a => [a.id, a.after]));
+    applyLocal(nextDocs, agreed.map(a => [a.id, a.after]));
+    if (Object.keys(nextDocs).length) recordLastUpdate('Deviation');
     const undo = async () => {
       if (!db) return false;
       try {
         const b = db.batch();
         agreed.forEach(a => b.set('weekRequests/' + a.id, a.before));
+        Object.entries(prevDocs).forEach(([key, doc]) => b.set('deviations/' + key, doc));
         await b.commit();
-        applyLocal({}, agreed.map(a => [a.id, a.before]));
+        applyLocal(prevDocs, agreed.map(a => [a.id, a.before]));
+        if (Object.keys(prevDocs).length) recordLastUpdate('Deviation');
         return true;
       } catch (e) { showToast(t('data.mislukt') + (e && e.message || e)); return false; }
     };
