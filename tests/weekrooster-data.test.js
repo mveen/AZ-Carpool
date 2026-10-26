@@ -239,10 +239,28 @@ await testAsync('closeDayRequests settles the pending requests of the day withou
     const r = await closeDayRequests('Do'); assert.equal(r.ok, true); assert.equal(r.n, 1);
     assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'accepted'); assert.equal(fake.get('weekRequests/2026-W40_Do_f3').decidedBy, 'f2');
     assert.equal(fake.get('weekRequests/2026-W40_Vr_f3').status, 'pending', 'another day is not touched');
-    assert.equal(fake.get('deviations/Do_heen'), undefined);
     assert.equal(adviceForDay('Do').requests.length, 0);
     assert.equal((await closeDayRequests('Do')).n, 0, 'nothing left: no write, no toast');
     assert.equal(await r.undo(), true); assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'pending');
+  });
+});
+await testAsync('closeDayRequests keeps the accepted times: the girl no longer has her standard time (Klaar after Zelf indelen)', async () => {
+  const car = (dep) => ({ driverFamilyId: 'f2', girlIds: ['f3'], reserveFamilyIds: [], departureTime: dep });
+  const fake = await asDay({
+    'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3', { heen: '07:00', terug: '12:00' }),
+    'deviations/Do_heen': { day: 'Do', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [car('06:00')] },
+    'deviations/Do_terug': { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [car('12:00')] },
+  });
+  S.deviations = { ...S.deviations, Do_heen: fake.get('deviations/Do_heen'), Do_terug: fake.get('deviations/Do_terug') };
+  await withFakeNowAsync(NOW, async () => {
+    const stdHeen = rideTime('f3', 'Do', 'heen'), stdTerug = rideTime('f3', 'Do', 'terug');
+    assert.notEqual(stdTerug, '12:00', 'the test needs a time that differs from the standard one');
+    const r = await closeDayRequests('Do'); assert.equal(r.ok, true); assert.equal(r.n, 1);
+    assert.equal(rideTime('f3', 'Do', 'heen'), '07:00'); assert.equal(rideTime('f3', 'Do', 'terug'), '12:00');
+    assert.equal(fake.get('deviations/Do_terug').times.f3, '12:00');
+    assert.equal(fake.get('deviations/Do_terug').cars[0].departureTime, '12:00', 'the cars stay as the coordinator planned them');
+    assert.equal(await r.undo(), true);
+    assert.equal(rideTime('f3', 'Do', 'heen'), stdHeen); assert.equal(rideTime('f3', 'Do', 'terug'), stdTerug);
   });
 });
 await testAsync('closeDayRequests: a failed write changes nothing, and it does nothing while the switch is off', async () => {

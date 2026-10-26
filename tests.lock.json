@@ -12,7 +12,7 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "b4b8e11450ae376b7f3d0c3eb79549e5de31e15188b929c7c4eca99b91289b1e",
+    "module": "b42684333e6786f4e4c79d7615865394bd70cd3cd0b7f665a89e132088cd4f83",
     "test": "61789ac0e596d8f386fa32635e9c964a7659c9d1fb77086abce6041f12fa01a0"
   },
   "coordinator.js": {
@@ -261,7 +261,7 @@
   },
   "ui-weekrooster-edit.js": {
     "module": "b19e7350a91f91756f36ea424091100e8c675e4a1b32b62992399463cbeae533",
-    "test": "c1b374d2e3dc256ad91892df8279aef7a8c09a7a583f3db3fadb6e0c8c495e96"
+    "test": "cf21c20e5aa6a1b1f66e4e5325ea663fc07b1393df0cc464e8ba3c2f4557f1b6"
   },
   "ui-weekrooster-form.js": {
     "module": "5d97f8cf746910557614d5663d90bc63108b6eaa6318b119fa5d30480f9119c1",
@@ -276,8 +276,8 @@
     "test": "7719b80d8505e3e1b5cd91752fcb429c6e6f8c6d7c7a870d2ee3181767290c9d"
   },
   "weekrooster-data.js": {
-    "module": "ce696e791cce629a1e9230608f096a83e163703dbc200fa8ad8fec0ba0e3195d",
-    "test": "eab12119a7a5580ba0e722259e0d08e5a0a0d8215adcddfdcd9e5954827a6b3a"
+    "module": "7fd57a2b52b80ac67e6517669e639145693f7f0c0454418ed5009e5f9589d14a",
+    "test": "9d2afea712594fab9194835e27e02b6591a1a835fad138a69353eea39ae0f8ac"
   },
   "weekrooster-impact.js": {
     "module": "640722dd48387c311a1d48c7386252540ab23651b06cbe4722750ae7289f6fd8",
