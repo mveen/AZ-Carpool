@@ -115,6 +115,13 @@ await test('relativeReferences finds imports, dynamic imports and page links, an
   assert.deepEqual(relativeReferences('index.html', '<link href="./t.css"><script src="https://x.nl/a.js"></script>'), ['./t.css']);
 });
 
+test('npm run preview uses the TEST database only: checked test config, the live config file is never served', () => {
+  const src = readFileSync(join(repo, 'scripts/preview.mjs'), 'utf8');
+  assert.ok(src.includes('readTestConfig('), 'refuses a missing, unfilled or live config');
+  assert.ok(src.includes("path === '/firebase-config.js'") && src.includes('res.end(testConfig)'), 'serves the test config for /firebase-config.js');
+  assert.ok(src.includes("markAsTest('index.html'"), 'shows the TESTOMGEVING bar');
+});
+
 rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
