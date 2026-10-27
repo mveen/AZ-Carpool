@@ -86,8 +86,8 @@ test('the ride log starts empty, not loaded, without a listener, and the deviati
   assert.equal(S.deviationsLoaded, false);
 });
 
-test('the Afwijkend-weekrooster switch starts empty, which means uit', () => {
-  assert.equal(S.weekrooster, null);
+test('there is no Afwijkend-weekrooster switch in the state any more', () => {
+  assert.ok(!('weekrooster' in S));
 });
 
 test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch is read', () => {
@@ -116,7 +116,7 @@ test('practice matches start empty', () => { assert.deepEqual(S.practiceMatches,
 
 test('Afwijkend weekrooster: no requests, no listeners and no form open at start; this week is shown', () => {
   assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, ''); assert.deepEqual(S.weekRequestsUnsubs, []);
-  assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrBusy, false); assert.equal(S.myWeekNextOpen, false, 'Volgende week in Mijn week starts closed'); assert.equal(S.weekrooster, null);
+  assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrBusy, false); assert.equal(S.myWeekNextOpen, false, 'Volgende week in Mijn week starts closed');
 });
 
 test('Mijn week loading flags: all start false, so rideDataLoaded() is false until every listener has answered', async () => {

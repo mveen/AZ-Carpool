@@ -12,7 +12,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleCoordinatorState, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
+import { installFakeDom, sampleCoordinatorState, sampleParentState, sampleFlexParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import { groupsFor } from '../rides.js';
 import { moveGirlToGroup, renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
@@ -170,7 +170,7 @@ console.log('\n=== Dagcoördinator vandaag (US-02) ===');
 test('nothing is shown when Beheer has no coordinator for today', () => {
   sampleParentState({ dayCoordinators: { Ma: 'f1' } });
   assert.equal(withFakeNow(NOW, () => dayCoordinatorHtml()), '');
-  assert.doesNotMatch(render(() => sampleParentState({ dayCoordinators: {} })), /Dagcoördinator/);
+  assert.doesNotMatch(render(() => sampleFlexParentState({ dayCoordinators: {} })), /Dagcoördinator/);
 });
 test('Rooster shows "Dagcoördinator morgen: <naam>", the name opens the contact sheet', () => {
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' } }));
@@ -350,14 +350,14 @@ test('Rooster has no "Laatst bijgewerkt" footer, in any mode', () => {
     assert.doesNotMatch(h, /Laatst bijgewerkt/i);
   }
 });
-test('Afwijkend weekrooster: Rooster "Deze week" gets the action block only on a day this person decides, and only with the switch on', () => {
+test('Afwijkend weekrooster: Rooster "Deze week" gets the action block only on a day this person decides, and not for a Flex family', () => {
   const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
   useFakeDb(sampleDbSeed());
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req }, scheduleDay: 'Do', roosterMode: 'week' });
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req }, scheduleDay: 'Do', roosterMode: 'week' });
   withFakeNow(NOW, () => renderSchedule()); assert.match(dom.html('tab-schedule'), /id="wrAlert"/);
   S.scheduleDay = 'Wo'; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAlert"/);
   S.scheduleDay = 'Do'; S.roosterMode = 'standard'; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAlert"/, 'Vast rooster stays as it is');
-  S.roosterMode = 'week'; S.weekrooster = { mode: 'uit' }; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAlert|wrLog|Dagcoördinator donderdag/);
+  sampleFlexParentState({ dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req }, scheduleDay: 'Do', roosterMode: 'week' }); withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAlert|wrLog|Dagcoördinator donderdag/);
 });
 
 import { assertNoUnusedImports } from './test-support.js';
@@ -375,8 +375,8 @@ await (async () => {
     assert.match(toastNow(), /verplaatst/); assert.doesNotMatch(toastNow(), /Let op/); assert.deepEqual(fake.get('groups/g2').girlIds, ['f1', 'f6']); passed++; console.log('  ✓ a move that keeps parent and daughter together gives no warning');
   } catch (e) { failed++; console.log('  ✗ own-car warning in the Vast rooster\n     ', e.message); }
 })();
-test('Rooster week view: with the switch off there is no "Toch zelf wijzigen" or "Zelf indelen" under the day', () => {
-  sampleParentState({ scheduleDay: 'Ma', roosterMode: 'week' }); withFakeNow(NOW, () => renderSchedule());
+test('Rooster week view: a Flex family has no "Toch zelf wijzigen" or "Zelf indelen" under the day', () => {
+  sampleFlexParentState({ scheduleDay: 'Ma', roosterMode: 'week' }); withFakeNow(NOW, () => renderSchedule());
   assert.doesNotMatch(dom.html('tab-schedule'), /wroverride|wredit|Toch zelf wijzigen|Zelf indelen/);
 });
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
@@ -391,20 +391,20 @@ test('the Rooster week view shows the Advies view in place of the day when S.wrA
   withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAdvice|wrAccept/);
 });
 test('Advies and Zelf indelen replace the whole Rooster header block: no coordinator line, tabs, Weekoverzicht or day pills', () => {
-  const state = edit => () => { sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' } }); S.wrAdvice = null; S.wrEdit = edit; };
+  const state = edit => () => { sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', dayCoordinators: { Do: 'f2' } }); S.wrAdvice = null; S.wrEdit = edit; };
   const normal = render(state(null)); assert.match(normal, /data-rmode="week"/); assert.match(normal, /dayPills/); assert.match(normal, /id="ovOpen"/);
   const focus = render(state({ day: 'Do', override: false })); assert.match(focus, /id="wrEdit"/); assert.doesNotMatch(focus, /data-rmode|dayPills|id="ovOpen"|coordLine/);
   S.wrEdit = null;
 });
 console.log('\n=== the driver\'s button "Tijd en plek" ===');
-await testAsync('in Rooster "Deze week" the driver gets the button on the own car only, and only while the new flow is on', async () => {
+await testAsync('in Rooster "Deze week" the driver gets the button on the own car only', async () => {
   const { sampleDeviations } = await import('./test-support.js');
   const DRV = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: [], departureTime: '18:00' }] } };
   const mk = patch => () => sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', deviations: { ...sampleDeviations(), ...DRV }, ...patch });
-  const on = render(mk({ weekrooster: { mode: 'aan' } }));
+  const on = render(mk({}));
   assert.equal((on.match(/data-drivercar=/g) || []).length, 1); assert.match(text(on), /Tijd en plek/);
-  assert.doesNotMatch(render(mk({ weekrooster: { mode: 'uit' } })), /data-drivercar/);
-  assert.doesNotMatch(render(mk({ weekrooster: { mode: 'aan' }, links: { p1: { familyId: 'f4' } } })), /data-drivercar/);
+  assert.doesNotMatch(render(mk({ links: {} })), /data-drivercar/);
+  assert.doesNotMatch(render(mk({ links: { p1: { familyId: 'f4' } } })), /data-drivercar/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

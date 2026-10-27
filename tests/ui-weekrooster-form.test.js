@@ -1,6 +1,6 @@
 // Run with: node ui-weekrooster-form.test.js
 // Afwijkend weekrooster, phase 2: what a parent sees. Wijzigen (the week form, the "Doorgegeven" card, "Wie merkt dit", the day
-// coordinator) and Mijn week (button, amber card, pill). With the switch off, or on for someone else, none of it exists.
+// coordinator) and Mijn week (button, amber card, pill). For a Flex family, or somebody without a family of their own, none of it exists.
 import assert from 'node:assert/strict';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleFamilies, assertNoUnusedImports } from './test-support.js';
+import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleFlexParentState, sampleCoordinatorState, sampleFamilies, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
@@ -39,20 +39,19 @@ const fillInputs = (pastDays = ['Ma', 'Di']) => {
 const switchOn = (html, day, dir) => new RegExp('class="switch switch--sm on" role="switch" aria-checked="true" aria-label="[^"]*" data-wrtoggle="' + day + '" data-wrdir="' + dir + '"').test(html);
 const blocksOf = html => html.split('class="reqBlock"').slice(1).map(b => b.slice(0, b.indexOf('</button>')));   // the request blocks of the days, in order
 const tick = () => new Promise(r => setImmediate(r));
-const parentOn = async (mode = 'aan') => { const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode } }); syncWeekRequests(); await tick(); return fake; };
+const parentOn = async () => { const fake = useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests(); await tick(); return fake; };
 
 console.log('=== who sees it ===');
-test('only with the switch on for this person, with a daughter of their own, and not Flex', () => {
-  sampleParentState({ weekrooster: { mode: 'aan' } }); assert.equal(weekroosterActive(), true);
-  [null, { mode: 'uit' }, { mode: 'test' }, { mode: 'kapot' }].forEach(w => { sampleParentState({ weekrooster: w }); assert.equal(weekroosterActive(), false); });
-  sampleCoordinatorState({ weekrooster: { mode: 'test' }, impersonateFamilyId: 'f2' }); assert.equal(weekroosterActive(), true);
+test('only with a daughter of their own (also when looking as a family), and not Flex', () => {
+  sampleParentState({}); assert.equal(weekroosterActive(), true);
+  sampleCoordinatorState({ impersonateFamilyId: 'f2' }); assert.equal(weekroosterActive(), true);
   const fams = sampleFamilies(); fams.f2.familyType = 'flex';
-  sampleParentState({ weekrooster: { mode: 'aan' }, families: fams });
+  sampleParentState({ families: fams });
   assert.equal(weekroosterActive(), false);
-  sampleParentState({ weekrooster: { mode: 'aan' }, links: {} }); assert.equal(weekroosterActive(), false);
+  sampleParentState({ links: {} }); assert.equal(weekroosterActive(), false);
 });
-test('uit: Wijzigen and Mijn week show nothing of the new flow and no pill', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'uit' } });
+test('a Flex family: Wijzigen and Mijn week show nothing of the week form and no pill', async () => {
+  useFakeDb(sampleDbSeed()); sampleFlexParentState({});
   assert.doesNotMatch(wijzigen(), /wrForm|data-wrweek|Tijden deze week/); assert.doesNotMatch(mijnWeek(), /wrChange|Tijden wijzigen|Aanvraag/);
   assert.equal(myWeekWeekroosterHtml(), ''); assert.equal(requestBlockHtml('Do'), ''); assert.equal(myWeekNextWeekHtml(), '');
 });
@@ -223,7 +222,7 @@ await testAsync('"Wie merkt dit" says when another car is needed (next week, Mon
   assert.match(s, /Doorgegeven · week 41/); assert.match(s, /MA Heen[^.]*auto extra nodig/);
 });
 test('the helpers the day coordinator\'s screens share: one-line summary, day names, the decider (never lower case at the start of a sentence)', () => {
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' } });
+  sampleParentState({ dayCoordinators: { Do: 'f3' } });
   assert.equal(summaryOf({ rides: true, heen: '11:00', terug: '18:00' }), 'Heen 11:00 · Terug 18:00');
   assert.equal(summaryOf({ rides: true, heen: '', terug: '18:00' }), 'Terug 18:00'); assert.equal(summaryOf({ rides: false, heen: '', terug: '' }), 'Rijdt niet mee');
   assert.equal(dayName('Do'), 'Donderdag'); assert.equal(lower('Donderdag'), 'donderdag'); assert.equal(upperFirst('de coördinator'), 'De coördinator');
@@ -237,7 +236,7 @@ await testAsync('a refused save shows the error and NOT "Je hebt niets gewijzigd
   assert.equal(S.wrForm.days.Do.terug, '19:00', 'what was typed is kept'); assert.equal(S.wrBusy, false);
 });
 await testAsync('what was just handed in shows at once ("Doorgegeven"), even when the live listener is not running', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });   // no syncWeekRequests: the listeners are dead
+  useFakeDb(sampleDbSeed()); sampleParentState({});   // no syncWeekRequests: the listeners are dead
   assert.equal(S.weekRequestsUnsubs.length, 0);
   wijzigen(); fillInputs(); setField('wrTerug_Do', '12:45');
   assert.equal(await withFakeNowAsync(NOW, () => submitWeekForm()), true);
@@ -251,7 +250,7 @@ console.log('=== the code ===');
 test('ui-weekrooster-form.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-form.js'));
 
 await testAsync('Mijn week: the button spans the width with an icon, in one stack with the request note (a clock, no bold text)', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });
+  useFakeDb(sampleDbSeed()); sampleParentState({});
   const html = myWeekWeekroosterHtml();
   assert.match(html, /^<div class="wrStack"><button type="button" class="btn secondary" id="wrChange"><svg/); assert.doesNotMatch(html, /<b>/);
 });

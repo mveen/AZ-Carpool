@@ -294,12 +294,9 @@ test('the practice match and "vertrek vanaf" texts exist', () => {
   assert.match(t('wa.my.match_van', { day: 'ZA 3', team: 'AZ', opponent: 'X', time: '09:15', place: 'ATC', driver: 'Jan' }), /vertrek 09:15 vanaf ATC met Jan/);
 });
 
-test('the Afwijkend-weekrooster texts exist for every mode and no text asks for a reason', () => {
-  ['uit', 'test', 'aan'].forEach(m => {
-    ['weekrooster.beheer.mode.', 'weekrooster.beheer.status.', 'weekrooster.saved.'].forEach(p => assert.ok(t(p + m) && t(p + m) !== p + m, p + m));
-  });
-  assert.match(t('weekrooster.beheer.status.uit'), /precies als voorheen/);
-  assert.match(t('weekrooster.err.coordinatorOnly'), /Alleen de coördinator/);
+test('the Afwijkend-weekrooster switch texts are gone, and no text asks for a reason', () => {
+  assert.ok(!Object.keys(nl).some(k => /^weekrooster\.(beheer|saved)\./.test(k) || k === 'weekrooster.err.coordinatorOnly'), 'nothing of the Beheer switch is left');
+  assert.ok(!Object.keys(nl).some(k => /^weekrooster\./.test(k) && /reden|toelichting/i.test(nl[k]) && !/geen reden|nooit een toelichting/i.test(nl[k])), 'no text asks for a reason');
 });
 
 test('Afwijkend weekrooster (phase 2): the screen texts exist, with their placeholders, and say what a parent needs to know', () => {

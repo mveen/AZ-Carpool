@@ -1,11 +1,6 @@
 // weekrooster.js — Afwijkend weekrooster (aanvragen, advies, akkoord): the rules, as pure functions. No DOM, no database.
 //
-// Phase 1 (foundation): the feature switch and the request model. The screens come in later phases.
-//
-// The feature switch (settings/weekrooster, { mode, updatedAt }):
-//   "uit"  (default; a missing document or an unknown value also means off): the app behaves exactly as before.
-//   "test": only the real coordinator sees and uses the new flow (to try it on the live database without parents noticing).
-//   "aan":  everybody.
+// The feature is always on: there is no switch and no "old" situation any more.
 //
 // A request is ONE document per family per day: weekRequests/<weekKey>_<day>_<familyId>. It holds only times and "rijdt mee ja/nee".
 // There is deliberately NO field for a reason or any free text (privacy). The fixed rooster counts until a request is accepted.
@@ -17,26 +12,12 @@
 //   A pending request whose day has passed counts as 'expired' (derived, never written).
 import { isTime } from './ritbeurs.js';
 
-export const WEEKROOSTER_MODES = ['uit', 'test', 'aan'];
 export const REQUEST_DAYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr'];
 export const REQUEST_STATUSES = ['pending', 'direct', 'accepted', 'withdrawn'];
 // The only fields a request may have. A test (here and in the rules) refuses anything else, so no reason or text can sneak in.
+// 'test' is a leftover: requests made while the feature was still in test mode carry test: true. It is never written any more, but such a
+// document stays valid.
 export const REQUEST_FIELDS = ['weekKey', 'day', 'familyId', 'rides', 'heen', 'terug', 'status', 'createdAt', 'updatedAt', 'decidedAt', 'decidedBy', 'test'];
-
-// ---------- the feature switch ----------
-export function normalizeWeekrooster(raw) {
-  const r = raw && typeof raw === 'object' ? raw : {};
-  return { mode: WEEKROOSTER_MODES.includes(r.mode) ? r.mode : 'uit' };
-}
-export function weekroosterDoc(mode, nowMs) {
-  return { mode: WEEKROOSTER_MODES.includes(mode) ? mode : 'uit', updatedAt: nowMs };
-}
-// Who sees and uses the new flow. isRealCoordinator ignores the "test as family" view on purpose: in "test" the coordinator
-// can still try everything as a parent or day coordinator through Testweergave.
-export function weekroosterVisible(mode, isRealCoordinator) {
-  const m = normalizeWeekrooster({ mode }).mode;
-  return m === 'aan' || (m === 'test' && !!isRealCoordinator);
-}
 
 // ---------- the request ----------
 export function requestId(weekKey, day, familyId) { return weekKey + '_' + day + '_' + familyId; }
@@ -104,7 +85,7 @@ export function desiredMarks({ days, standard, isPast }) {
 // and a day that equals what is already handed in or applied ('unchanged').
 // directTimes (default true): may new times be applied at once on the own day of a day coordinator? The caller passes false for next week
 // (its cars do not exist yet), so there it stays a request. "Rijdt niet mee" is always direct.
-export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, test, directTimes = true, shiftOff = false }) {
+export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, directTimes = true, shiftOff = false }) {
   const writes = [], skipped = [];
   for (const day of REQUEST_DAYS) {
     const f = days && days[day];
@@ -134,7 +115,6 @@ export function buildRequests({ weekKey, familyId, days, standard, isPast, decid
     const mode = decideMode({ ownDaughter: true, rides, isDayCoordinator: directTimes && deciderOf ? deciderOf(day) === familyId : false });
     const doc = { weekKey, day, familyId, rides, heen, terug, status: mode, createdAt: old && typeof old.createdAt === 'number' ? old.createdAt : nowMs, updatedAt: nowMs };
     if (mode === 'direct' && rides) { doc.decidedAt = nowMs; doc.decidedBy = familyId; }
-    if (test) doc.test = true;
     writes.push({ id, doc });
   }
   return { writes, skipped };

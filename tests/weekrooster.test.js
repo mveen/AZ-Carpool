@@ -9,31 +9,10 @@ function test(name, fn) {
 }
 import './test-support.js';
 import {
-  WEEKROOSTER_MODES, REQUEST_DAYS, REQUEST_STATUSES, REQUEST_FIELDS,
-  normalizeWeekrooster, weekroosterDoc, weekroosterVisible, requestId, isValidRequest, decideMode, buildRequests,
+  REQUEST_DAYS, REQUEST_STATUSES, REQUEST_FIELDS,
+  requestId, isValidRequest, decideMode, buildRequests,
   requestState, canChangeRequest, withdrawRequest, acceptRequest, pendingForDay, staleRequestIds, nextWeekKey, weekFormFrom, openRequestsOf, offOf, desiredMarks, decidedDays, actionCounts, recentChanges, selfChanges,
 } from '../weekrooster.js';
-
-console.log('=== the feature switch ===');
-test('a missing, broken or unknown document means: uit', () => {
-  [null, undefined, 'x', 5, {}, { mode: 'AAN' }, { mode: true }, { mode: 'aan ' }, { mode: 'aan-test' }].forEach(r => assert.deepEqual(normalizeWeekrooster(r), { mode: 'uit' }));
-});
-test('only the three real modes are kept, and nothing else comes along', () => {
-  assert.deepEqual(WEEKROOSTER_MODES, ['uit', 'test', 'aan']);
-  WEEKROOSTER_MODES.forEach(mode => assert.deepEqual(normalizeWeekrooster({ mode, extra: 1 }), { mode }));
-});
-test('the stored document has the mode and a time, and an unknown mode is stored as uit', () => {
-  assert.deepEqual(weekroosterDoc('test', 5), { mode: 'test', updatedAt: 5 });
-  assert.deepEqual(weekroosterDoc('whatever', 5), { mode: 'uit', updatedAt: 5 });
-});
-test('uit: nobody sees it; test: only the real coordinator; aan: everybody', () => {
-  [true, false].forEach(c => assert.equal(weekroosterVisible('uit', c), false));
-  [undefined, null, 'x'].forEach(m => [true, false].forEach(c => assert.equal(weekroosterVisible(m, c), false)));
-  assert.equal(weekroosterVisible('test', true), true);
-  assert.equal(weekroosterVisible('test', false), false);
-  assert.equal(weekroosterVisible('aan', true), true);
-  assert.equal(weekroosterVisible('aan', false), true);
-});
 
 console.log('=== direct or a request ===');
 test('only the own daughter can be changed', () => {
@@ -79,11 +58,11 @@ test('days that equal the fixed rooster, past days and incomplete times are skip
   assert.deepEqual(r.writes.map(w => w.doc.day), ['Do']);
   assert.deepEqual(r.skipped, [{ day: 'Ma', why: 'past' }, { day: 'Di', why: 'time' }, { day: 'Wo', why: 'time' }, { day: 'Vr', why: 'same' }]);
 });
-test('a replaced request keeps its createdAt, a test request carries test: true', () => {
+test('a replaced request keeps its createdAt; it never carries a test flag any more, but an old document with test: true stays valid', () => {
   const existing = { '2026-W41_Do_f2': { createdAt: 77 } };
-  const r = buildRequests({ ...base, existing, test: true, nowMs: 2000, days: { Do: { rides: true, heen: '16:45', terug: '17:00' } } });
-  assert.equal(r.writes[0].doc.createdAt, 77); assert.equal(r.writes[0].doc.updatedAt, 2000); assert.equal(r.writes[0].doc.test, true);
-  assert.ok(isValidRequest(r.writes[0].doc));
+  const r = buildRequests({ ...base, existing, nowMs: 2000, days: { Do: { rides: true, heen: '16:45', terug: '17:00' } } });
+  assert.equal(r.writes[0].doc.createdAt, 77); assert.equal(r.writes[0].doc.updatedAt, 2000); assert.ok(!('test' in r.writes[0].doc));
+  assert.ok(isValidRequest(r.writes[0].doc)); assert.ok(isValidRequest({ ...r.writes[0].doc, test: true }));
 });
 test('a day nobody asked for is left out; no day coordinator known still gives a request', () => {
   const r = buildRequests({ ...base, deciderOf: () => null, days: { Do: { rides: true, heen: '16:30', terug: '17:00' } } });

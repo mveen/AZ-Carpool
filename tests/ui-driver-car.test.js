@@ -24,7 +24,7 @@ const MINE = { driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: []
 const setup = async (cars = [MINE], patch = {}, extra = {}) => {
   const devs = { Do_terug: DEV('Do', 'terug', cars), ...extra };
   const fake = useFakeDb({ ...sampleDbSeed(), ...Object.fromEntries(Object.entries(devs).map(([k, v]) => ['deviations/' + k, v])) });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, deviations: { ...sampleDeviations(), ...devs }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, deviations: { ...sampleDeviations(), ...devs }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
   syncWeekRequests(); await tick(); return fake;
 };
 const rooster = () => { withFakeNow(NOW, () => renderSchedule()); return dom.html('tab-schedule'); };
@@ -37,10 +37,10 @@ await testAsync('the driver sees "Tijd en plek" under the own car in Rooster and
   const r = rooster(); assert.match(r, /data-drivercar="Do\|terug"/); assert.match(text(r), /Tijd en plek/);
   assert.match(myweek(), /data-drivercar="Do\|terug"/);
 });
-await testAsync('nobody else sees it: not a passenger\'s parent, not on a shift without my car, not while the new flow is off, not on a day that is over', async () => {
+await testAsync('nobody else sees it: not a passenger\'s parent, not on a shift without my car, not without a family of their own, not on a day that is over', async () => {
   await setup([MINE], { links: { p1: { familyId: 'f4' } } });
   assert.doesNotMatch(rooster(), /data-drivercar/); assert.doesNotMatch(myweek(), /data-drivercar/);
-  await setup([MINE], { weekrooster: { mode: 'uit' } });
+  await setup([MINE], { links: {} });
   assert.doesNotMatch(rooster(), /data-drivercar/); assert.doesNotMatch(myweek(), /data-drivercar/);
   await setup([MINE]);
   withFakeNow(NOW, () => { assert.equal(driverCarButtonHtml('Do', 'heen'), '', 'I do not drive Thursday heen'); assert.equal(driverCarButtonHtml('Ma', 'terug'), '', 'Monday is over'); assert.match(driverCarButtonHtml('Do', 'terug'), /data-drivercar/); assert.match(driverCarButtonHtml('Do', 'terug'), /class="linkbtn"/); assert.match(driverCarButtonHtml('Do', 'terug', 'btn secondary small'), /class="btn secondary small" data-drivercar/); });

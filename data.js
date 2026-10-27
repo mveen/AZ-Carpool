@@ -10,7 +10,6 @@ import { normalizeNotice } from './notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
 import { normalizeMaintenance } from './maintenance.js';
 import { normalizeRitbeurs } from './ritbeurs.js';
-import { normalizeWeekrooster } from './weekrooster.js';
 import { purgeStaleWeekRequests, stopWeekRequests, syncWeekRequests } from './weekrooster-data.js';
 import { normalizePush } from './push.js';
 import { stopPushListeners, syncPushListeners } from './push-data.js';
@@ -173,7 +172,7 @@ export async function purgeStaleDeviations(){
       await purgeDelete("deviations/"+key);
     }
   }
-  // Afwijkend weekrooster: old requests go too (only the real coordinator's browser, only while the switch is on). They are read in full,
+  // Afwijkend weekrooster: old requests go too (only the real coordinator's browser). They are read in full,
   // so not on every snapshot: at most every few minutes.
   if(Date.now()-lastRequestsPurge > 5*60*1000){ lastRequestsPurge = Date.now(); purgeStaleWeekRequests(); }
 }
@@ -472,7 +471,7 @@ export function syncListeners(){
       }, err=>{});
     }
   }
-  syncWeekRequests();   // only does anything while the Afwijkend weekrooster is on for this person
+  syncWeekRequests();   // the Afwijkend weekrooster requests: only for a person with a linked family
   const coord = isRealCoordinator();
   if(coord && !S.linksCollUnsub){
     S.linksCollUnsub = db.collection("links").onSnapshot(snap=>{
@@ -557,9 +556,6 @@ export function startDataListeners(){
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
     db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; applyPendingPushOpen(); renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
       err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
-    // Afwijkend weekrooster: only the feature switch is read here (one document). Everything else waits until the switch is on.
-    db.doc("settings/weekrooster").onSnapshot(snap=>{ S.weekrooster = snap.exists? normalizeWeekrooster(snap.data()) : null; syncWeekRequests(); renderBeheer(); renderDeviationTab(); renderMyWeek(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Push: every member reads the switches (test and live), so no queue entry is written while both are off and the parent's Push-meldingen row knows whether it shows.
     db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
       err=>{});
@@ -642,7 +638,7 @@ export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
   stopWeekRequests();
-  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.weekrooster=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   stopPushListeners();
   renderNoticeBanner();
