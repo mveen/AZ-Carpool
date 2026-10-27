@@ -25,7 +25,7 @@ const doc = (day, fam, e = {}) => ({ weekKey: WK, day, familyId: fam, rides: tru
 const tick = () => new Promise(r => setImmediate(r));
 const setup = async (extra = {}, patch = {}) => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f3': doc('Do', 'f3'), ...extra });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
   syncWeekRequests(); await tick(); return fake;
 };
 const view = () => withFakeNow(NOW, () => scheduleAdviceHtml());
@@ -54,8 +54,8 @@ await testAsync('nothing to advise (no open request): the view closes itself', a
   await setup({ 'weekRequests/2026-W40_Do_f3': doc('Do', 'f3', { status: 'accepted' }) });
   S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' }; assert.equal(view(), ''); assert.equal(S.wrAdvice, null);
 });
-await testAsync('uit: nothing, even when the state says open', async () => {
-  await setup({}, { weekrooster: { mode: 'uit' } }); S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
+await testAsync('nobody linked: nothing, even when the state says open', async () => {
+  await setup({}, { links: {} }); S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
   assert.equal(view(), '');
 });
 

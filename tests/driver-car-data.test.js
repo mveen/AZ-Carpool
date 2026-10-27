@@ -19,7 +19,7 @@ const DEV = (day, direction, cars, extra = {}) => ({ day, direction, weekKey: '2
 const THU = { Do_terug: DEV('Do', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: [], departureTime: '18:00' }]) };
 const setup = async (devs = THU, patch = {}, extra = {}) => {
   const fake = useFakeDb({ ...sampleDbSeed(), ...Object.fromEntries(Object.entries(devs).map(([k, v]) => ['deviations/' + k, v])), ...extra });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, deviations: { ...sampleDeviations(), ...devs }, ...patch });
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, deviations: { ...sampleDeviations(), ...devs }, ...patch });
   syncWeekRequests(); await tick(); return fake;
 };
 const run = fn => withFakeNowAsync(NOW, fn);

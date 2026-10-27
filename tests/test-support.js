@@ -124,6 +124,13 @@ const LOADED = { familiesLoaded: true, groupsLoaded: true, deviationsLoaded: tru
 export function sampleParentState(patch = {}) {
   return resetState({ ...LOADED, me: 'p1', appReady: true, links: { p1: { familyId: 'f2' } }, families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
 }
+// A parent for whom the Afwijkend weekrooster does not apply: a Flex family (player-driver). They still get the day-by-day editor in Wijzigen,
+// so this is the state to test that editor in its own tab. (Every other linked family gets the week form instead.)
+export function sampleFlexParentState(patch = {}) {
+  const families = sampleFamilies();
+  families.f7 = { ...families.f5, parentName: 'Fleur Flex', girlName: 'Fenna', parentPhone1: '0677777777', phoneKeys: ['0677777777'], familyType: 'flex' };
+  return resetState({ ...LOADED, me: 'p1', appReady: true, links: { p1: { familyId: 'f7' } }, families, groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
+}
 export function sampleCoordinatorState(patch = {}) {
   return resetState({ ...LOADED, me: 'coord', appReady: true, coordinatorExists: true, coordinatorConfig: { uid: 'coord', familyId: 'f1' }, canEdit: true, links: {}, families: sampleFamilies(), groups: sampleGroups(), deviations: sampleDeviations(), ...patch });
 }

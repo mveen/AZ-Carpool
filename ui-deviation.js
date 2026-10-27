@@ -62,7 +62,7 @@ export function renderDeviationTab(){
   if(!rbOn && S.rbView==='ritbeurs') S.rbView = 'wijzigen';
   const seg = rbOn? ritbeursSegmentHtml() : '';
   if(rbOn && S.rbView==='ritbeurs'){ if(holdFormRedraw()) return; box.innerHTML = seg + ritbeursViewHtml(); wireRitbeurs(); markPeriodShown(); return; }
-  // Afwijkend weekrooster (only while the switch is on for this person): the week form replaces the day-by-day editor.
+  // Afwijkend weekrooster (for a person with a family of their own): the week form replaces the day-by-day editor.
   if(weekroosterActive()){ if(holdFormRedraw()) return; box.innerHTML = seg + periodCardsHtml() + weekroosterBodyHtml(); wireRitbeursSegment(); wirePeriod(); wireWeekrooster(); markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
   if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKeyNow() || 'Ma';

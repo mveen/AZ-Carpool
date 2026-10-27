@@ -1,4 +1,4 @@
-// Firestore rules test for the Afwijkend weekrooster. Needs the Firestore emulator on port 8089 and: npm i @firebase/rules-unit-testing firebase.
+// Firestore rules test for the Afwijkend weekrooster (always on; there is no switch any more). Needs the Firestore emulator on port 8089 and: npm i @firebase/rules-unit-testing firebase.
 // Start: firebase emulators:start --only firestore (rules = firebase/firestore.rules, port 8089), then: node weekrooster-rules.test.mjs
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { doc, setDoc, updateDoc, deleteField, getDoc, deleteDoc, getDocs, collection, query, where } from 'firebase/firestore';
@@ -7,7 +7,7 @@ const env = await initializeTestEnvironment({ projectId: 'demo-test', firestore:
 let ok = 0, bad = 0;
 const check = async (name, p, expectOk = true) => { try { await (expectOk ? assertSucceeds(p) : assertFails(p)); ok++; console.log('  ✓', name); } catch (e) { bad++; console.log('  ✗', name, String(e.message).slice(0, 120)); } };
 // f1 = coordinator's family (uid 'coord'); f2 = day coordinator of Do; f3, f4 = ordinary families. Do is coordinated by f2, Vr by f3.
-const reset = async (mode) => {
+const reset = async () => {
   await env.clearFirestore();
   await env.withSecurityRulesDisabled(async ctx => {
     const d = ctx.firestore();
@@ -15,7 +15,6 @@ const reset = async (mode) => {
     for (const f of ['f1', 'f2', 'f3', 'f4']) await setDoc(doc(d, 'families/' + f), { parentName: f });
     for (const [u, f] of [['u1', 'f1'], ['u2', 'f2'], ['u3', 'f3'], ['u4', 'f4']]) await setDoc(doc(d, 'links/' + u), { familyId: f });
     await setDoc(doc(d, 'settings/dayCoordinators'), { Do: 'f2', Vr: 'f3' });
-    if (mode !== null) await setDoc(doc(d, 'settings/weekrooster'), typeof mode === 'string' ? { mode } : mode);
   });
 };
 const as = u => env.authenticatedContext(u).firestore();
@@ -25,10 +24,8 @@ const req = (day, fam, extra = {}) => ({ weekKey: WK, day, familyId: fam, rides:
 const seed = async (day, fam, extra) => env.withSecurityRulesDisabled(async ctx => setDoc(doc(ctx.firestore(), 'weekRequests/' + id(day, fam)), req(day, fam, extra)));
 const accept = (u, day, fam, by = 'f2') => updateDoc(doc(as(u), 'weekRequests/' + id(day, fam)), { status: 'accepted', decidedAt: 9, decidedBy: by, updatedAt: 9 });
 
-console.log('--- mode aan');
-await reset('aan');
-await check('coordinator can set the switch', setDoc(doc(as('coord'), 'settings/weekrooster'), { mode: 'aan', updatedAt: 1 }));
-await check('parent cannot set the switch', setDoc(doc(as('u4'), 'settings/weekrooster'), { mode: 'uit' }), false);
+console.log('--- requests');
+await reset();
 await check('family creates its own pending request', setDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4')), req('Do', 'f4')));
 await check('family cannot write for another family', setDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f3')), req('Do', 'f3')), false);
 await check('document id must match week_day_family', setDoc(doc(as('u4'), 'weekRequests/other'), req('Di', 'f4')), false);
@@ -77,7 +74,7 @@ await check('with no day coordinator for a day, the real coordinator still decid
 await check('with no day coordinator for a day, a parent cannot', (async () => { await seed('Ma', 'f4'); return accept('u2', 'Ma', 'f4'); })(), false);
 
 console.log('--- reading');
-await reset('aan'); await seed('Do', 'f4'); await seed('Vr', 'f4'); await seed('Do', 'f3');
+await reset(); await seed('Do', 'f4'); await seed('Vr', 'f4'); await seed('Do', 'f3');
 await check('a family reads its own request', getDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4'))));
 await check('a linked family reads another family\'s request (times only)', getDoc(doc(as('u3'), 'weekRequests/' + id('Do', 'f4'))));
 await check('the day coordinator reads the requests of his day', getDocs(query(collection(as('u2'), 'weekRequests'), where('day', '==', 'Do'))));
@@ -91,30 +88,13 @@ await check('a linked family lists everything (times only)', getDocs(collection(
 await check('the coordinator reads everything', getDocs(collection(as('coord'), 'weekRequests')));
 await check('a stranger without a link reads nothing', getDoc(doc(env.authenticatedContext('nobody').firestore(), 'weekRequests/' + id('Do', 'f4'))), false);
 
-console.log('--- mode test: only the real coordinator');
-await reset('test');
-await check('test: a parent cannot create', setDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4')), req('Do', 'f4')), false);
-await check('test: the coordinator can create (also for a family, Testweergave)', setDoc(doc(as('coord'), 'weekRequests/' + id('Do', 'f4')), req('Do', 'f4', { test: true })));
-await check('test: the day coordinator parent cannot accept', accept('u2', 'Do', 'f4'), false);
-await check('test: the coordinator accepts', accept('coord', 'Do', 'f4', 'f1'));
-await check('test: a parent can still delete its own withdrawn request', (async () => { await seed('Di', 'f4', { status: 'withdrawn' }); return deleteDoc(doc(as('u4'), 'weekRequests/' + id('Di', 'f4'))); })());
-await check('test: a parent can still read its own request', (async () => { await seed('Wo', 'f4'); return getDoc(doc(as('u4'), 'weekRequests/' + id('Wo', 'f4'))); })());
-
-console.log('--- mode uit / missing / unknown: everything stops at once');
-for (const mode of ['uit', null, {}, { mode: 'AAN' }, { mode: true }, { mode: 'aan ' }]) {
-  await reset(mode); await seed('Do', 'f4'); await seed('Vr', 'f4', { status: 'withdrawn' });
-  const L = mode === null ? 'missing' : JSON.stringify(mode);
-  await check(`${L}: no new request by a parent`, setDoc(doc(as('u4'), 'weekRequests/' + id('Di', 'f4')), req('Di', 'f4')), false);
-  await check(`${L}: no new request by the coordinator`, setDoc(doc(as('coord'), 'weekRequests/' + id('Di', 'f4')), req('Di', 'f4')), false);
-  await check(`${L}: no change`, updateDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4')), { heen: '16:45', updatedAt: 2 }), false);
-  await check(`${L}: no accepting`, accept('u2', 'Do', 'f4'), false);
-  await check(`${L}: no accepting by the coordinator`, accept('coord', 'Do', 'f4', 'f1'), false);
-  await check(`${L}: reading still works`, getDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4'))));
-  await check(`${L}: deleting still works`, deleteDoc(doc(as('u4'), 'weekRequests/' + id('Vr', 'f4'))));
-}
+console.log('--- old requests and withdrawing');
+await reset();
+await check('a legacy request with test: true is still accepted', setDoc(doc(as('u4'), 'weekRequests/' + id('Do', 'f4')), req('Do', 'f4', { test: true })));
+await check('a parent can delete its own withdrawn request', (async () => { await seed('Di', 'f4', { status: 'withdrawn' }); return deleteDoc(doc(as('u4'), 'weekRequests/' + id('Di', 'f4'))); })());
 
 console.log('--- existing rules untouched');
-await reset('uit');
+await reset();
 await check('deviations: a member can still write', setDoc(doc(as('u4'), 'deviations/Do_heen'), { day: 'Do', cars: [], weekKey: WK }));
 await check('settings: a parent still cannot write', setDoc(doc(as('u4'), 'settings/other'), { a: 1 }), false);
 await check('settings: the coordinator still can', setDoc(doc(as('coord'), 'settings/other'), { a: 1 }));

@@ -52,7 +52,7 @@ function askOverride(day) {
 // Is there still an advice to look at for this day? Only for who decides the day: from the editor there is a way back to the Advies.
 const hasAdvice = day => mayPlanDay(day) && Object.keys(adviceForDay(day).directions).length > 0;
 
-// The editor, in place of the day. Empty when closed or when the switch is off for this person.
+// The editor, in place of the day. Empty when closed or for a person without a family of their own.
 export function scheduleEditHtml() {
   if (!weekroosterActive() || !S.wrEdit) return '';
   const { day, override } = S.wrEdit;

@@ -57,8 +57,7 @@ export const S = {
   maintenance: null,       // settings/maintenance: onderhoudsmodus { on, text } (null = none / not loaded)
   maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
   ritbeurs: null,          // settings/ritbeurs: the Ritbeurs feature switch { on } (null = none / not loaded, which means off)
-  weekrooster: null,       // settings/weekrooster: the Afwijkend-weekrooster switch { mode: 'uit'|'test'|'aan' } (null = none / not loaded, which means uit)
-  weekRequests: {},        // weekRequests/*: the own family's requests for this and next week, by document id (only while the switch is on for this person)
+  weekRequests: {},        // weekRequests/*: the own family's requests for this and next week, by document id (only for a person with a linked family)
   weekRequestsKey: '',     // '<family>|<week>' the listeners belong to ('' = none)
   weekRequestsUnsubs: [],
   dayRequests: {},         // weekRequests/* of OTHER families for the days this person decides (day coordinator), this week only

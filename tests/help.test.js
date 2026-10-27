@@ -156,7 +156,7 @@ import nl from '../texts-nl.js';
 // Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
 const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
   'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Ander adres…', 'Plek toevoegen',
-  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen'];
+  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Advies bekijken', 'Zelf indelen', 'Toch zelf wijzigen', 'Overnemen'];
 const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
 const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
 test('every quoted name exists in the app texts', () => {
@@ -257,11 +257,14 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   assert.match(a.title + b.title, /Ritten ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ritten ruilen everywhere');
 });
 
-test('the Afwijkend weekrooster has a coordinator-only Beheer article that explains uit, test and aan', () => {
-  const b = articles.find(x => x.id === 'beheer-weekrooster');
-  assert.ok(b && b.coordinatorOnly && b.tab === 'beheer'); const s = b.body.join(' ');
-  assert.match(s, /Uit[\s\S]*precies als voorheen[\s\S]*Test[\s\S]*alleen jij[\s\S]*Aan[\s\S]*iedereen/); assert.match(s, /database-regels/); assert.match(s, /Bestaande gegevens blijven ongemoeid/);
-  assert.doesNotMatch(s, /reden/i, 'no reason is ever asked or stored');
+test('the Afwijkend weekrooster is always on: no Beheer switch article any more, but a parent article and a day coordinator article', () => {
+  assert.ok(!articles.find(x => x.id === 'beheer-weekrooster'), 'the switch is gone, so is its article');
+  const a = findArticle('afwijkend-weekrooster'), b = findArticle('dagcoordinator-aanvragen');
+  assert.ok(a && !a.coordinatorOnly && a.tab === 'deviation'); assert.ok(b && !b.coordinatorOnly && b.tab === 'schedule');
+  const s = allText(a);
+  assert.match(s, /Rijdt niet mee geldt direct/); assert.match(s, /het vaste rooster geldt tot de dagcoördinator akkoord geeft/i); assert.match(s, /Er hoeft geen reden bij/);
+  assert.doesNotMatch(allText(a) + allText(b), /schakelaar|database-regels|Test en Aan/i, 'nothing about a switch');
+  assert.ok(ids('afwijkend weekrooster').includes('afwijkend-weekrooster')); assert.ok(ids('aanvragen dagcoordinator').includes('dagcoordinator-aanvragen'));
 });
 
 test('the push messages: a parent article (how to switch on, per phone, iPhone, quiet hours), the Beheer article (default off, count, testing always works) and the privacy and services articles', () => {
@@ -289,7 +292,7 @@ test('the avatar article quotes names that exist in the app', () => {
 });
 
 test('help reflects the server jobs, the new host and the "Aanwezig om" texts', () => {
-  assert.match(allText(findArticle('mijn-week')), /gele pil "Gewijzigd"/); assert.match(allText(findArticle('mijn-week')), /telefoon-icoon/); assert.match(allText(articles.find(x => x.id === 'beheer-weekrooster')), /standaard dicht/);
+  assert.match(allText(findArticle('mijn-week')), /gele pil "Gewijzigd"/); assert.match(allText(findArticle('mijn-week')), /telefoon-icoon/); assert.match(allText(articles.find(x => x.id === 'afwijkend-weekrooster')), /standaard dicht/);
   assert.match(allText(findArticle('mijn-week')), /aanwezig om/); assert.ok(Object.values(nl).includes('{name} aanwezig om'));
   assert.match(allText(findArticle('over-privacy')), /mijn\.host[\s\S]*Back-ups[\s\S]*30 dagen/);
   assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*vrijdag kort na 19:00/);
@@ -316,25 +319,25 @@ test('Help explains "Eigen ouder rijdt mee" (terug, hard rule, only when the par
   assert.match(a.keywords, /eigen ouder/);
 });
 
-test('the Afwijkend weekrooster article explains what Test shows and that day-by-day changing is hidden while it is on', () => {
-  const a = articles.find(x => x.id === 'beheer-weekrooster'); assert.ok(a);
-  const s = JSON.stringify(a.body || a);
-  assert.match(s, /Tijden wijzigen/); assert.match(s, /Volgende week/); assert.match(s, /verborgen/);
+test('the Afwijkend weekrooster parent article explains the form and Mijn week; Wijzigen says the day editor is in Rooster', () => {
+  const s = JSON.stringify(findArticle('afwijkend-weekrooster').body);
+  assert.match(s, /Tijden wijzigen/); assert.match(s, /Volgende week/); assert.match(s, /Aanvraag intrekken/);
+  const w = allText(findArticle('wijzigen'));
+  assert.match(w, /Rooster/); assert.match(w, /Zelf indelen/); assert.match(w, /Toch zelf wijzigen/);
 });
 
-test('the Afwijkend weekrooster article tells a day coordinator what he sees (action card, Recente wijzigingen, dot, number)', () => {
-  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
-  assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/);
+test('the day coordinator article tells what he sees (action card, Recente wijzigingen, dot, number)', () => {
+  const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
+  assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
 });
 
-test('the Afwijkend weekrooster article explains the advice: variants, the reason, Overnemen, Ongedaan, Dagbericht', () => {
-  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+test('the day coordinator article explains the advice: variants, Overnemen, Ongedaan, Dagbericht', () => {
+  const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
   assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/); assert.match(s, /Overnemen/); assert.match(s, /Ongedaan/); assert.match(s, /Dagbericht/);
-  assert.doesNotMatch(s, /Overnemen volgt/);
 });
 
-test('the Afwijkend weekrooster article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
-  const s = JSON.stringify(articles.find(x => x.id === 'beheer-weekrooster'));
+test('the day coordinator article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
+  const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
   assert.match(s, /Zelf indelen/); assert.match(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);
 });
 

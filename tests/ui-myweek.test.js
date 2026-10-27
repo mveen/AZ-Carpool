@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
+import { installFakeDom, sampleParentState, sampleFlexParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderMyWeek, matchInfoHtml, goToWijzigen } from '../ui-myweek.js';
 import { submitWeekRequests, syncWeekRequests } from '../weekrooster-data.js';
@@ -74,12 +74,12 @@ console.log('\n=== a parent\'s week ===');
 test('there is no hero card any more: the week starts with the rides to arrange (alert cards with a Regelen button)', () => {
   const s = text(render({}));
   assert.doesNotMatch(s, /plekken/);
-  assert.match(s, /^Do heen · aankomst 10:15 Jahaimy heeft nog geen rit Regelen Do terug · klaar 18:00/);
+  assert.match(s, /^Tijden wijzigen Do heen · aankomst 10:15 Jahaimy heeft nog geen rit Regelen Do terug · klaar 18:00/);
 });
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
   assert.match(s, /Vandaag maandag 28 sep 07:30 vertrek Heen · Busstation → AFC (&#39;|')34 Jan Jansen Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar Jahaimy klaar om 17:30/);
+  assert.match(s, /17:30 vertrek Terug · AFC (&#39;|')34 → Busstation Jij rijdt Eline, Jahaimy, Saar Tijd en plek Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
@@ -131,7 +131,7 @@ test('matchInfoHtml uses the shared classes (matchInfo, noteLine), no inline fon
 
 console.log('\n=== navigation ===');
 test('goToWijzigen remembers the chosen day for the Wijzigen tab', () => {
-  sampleParentState(); goToWijzigen('Di'); assert.equal(S.deviationDay, 'Di');
+  sampleFlexParentState(); goToWijzigen('Di'); assert.equal(S.deviationDay, 'Di');
   goToWijzigen(); assert.equal(S.deviationDay, 'Di'); // no day given: the open day stays
   goToWijzigen(null); assert.equal(S.deviationDay, 'Di');
 });
@@ -238,7 +238,7 @@ test('US-22: matchInfoHtml(geo) makes the location a route link (Wedstrijd tab);
   assert.match(html, /matchTile__title.*<div class="matchTile__loc"><a class="geoLink" href="geo:0,0\?q=De%20Toekomst%2C%20Amsterdam".*matchTile__sub/s);   // US-22: the route link stays in Mijn week, directly under the title
 });
 await testAsync('the matches of this week come right after the day cards, under their own heading; "Volgende week" is last', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests(); await new Promise(r => setImmediate(r));
   await withFakeNowAsync(NOW, () => submitWeekRequests('next', { Ma: { rides: true, heen: '08:15', terug: '17:00' } }));
   const m = { calendarId: 'cal1', eventId: 'e5', summary: 'Ajax O15-1-AZ O15-1', location: 'De Toekomst, Amsterdam', start: new Date('2026-10-03T10:00:00+02:00') };
   Object.assign(S, { matchesSource: 'live', matches: [m], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });   // keep the request that was just handed in
@@ -345,12 +345,12 @@ test('design v2: no "je dochter" any more; the alert names the daughter', () => 
   assert.match(text(render({})), /Jahaimy heeft nog geen rit/); assert.doesNotMatch(text(render({})), /[Jj]e dochter/);
 });
 
-test('Afwijkend weekrooster: Mijn week shows the day coordinator\'s action card only with the switch on', () => {
+test('Afwijkend weekrooster: Mijn week shows the day coordinator\'s action card only for the days this person decides', () => {
   const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
   useFakeDb(sampleDbSeed());
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req } });
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, dayRequests: { '2026-W40_Do_f3': req } });
   withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /data-wraction="Do"/);
-  S.weekrooster = { mode: 'uit' }; withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /data-wraction/);
+  S.dayCoordinators = { Do: 'f3' }; withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /data-wraction/);
 });
 
 import { assertNoUnusedImports } from './test-support.js';
@@ -369,19 +369,22 @@ test('matchInfoHtml: a practice match gets the Oefen tag, a calendar match does 
   assert.doesNotMatch(text(matchInfoHtml({ ...base, eventId: 'e1' })), /Oefen/);
 });
 
-test('Afwijkend weekrooster: Mijn week shows "Tijden wijzigen" only while the switch is on; Testweergave only then shows a family\'s week', () => {
+test('Afwijkend weekrooster: Mijn week shows "Tijden wijzigen" for a family with a daughter of their own (not Flex); Testweergave shows that family\'s week', () => {
   useFakeDb(sampleDbSeed());
-  sampleParentState({ weekrooster: { mode: 'uit' } }); withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /wrChange/);
-  sampleParentState({ weekrooster: { mode: 'aan' } }); withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /id="wrChange"/);
-  resetState({ me: 'coord', appReady: true, impersonateFamilyId: 'f2', canEdit: false, links: {}, families: S.families, weekrooster: { mode: 'uit' } });
+  sampleFlexParentState({}); withFakeNow(NOW, () => renderMyWeek()); assert.doesNotMatch(dom.html('tab-myweek'), /wrChange/);
+  sampleParentState({}); withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /id="wrChange"/);
+  sampleCoordinatorState({ canEdit: false });
   withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /geen eigen gezin/);
+  sampleCoordinatorState({ impersonateFamilyId: 'f2', canEdit: false });
+  withFakeNow(NOW, () => renderMyWeek()); assert.match(dom.html('tab-myweek'), /id="wrChange"/);
 });
 
-test('goToWijzigen with the switch off still opens the Wijzigen tab on that day', () => {
-  sampleParentState({}); withFakeNow(NOW, () => goToWijzigen('Di')); assert.equal(S.deviationDay, 'Di'); assert.equal(S.wrEdit, null);
+test('goToWijzigen: a Flex family opens the Wijzigen tab on that day; a family with a daughter of their own opens the day editor in Rooster (straight in when they decide that day)', () => {
+  sampleFlexParentState({}); withFakeNow(NOW, () => goToWijzigen('Di')); assert.equal(S.deviationDay, 'Di'); assert.equal(S.wrEdit, null);
+  sampleParentState({ dayCoordinators: { Di: 'f2' } }); withFakeNow(NOW, () => goToWijzigen('Di')); assert.ok(S.wrEdit && S.wrEdit.day === 'Di'); S.wrEdit = null;
 });
 await testAsync('Wijzigen "Rijdt niet mee" for a day: Mijn week shows both rides switched off, no "geen rit" line and no warning banner for that day', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests(); await new Promise(r => setImmediate(r));
   await withFakeNow(NOW, () => submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } }));
   withFakeNow(NOW, () => renderMyWeek());
   const h = dom.html('tab-myweek');
@@ -391,7 +394,7 @@ await testAsync('Wijzigen "Rijdt niet mee" for a day: Mijn week shows both rides
   assert.doesNotMatch(h, /data-gowijzig="Do"/, 'no "heeft nog geen rit" warning for a day she does not ride');
 });
 await testAsync('switching a ride of a "Rijdt niet mee" day back on in Mijn week withdraws the whole-day request, the other ride stays off as its mark; the form shows the new marks', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests(); await new Promise(r => setImmediate(r));
   await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: false, heen: '', terug: '' } }));
   const press = async dir => {
     const btn = { dataset: { ovtoggle: 'Do', ovon: '0', ovdir: dir } };
@@ -410,13 +413,12 @@ await testAsync('switching a ride of a "Rijdt niet mee" day back on in Mijn week
   assert.ok(!(fake.get('deviations/Do_terug').ovGirlIds || []).length);
 });
 console.log('\n=== the driver\'s button "Tijd en plek" ===');
-await testAsync('a driver sees "Tijd en plek" under the own ride when the new flow is on, and nobody else does', async () => {
+await testAsync('a driver sees "Tijd en plek" under the own ride, and nobody else does', async () => {
   const { sampleDeviations } = await import('./test-support.js');
   const DRV = { Do_terug: { day: 'Do', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: [], departureTime: '18:00' }] } };
-  const on = render({ weekrooster: { mode: 'aan' }, deviations: { ...sampleDeviations(), ...DRV } });
+  const on = render({ deviations: { ...sampleDeviations(), ...DRV } });
   assert.match(on, /data-drivercar="Do\|terug"/); assert.match(text(on), /Tijd en plek/);
-  assert.doesNotMatch(render({ weekrooster: { mode: 'uit' }, deviations: { ...sampleDeviations(), ...DRV } }), /data-drivercar/, 'switch off: Mijn week is as before');
-  assert.doesNotMatch(render({ weekrooster: { mode: 'aan' }, links: { p1: { familyId: 'f4' } }, deviations: { ...sampleDeviations(), ...DRV } }), /data-drivercar/, 'not my car');
+  assert.doesNotMatch(render({ links: { p1: { familyId: 'f4' } }, deviations: { ...sampleDeviations(), ...DRV } }), /data-drivercar/, 'not my car');
 });
 
 test('finding 8: the red initial circle is gone; the line names her ("Jahaimy aanwezig om 08:30")', () => {
@@ -435,7 +437,7 @@ test('design B: "terug" says "klaar om", "heen" says "aanwezig om"', () => {
 });
 
 await testAsync('an open request changes HER time in the ride row at once ("klaar om" is hers, not the coordinator\'s); the car and the other days stay as they were', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  const fake = useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests(); await new Promise(r => setImmediate(r));
   await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '12:30', terug: '19:00' } }));
   withFakeNow(NOW, () => renderMyWeek());
   const h = dom.html('tab-myweek'), card = text(h.slice(h.indexOf('Donderdag'), h.indexOf('Vrijdag')));

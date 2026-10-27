@@ -1,9 +1,7 @@
 // weekrooster-data.js — Afwijkend weekrooster, the database side. The rules are in weekrooster.js; the screens are in ui-weekrooster*.js.
 //
-// The feature switch (settings/weekrooster): with mode "uit" (the default, also for a missing document or an unknown value) nothing of the new
-// flow is shown, read or written; the Firestore rules check the same switch, so an app that is still open stops too.
 // Requests (weekRequests/<weekKey>_<day>_<familyId>): the own ones are read document by document (10 known ids: this week and next week, five
-// days); the requests of the other families (times only) come in through ONE listener on the collection. Only while the switch is on for this person.
+// days); the requests of the other families (times only) come in through ONE listener on the collection. Only for a person with a linked family.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
@@ -16,24 +14,7 @@ import { cleanCars, currentDeviationDoc, db, recordLastUpdate, returnByPublicTra
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderSchedule } from './ui-schedule.js';
-import { REQUEST_DAYS, acceptRequest, buildRequests, desiredMarks, pendingForDay, decidedDays, nextWeekKey, normalizeWeekrooster, requestId, weekroosterDoc, weekroosterVisible, withdrawRequest } from './weekrooster.js';
-
-export function weekroosterMode() { return normalizeWeekrooster(S.weekrooster).mode; }
-// Does THIS person see and use the new flow? "test": only the real coordinator (Testweergave does not change that). "aan": everybody.
-export function weekroosterOn() { return weekroosterVisible(weekroosterMode(), isRealCoordinator()); }
-
-// The coordinator switches the feature: 'uit' | 'test' | 'aan'. Saves at once. Existing data is never touched.
-export async function setWeekrooster(mode) {
-  if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return false; }
-  if (!isRealCoordinator()) { showToast(t('weekrooster.err.coordinatorOnly')); return false; }
-  const next = normalizeWeekrooster({ mode }).mode;
-  try {
-    await db.doc('settings/weekrooster').set(weekroosterDoc(next, Date.now()));
-    S.weekrooster = normalizeWeekrooster({ mode: next });
-    showToast(next === 'aan' ? t('weekrooster.saved.aan') : next === 'test' ? t('weekrooster.saved.test') : t('weekrooster.saved.uit'));
-    return true;
-  } catch (e) { showToast(t('data.mislukt') + (e && e.message || e)); return false; }
-}
+import { REQUEST_DAYS, acceptRequest, buildRequests, desiredMarks, pendingForDay, decidedDays, nextWeekKey, requestId, withdrawRequest } from './weekrooster.js';
 
 // ---------- the weeks ----------
 // 'this' = the current planning week, 'next' = the week after it.
@@ -89,19 +70,19 @@ export function stopWeekRequests() { stopWeekRequestListeners(); stopDayRequestL
 
 // The weekdays this person decides (day coordinator of that day, or the coordinator's family when no day coordinator is set).
 export function myDeciderDays() {
-  if (!weekroosterOn() || !myLinkedFamilyId()) return [];
+  if (!myLinkedFamilyId()) return [];
   return decidedDays(deciderFamilyOf, myFamilyId());
 }
 // All requests of this week that this person may see: the own ones plus, for the days they decide, those of the other families.
 export function requestsForDeciding() { return { ...S.dayRequests, ...S.weekRequests }; }
 
-// Keeps the listeners in step with: the switch, who is looking (also in Testweergave) and the planning week. With the switch off for
-// this person there are none, and nothing is read.
+// Keeps the listeners in step with: who is looking (also in Testweergave) and the planning week. Without a linked family there are none,
+// and nothing is read.
 // - Own requests: 10 known documents (this week and next week, five days).
 // - Every family also reads the requests of the other families, THIS week only (a day coordinator to decide, a parent for the note): what was handed in as
 //   "next week" shows up by itself when the week changes (Friday 19:00).
 export function syncWeekRequests() {
-  const fid = (db && S.me && weekroosterOn() && myLinkedFamilyId()) ? myFamilyId() : null;
+  const fid = (db && S.me && myLinkedFamilyId()) ? myFamilyId() : null;
   syncOwn(fid);
   syncDays(fid);
 }
@@ -180,14 +161,14 @@ export function currentMarks(familyId) {
 export async function submitWeekRequests(which, days) {
   const none = { ok: false, error: true, written: [], skipped: [] };   // error: nothing could be saved (the reason was shown, or there was nothing to do for this person)
   if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return none; }
-  if (!weekroosterOn() || !myLinkedFamilyId()) return none;
+  if (!myLinkedFamilyId()) return none;
   if (S.wrBusy) return none;   // a double tap makes no double request
   const familyId = myFamilyId(), weekKey = weekKeyFor(which), nowMs = Date.now();
   S.wrBusy = true;
   try {
     const built = buildRequests({
       weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs, directTimes: which === 'this',   // next week has no cars yet: there it stays a request
-      test: weekroosterMode() === 'test', shiftOff: which === 'this',
+      shiftOff: which === 'this',
       isPast: day => isDayPast(weekKey, day),
       deciderOf: deciderFamilyOf,
     });
@@ -245,7 +226,7 @@ export async function submitWeekRequests(which, days) {
 
 // The family takes back its open (pending) requests of one week, or of one day when onlyDay is given. Returns true when something was withdrawn.
 export async function withdrawWeekRequests(which, onlyDay) {
-  if (!db || !weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return false;
+  if (!db || !myLinkedFamilyId() || S.wrBusy) return false;
   const familyId = myFamilyId(), weekKey = weekKeyFor(which), nowMs = Date.now();
   const open = REQUEST_DAYS.map(day => S.weekRequests[requestId(weekKey, day, familyId)]).filter(r => r && r.status === 'pending' && (!onlyDay || r.day === onlyDay));
   if (!open.length) return false;
@@ -265,7 +246,7 @@ export async function withdrawWeekRequests(which, onlyDay) {
 // Mijn week switched her back on for a shift: she is no longer off the whole day, so the "rijdt niet mee" request of that day (a whole day off)
 // is withdrawn. What is still off lives on as the mark of that shift (the week form reads the marks). Returns true when a request was withdrawn.
 export async function releaseNotRidingRequest(day) {
-  if (!db || !weekroosterOn() || !myLinkedFamilyId()) return false;
+  if (!db || !myLinkedFamilyId()) return false;
   const familyId = myFamilyId(), id = requestId(weekKeyFor('this'), day, familyId), old = S.weekRequests[id];
   if (!old || old.rides !== false || !['direct', 'accepted'].includes(old.status)) return false;
   const { decidedAt, decidedBy, ...rest } = withdrawRequest(old, Date.now());
@@ -322,7 +303,7 @@ export function directPlan(day, request) {
 // refuse a request that is no longer pending). Returns { ok, n, undo } where undo() puts everything back.
 export async function acceptDay(day, variant) {
   if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return { ok: false }; }
-  if (!weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return { ok: false };
+  if (!myLinkedFamilyId() || S.wrBusy) return { ok: false };
   const advice = adviceForDay(day), dirs = Object.keys(advice.directions);
   if (!advice.requests.length) return { ok: false };
   if (dirs.some(d => advice.directions[d].variants[variant].noSolution)) { showToast(t('weekrooster.advice.noSolution')); return { ok: false }; }
@@ -365,7 +346,7 @@ export async function acceptDay(day, variant) {
 // otherwise the girl keeps her standard time and the planning warns about a time she no longer has. ONE batch; returns { ok, n, undo }
 // (n = 0 when nothing was waiting).
 export async function closeDayRequests(day) {
-  if (!db || !weekroosterOn() || !myLinkedFamilyId() || S.wrBusy) return { ok: false, n: 0 };
+  if (!db || !myLinkedFamilyId() || S.wrBusy) return { ok: false, n: 0 };
   const open = pendingOfDay(day);
   if (!open.length) return { ok: true, n: 0 };
   const nowMs = Date.now(), me = myFamilyId();
@@ -421,10 +402,10 @@ function applyLocal(devDocs, reqPairs) {
   S.weekRequests = own; S.dayRequests = others;
 }
 
-// Tidying up (the real coordinator's browser only, and never while the switch is off): requests of OLDER weeks are removed, test requests included.
+// Tidying up (the real coordinator's browser only): requests of OLDER weeks are removed, leftover test requests included.
 // Their week is over, the fixed rooster stayed as it was and nothing else reads them. Returns how many were removed.
 export async function purgeStaleWeekRequests() {
-  if (!db || !isRealCoordinator() || !weekroosterOn()) return 0;
+  if (!db || !isRealCoordinator()) return 0;
   let n = 0;
   try {
     const snap = await db.collection('weekRequests').get();

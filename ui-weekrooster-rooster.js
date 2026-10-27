@@ -2,7 +2,7 @@
 //   Day coordinator (of the days he decides): the amber "Actie nodig" block, the log "Recente wijzigingen", a dot on the day pill,
 //   the number on the Rooster tab, and the card "Actie nodig voor {dag}" in Mijn week.
 //   Parent: read only; the own request shows as a note on that day. Nobody else's request is shown to a parent.
-// These are status views, not notifications. Everything here only exists while the switch is on for this person.
+// These are status views, not notifications. Everything here only exists for a person with a family of their own (not Flex).
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { esc, foldHtml, hapticTap, phIcon, showToast } from './ui-common.js';
@@ -19,7 +19,7 @@ import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekr
 const wk = () => S.currentWeekKey;
 const counts = () => weekroosterActive() ? actionCounts(requestsForDeciding(), wk(), myDeciderDays(), Date.now(), day => dayEndMs(wk(), day)) : {};
 
-// How many requests wait for this person (the number that is added to the Rooster tab). 0 when the switch is off for this person.
+// How many requests wait for this person (the number that is added to the Rooster tab). 0 for a person without a family of their own.
 export function weekroosterActionCount() { return Object.values(counts()).reduce((a, b) => a + b, 0); }
 // Does this day need an action from this person? (the dot on the day pill)
 export function weekroosterDayDot(day) { return !!counts()[day]; }
@@ -60,7 +60,7 @@ function logHtml(day) {
   return foldHtml('wrlog|' + day, `${esc(t('weekrooster.log.title'))} <b>${items.length}</b>`, rows, 'fold--quiet', 'wrLog');
 }
 
-// Above the day in Rooster "Deze week". Empty when the switch is off for this person.
+// Above the day in Rooster "Deze week". Empty for a person without a family of their own.
 export function scheduleDayExtrasHtml(day) {
   if (!weekroosterActive()) return '';
   const decides = myDeciderDays().includes(day);

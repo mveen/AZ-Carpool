@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP } from './test-support.js';
+import { installFakeDom, sampleParentState, sampleFlexParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { setAskedTimeOf } from '../rides.js';
 import { todayKey } from '../constants.js';
@@ -34,7 +34,7 @@ function renderOpen(state, patch) { withFakeNow(NOW, () => { state(patch); S.dev
 
 console.log('=== day pills (same design as Rooster) ===');
 test('shows the week, one pill per day and the content of one day straight away', () => {
-  const html = render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: null });
+  const html = render(sampleFlexParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: null });
   const s = text(html);
   assert.match(s, /^vandaag 30 do 1 vr 2 Eenmalige ritaanpassing voor deze week\. Het standaardrooster blijft intact; wijzigingen worden elke vrijdag om 19:00 automatisch gewist\./);
   assert.equal((html.match(/data-devday=/g) || []).length, 3);   // today (Wed) and the two days after it
@@ -46,33 +46,33 @@ test('shows the week, one pill per day and the content of one day straight away'
   assert.equal(S.deviationDay, day);
 });
 test('the day name is a capitalised heading and the info line no longer repeats it', () => {
-  const s = text(render(sampleParentState, { deviationDay: 'Do' }));
+  const s = text(render(sampleFlexParentState, { deviationDay: 'Do' }));
   assert.match(s, /gewist\. .*Donderdag Heen Heen · Aalsmeer → Alkmaar/);
-  const yes = text(render(sampleParentState, { deviationDay: 'Do', dayCoordinators: { Do: 'f2' } }));
-  assert.match(yes, /Jij bent dagcoördinator op donderdag\./);
+  sampleParentState({ dayCoordinators: { Do: 'f2' } });
+  assert.match(text(conclusieCardHtml('Do')), /Jij bent dagcoördinator op donderdag\./);
 });
 test('design v2: the pills are today and the days after it (the open day stays visible)', () => {
-  const html = render(sampleParentState, { deviationDay: 'Wo' });
+  const html = render(sampleFlexParentState, { deviationDay: 'Wo' });
   assert.deepEqual([...html.matchAll(/data-devday="(\w\w)"/g)].map(m => m[1]), ['Wo', 'Do', 'Vr']); assert.match(html, /class="dayPills dayPills--3"/);
-  assert.deepEqual([...render(sampleParentState, { deviationDay: 'Ma' }).matchAll(/data-devday="(\w\w)"/g)].map(m => m[1]), ['Ma', 'Wo', 'Do', 'Vr']);
+  assert.deepEqual([...render(sampleFlexParentState, { deviationDay: 'Ma' }).matchAll(/data-devday="(\w\w)"/g)].map(m => m[1]), ['Ma', 'Wo', 'Do', 'Vr']);
 });
 test('a day that was changed this week is marked on its pill', () => {
-  const html = render(sampleParentState, { deviationDay: 'Di' });
+  const html = render(sampleFlexParentState, { deviationDay: 'Di' });
   assert.match(html, /devDayPill on changed" data-devday="Di"/);
   assert.match(text(html), /= deze week gewijzigd/);
 });
 test('tapping a pill loads that day (like Rooster)', () => {
-  render(sampleParentState, { deviationDay: 'Ma' });
+  render(sampleFlexParentState, { deviationDay: 'Ma' });
   const btn = { dataset: { devday: 'Vr' } };
   const all = dom.doc.querySelectorAll; dom.doc.querySelectorAll = sel => sel === '[data-devday]' ? [btn] : all(sel);
   withFakeNow(NOW, () => { renderDeviationTab(); btn.onclick(); });
   dom.doc.querySelectorAll = all;
   assert.equal(S.deviationDay, 'Vr');
   assert.match(text(dom.html('tab-deviation')), /gewist\. .*Vrijdag Heen/);
-  expectSnapshot('ui-deviation', 'parent day pills with a live match', render(sampleParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
+  expectSnapshot('ui-deviation', 'flex parent day pills with a live match', render(sampleFlexParentState, { matches: [liveMatch], matchesSource: 'live', matchFeeds: feeds, deviationDay: 'Ma' }));
 });
 test('an unknown day falls back to today (or Monday)', () => {
-  render(sampleParentState, { deviationDay: 'Zo' });
+  render(sampleFlexParentState, { deviationDay: 'Zo' });
   assert.equal(S.deviationDay, todayKey || 'Ma');
 });
 
@@ -89,24 +89,24 @@ test('a day does not show a match card of its own, even when a carpool is stored
 
 console.log('\n=== periode met andere tijden: the card sits on top of Wijzigen ===');
 const periodDoc = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
-test('while filling in is open the task card comes before the weekly changes; without a period Wijzigen is as before', () => {
+test('while filling in is open the task card comes before the week form; without a period Wijzigen shows only the form', () => {
   const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ periods: oneP(periodDoc), periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
-  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('class="dayPills '));
+  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('id="wrForm"'));
   assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma' }), /periodTask|periodDone/);
 });
 
 console.log('\n=== editing one day ===');
 test('a parent editing Tuesday sees both directions with drivers, and a way back to the standard rooster', () => {
-  const s = text(renderOpen(sampleParentState, { deviationDay: 'Di', matchFeeds: feeds }));
+  const s = text(renderOpen(sampleFlexParentState, { deviationDay: 'Di', matchFeeds: feeds }));
   assert.match(s, /automatisch gewist\. = deze week gewijzigd Dinsdag Heen Heen · Aalsmeer/);
   assert.doesNotMatch(s, /Andere dag/);   // no separate day picker screen any more
   assert.match(s, /Heen · Aalsmeer → Alkmaar [\d:-]+ .*? Klaar Vertrek Chauffeur -- geen chauffeur -- Jan Jansen \(geen beschikbaarheid\) Piet Pieters/);
   assert.match(s, /Terug naar standaard rooster/);
   assert.match(s, /Terug · Alkmaar → Aalsmeer Geen ritten gepland in het standaard Rooster voor dit moment\./);
-  expectSnapshot('ui-deviation', 'parent editing Tuesday', dom.html('tab-deviation'));
+  expectSnapshot('ui-deviation', 'flex parent editing Tuesday', dom.html('tab-deviation'));
 });
 test('a driver without availability gets a warning', () => {
-  assert.match(text(renderOpen(sampleParentState, { deviationDay: 'Di' })), /Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven/);
+  assert.match(text(renderOpen(sampleFlexParentState, { deviationDay: 'Di' })), /Deze ouder heeft voor dit moment geen beschikbaarheid opgegeven/);
 });
 test('girls who are in no car can be added with "+ Passagier toevoegen" (design v2)', () => {
   const closed = text(renderOpen(sampleCoordinatorState, { deviationDay: 'Ma' }));
@@ -176,25 +176,28 @@ import { sampleFamilies as _sampleFamilies } from './test-support.js';
 
 console.log('\n=== conclusie-appje (US-03) ===');
 test('the card shows the drafted text: "volgens schema" when nothing changed', () => {
-  const s = text(render(sampleParentState, { deviationDay: 'Vr' }));
+  const s = text(render(sampleFlexParentState, { deviationDay: 'Vr' }));
   assert.match(s, /Dagbericht Vrijdag De dagcoördinator deelt dit om 20:00 in de groep\. Vrijdag: volgens schema\. Deel in de groep/);
 });
 test('with a deviation there is one line per change from Wijzigen', () => {
-  const html = render(sampleParentState, { deviationDay: 'Di' });
+  const html = render(sampleFlexParentState, { deviationDay: 'Di' });
   assert.match(html, /id="conclusieCard"/);
   assert.match(text(html), /Gewijzigde chauffeur\/tijd: heen Kees de Vries 09:15 Rijdt ook mee heen: Eline, Evi Aangepast schema dinsdag 29 sep Heen · Aalsmeer → Alkmaar \(aangepast\): • 09:15 – Kees de Vries: Eline, Evi/);
 });
 test('the day coordinator sees the card highlighted, other parents do not', () => {
-  const yes = render(sampleParentState, { deviationDay: 'Di', dayCoordinators: { Di: 'f2' } });
+  sampleParentState({ dayCoordinators: { Di: 'f2' } });
+  const yes = conclusieCardHtml('Di');
   assert.match(yes, /class="card conclusieCard forYou"/); assert.match(text(yes), /Jij bent dagcoördinator op dinsdag\. Deel het besluit met de groep\./);
   assert.match(yes, /id="conclusieBtn"/); assert.doesNotMatch(yes, /id="conclusieBtn"[^>]*secondary/);
-  const no = render(sampleParentState, { deviationDay: 'Di', dayCoordinators: { Di: 'f3' } });
+  sampleParentState({ dayCoordinators: { Di: 'f3' } });
+  const no = conclusieCardHtml('Di');
   assert.doesNotMatch(no, /conclusieCard forYou/); assert.match(no, /id="conclusieBtn"/, 'others can use the card too');
-  const other = render(sampleParentState, { deviationDay: 'Wo', dayCoordinators: { Di: 'f2' } });
+  sampleParentState({ dayCoordinators: { Di: 'f2' } });
+  const other = conclusieCardHtml('Wo');
   assert.doesNotMatch(other, /conclusieCard forYou/, 'being coordinator on Tuesday does not highlight Wednesday');
 });
 test('the button opens WhatsApp with the text filled in and sends nothing itself', () => {
-  render(sampleParentState, { deviationDay: 'Di' }); dom.opened.length = 0;
+  render(sampleFlexParentState, { deviationDay: 'Di' }); dom.opened.length = 0;
   withFakeNow(NOW, () => dom.el('conclusieBtn').onclick());
   assert.equal(dom.opened.length, 1);
   const [url, target] = dom.opened[0];
@@ -208,7 +211,7 @@ test('the card follows the open day', () => {
 
 console.log('\n=== no 1-op-1 WhatsApp buttons any more (design v2) ===');
 test('Wijzigen has no direct WhatsApp buttons per driver; contact goes through the name (contact sheet)', () => {
-  const html = render(sampleParentState, { deviationDay: 'Di' });
+  const html = render(sampleFlexParentState, { deviationDay: 'Di' });
   assert.doesNotMatch(html, /oneOnOne|Stem af met chauffeur|Stem 1-op-1 af/);
   assert.match(html, /data-contact="f4"/);
 });
@@ -242,13 +245,13 @@ test('no Back-up line when nobody is left, or when there is no ride', () => {
   assert.equal(backupHtml('Ma', 'heen', all), '');
 });
 test('Wijzigen shows the Back-up line for a direction', () => {
-  const s = text(render(sampleParentState, { deviationDay: 'Di' }));
-  assert.match(s, /Back-up: Piet Pieters, Mo Bakker/);
+  const s = text(render(sampleCoordinatorState, { deviationDay: 'Di' }));
+  assert.match(s, /Back-up: Piet Pieters ?, Mo Bakker/);
 });
 
 console.log('\n=== Flex aanmelden (US-05) ===');
 const flexFamily = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', parentPhone2: '', phoneKeys: ['0677777777'], schedule: {}, availability: {} };
-function flexParent(patch = {}) { return sampleParentState({ me: 'p9', links: { p9: { familyId: 'f9' } }, families: { ..._sampleFamilies(), f9: flexFamily }, ...patch }); }
+function flexParent(patch = {}) { return sampleFlexParentState({ me: 'p9', links: { p9: { familyId: 'f9' } }, families: { ..._sampleFamilies(), f9: flexFamily }, ...patch }); }
 test('a Flex parent sees a signup block per direction, with time, car choice, ride-along and drive-yourself', () => {
   const html = render(flexParent, { deviationDay: 'Ma' });
   assert.equal((html.match(/class="fold group flexSignup"/g) || []).length, 2);
@@ -351,12 +354,12 @@ await testAsync('a Flex signup shows up in the conclusie-appje as "Rijdt ook mee
 
 console.log('\n=== one-off pickup / drop-off place per ride (US-15) ===');
 test('every car has a "Plek (eenmalig)" choice with the default first and the three places', () => {
-  const html = renderOpen(sampleParentState, { deviationDay: 'Ma' });
+  const html = renderOpen(sampleFlexParentState, { deviationDay: 'Ma' });
   assert.match(html, /<select class="devLocSel devInput"[^>]*data-day="Ma" data-direction="heen" data-caridx="0"><option value="" selected>Standaard: Busstation<\/option><option value="busstation" >Busstation<\/option><option value="a4-de-hoek" >A4-De Hoek<\/option><option value="de-parel" >De Parel<\/option>/);
 });
 test('the saved choice is preselected; the default of the direction follows Beheer', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1'], departureTime: '07:30', locationId: 'de-parel' }] } };
-  const html = renderOpen(sampleParentState, { deviationDay: 'Ma', deviations: dev, locationsDoc: { defaults: { heen: 'a4-de-hoek', terug: 'busstation' } } });
+  const html = renderOpen(sampleFlexParentState, { deviationDay: 'Ma', deviations: dev, locationsDoc: { defaults: { heen: 'a4-de-hoek', terug: 'busstation' } } });
   assert.match(html, /<option value="" >Standaard: A4-De Hoek<\/option>/); assert.match(html, /<option value="de-parel" selected>De Parel<\/option>/);
 });
 async function pickPlace(value) {
@@ -365,7 +368,7 @@ async function pickPlace(value) {
   try { await withFakeNowAsync(NOW, async () => { renderDeviationTab(); await sel.onchange(); }); } finally { dom.doc.querySelectorAll = all; }
 }
 await testAsync('choosing a place stores it on that car of the deviation only; choosing the default removes it again', async () => {
-  const fake = useFakeDb(sampleDbSeed()); sampleParentState({ deviationDay: 'Ma' });
+  const fake = useFakeDb(sampleDbSeed()); sampleFlexParentState({ deviationDay: 'Ma' });
   await pickPlace('a4-de-hoek');
   assert.equal(fake.get('deviations/Ma_heen').cars[0].locationId, 'a4-de-hoek');
   assert.equal(fake.get('deviations/Ma_terug'), undefined, 'the other direction is untouched');
@@ -505,15 +508,15 @@ await testAsync('moving a child offers one button per other car and shows "Onged
   assert.match(text(dom.html('tab-deviation')), /verplaatst\. Ongedaan/);
 });
 
-test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off leaves the tab exactly as before', () => {
+test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off leaves only the week form', () => {
   const off = render(sampleParentState, { ritbeurs: { on: false } });
-  assert.doesNotMatch(off, /data-rbview|segmented/);
+  assert.doesNotMatch(off, /data-rbview/);
   const on = render(sampleParentState, { ritbeurs: { on: true } });
   assert.match(on, /class="segmented"[\s\S]*data-rbview="ritbeurs"/);
-  assert.match(on, /Eenmalige ritaanpassing voor deze week/);
+  assert.match(on, /id="wrForm"/);
   S.rbView = 'ritbeurs';
   const rb = render(sampleParentState, { ritbeurs: { on: true }, rbView: 'ritbeurs' });
-  assert.match(text(rb), /Aangeboden ritten/); assert.doesNotMatch(rb, /Eenmalige ritaanpassing/);
+  assert.match(text(rb), /Aangeboden ritten/); assert.doesNotMatch(rb, /id="wrForm"/);
 });
 
 test('design v2: ui-deviation.js only uses variables from tokens.css in its inline styles', async () => {
@@ -546,17 +549,17 @@ await testAsync('Wijzigen: choosing another driver that breaks the rule warns so
   assert.match(warned, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(warned, /Ongedaan/);
   assert.doesNotMatch(await run({ rules: [] }), /Let op/);
 });
-test('Wijzigen: with an open Rooster editor (S.wrEdit) and the switch off, the day editor of Wijzigen is drawn as always', () => {
-  const html = render(sampleParentState, { wrEdit: { day: 'Ma', override: true } }); assert.match(html, /devDir|daysection/); S.wrEdit = null;
+test('Wijzigen: for a Flex family (no week form) an open Rooster editor (S.wrEdit) changes nothing, the day editor of Wijzigen is drawn', () => {
+  const html = render(sampleFlexParentState, { wrEdit: { day: 'Ma', override: true } }); assert.match(html, /devDir|daysection/); S.wrEdit = null;
 });
 test('ui-deviation.js imports nothing it does not use', () => assertNoUnusedImports('ui-deviation.js'));
 
-test('Afwijkend weekrooster: Wijzigen shows the week form only while the switch is on for this person', () => {
+test('Afwijkend weekrooster: Wijzigen shows the week form for a family with a daughter of their own, and the day editor for a Flex family', () => {
   useFakeDb(sampleDbSeed());
-  sampleParentState({ weekrooster: { mode: 'uit' } }); withFakeNow(NOW, () => renderDeviationTab());
-  assert.doesNotMatch(dom.html('tab-deviation'), /id="wrForm"/);
-  sampleParentState({ weekrooster: { mode: 'aan' } }); withFakeNow(NOW, () => renderDeviationTab());
-  assert.match(dom.html('tab-deviation'), /id="wrForm"/);
+  sampleParentState({}); withFakeNow(NOW, () => renderDeviationTab());
+  assert.match(dom.html('tab-deviation'), /id="wrForm"/); assert.doesNotMatch(dom.html('tab-deviation'), /data-devday/);
+  sampleFlexParentState({}); withFakeNow(NOW, () => renderDeviationTab());
+  assert.doesNotMatch(dom.html('tab-deviation'), /id="wrForm"/); assert.match(dom.html('tab-deviation'), /data-devday/);
 });
 
 test('Wijzigen shows the spinner while the data is loading', () => {

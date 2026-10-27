@@ -28,7 +28,7 @@ const tick = () => new Promise(r => setImmediate(r));
 const rooster = () => { withFakeNow(NOW, () => renderSchedule()); return dom.html('tab-schedule'); };
 const setup = async (patch = {}, extra = {}) => {
   const fake = useFakeDb({ ...sampleDbSeed(), ...extra });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
   syncWeekRequests(); await tick(); return fake;
 };
 const sheet = () => dom.doc.body.children[dom.doc.body.children.length - 1];   // the sheet that was just opened
@@ -153,10 +153,10 @@ await testAsync('a change made that way is marked (selfBy, selfAt); the day coor
   const d = fake.get('deviations/Do_heen'); assert.equal(d.selfBy, 'f2'); assert.equal(typeof d.selfAt, 'number');
   assert.deepEqual(Object.keys(d).filter(k => /reden|reason|text|note/i.test(k)), [], 'no reason or free text');
   // the day coordinator (f3) looks at the same week
-  S.wrEdit = null; sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', deviations: { Do_heen: d }, links: { p1: { familyId: 'f2' } } });
+  S.wrEdit = null; sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', deviations: { Do_heen: d }, links: { p1: { familyId: 'f2' } } });
   // f2 is the decider here: his own change shows no mark
   assert.doesNotMatch(rooster(), /Zelf gewijzigd/);
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week', deviations: { Do_heen: d }, links: { p1: { familyId: 'f3' } } });
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week', deviations: { Do_heen: d }, links: { p1: { familyId: 'f3' } } });
   syncWeekRequests(); await tick();
   const s = text(rooster()); assert.match(s, /Zelf gewijzigd/); assert.match(s, /heen zelf aangepast/);
 });
@@ -203,9 +203,9 @@ await testAsync('when the editor draws again through Wijzigen (its handlers do) 
   assert.match(dom.html('tab-schedule'), /id="wrEdit"/); assert.equal(dom.html('tab-deviation'), 'untouched');
 });
 
-console.log('=== switch off ===');
-await testAsync('uit: no link, no editor, and Wijzigen keeps its own day editor', async () => {
-  await setup({ weekrooster: { mode: 'uit' } });
+console.log('=== nobody linked ===');
+await testAsync('nobody linked: no link, no editor, and Wijzigen keeps its own day editor', async () => {
+  await setup({ links: {} });
   assert.equal(scheduleDayFootHtml('Do'), ''); S.wrEdit = { day: 'Do', override: true }; assert.equal(scheduleEditHtml(), '');
   S.wrEdit = null; assert.doesNotMatch(rooster(), /wroverride|wredit|Toch zelf wijzigen/);
   withFakeNow(NOW, () => goToWijzigen('Do')); assert.equal(S.wrEdit, null); assert.equal(S.deviationDay, 'Do');

@@ -76,7 +76,7 @@ export function renderMyWeek(){
   const box=document.getElementById('tab-myweek');
   if(!box) return;
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('myweek.mijn_week')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; return; }
-  // Testweergave (Bekijk als) shows a family's own week only while the new weekrooster is on for this person; otherwise exactly as before.
+  // Testweergave (Bekijk als) shows a family's own week only for a person the Afwijkend weekrooster applies to (weekroosterActive); otherwise exactly as before.
   const linked = !!(S.links[S.me] && S.links[S.me].familyId) || (!!S.impersonateFamilyId && weekroosterActive());
   if(!linked){ box.innerHTML=`<div class="card"><h2>${t('myweek.mijn_week')}</h2><p class="muted">${t('myweek.koppel_eerst_je_dochter_via')}</p></div>`; return; }
   // Data still on its way: a spinner instead of rides that would wrongly read "nog geen rit".

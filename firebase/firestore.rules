@@ -158,18 +158,8 @@ service cloud.firestore {
       allow write: if isCoordinator();
     }
 
-    // ---- Afwijkend weekrooster: the feature switch and the requests (see weekrooster.js) ----
-    // settings/weekrooster ({ mode: 'uit' | 'test' | 'aan' }, written by the coordinator in Beheer; the general settings rule above covers it)
-    // gates every CREATE and UPDATE of a request. A missing document, a missing field or an unknown value counts as 'uit'. 'test': only the
-    // real coordinator may write. Deleting and reading stay allowed in every mode, so switching off never locks data in.
-    function weekroosterMode() {
-      let p = /databases/$(database)/documents/settings/weekrooster;
-      return exists(p) && ('mode' in get(p).data) ? get(p).data.mode : 'uit';
-    }
-    function weekroosterOpen() {
-      let m = weekroosterMode();
-      return m == 'aan' || (m == 'test' && isCoordinator());
-    }
+    // ---- Afwijkend weekrooster: the requests (see weekrooster.js) ----
+    // The feature is always on. (The old switch document settings/weekrooster is no longer read or written; it may stay in the database.)
     // Is the linked family the day coordinator of this weekday (settings/dayCoordinators = { Ma: familyId, ... })?
     function isDayCoordinatorOf(day) {
       let p = /databases/$(database)/documents/settings/dayCoordinators;
@@ -211,9 +201,9 @@ service cloud.firestore {
       // not an error (the app listens to the known ids). list: any linked family or the coordinator (the app asks for one week with a where on weekKey, to read less).
       allow get: if isCoordinator() || isLinked();
       allow list: if isCoordinator() || isLinked();
-      allow create: if weekroosterOpen() && (ownRequestOk(reqId) || (isCoordinator() && validRequest(reqId)));
+      allow create: if ownRequestOk(reqId) || (isCoordinator() && validRequest(reqId));
       // The owner changes or withdraws it (createdAt stays); a replaced accepted request starts over as 'pending'.
-      allow update: if weekroosterOpen() && (
+      allow update: if (
         (resource.data.familyId == request.resource.data.familyId && request.resource.data.createdAt == resource.data.createdAt
           && ownRequestOk(reqId))
         || (isCoordinator() && validRequest(reqId))

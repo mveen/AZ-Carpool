@@ -7,7 +7,6 @@ import { availableDrivers, driverNameHtml, isFlex, isStandaardDriver, fam, girlN
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
-import { weekroosterCardHtml, wireWeekroosterCard } from './ui-weekrooster.js';
 import { weekroosterActionCount } from './ui-weekrooster-rooster.js';
 import { pushCardHtml, wirePushCard } from './ui-push.js';
 import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
@@ -675,7 +674,6 @@ export function renderBeheer(){
     ]],
     ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
       ic('car', ritbeursCardHtml()),
-      ic('calendar', weekroosterCardHtml()),
       ic('bell', pushCardHtml()),
       ic('info', noticeCardHtml()),
       ic('wrench', maintenanceCardHtml()),
@@ -776,7 +774,6 @@ export function renderBeheer(){
     wireRideLogCard();
     wireMaintenanceCard();
     wireRitbeursCard();
-    wireWeekroosterCard();
     wirePushCard();
     document.querySelectorAll('.periodInput').forEach(el=>el.oninput=rememberPeriodDraft);
     const perSave=document.getElementById('periodDraftSave'); if(perSave) perSave.onclick=()=>{ hapticTap(); return savePeriod(); };

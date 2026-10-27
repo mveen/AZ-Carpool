@@ -284,15 +284,15 @@ test('a name change is not a Weekschema change: no edit is held back and no warn
   listener({ target: { id: 'me_parentName' } });
   assert.equal(S.weekschemaBase, null);
 });
-test('Eenmalig wijzigen undoes the edit, remembers what was wanted and opens Wijzigen', () => {
-  useFakeDb(sampleDbSeed()); sampleParentState();
+test('Eenmalig wijzigen undoes the edit, remembers what was wanted and opens the day editor (in Rooster)', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState({ dayCoordinators: { Ma: 'f2' } });
   const listener = openProfileAndGetListener();
   editedF2(e => { e.schedule.Ma.heen = '09:00'; }); listener({ target: { id: 'me_sch_Ma_heen' } });
   withFakeNow(NOW, () => dom.el('weekschemaToWijzigen').onclick());
   assert.equal(S.families.f2.schedule.Ma.heen, '08:30');                        // back to the saved time
   assert.equal(S.weekschemaBase, null); assert.equal(S.weekschemaEdit, null);
   assert.deepEqual(S.deviationIntent.map(c => [c.day, c.direction, c.from, c.to]), [['Ma', 'heen', '08:30', '09:00']]);
-  assert.match(text(dom.html('tab-deviation')), /Eenmalige ritaanpassing/);
+  assert.ok(S.wrEdit && S.wrEdit.day === 'Ma'); S.wrEdit = null;
 });
 await testAsync('Bevestigen saves the edit for every week and clears the warning', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState(); S.serverSchedules = { f2: JSON.parse(JSON.stringify(S.families.f2.schedule)) };

@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, assertNoUnusedImports } from './test-support.js';
+import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleFlexParentState, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
@@ -30,7 +30,7 @@ const seed = () => ({
   'weekRequests/2026-W40_Do_f4': doc('Do', 'f4', { status: 'direct', rides: false, heen: '', terug: '', updatedAt: new Date('2026-09-30T08:30:00+02:00').getTime() }),
 });
 const tick = () => new Promise(r => setImmediate(r));
-const asDecider = async (patch = {}) => { useFakeDb(seed()); sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', ...patch }); syncWeekRequests(); await tick(); };
+const asDecider = async (patch = {}) => { useFakeDb(seed()); sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', ...patch }); syncWeekRequests(); await tick(); };
 const rooster = () => { withFakeNow(NOW, () => renderSchedule()); return dom.html('tab-schedule'); };
 const mijnWeek = () => { withFakeNow(NOW, () => renderMyWeek()); return dom.html('tab-myweek'); };
 
@@ -68,7 +68,7 @@ await testAsync('a day he does not decide has no action block and no log; the do
 });
 await testAsync('two requests are counted together; with none waiting there is no block (only the log)', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5') });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   assert.match(text(rooster()), /Actie nodig: 2 wijzigingen voor donderdag/); assert.equal(weekroosterActionCount(), 2);
   await asDecider(); S.dayRequests = { '2026-W40_Do_f4': S.dayRequests['2026-W40_Do_f4'] };
   const html = rooster(); assert.doesNotMatch(html, /id="wrAlert"/); assert.match(html, /id="wrLog"/); assert.equal(weekroosterActionCount(), 0);
@@ -76,7 +76,7 @@ await testAsync('two requests are counted together; with none waiting there is n
 });
 await testAsync('the line of the day coordinator says "Jij bent dagcoördinator donderdag" for the day coordinator himself, and the direction titles show her asked time', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '07:30', terug: '16:00' }) });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const html = rooster(), s = text(html);
   assert.match(s, /Jij bent dagcoördinator donderdag/); assert.doesNotMatch(s, /Dagcoördinator donderdag:/);
   assert.match(html, /sectionHead__sub">[^<]*aanwezig 07:30/); assert.match(html, /sectionHead__sub">[^<]*klaar 16:00/);   // the same time as on her chip
@@ -105,7 +105,7 @@ await testAsync('"Bekijk" opens Rooster on that day, in "Deze week"', async () =
 await testAsync('the number on the Rooster tab adds the waiting requests to the existing count', async () => {
   await asDecider(); S.canEdit = false; updateTimeChangesBadge();
   assert.equal(dom.el('navRoosterBadge').textContent, '1'); assert.notEqual(dom.el('navRoosterBadge').style.display, 'none');
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'uit' }, dayCoordinators: { Do: 'f2' } }); syncWeekRequests(); updateTimeChangesBadge();
+  useFakeDb(sampleDbSeed()); sampleParentState({ links: {}, dayCoordinators: { Do: 'f2' } }); syncWeekRequests(); updateTimeChangesBadge();
   assert.equal(dom.el('navRoosterBadge').style.display, 'none');
 });
 
@@ -118,7 +118,7 @@ await testAsync('children who do not ride along sit in the quiet fold (muted nam
 console.log('=== a parent ===');
 await testAsync('read only: the own request is a note on that day, other families\' requests are not shown, no action block', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '12:15', terug: '17:00' }) });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const s = text(rooster());
   assert.match(s, /Jouw aanvraag: heen 12:15 · terug 17:00\. Kees de Vries beslist\./); assert.match(s, /Dagcoördinator donderdag: Kees de Vries/);
   assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen|Anouk: Heen|Evi: Rijdt/);
@@ -127,16 +127,16 @@ await testAsync('read only: the own request is a note on that day, other familie
 
 await testAsync('a parent sees the open request of another family on that day as a note; an accepted or direct one is not shown', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '12:15', terug: '17:00' }) });
-  sampleParentState({ weekrooster: { mode: 'aan' }, dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const s = text(rooster());
   assert.match(s, /: aanvraag heen 12:15 · terug 17:00\. Kees de Vries beslist\./);
   assert.doesNotMatch(s, /Evi: Rijdt/, 'a direct request is not a note'); assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen/);
 });
 
-console.log('=== switch off ===');
-await testAsync('uit (or test for a parent): none of it exists', async () => {
-  for (const mode of ['uit', 'test']) {
-    useFakeDb(seed()); sampleParentState({ weekrooster: { mode }, dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
+console.log('=== not applicable ===');
+await testAsync('nobody linked, or a Flex family: none of it exists', async () => {
+  for (const make of [p => sampleParentState({ links: {}, ...p }), sampleFlexParentState]) {
+    useFakeDb(seed()); make({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
     assert.equal(scheduleDayExtrasHtml('Do'), ''); assert.equal(myWeekActionCardsHtml(), ''); assert.equal(weekroosterActionCount(), 0);
     assert.doesNotMatch(rooster() + mijnWeek(), /Actie nodig|Recente wijzigingen|Jouw aanvraag|wrAlert|wrLog|data-wraction/);
   }

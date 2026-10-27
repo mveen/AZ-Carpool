@@ -41,7 +41,7 @@ test('off or missing: no segment, no badge, the Wijzigen tab is the normal one',
     withFakeNow(NOW, () => renderDeviationTab());
     const html = dom.html('tab-deviation');
     assert.doesNotMatch(html, /data-rbview|Ritbeurs|Ritten ruilen/);
-    assert.match(html, /Eenmalige ritaanpassing/);
+    assert.match(html, /id="wrForm"/);
     assert.equal(S.rbView, 'wijzigen');
   }
 });
@@ -52,7 +52,7 @@ test('on: the Wijzigen tab starts with the segment "Wijzigen | Ritbeurs (n)"', (
   assert.match(html, /class="segmented"/);
   assert.match(text(html), /^Wijzigen Ritten ruilen \(1\)/);
   assert.match(html, /data-rbview="wijzigen" aria-pressed="true"/);
-  assert.match(text(html), /Eenmalige ritaanpassing/);
+  assert.match(text(html), /Tijden deze week/);
 });
 test('a user without a linked family does not get the Ritbeurs', () => {
   sampleParentState({ links: {}, ritbeurs: { on: true } });

@@ -952,19 +952,11 @@ await testAsync('Ritbeurs: the switch, the offers and the moments are read; the 
   stopDataListeners(); assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {});
   S.links = {}; syncListeners(); assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null); assert.deepEqual(S.notifications, {});
 });
-await testAsync('Afwijkend weekrooster: only the switch document is read, a missing or unknown one means uit, and stopping the listeners clears it', async () => {
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } });
+await testAsync('Afwijkend weekrooster: the old switch document is no longer read, and the app starts no request listener by itself from the data listeners', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'uit', updatedAt: 1 } }); sampleParentState({});
   startDataListeners(); await tick(); await tick();
-  assert.equal(S.weekrooster, null, 'a missing document: nothing stored, so uit');
-  stopDataListeners();
-  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'test', updatedAt: 1 } }); sampleParentState({ weekrooster: null });
-  startDataListeners(); await tick(); await tick();
-  assert.deepEqual(S.weekrooster, { mode: 'test' });
-  assert.deepEqual([...fake.store.keys()].filter(k => k.startsWith('weekRequests')), [], 'no request is read or written while only the switch is known');
-  stopDataListeners(); assert.equal(S.weekrooster, null);
-  useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'AAN' } }); sampleParentState({ weekrooster: null });
-  startDataListeners(); await tick(); await tick();
-  assert.deepEqual(S.weekrooster, { mode: 'uit' }, 'an unknown value means uit');
+  assert.ok(!('weekrooster' in S), 'no switch in the state');
+  assert.deepEqual([...fake.store.keys()].filter(k => k.startsWith('weekRequests')), [], 'nothing is written');
   stopDataListeners();
 });
 await testAsync('Ritbeurs: a missing switch document means off', async () => {
@@ -1051,15 +1043,15 @@ await testAsync('purgeStalePracticeMatches removes practice matches more than a 
   assert.deepEqual(fake.collection('practiceMatches').map(e => e[0]).sort(), ['future', 'recent']);
 });
 
-test('Afwijkend weekrooster: leaving (stopDataListeners) closes the request listeners and forgets the requests; the switch document and the requests are wired in', async () => {
+test('Afwijkend weekrooster: leaving (stopDataListeners) closes the request listeners and forgets the requests; they are started from the data listeners', async () => {
   const { stopDataListeners } = await import('../data.js');
   const { syncWeekRequests } = await import('../weekrooster-data.js');
-  useFakeDb(sampleDbSeed()); sampleParentState({ weekrooster: { mode: 'aan' } }); syncWeekRequests();
+  useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests();
   assert.equal(S.weekRequestsUnsubs.length, 10);
   stopDataListeners();
   assert.deepEqual(S.weekRequestsUnsubs, []); assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, '');
   const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
-  assert.match(src, /settings\/weekrooster[\s\S]{0,200}syncWeekRequests\(\)/);
+  assert.match(src, /syncWeekRequests\(\);/); assert.doesNotMatch(src, /settings\/weekrooster/, 'the old switch document is not read any more');
 });
 
 test('the ride listeners mark themselves loaded (also on error) and stopDataListeners resets the flags', async () => {

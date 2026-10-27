@@ -1,7 +1,7 @@
 // ui-weekrooster-form.js — Afwijkend weekrooster, phase 2: what a parent (or a day coordinator for the own daughter) sees.
 //   Wijzigen: the week form (same look as the period form), then the "Doorgegeven" card (days, what others notice, actions) and the day coordinators.
 //   Mijn week: the button "Tijden wijzigen", the amber block of an open request in the card of its day, and next week's open requests as one block.
-// Everything here only shows while the switch is on for this person (weekroosterOn) and the person has a daughter of their own
+// Everything here only shows for a person who has a daughter of their own
 // (not Flex). Rules and requests: weekrooster.js; database: weekrooster-data.js.
 import { t } from './i18n.js';
 import { S } from './state.js';
@@ -15,7 +15,7 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { activateTab } from './app.js';
 import { REQUEST_DAYS, requestId, requestState, weekFormFrom, openRequestsOf } from './weekrooster.js';
 import { expectedImpact } from './weekrooster-impact.js';
-import { currentMarks, dayEndMs, deciderFamilyOf, isDayPast, standardTimes, submitWeekRequests, weekKeyFor, weekroosterOn, withdrawWeekRequests } from './weekrooster-data.js';
+import { currentMarks, dayEndMs, deciderFamilyOf, isDayPast, standardTimes, submitWeekRequests, weekKeyFor, withdrawWeekRequests } from './weekrooster-data.js';
 
 export const dayName = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
 export const lower = s => String(s || '').toLowerCase();
@@ -23,9 +23,9 @@ export const upperFirst = s => String(s || '').charAt(0).toUpperCase() + String(
 const weekNumber = weekKey => +String(weekKey).split('-W')[1];
 
 // ---------- who sees it ----------
-// The new Wijzigen / Mijn week parts: switch on for this person, a family of their own (also in Testweergave), and not Flex.
+// The Wijzigen / Mijn week parts of the Afwijkend weekrooster: a family of their own (also in Testweergave), and not Flex.
 export function weekroosterActive() {
-  if (!weekroosterOn() || !myLinkedFamilyId()) return false;
+  if (!myLinkedFamilyId()) return false;
   return !isFlex(fam(myFamilyId()));
 }
 
