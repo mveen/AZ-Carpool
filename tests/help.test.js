@@ -374,5 +374,12 @@ test('the privacy article says a phone that was not used for 30 days is disconne
   assert.match(all, /30 dagen niet is gebruikt, wordt automatisch losgekoppeld/); assert.match(all, /opnieuw je toegangscode/);
 });
 
+test('the help explains the redesign: day pills and the card you drive in Mijn week, blue Rooster with Aankomst bij and ATC blocks', () => {
+  const body = id => articles.find(x => x.id === id).body.join(' ');
+  assert.match(body('mijn-week'), /kies je een dag/); assert.match(body('mijn-week'), /groene rand/); assert.match(body('mijn-week'), /ingeklapt onder de dag/);
+  const r = articles.find(x => /Wat staat er in het Rooster/.test(x.title)).body.join(' ');
+  assert.match(r, /blauw/); assert.match(r, /Aankomst bij/); assert.match(r, /ATC Wijdewormer/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

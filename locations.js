@@ -114,6 +114,9 @@ export function arrivalPlaces(cars, cfg) {
   return [...seen.values()].sort((x, y) => x.key.localeCompare(y.key));
 }
 
+// The arrival place as a header says it: "AFC '34", or "ATC Wijdewormer" (the short name alone is not clear enough on its own).
+export function arrivalLabel(dest) { return dest.key === 'ATC' ? `${dest.name} ${dest.city}` : dest.name; }
+
 // "Busstation → AFC '34" (heen) / "AFC '34 → Busstation" (terug): the route of one ride.
 export function routeLabel(car, direction, cfg, day) {
   const place = placeName(car, direction, cfg, day), dest = destinationFor(car, cfg).name;

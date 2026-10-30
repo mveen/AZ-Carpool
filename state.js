@@ -70,6 +70,7 @@ export const S = {
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
   wrBusy: false,           // a request is being saved (a double tap makes no double request)
+  myWeekDay: '',   // Mijn week: the day shown under the day pills (a Date toDateString); empty = today, else the first day
   myWeekNextOpen: false,   // Mijn week: the block "Volgende week" (open requests) is unfolded; closed by default
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id

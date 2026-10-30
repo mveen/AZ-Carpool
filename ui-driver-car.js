@@ -17,9 +17,10 @@ import { hasOpenOffer } from './ritbeurs.js';
 const dayLabel = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
 
 // The button under the own car. Empty when the new flow is off for this person, when this person does not drive on that shift, or when the day is over.
-export function driverCarButtonHtml(day, direction, cls = 'linkbtn') {
+// Icon only (a pencil in a round button, top right of the ride card): the words "Tijd en plek" are its aria-label and tooltip.
+export function driverCarButtonHtml(day, direction, cls = 'roundBtn') {
   if (!weekroosterActive() || isDayPast(S.currentWeekKey, day) || !myCarOf(day, direction)) return '';
-  return `<button type="button" class="${cls}" data-drivercar="${day}|${direction}">${phIcon('map-pin')} ${esc(t('driverCar.knop'))}</button>`;
+  return `<button type="button" class="${cls}" data-drivercar="${day}|${direction}" aria-label="${esc(t('driverCar.knop'))}" title="${esc(t('driverCar.knop'))}">${phIcon('pencil')}</button>`;
 }
 
 export function wireDriverCar(box, rerender) {

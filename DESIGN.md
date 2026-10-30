@@ -19,8 +19,8 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 2. **No colour literals** (`#fff`, `rgb(...)`) and **no radius or shadow literals** in CSS or in `style="..."` of new code. Use `var(--...)`.
 3. **No font sizes in px in screens.** Use a `--type-*` token (`font:var(--type-body)`). Times and counts use `--font-mono`, nothing else does.
 4. **Need something that does not exist?** Add the block to `components.css`, from tokens, and list it below. Then use it. Do not make a one-off.
-5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab, "vandaag", the own daughter's chip, a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
-6. **Primary buttons are ink** (`--action-bg`). Selected = ink. Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
+5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab (Rooster: blue, see below), "vandaag", the own daughter's chip, a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
+6. **Primary buttons are ink** (`--action-bg`). Selected = ink (`--tab`; in Rooster blue, see below). Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
 7. **Every tap target is at least 44 px** (`--hit-min`).
 8. **Dark theme comes free** if you only use role tokens (`--surface-card`, `--text-1`, ...). Never use the raw palette (`--ink-900`, `--paper-0`, ...) in components.
 9. **Texts** go in `texts-nl.js`. Icons: Phosphor ONLY, through `phIcon('name')` (regular; `name-fill` for the active state, `-bold` in the switch knob). No hand-drawn SVG (a test checks `PH_PATHS`).
@@ -118,3 +118,13 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - **Small switch** `.switch--sm`: the `.switch` of Mijn week at 40 x 24 (the tap area stays 44 px), for places where a switch sits next to a field.
 - **Ride cell** `.wrCell` (+ `.wrCell__off`): in "Tijden deze week" per ride (heen, terug) the small switch and the time field on one line; while the ride is off the dashed `.wrCell__off` ("Rijdt niet mee") takes the place of the field. **Past day** `.wrPastDay`: day name and "Voorbij" on one line.
+
+## Redesign of Mijn week and Rooster (v159)
+
+- **Borders, not grey fills.** White cards sit on the page with a 1 px border in `--edge` (`.rideRow`, `.carCard`, `.matchTile`, `.dayPill`); no shadow. `--edge` is the border colour, `--line` stays for dividers inside a card.
+- **Where am I:** `--tab` / `--tab-ink` are the colour of the selected day pill and the selected switch of the current tab. Ink by default (Mijn week); `#tab-schedule` sets them to `--info` (blue) and the active Rooster tab is blue too (`.navtab.active[data-tab="schedule"]`). Mijn week says "Week 44 · mijn gezin", Rooster "Week 44 · iedereen" (`contextLine()`).
+- **Day pills on top of both tabs:** `.dayPills` > `.dayPill` (Mijn week: `data-mwday`, one day open under the pills, amber `.dayPill__dot` = something to arrange that day, `.dayPills--6/--7` when a weekend match day is added; Rooster: `.dayPill--cars` with `.dayPill__cars`: wheel icon + number of rides that day). Heading of the open day: `.dayHead`.
+- **One ride, one card** (`ui-myweek.js` `rideRow`, `ui-schedule.js` `weekCarHtml`): head = time + direction (`.rideRow__time`) | "Chauffeur" label (`.rideRow__lab`) + who (`.rideRow__who`) | one round button (`.roundBtn`: your own car = pencil, Tijd en plek, `aria-label` only; another car = phone, opens the contact sheet); then the route as a bordered line (`.rideRow__route`, `.carCard__route--inset`), passengers (`.rideRow__pass` with label, or chips in Rooster), and in Mijn week her own time + the switch (`.rideRow__kid`). Seats in Rooster: `.seats` (two-people icon + 3/4).
+- **The card you drive:** green top edge (`.rideRow--mine`, `.carCard--mine`) and the filled green badge `.tag--drive` "Jij rijdt".
+- **Heen / Terug titles** always say what the time means: `.sectionHead__note` "Aankomst bij AFC '34" / "Vertrek bij AFC '34". Cars with another arrival place (ATC Wijdewormer) form their own block with their own title (no pill); `arrivalPlaces()` / `arrivalLabel()` in `locations.js`.
+- Matches of the week are one folded `.matchTile` under the day they are played on (no separate block); a weekend day with a match gets its own pill.

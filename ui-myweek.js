@@ -11,7 +11,7 @@ import { myFamilyId } from './coordinator.js';
 import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
 import { dayChanges } from './day-changes.js';
 import { DAYS, KM_COST_EUR, todayKeyNow } from './constants.js';
-import { dateForWeekday } from './dates.js';
+import { dateForWeekday, dayUp } from './dates.js';
 import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { activateTab } from './app.js';
@@ -20,6 +20,7 @@ import { isFlex, driverNameHtml } from './rides.js';
 import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-rooster.js';
 import { openDayEditor } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
+import { contactButtonHtml } from './ui-contact.js';
 import { timeChangeOf } from './driver-car.js';
 import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
@@ -86,9 +87,9 @@ export function renderMyWeek(){
   const cfg = locationsCfg();
   const daughterName = plainGirlName(myId) || t('myweek.daughter_unknown');
 
-  // One ride row: departure time, route, who drives, her own time, and the "rides along" switch.
-  // opts.sharedDriver: heen and terug have the same driver, said once above the two rows (dayRows), so not here.
-  function rideRow(day,direction,opts={}){
+  // One ride = one white card (with a border): time and direction on the left, "Chauffeur" and who drives in the middle, one round button on
+  // the right (your own car: Tijd en plek; another car: contact), then the route, the passengers of the car you drive, and her own time with the switch.
+  function rideRow(day,direction){
     let s = rideTime(myId, day, direction);   // the handed-in time where the temporary rooster applies, else the standard time
     const cars = effectiveCars(day,direction);
     const isOvMe = ovGirlsFor(day,undefined,direction).includes(myId);   // US-06: marked "Rijdt niet mee" on this shift
@@ -104,30 +105,37 @@ export function renderMyWeek(){
     // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
     const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), cars).length>0;
     const changedTag = ((differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '');
-    const route = `${dirName(direction)} · ${routeLabel(ownCar||{},direction,cfg,day)}`;
+    const route = routeLabel(ownCar||{},direction,cfg,day);
+    const iDrive = !!(ownCar && ownCar.driverFamilyId===myId);
 
-    let status;
+    let who, act = '', passengers = '';
     if(ownCar){
-      if(ownCar.driverFamilyId===myId){
+      if(iDrive){
         // Full passenger list, including your own daughter — not just "everyone else".
-        const passengers = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
-        status = `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}${driverCarButtonHtml(day,direction)}`;
+        const names = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
+        who = `<div class="rideRow__who"><span class="tag tag--drive">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>`;
+        act = driverCarButtonHtml(day,direction);
+        passengers = names? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${names}</div>` : '';
       } else {
-        status = opts.sharedDriver ? '' : driverButtonHtml(ownCar.driverFamilyId);
+        const id = ownCar.driverFamilyId;
+        const known = !!(id && S.families[id] && S.families[id].parentName);
+        who = known? `<div class="rideRow__who">${driverNameHtml(id)}</div>` : `<div class="rideRow__none">${esc(t('driver.none'))}</div>`;
+        act = known? contactButtonHtml(id, phIcon('phone'), '', 'roundBtn', t('contact.open_met',{p1:S.families[id].parentName})) : '';
       }
     } else if(isOvMe){
-      status = `<div class="rideRow__off">${esc(t('myweek.rijdt_niet_mee', { name: plainGirlName(myId) }))}</div>`;
+      who = `<div class="rideRow__off">${esc(t('myweek.rijdt_niet_mee', { name: plainGirlName(myId) }))}</div>`;
     } else {
-      status = `<div class="rideRow__none">${esc(t('myweek.nog_geen_rit'))}</div>`;
+      who = `<div class="rideRow__none">${esc(t('myweek.nog_geen_rit'))}</div>`;
     }
     // The departure time of the car changed compared with the standard rooster: said in words, with the old and the new time.
     const timeChangedLine = c => { const x = timeChangeOf(baseCars(day,direction), c); return x? `<div class="rideRow__extra rideRow__extra--changed">${phIcon('clock')} ${esc(t('driverCar.tijdGewijzigd',{p1:x.from,p2:x.to}))}</div>` : ''; };
     const ownTimeChange = ownCar ? timeChangeOf(baseCars(day,direction), ownCar) : null;   // shown as "was 07:00" under the time
     // Own driving duty in a DIFFERENT car than the daughter's own ride — shown as a second line.
+    let extra = '';
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg = cars[drivingIdx];
       const names = sortGirlIds(dg.girlIds).map(id=>girlName(id)).join(', ');
-      status += `<div class="rideRow__extra">${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</div>${timeChangedLine(dg)}${driverCarButtonHtml(day,direction)}`;
+      extra = `<div class="rideRow__extra"><span>${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</span>${driverCarButtonHtml(day,direction)}</div>${timeChangedLine(dg)}`;
     }
     // Her own time: when she has to be there (heen) / when she is done (terug).
     const ownTime = openAskedTime(day,direction) || s;   // an open request already counts for HER time; the car waits for the coordinator
@@ -136,22 +144,20 @@ export function renderMyWeek(){
     const dayPassed = dateForWeekday(day) < new Date(new Date().setHours(0,0,0,0));
     const sw = !dayPassed && !isFlex(myFam)
       ? `<span class="swWrap"><button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button><span class="swCap">${esc(t(isOvMe?'myweek.switch_off':'myweek.switch_on'))}</span></span>` : '';
-    return `<div class="rideRow${isOvMe?' rideRow--off':''}" data-rideday="${day}" data-ridedir="${direction}">
-      <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${ownTimeChange ? `${esc(t('myweek.was'))} <s>${esc(ownTimeChange.from)}</s>` : esc(t('myweek.vertrek'))}</div>${changedTag}</div>
-      <div class="rideRow__main"><div class="rideRow__route">${esc(route)}</div>${status}${daughterLine}</div>
-      ${sw}
+    return `<div class="rideRow${isOvMe?' rideRow--off':''}${iDrive||drivingIdx>=0?' rideRow--mine':''}" data-rideday="${day}" data-ridedir="${direction}">
+      <div class="rideRow__head">
+        <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ownTimeChange ? `<div class="rideRow__sub">${esc(t('myweek.was'))} <s>${esc(ownTimeChange.from)}</s></div>` : ''}${changedTag}</div>
+        <div class="rideRow__mid"><div class="rideRow__lab">${esc(t('ride.chauffeur'))}</div>${who}</div>
+        ${act? `<div class="rideRow__act">${act}</div>` : ''}
+      </div>
+      <div class="rideRow__route">${phIcon('map-pin')}<span>${esc(route)}</span></div>
+      ${passengers}${extra}
+      ${(daughterLine || sw)? `<div class="rideRow__kid">${daughterLine}${sw}</div>` : ''}
     </div>`;
   }
 
-  // The rows of one day. When heen and terug have the same driver (not me) it is said ONCE above the two rows, not twice with the same tags.
-  const ownCarOf = (day,direction) => effectiveCars(day,direction).find(c=>(c.girlIds||[]).includes(myId)) || null;
-  function dayRows(day){
-    const heen = rideRow(day,'heen'), terug = rideRow(day,'terug');
-    const a = ownCarOf(day,'heen'), b = ownCarOf(day,'terug');
-    const id = a && b && a.driverFamilyId && a.driverFamilyId===b.driverFamilyId && a.driverFamilyId!==myId && S.families[a.driverFamilyId] && S.families[a.driverFamilyId].parentName ? a.driverFamilyId : '';
-    if(!(id && heen && terug)) return heen + terug;
-    return `<button type="button" class="rideRow__driver driverOnce" data-contact="${esc(id)}">${driverNameHtml(id)} ${esc(t('myweek.rijdt_heen_terug'))}${phIcon('phone')}</button>` + rideRow(day,'heen',{sharedDriver:true}) + rideRow(day,'terug',{sharedDriver:true});
-  }
+  // The rides of one day: heen and terug, each its own card.
+  const dayRows = day => rideRow(day,'heen') + rideRow(day,'terug');
 
   // Wedstrijdcarpool rides (spontaneous, per match) — violet + football so they never get
   // mistaken for the regular weekday carpool. Grouped per calendar date.
@@ -166,54 +172,25 @@ export function renderMyWeek(){
     const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
     const passengers = sortGirlIds(r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
     const status = r.driving
-      ? `<div class="rideRow__drives"><span class="tag tag--ok">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}`
+      ? `<div class="rideRow__drives"><span class="tag tag--drive">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}`
       : driverButtonHtml(r.car.driverFamilyId);
-    return `<div class="rideRow rideRow--match">
-      <div class="rideRow__time"><div class="rideRow__dep">${esc(r.car.departureTime||'--:--')}</div><div class="rideRow__sub">${esc(t('myweek.vertrek'))}</div></div>
-      <div class="rideRow__main">
-        <div class="rideRow__route"><span class="tag tag--match">${phIcon('soccer')} ${esc(t(isPracticeMatch(r.doc)? 'myweek.oefenwedstrijd' : 'myweek.wedstrijd_2'))}</span> ${esc(matchLabel(r.doc))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</div>
-        ${status}
-        <div class="rideRow__pass">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf', { place: matchFromName(r.car, cfg) }))}</div>
-        <div class="rideRow__pass">${t('myweek.aftrap')} ${kickoff}${r.doc.location? ' · '+locationLinkHtml(r.doc.location):''}</div>
-        ${matchDistanceHtml(docToMatch(r.doc))}
+    return `<div class="rideRow rideRow--match${r.driving? ' rideRow--mine' : ''}">
+      <div class="rideRow__head">
+        <div class="rideRow__time"><div class="rideRow__dep">${esc(r.car.departureTime||'--:--')}</div><div class="rideRow__sub">${esc(t('myweek.vertrek'))}</div></div>
+        <div class="rideRow__mid">
+          <div class="rideRow__title"><span class="tag tag--match">${phIcon('soccer')} ${esc(t(isPracticeMatch(r.doc)? 'myweek.oefenwedstrijd' : 'myweek.wedstrijd_2'))}</span> ${esc(matchLabel(r.doc))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</div>
+          ${status}
+          <div class="rideRow__pass">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf', { place: matchFromName(r.car, cfg) }))}</div>
+          <div class="rideRow__pass">${t('myweek.aftrap')} ${kickoff}${r.doc.location? ' · '+locationLinkHtml(r.doc.location):''}</div>
+          ${matchDistanceHtml(docToMatch(r.doc))}
+        </div>
       </div>
     </div>`;
   }
   const matchRowsFor = date => (matchRidesByDate[date.toDateString()]||[]).map(matchRideRow).join('');
 
-  const todayStr = new Date().toDateString();
-  const weekdayDates = new Set(DAYS.map(([k])=>dateForWeekday(k).toDateString()));
-  const dayInfo = DAYS.map(([k,label])=>{
-    const rows = dayRows(k) + requestBlockHtml(k) + matchRowsFor(dateForWeekday(k));
-    return { key:k, label, date:dateForWeekday(k), rows, isToday: k===todayKeyNow() };
-  }).filter(d=>d.rows);
-  const dateText = d => d.toLocaleDateString(locale(),{day:'numeric',month:'short'});
-  const dayCardHtml = d => `<div class="rideCard"><div class="rideCard__head">${esc(d.label)} <small>${dateText(d.date)}</small></div>${d.rows}</div>`;
-
-  // Match rides on days outside Ma–Vr of the planning week (the weekend) get their own card.
-  const extraKeys = Object.keys(matchRidesByDate).filter(k=>!weekdayDates.has(k)).sort((a,b)=>matchDateByKey[a]-matchDateByKey[b]);
-  const extraCard = key => {
-    const d = matchDateByKey[key];
-    const name = d.toLocaleDateString(locale(),{weekday:'long'});
-    return `<div class="rideCard${key===todayStr?' rideCard--match':''}"><div class="rideCard__head">${esc(name.charAt(0).toUpperCase()+name.slice(1))} <small>${dateText(d)}</small></div>${matchRowsFor(d)}</div>`;
-  };
-  // myMatchRides already starts at today, so after Friday 19:00 this weekend's matches stay (until they are played) next to next week's days.
-  // Weekend match cards and the weekday cards share one timeline, so this weekend comes before next Monday.
-  const afterEntries = extraKeys.map(k=>({ date: matchDateByKey[k], html: extraCard(k) }));
-
-  const todayDay = dayInfo.find(d=>d.isToday);
-  const todayCardHtml = todayDay ? `<div class="rideCard rideCard--today">
-      <div class="rideCard__today"><span class="rideCard__dot"></span><span class="rideCard__todayLabel">${esc(t('myweek.vandaag'))}</span><span class="rideCard__date">${esc(todayDay.date.toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'short'}))}</span></div>
-      ${todayDay.rows}</div>` : '';
-  const todayIdx = DAYS.findIndex(([k])=>k===todayKeyNow());
-  const upcoming = dayInfo.filter(d=>!d.isToday && (todayIdx<0 || DAYS.findIndex(([k])=>k===d.key)>todayIdx));
-  const restEntries = [...upcoming.map(d=>({ date: d.date, html: dayCardHtml(d) })), ...afterEntries].sort((a,b)=>a.date-b.date);
-  const restHtml = restEntries.map(e=>e.html).join('');
-  const noRidesHtml = (!todayCardHtml && !restHtml) ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
-
-  // This week's matches: one tile each, linking to the Wedstrijd tab where the carpool is arranged.
-  const weekMatches = matchesThisWeek(currentMatchList());
-  const matchTiles = weekMatches.map(m=>{
+  // The matches of this week: one folded line each (the tile), under the day it is played on; it links to the Wedstrijd tab where the carpool is arranged.
+  const matchTileHtml = m=>{
     const a = analyzeMatch(m.summary);
     const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
     const cars = ((carpoolFor(m).doc||{}).cars||[]).length;
@@ -225,15 +202,11 @@ export function renderMyWeek(){
       ${m.location? `<div class="matchTile__loc">${locationLinkHtml(m.location)}</div>` : ''}
       <div class="matchTile__sub">${esc(sub)}</div></span>
       <span class="matchTile__more">${phIcon('caret-right')}</span></div>`;
-  }).join('');
-  // The matches of this week follow the day cards (Friday, then Saturday), under their own heading; "Volgende week" comes last.
-  const matchesHtml = matchTiles ? `<div class="sectionHead"><span class="sectionHead__title">${esc(t('myweek.wedstrijden_title'))}</span><span class="sectionHead__sub">${esc(t('myweek.wedstrijden_sub'))}</span></div>${matchTiles}` : '';
-  const matchStatusNote = S.matchesSource==='live' ? '' : (S.cachedMatchesAt? `<p class="noteLine">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
-  const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
+  };
 
-  // Rides of the daughter that have no car yet — today first, then the rest of the week.
+  // Rides of the daughter that have no car yet. A day with one gets the amber dot on its pill; the alert card shows when that day is open.
   const todayMidnight = new Date(); todayMidnight.setHours(0,0,0,0);
-  const alertRows = [];
+  const alertRows = [], attention = new Set();   // alertRows: { key (date), html }
   DAYS.forEach(([k,label])=>{
     if(dateForWeekday(k) < todayMidnight) return; // days already past
     ['heen','terug'].forEach(direction=>{
@@ -241,18 +214,57 @@ export function renderMyWeek(){
       if(!s || isFlex(myFam)) return; // Flex is never auto-planned, so nothing is 'missing'
       if(effectiveCars(k,direction).some(c=>(c.girlIds||[]).includes(myId))) return;
       if(ovGirlsFor(k,undefined,direction).includes(myId)) return;   // marked "Rijdt niet mee"
+      attention.add(dateForWeekday(k).toDateString());
       const when = label.slice(0,2);   // "Do terug · klaar 20:00" (design v2)
       const doneText = direction==='heen' ? t('myweek.alert_heen', { time: s }) : t('myweek.alert_terug', { time: s });
-      alertRows.push(`<div class="alertCard"><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span>
+      alertRows.push({ key: dateForWeekday(k).toDateString(), html: `<div class="alertCard"><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span>
         <div class="alertCard__text"><b>${esc(when)} ${esc(dirName(direction).toLowerCase())} · ${esc(doneText)}</b><br>${esc(plainGirlName(myId))} ${t('myweek.heeft_nog_geen_rit')}</div>
-        <button type="button" class="btn" data-gowijzig="${k}">${t('myweek.regelen')}</button></div>`);
+        <button type="button" class="btn" data-gowijzig="${k}">${t('myweek.regelen')}</button></div>` });
     });
   });
 
+  const weekdayDates = new Set(DAYS.map(([k])=>dateForWeekday(k).toDateString()));
+  // The days: one pill per day (Ma–Vr from today on, plus a weekend day with a match); the selected day shows its rides, its open request and its matches.
+  const dateText = d => d.toLocaleDateString(locale(),{day:'numeric', month:'short'});
+  const todayIdx = DAYS.findIndex(([k])=>k===todayKeyNow());
+  const entries = new Map();
+  const entryFor = (date, label, abbr, weekday) => { const key = date.toDateString(); if(!entries.has(key)) entries.set(key, { key, date, label, abbr, weekday, rows:'', request:'', tiles:'', isToday: key===new Date().toDateString() }); return entries.get(key); };
+  DAYS.forEach(([k,label],i)=>{
+    if(todayIdx>=0 && i<todayIdx) return;   // days that are over are not shown any more
+    const date = dateForWeekday(k), request = requestBlockHtml(k), rows = dayRows(k) + matchRowsFor(date);
+    if(!rows && !request) return;
+    const e = entryFor(date, label, dayUp(k).toLowerCase(), k);
+    e.rows = rows; e.request = request;
+    if(request) attention.add(e.key);
+  });
+  // Match carpool rides on days outside Ma–Vr of the planning week (the weekend). myMatchRides already starts at today, so after Friday 19:00
+  // this weekend's matches stay (until they are played) next to next week's days.
+  Object.keys(matchRidesByDate).filter(k=>!weekdayDates.has(k)).forEach(k=>{
+    const d = matchDateByKey[k], name = d.toLocaleDateString(locale(),{weekday:'long'});
+    const e = entryFor(d, name.charAt(0).toUpperCase()+name.slice(1), d.toLocaleDateString(locale(),{weekday:'short'}).replace('.','').slice(0,2).toLowerCase());
+    e.rows = matchRowsFor(d);
+  });
+  matchesThisWeek(currentMatchList()).forEach(m=>{
+    const d = new Date(m.start); d.setHours(0,0,0,0);
+    const name = d.toLocaleDateString(locale(),{weekday:'long'});
+    const e = entryFor(d, name.charAt(0).toUpperCase()+name.slice(1), d.toLocaleDateString(locale(),{weekday:'short'}).replace('.','').slice(0,2).toLowerCase());
+    e.tiles += matchTileHtml(m);
+  });
+  const list = [...entries.values()].sort((a,b)=>a.date-b.date);
+  const shown = list.find(e=>e.key===S.myWeekDay) || list.find(e=>e.isToday) || list[0];
+  const pillsHtml = list.length? `<div class="dayPills dayPills--${list.length}" role="group" aria-label="${esc(t('deviation.kies_een_dag'))}">${list.map(e=>`<button type="button" class="dayPill${e===shown?' on':''}${e.isToday?' dayPill--today':''}" data-mwday="${esc(e.key)}" aria-pressed="${e===shown}" aria-label="${esc(e.label+' '+dateText(e.date))}">
+      <span class="dayPill__ab">${esc(e.isToday? t('myweek.vandaag').toLowerCase() : e.abbr)}</span><span class="dayPill__n">${e.date.getDate()}</span>${attention.has(e.key)? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
+    </button>`).join('')}</div>` : '';
+  const panelHtml = shown ? `<div class="dayHead">${esc(shown.label)} <small>${dateText(shown.date)}</small></div>${shown.request}${shown.rows}${shown.tiles}` : '';
+  const noRidesHtml = !list.length ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
+  const matchStatusNote = S.matchesSource==='live' ? '' : (S.cachedMatchesAt? `<p class="noteLine">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
+  const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
+
   box.innerHTML = `
-    ${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${todayCardHtml}${alertRows.join('')}${noRidesHtml}${restHtml}${matchesHtml}${matchFailNote}${matchStatusNote}${myWeekNextWeekHtml()}
+    ${pillsHtml}${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${matchStatusNote}${myWeekNextWeekHtml()}
     ${dayCoordinatorHtml()}
   `;
+  box.querySelectorAll('[data-mwday]').forEach(b=>b.onclick=()=>{ S.myWeekDay = b.dataset.mwday; hapticTap(); renderMyWeek(); });
   wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireDriverCar(box, renderMyWeek);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{

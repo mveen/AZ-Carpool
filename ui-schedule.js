@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
 import { baseCars, driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
-import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
+import { ATC_NAME, CITY_AFC, CITY_ATC, arrivalLabel, arrivalPlaces, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
 import { esc, foldHtml, hapticTap, locationsCfg, openSheet, phIcon, renderLoadingIfNeeded, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
@@ -62,9 +62,10 @@ export function renderSchedule(){
     const unplaced = unplacedFor(k,'heen',mode).length + unplacedFor(k,'terug',mode).length;
     const isActive = k===S.scheduleDay;
     const isToday = k===todayKeyNow();
-    return `<button type="button" class="dayPill${isActive?' on':''}${isToday?' dayPill--today':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? t('schedule.niet_ingedeeld_2', { p1: unplaced }):''}">
+    return `<button type="button" class="dayPill dayPill--cars${isActive?' on':''}${isToday?' dayPill--today':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? t('schedule.niet_ingedeeld_2', { p1: unplaced }):''}">
       <span class="dayPill__ab">${isToday? esc(t('myweek.vandaag').toLowerCase()) : dayUp(k).toLowerCase()}</span>
       <span class="dayPill__n">${dateForWeekday(k).getDate()}</span>
+      <span class="dayPill__cars" title="${esc(t('schedule.auto_aantal',{p1:carCount}))}">${phIcon('steering-wheel')}${carCount}</span>
       ${(unplaced || (mode==='week' && weekroosterDayDot(k)))? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
     </button>`;
   }).join('');
@@ -146,7 +147,7 @@ export function neededTimesHtml(day,direction,girlIds,timeOf=famTime,car=null){
 // wa = {day,time}: "Deze week": the contact sheet starts WhatsApp with the question to take over this ride.
 export function driverLineHtml(driverId,myId,wa){
   if(!driverId) return `<div class="carCard__driver carCard__driver--none">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
-  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me">${phIcon('steering-wheel-fill')} ${t('schedule.jij_rijdt')}</div>`;
+  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me"><span class="tag tag--drive">${phIcon('steering-wheel-fill')}${t('schedule.jij_rijdt')}</span></div>`;
   const name = wa? contactButtonHtml(driverId, esc(fam(driverId).parentName||'?'), driverAskText(wa.day, wa.time), 'carCard__driver') : `<span class="carCard__driver">${driverNameHtml(driverId)}</span>`;
   return `<div>${name}</div>`;
 }
@@ -206,6 +207,7 @@ export function carRouteHtml(car,direction,day,opts){
   const cfg = locationsCfg();
   const label = esc(routeLabel(car,direction,cfg,day));
   const changed = isOverride(car,direction,cfg,day)? ` <span class="tag tag--warn">${t('loc.changedTag')}</span>` : '';
+  if(o.inset) return `<div class="carCard__route carCard__route--inset">${phIcon('map-pin')}<span>${label}</span>${changed}</div>`;
   if(o.edit && o.pcar) return `<div class="carCard__route"><button type="button" class="shiftLocBtn" data-pcarplace="${esc(o.pcar)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}">${phIcon('map-pin')}<span class="shiftLocText">${label}</span></button>${changed}</div>`;
   if(o.edit && o.gid) return `<div class="carCard__route"><button type="button" class="shiftLocBtn" data-shiftloc="${esc(o.gid)}" aria-haspopup="dialog" aria-label="${esc(t('loc.shiftChange'))}">${phIcon('map-pin')}<span class="shiftLocText">${label}</span></button>${changed}</div>`;
   return `<div class="carCard__route">${label}${changed}</div>`;
@@ -232,47 +234,56 @@ function unplacedBoxHtml(day,direction){
   return `<div class="dashBox" role="alert"><b>${t('schedule.niet_ingedeeld_box')}</b> ${l.map(([id])=>girlName(id)).join(', ')}${action? `<div class="dashBox__actions">${action}</div>` : ''}</div>`;
 }
 
-// The section title of one direction ("Heen" / "Terug"), with your own daughter's time on the right.
-function directionHeadHtml(day,direction,devTagHtml){
-  const myFamId = myLinkedFamilyId();
-  let sub = '';
-  if(myFamId){
-    const f = fam(myFamId), time = openAskedTimeOf(myFamId,day,direction) || rideTime(myFamId,day,direction);   // the same time as on her chip
-    if(time) sub = direction==='heen'
-      ? t('schedule.sub_heen', { name: f.girlName||'', time })
-      : t('schedule.sub_terug', { name: f.girlName||'', time });
-  }
-  return `<div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')} ${devTagHtml||''}</div><div class="sectionHead__sub">${esc(sub)}</div></div>`;
+// The section title of one direction ("Heen" / "Terug") with what the time at the sports park means: "Aankomst bij AFC '34" (heen) /
+// "Vertrek bij AFC '34" (terug). `places` = the arrival places [{ key, name, city }] of the cars under this title.
+function directionHeadHtml(day,direction,devTagHtml,places){
+  const cfg = locationsCfg();
+  const where = (places && places.length? places : arrivalPlaces([],cfg)).map(arrivalLabel).join(' · ');
+  const note = t(direction==='heen'? 'schedule.aankomst_bij' : 'schedule.vertrek_bij', { p1: where });
+  return `<div class="sectionHead sectionHead--dir"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}<span class="sectionHead__note">${esc(note)}</span> ${devTagHtml||''}</div></div>`;
+}
+
+// One car of "Deze week": time, who drives (the round button next to it: your own car = Tijd en plek, another car = contact), seats, route, passengers.
+function weekCarHtml(c,day,direction,base,myId){
+  const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
+  const change = timeChangeOf(base,c);   // "was 15:30" (no strike-through: the word "was" says it)
+  const own = !!(myId && c.driverFamilyId===myId);
+  const timeHtml = `<div class="timeCol"><span class="carCard__time">${esc(c.departureTime||'--:--')}</span>${change? `<span class="wasTime">${esc(t('myweek.was'))} ${esc(change.from)}</span>` : ''}</div>`;
+  const act = own? driverCarButtonHtml(day,direction)
+    : (driver && c.driverFamilyId? contactButtonHtml(c.driverFamilyId, phIcon('phone'), driverAskText(day,c.departureTime), 'roundBtn', t('contact.open_met',{p1:driver.parentName||''})) : '');
+  const who = !c.driverFamilyId || own? driverLineHtml(c.driverFamilyId,myId) : `<div class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</div>`;
+  const seatsHtml = driver? `<span class="seats" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${phIcon('users')}<b>${c.girlIds.length}/${seats(driver)}</b></span>` : '';
+  return `<div class="carCard${change? ' carCard--changed' : ''}${own? ' carCard--mine' : ''}">
+      <div class="carCard__head">
+        ${timeHtml}
+        <div class="carCard__who"><div class="rideRow__lab">${esc(t('ride.chauffeur'))}</div>${who}</div>
+        ${seatsHtml}${act}
+      </div>
+      ${carRouteHtml(c,direction,day,{inset:true})}
+      <div class="chips">${pillsTimedHtml(c.girlIds,myId,day,direction)}</div>
+      ${lateReadyHtml(c,day,direction)}
+    </div>`;
 }
 
 // "Deze week": what actually runs this week — read-only; changes go through Wijzigen.
+// The cars are grouped by arrival place: a block per place under its own "Aankomst bij …" title (AFC '34 first). Almost always that is one block.
 export function renderDirectionWeek(day,direction){
   const cars = effectiveCars(day,direction).filter(c=>(c.girlIds||[]).length);
   const dev = activeDeviation(day,direction);
   const myId = myLinkedFamilyId();
   const base = baseCars(day,direction);
-  const cardsHtml = cars.map(c=>{
-    const driver = c.driverFamilyId? fam(c.driverFamilyId) : null;
-    const change = timeChangeOf(base,c);   // "was 15:30" (no strike-through: the word "was" says it)
-    const own = myId && c.driverFamilyId===myId;
-    const timeHtml = `<div class="timeCol"><span class="carCard__time">${esc(c.departureTime||'--:--')}</span>${change? `<span class="wasTime">${esc(t('myweek.was'))} ${esc(change.from)}</span>` : ''}</div>`;
-    const carBtn = own? driverCarButtonHtml(day,direction,'btn secondary small') : '';
-    return `<div class="carCard${change? ' carCard--changed' : ''}">
-      <div class="carCard__head">
-        ${timeHtml}
-        <div class="carCard__who">${driverLineHtml(c.driverFamilyId,myId,{day,time:c.departureTime})}${carRouteHtml(c,direction,day)}</div>
-        ${driver? `<span class="tag" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${c.girlIds.length}/${seats(driver)}</span>` : ''}
-      </div>
-      <div class="chipsRow"><div class="chips">${pillsTimedHtml(c.girlIds,myId,day,direction)}</div>${carBtn}</div>
-      ${lateReadyHtml(c,day,direction)}
-    </div>`;
-  }).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`;
+  const cfg = locationsCfg();
+  const places = arrivalPlaces(cars,cfg);
+  const devTag = dev? `<span class="tag tag--warn">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>` : '';
+  const blocks = places.map((p,i)=>{
+    const inBlock = cars.filter(c=>destinationFor(c,cfg).key===p.key);
+    return directionHeadHtml(day,direction,i===0? devTag : '',[p]) + (inBlock.map(c=>weekCarHtml(c,day,direction,base,myId)).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`);
+  }).join('');
   // The ride a reserve is asked to take over: the one you drive, else your daughter's, else the first.
   const askCar = cars.find(c=>myId && c.driverFamilyId===myId) || cars.find(c=>myId && (c.girlIds||[]).includes(myId)) || cars[0];
   const notRiding = ovGirlsFor(day,undefined,direction);
   return `<div>
-    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>`:'')}
-    ${cardsHtml}${unplacedBoxHtml(day,direction)}
+    ${blocks}${unplacedBoxHtml(day,direction)}
     ${restFoldHtml(day,direction,notRiding,cars,askCar&&askCar.departureTime)}
   </div>`;
 }
@@ -398,7 +409,7 @@ export function renderDirectionStandard(day,direction){
   const dev = activeDeviation(day,direction);
   const cars = grps.map(([,g])=>g);
   return `<div>
-    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${phIcon('lightning')} ${t('schedule.deze_week_gewijzigd')}</span>`:'')}
+    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${phIcon('lightning')} ${t('schedule.deze_week_gewijzigd')}</span>`:'',arrivalPlaces(grps.map(([,g])=>g),locationsCfg()))}
     ${S.canEdit && grps.length? shiftToolsHtml(day,direction,grps) : ''}
     ${groupHtml}
     ${unplacedBoxHtml(day,direction)}

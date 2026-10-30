@@ -62,11 +62,11 @@ export default [
     title: 'Waar zie ik wie mijn dochter rijdt?',
     keywords: 'mijn week overzicht wie rijdt vertrektijd heen terug chauffeur vandaag wanneer opgehaald',
     body: [
-      'Op Mijn week zie je per dag de rit van je dochter: heen en terug, met de tijd en de chauffeur. Vandaag heeft een label VANDAAG.',
+      'Bovenaan Mijn week kies je een dag. Vandaag staat er al open en heeft het label VANDAAG. Een oranje stip bij een dag betekent dat er nog iets te regelen valt. Je ziet de ritten van je dochter als aparte kaarten: heen en terug, met de tijd, de chauffeur en de route. De kaart waar je zelf rijdt heeft een groene rand en het label Jij rijdt, met de passagiers erbij. Een wedstrijd staat ingeklapt onder de dag waarop hij gespeeld wordt.',
       'Bij de rit staat de naam van je dochter met "aanwezig om" (heen) of "klaar om" (terug) en de tijd. Is de vertrektijd van de auto gewijzigd, dan staat onder de nieuwe tijd klein "was" met de oude tijd. Is een rit gewijzigd, dan staat links onder de tijd een gele pil "Gewijzigd". Achter de naam van de chauffeur staat een telefoon-icoon: tik erop om te appen of te bellen. Onder de schakelaar staat wat hij doet: "rijdt mee" of "rijdt niet mee". In het Rooster staat bij Heen en Terug hetzelfde: haar naam met "aanwezig" en de tijd.',
       'Rijd je zelf op een dag, dan staat er "Jouw rijbeurt om" met de tijd.',
       'Is er deze week iets aangepast, dan staat er "Wijziging actief" bij die dag.',
-      'Mijn week is om te lezen. Wil je iets veranderen, ga dan naar Wijzigen. Alleen als je zelf rijdt, staat onder je rit de knop Tijd en plek: daarmee kies je zelf wanneer en waar jouw auto vertrekt.',
+      'Mijn week is om te lezen. Wil je iets veranderen, ga dan naar Wijzigen. Alleen als je zelf rijdt, staat rechtsboven in je rit de knop Tijd en plek (een potlood): daarmee kies je zelf wanneer en waar jouw auto vertrekt.',
       'Met de deel-knop rechtsboven tik je op Delen. Dan kies je zelf met wie en in welke app (bijvoorbeeld WhatsApp) je het overzicht deelt.',
       'Onder Wedstrijden deze week zie je de wedstrijden van het team. Staat er "carpool nog niet geregeld", tik dan op Regelen om naar Wedstrijden te gaan.',
     ],
@@ -141,7 +141,7 @@ export default [
     keywords: 'chauffeur vertrektijd later eerder vertrekken plek ophalen adres mijn auto aanpassen tijd en plek zelf bepalen rijder',
     body: [
       'Als chauffeur bepaal je zelf hoe laat jouw auto vertrekt en waar je de meiden ophaalt. Dat geldt alleen voor jouw eigen auto en alleen voor deze week. De dagcoördinator en de coördinator kunnen het voor elke auto.',
-      '1. Tik in Mijn week of in Rooster (Deze week) onder jouw rit op Tijd en plek.',
+      '1. Tik in Mijn week of in Rooster (Deze week) in jouw rit rechtsboven op het potlood (Tijd en plek).',
       '2. Kies de tijd en de ophaalplek. Je kunt ook een eigen adres invullen. Tik op Opslaan.',
       '3. Per ongeluk iets gewijzigd? Tik direct op Ongedaan.',
       'De app zegt het als je later vertrekt dan nodig is (heen) of eerder dan de meiden klaar zijn (terug). Je kunt het dan nog steeds zo laten.',
@@ -205,7 +205,7 @@ export default [
     title: 'Wat staat er in het Rooster?',
     keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen tijdelijk rooster vakantie periode weekoverzicht pdf afdrukken printen',
     body: [
-      'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Bij elke rit staat waar de auto ophaalt en heen gaat.',
+      'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Het Rooster is blauw, zodat je ziet waar je bent. Onder elke dag in de dagbalk staat hoeveel ritten er rijden. Bij elke rit staat waar de auto ophaalt en heen gaat. Boven Heen en Terug staat waar iedereen aankomt (Aankomst bij) of vertrekt (Vertrek bij). Gaat een deel van de auto\'s naar een andere plek, bijvoorbeeld ATC Wijdewormer, dan staan die auto\'s in een eigen blok.',
       'Het Rooster opent op Deze week (met eventuele wijzigingen). Kies bovenaan Vast rooster voor hoe het elke week is.',
       'Mag jij de dag indelen (coördinator of dagcoördinator)? Dan staat rechts op de regel Dagcoördinator de knop Zelf indelen. Daarmee verplaats je meisjes en wissel je chauffeurs voor die dag. Staat er een gele kaart Actie nodig met aanvragen? Dan staat de knop Zelf indelen daar naast Advies bekijken.',
       'Bij elk meisje in een auto staat haar eigen tijd: heen wanneer ze er moet zijn, terug wanneer ze klaar is. De meisjes staan op tijd (de vroegste eerst) en bij dezelfde tijd op alfabet. Is de vertrektijd van een auto gewijzigd, dan staat onder de tijd klein "was" met de oude tijd. Komt de auto bij Heen later aan dan een meisje er moet zijn, of is ze bij Terug pas klaar nadat de auto vertrekt, dan staat er een gele waarschuwing.',

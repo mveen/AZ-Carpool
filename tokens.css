@@ -19,7 +19,7 @@
   /* ---------- Palette (raw values: use the semantic roles below in components, never these) ---------- */
   --az-red:#d7001e; --red-50:#fde8eb; --red-700:#b0001a;
   --ink-900:#14161a; --ink-700:#3a3d42; --ink-500:#6b6f76; --ink-400:#8d9096; --ink-300:#b9b8b4;
-  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea;
+  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea; --paper-200:#e2e0da;
   --green-500:#1fa463; --green-50:#e3f6ec; --green-700:#11734a;
   --amber-50:#fff3dc; --amber-400:#f0b545; --amber-500:#c27200; --amber-700:#8a5200;
   --violet-50:#efeafd; --violet-700:#5b36c9;
@@ -32,6 +32,9 @@
   --surface-soft:var(--paper-100);      /* chips, segmented track, icon tiles */
   --surface-inset:var(--paper-50);      /* inputs, inner panels inside a card */
   --line:var(--paper-150);
+  --edge:var(--paper-200);              /* border of cards and day pills (white cards on the page, no grey fills) */
+  --tab-ink:var(--action-ink);          /* text on --tab */
+  --tab:var(--action-bg);               /* colour of the selected day / switch of the current tab: ink, Rooster overrides it with --info */
   --control-line:var(--ink-400);        /* edge of inputs and buttons that must reach 3:1 contrast */
   --text-1:var(--ink-900);
   --text-2:var(--ink-700);
@@ -102,7 +105,7 @@
 :root.no-bottom-inset{--sab:0px}
 
 [data-theme="dark"]{
-  --surface-page:#0f1012; --surface-card:#1a1c1f; --surface-soft:#26282c; --surface-inset:#0f1012; --line:#2a2c30; --control-line:#6b6f76;
+  --surface-page:#0f1012; --surface-card:#1a1c1f; --surface-soft:#26282c; --surface-inset:#0f1012; --line:#2a2c30; --edge:#34373c; --control-line:#6b6f76;
   --text-1:#f3f2ef; --text-2:#cfd0d3; --text-muted:#9a9da3;
   --action-bg:#f3f2ef; --action-ink:#14161a;
   --accent-soft:#3d1218; --accent-ink:#ff7584;

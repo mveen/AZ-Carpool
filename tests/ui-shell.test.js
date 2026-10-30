@@ -10,7 +10,7 @@ import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, 
 import { S } from '../state.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
-import { initials, updateHeader, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
+import { contextLine, initials, updateHeader, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -264,6 +264,12 @@ test('initShell measures right away and listens for resize, orientation change, 
 
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-shell.js imports nothing it does not use', () => assertNoUnusedImports('ui-shell.js'));
+
+test('the context line says where you are: Mijn week is "mijn gezin", Rooster is "iedereen"', () => {
+  sampleParentState({});
+  assert.equal(contextLine('myweek'), 'Week 40 · mijn gezin'); assert.equal(contextLine('schedule'), 'Week 40 · iedereen');
+  resetState({}); S.currentWeekKey = ''; assert.equal(contextLine('myweek'), 'AZ Carpool', 'no week known yet');
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

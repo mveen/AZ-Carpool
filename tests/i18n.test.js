@@ -356,6 +356,13 @@ test('child time titles: Heen = Aanwezig om, Terug = Klaar om', () => {
   assert.equal(t('deviation.klaar_om', { time: '16:45' }), 'Klaar om 16:45');
 });
 
+test('the texts of the redesign of Mijn week and Rooster are there', () => {
+  assert.equal(t('myweek.passagiers'), 'Passagiers'); assert.equal(t('ride.chauffeur'), 'Chauffeur');
+  assert.equal(t('schedule.aankomst_bij', { p1: "AFC '34" }), "Aankomst bij AFC '34"); assert.equal(t('schedule.vertrek_bij', { p1: "AFC '34" }), "Vertrek bij AFC '34");
+  assert.equal(t('shell.context_mijnweek', { week: 44 }), 'Week 44 · mijn gezin'); assert.equal(t('schedule.auto_aantal', { p1: 4 }), '4 ritten');
+  assert.equal(t('contact.open_met', { p1: 'Jan' }), 'Neem contact op met Jan');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
