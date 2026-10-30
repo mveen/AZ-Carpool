@@ -17,7 +17,7 @@ import { S } from '../state.js';
 import {
   createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, resetPurgeMemory, purgeStaleMatchCarpools, purgeStalePracticeMatches, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
-  migrateLegacyFamilySecrets, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
+  migrateLegacyFamilySecrets, staleSessionPaths, purgeStaleSessions, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
   createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
 } from '../data.js';
@@ -260,7 +260,7 @@ await testAsync('syncListeners: a member starts listeners, someone who lost acce
 });
 await testAsync('syncListeners: only the coordinator listens to all links and invite codes', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'links/p1': { familyId: 'f2' }, 'invites/CODE1234': { familyId: 'f3' } });
-  sampleCoordinatorState({ links: {}, families: {} });
+  sampleCoordinatorState({ links: {}, families: {}, beheerOpened: true });
   syncListeners(); await tick(); await tick();
   assert.deepEqual(S.invitesByCode, { CODE1234: 'f3' }); assert.deepEqual(S.inviteByFamily, { f3: 'CODE1234' }); assert.ok('p1' in S.links);
   stopDataListeners();
@@ -281,10 +281,12 @@ await testAsync('syncListeners: the coordinator does not read the ride log, erro
   syncListeners(); await tick(); await tick(); await tick();
   assert.equal(S.errorLogUnsub, null); assert.equal(S.rideLogUnsub, null); assert.equal(S.periodBackupsUnsub, null);
   assert.deepEqual(S.errorLog, {}); assert.deepEqual(S.rideLog, {}); assert.deepEqual(S.periodBackups, {});
-  assert.ok(S.linksCollUnsub && S.sessionsUnsub && S.invitesUnsub, 'the small coordinator lists stay live');
+  assert.ok(!S.linksCollUnsub && !S.sessionsUnsub && !S.invitesUnsub, 'links, sessions and invite codes wait for Beheer too');
+  assert.deepEqual(S.invitesByCode, {}); assert.deepEqual(S.lastSeenByFamily, {});
   assert.equal(S.rideLogLoaded, false); assert.equal(fake.collection('rideLog').length, 1, 'nothing was logged either');
   S.beheerOpened = true; syncListeners(); await tick(); await tick(); await tick();
   assert.equal(typeof S.errorLogUnsub, 'function'); assert.equal(typeof S.rideLogUnsub, 'function'); assert.equal(typeof S.periodBackupsUnsub, 'function');
+  assert.equal(typeof S.linksCollUnsub, 'function'); assert.equal(typeof S.sessionsUnsub, 'function'); assert.equal(typeof S.invitesUnsub, 'function');
   assert.deepEqual(Object.keys(S.errorLog), ['u1_0']); assert.deepEqual(Object.keys(S.periodBackups), ['b1']); assert.equal(S.rideLogLoaded, true);
   stopDataListeners();
 });
@@ -324,11 +326,55 @@ await testAsync('recordSession: nothing for an unlinked browser or a coordinator
   await recordSession(1e12); assert.equal(fake.get('sessions/p1'), undefined);
 });
 await testAsync('syncListeners: the coordinator sees the newest session per family', async () => {
-  useFakeDb({ ...sampleDbSeed(), 'sessions/a': { familyId: 'f2', at: 10 }, 'sessions/b': { familyId: 'f2', at: 30 }, 'sessions/c': { familyId: 'f3', at: 20 } });
-  sampleCoordinatorState({ links: {}, families: {} });
+  const T0 = Date.now() - 1000;
+  useFakeDb({ ...sampleDbSeed(), 'sessions/a': { familyId: 'f2', at: T0 + 10 }, 'sessions/b': { familyId: 'f2', at: T0 + 30 }, 'sessions/c': { familyId: 'f3', at: T0 + 20 } });
+  sampleCoordinatorState({ links: {}, families: {}, beheerOpened: true });
   syncListeners(); await tick(); await tick();
-  assert.deepEqual(S.lastSeenByFamily, { f2: 30, f3: 20 });
+  assert.deepEqual(S.lastSeenByFamily, { f2: T0 + 30, f3: T0 + 20 });
   stopDataListeners();
+});
+console.log('\n=== tidying up browsers that were not seen for 30 days ===');
+const D30 = 24 * 60 * 60 * 1000;
+await testAsync('staleSessionPaths: old sessions go; a link goes only without a fresh session AND when it is old; never my own', () => {
+  const now = 1e13;
+  const sessions = { me: now - 99 * D30, fresh: now - D30, old: now - 31 * D30, broken: 'x' };
+  const links = { me: { linkedAt: 1 }, fresh: { linkedAt: 1 }, old: { linkedAt: 1 }, nosession: { linkedAt: 1 }, newlink: { linkedAt: now - D30 }, nolinkedat: {} };
+  const out = staleSessionPaths({ sessions, links, me: 'me', nowMs: now }).sort();
+  assert.deepEqual(out, ['links/nolinkedat', 'links/nosession', 'links/old', 'sessions/broken', 'sessions/old']);
+});
+await testAsync('staleSessionPaths: when no session is fresh at all, no link is touched (looks like a rules problem)', () => {
+  const now = 1e13;
+  const out = staleSessionPaths({ sessions: { a: 1, b: 2 }, links: { a: { linkedAt: 1 }, b: { linkedAt: 1 }, c: { linkedAt: 1 } }, me: 'x', nowMs: now });
+  assert.deepEqual(out.sort(), ['sessions/a', 'sessions/b']);
+  assert.deepEqual(staleSessionPaths({ sessions: {}, links: { c: { linkedAt: 1 } }, me: 'x', nowMs: now }), []);
+});
+await testAsync('staleSessionPaths: at most 10 links per run', () => {
+  const now = 1e13, links = {}; for (let i = 0; i < 25; i++) links['u' + i] = { linkedAt: 1 };
+  const out = staleSessionPaths({ sessions: { fresh: now }, links, me: 'x', nowMs: now });
+  assert.equal(out.filter(p => p.startsWith('links/')).length, 10);
+});
+await testAsync('Beheer open: old sessions and links are removed from the database, fresh ones and my own stay', async () => {
+  resetPurgeMemory();
+  const now = Date.now();
+  const fake = useFakeDb({ ...sampleDbSeed(),
+    'links/coord': { familyId: 'f1', linkedAt: 1 }, 'links/stale': { familyId: 'f3', linkedAt: 1 }, 'links/active': { familyId: 'f3', linkedAt: 1 },
+    'sessions/coord': { familyId: 'f1', at: now - 90 * D30 }, 'sessions/stale': { familyId: 'f3', at: now - 40 * D30 }, 'sessions/active': { familyId: 'f3', at: now - D30 / 30 } });
+  sampleCoordinatorState({ links: {}, families: {}, beheerOpened: true });
+  syncListeners(); for(let i=0;i<8;i++) await tick();
+  assert.deepEqual(fake.collection('sessions').map(r => r[0]).sort(), ['active', 'coord']);
+  assert.deepEqual(fake.collection('links').map(r => r[0]).sort(), ['active', 'coord']);
+  stopDataListeners(); resetPurgeMemory();
+});
+await testAsync('purgeStaleSessions does nothing for a parent, while viewing as another family, or before both lists have loaded', async () => {
+  resetPurgeMemory();
+  const fake = useFakeDb({ 'sessions/old': { familyId: 'f2', at: 1 } });
+  resetState({ me: 'x', sessionsByUid: { old: 1 }, links: {}, linksAllLoaded: true, sessionsAllLoaded: true });
+  assert.equal(await purgeStaleSessions(), 0);
+  sampleCoordinatorState({ sessionsByUid: { old: 1 }, links: {}, linksAllLoaded: true, sessionsAllLoaded: false });
+  assert.equal(await purgeStaleSessions(), 0);
+  sampleCoordinatorState({ sessionsByUid: { old: 1 }, links: {}, linksAllLoaded: true, sessionsAllLoaded: true, impersonateFamilyId: 'f2' });
+  assert.equal(await purgeStaleSessions(), 0);
+  assert.equal(fake.collection('sessions').length, 1);
 });
 await testAsync('saveCoordFamily creates a new family document and warns about duplicate girl names', async () => {
   const fake = useFakeDb({}); sampleCoordinatorState({ coordEditId: undefined, invitesByCode: {}, inviteByFamily: {} });

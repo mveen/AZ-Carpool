@@ -45,10 +45,10 @@ test('opening Beheer for the first time starts the coordinator-only listeners (r
   installNav(); useFakeDb(sampleDbSeed()); sampleCoordinatorState({ links: {}, families: {} });
   dom.el('tab-gate').style.display = 'none';
   activateTab('deviation');
-  assert.equal(S.beheerOpened, false); assert.equal(S.rideLogUnsub, null); assert.equal(S.errorLogUnsub, null); assert.equal(S.periodBackupsUnsub, null);
+  assert.equal(S.beheerOpened, false); assert.equal(S.rideLogUnsub, null); assert.equal(S.errorLogUnsub, null); assert.equal(S.periodBackupsUnsub, null); assert.equal(S.linksCollUnsub, null); assert.equal(S.sessionsUnsub, null); assert.equal(S.invitesUnsub, null);
   activateTab('beheer');
   assert.equal(S.beheerOpened, true);
-  assert.equal(typeof S.rideLogUnsub, 'function'); assert.equal(typeof S.errorLogUnsub, 'function'); assert.equal(typeof S.periodBackupsUnsub, 'function');
+  assert.equal(typeof S.rideLogUnsub, 'function'); assert.equal(typeof S.errorLogUnsub, 'function'); assert.equal(typeof S.periodBackupsUnsub, 'function'); assert.equal(typeof S.linksCollUnsub, 'function');
   const first = S.rideLogUnsub; activateTab('schedule'); activateTab('beheer'); assert.equal(S.rideLogUnsub, first, 'not started again');
   [S.rideLogUnsub, S.errorLogUnsub, S.periodBackupsUnsub, S.linksCollUnsub, S.sessionsUnsub, S.invitesUnsub].forEach(u => u && u());
 });
