@@ -274,6 +274,10 @@ function wirePracticeSheet(editId){
   };
 }
 
+// True while a car is being written. The database echoes our own write back (and re-draws the tab) before the write has
+// finished, so without this a second tap on Opslaan / Ik rij ook would still see the old state and add the car again.
+let savingMatchCar = false;
+
 export function wireMatchCarpool(){
   if(S.openMatchCarpoolForm){
     const slug=S.openMatchCarpoolForm;
@@ -301,6 +305,7 @@ export function wireMatchCarpool(){
   });
   document.querySelectorAll('[data-cancelmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=null; S.editMatchCarIdx=null; renderMatchesTab(); });
   document.querySelectorAll('[data-savematchcar]').forEach(b=>b.onclick=async ()=>{
+    if(savingMatchCar) return;
     const slug=b.dataset.savematchcar;
     const driverSel=document.getElementById('matchCarDriver_'+slug);
     const timeInp=document.getElementById('matchCarTime_'+slug);
@@ -325,23 +330,30 @@ export function wireMatchCarpool(){
     const oldCars = (cp.doc&&cp.doc.cars)||[];
     if(editIdx!=null && !oldCars[editIdx]){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }   // someone removed the car meanwhile
     const cars = editIdx!=null? oldCars.map((c,i)=>i===editIdx? {...c, ...newCar} : c) : [...oldCars, newCar];
+    savingMatchCar = true; b.disabled = true;
     try{
       await db.doc("matchCarpools/"+slug).set(carpoolDoc(m, slug, cars));
       // An old name-keyed document is moved over to the ID-keyed one.
       if(cp.doc && cp.id!==slug){ try{ await db.doc("matchCarpools/"+cp.id).delete(); }catch(e){} }
       S.openMatchCarpoolForm=null; S.editMatchCarIdx=null;
+      savingMatchCar = false;
+      renderMatchesTab();   // the echo of our own write was drawn while the form was still open: close it now
       showToast(t(editIdx!=null? 'matches.auto_bijgewerkt' : 'deviation.carpool_toegevoegd'));
-    }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
+    }catch(e){ savingMatchCar = false; b.disabled = false; showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
   });
   // Quick "Ik rij ook": own car with the own daughter, unless she already sits in another car of this match. Leaves from Busstation.
   document.querySelectorAll('[data-iride]').forEach(b=>b.onclick=async ()=>{
+    if(savingMatchCar) return;
     const slug=b.dataset.iride; const m=S.weekendMatchBySlug[slug]; const own=myLinkedFamilyId();
     if(!m || !own || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
     const cp=carpoolFor(m); const cars=(cp.doc&&cp.doc.cars)||[];
     const taken=cars.some(c=>(c.girlIds||[]).includes(own));
     const newCar={driverFamilyId:own, girlIds:taken?[]:[own], departureTime:suggestedMatchDeparture(m.start), ...matchFromFields('busstation','',locationsCfg())};
+    if(cars.some(c=>c.driverFamilyId===own && (c.girlIds||[]).length===newCar.girlIds.length && newCar.girlIds.every(g=>(c.girlIds||[]).includes(g)) && c.departureTime===newCar.departureTime)) return;   // already in
+    savingMatchCar = true;
     try{ await writeMatchCars(m,cp,slug,[...cars,newCar]); showToast(t('matches.ik_rij_toegevoegd')); }
     catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
+    finally{ savingMatchCar = false; }
   });
   document.querySelectorAll('[data-delmatchcar]').forEach(b=>b.onclick=async ()=>{
     const [slug,idxStr]=b.dataset.delmatchcar.split('|'); const idx=+idxStr;
