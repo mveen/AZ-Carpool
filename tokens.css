@@ -42,9 +42,9 @@
   --action-bg:var(--ink-900);           /* primary buttons are INK, never red */
   --action-ink:#ffffff;
   --on-accent:#ffffff;                  /* text on a red or green fill */
-  --accent:var(--az-red);               /* app icon, active tab, "vandaag", own daughter, badges, destructive confirm */
+  --accent:var(--az-red);               /* app icon, active tab, "vandaag", badges, destructive confirm */
   --accent-soft:var(--red-50);
-  --accent-ink:var(--red-700);          /* own daughter's chip, destructive text */
+  --accent-ink:var(--red-700);          /* destructive text */
   --ok:var(--green-500);                /* switch on, "standaard" fill */
   --ok-soft:var(--green-50);
   --ok-ink:var(--green-700);            /* "Jij rijdt" */

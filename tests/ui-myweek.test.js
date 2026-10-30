@@ -326,7 +326,7 @@ test('outside the days with a temporary rooster the week is exactly as before', 
 test('the pill "Gewijzigd" sits in the time column of the ride, under "vertrek", and not next to the driver', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const html = renderAt(MON, { ...period40(), deviations: dev });
-  assert.match(html, /<div class="rideRow__sub">was <s>12:00<\/s><\/div><span class="tag tag--warn">Gewijzigd<\/span><\/div>/);
+  assert.match(html, /<div class="rideRow__sub">was 12:00<\/div><span class="tag tag--warn">Gewijzigd<\/span><\/div>/); assert.doesNotMatch(html, /<s>12:00/, 'was {time} is not struck through');
   assert.ok(html.indexOf('tag--warn">Gewijzigd') < html.indexOf('rideRow__mid', html.indexOf('tag--warn">Gewijzigd')), 'the pill is in the time column, before the driver column');
 });
 test('the driver button ends in a (neutral) phone icon, not in ">"', () => {

@@ -146,7 +146,7 @@ export function renderMyWeek(){
       ? `<span class="swWrap"><button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button><span class="swCap">${esc(t(isOvMe?'myweek.switch_off':'myweek.switch_on'))}</span></span>` : '';
     return `<div class="rideRow${isOvMe?' rideRow--off':''}${iDrive||drivingIdx>=0?' rideRow--mine':''}" data-rideday="${day}" data-ridedir="${direction}">
       <div class="rideRow__head">
-        <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ownTimeChange ? `<div class="rideRow__sub">${esc(t('myweek.was'))} <s>${esc(ownTimeChange.from)}</s></div>` : ''}${changedTag}</div>
+        <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ownTimeChange ? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(ownTimeChange.from)}</div>` : ''}${changedTag}</div>
         <div class="rideRow__mid"><div class="rideRow__lab">${esc(t('ride.chauffeur'))}</div>${who}</div>
         ${act? `<div class="rideRow__act">${act}</div>` : ''}
       </div>

@@ -103,7 +103,7 @@ test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { a
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
 
-test('APP_VERSION is at least v159 (redesign of Mijn week and Rooster)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 159); });
+test('APP_VERSION is at least v160 (own-daughter chip grey with a green dot, plain was-time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
