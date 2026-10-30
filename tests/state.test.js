@@ -69,7 +69,7 @@ test('the maintenance state starts empty', () => { assert.equal(S.maintenance, n
 test('the notice state starts empty', () => { assert.equal(S.notice, null); assert.equal(S.noticeDraft, null); });
 
 test('the last-session map starts empty and has no listener', () => {
-  assert.deepEqual(S.lastSeenByFamily, {}); assert.equal(S.sessionsUnsub, null);
+  assert.deepEqual(S.lastSeenByFamily, {}); assert.equal(S.sessionsUnsub, null); assert.deepEqual(S.sessionsByUid, {}); assert.equal(S.sessionsAllLoaded, false); assert.equal(S.linksAllLoaded, false);
 });
 
 test('the period back-ups start empty and have no listener', () => {

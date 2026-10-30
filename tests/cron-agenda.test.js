@@ -10,7 +10,7 @@ import { join } from 'node:path';
 import { installFakeDom, resetState, sampleDbSeed } from './test-support.js';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { buildCron } from '../scripts/build-cron.mjs';
-import { runAgenda, loadAgendaApp, HTACCESS, AGENDA_APP_MODULES } from '../cron/agenda.mjs';
+import { runAgenda, loadAgendaApp, HTACCESS, AGENDA_APP_MODULES, agendaSignature, needsFullRun, readAgendaSignature, readAgendaState, writeAgendaState, AGENDA_FULL_MAX_AGE_MS } from '../cron/agenda.mjs';
 import { feedEvents, driverFeedEvents, buildIcs } from '../calendar-feed.js';
 import { S } from '../state.js';
 
@@ -289,6 +289,51 @@ await test('the copy that is uploaded to the host (cron folder + app/) writes th
 await test('run.sh knows the agenda job and the web deploy leaves the agenda folder alone', () => {
   assert.match(readFileSync(new URL('../cron/run.sh', import.meta.url), 'utf8'), /agenda\)\s+exec "\$best" "\$here\/agenda\.mjs"/);
   assert.match(readFileSync(new URL('../scripts/deploy-rsync.sh', import.meta.url), 'utf8'), /--exclude=\/agenda\//);
+});
+
+console.log('=== change check (quota) ===');
+const sig = (o = {}) => agendaSignature({ rooster: 5, deviation: 7, tokens: [{ id: 'girl/f1', token: T1 }], nowMs: NOW, ...o });
+await test('same data, same day: same signature; each kind of change gives another one', () => {
+  assert.equal(sig(), sig());
+  assert.notEqual(sig(), sig({ rooster: 6 })); assert.notEqual(sig(), sig({ deviation: 8 }));
+  assert.notEqual(sig(), sig({ tokens: [{ id: 'girl/f1', token: T3 }] }));
+  assert.notEqual(sig(), sig({ tokens: [] }));
+  assert.notEqual(sig(), sig({ nowMs: NOW + 24 * 3600000 }), 'a new day moves the 3 weeks');
+  assert.notEqual(sig(), sig({ weekEnded: true }), 'Friday 19:00 moves the first week');
+  assert.equal(sig({ tokens: [{ id: 'b', token: T2 }, { id: 'a', token: T1 }] }), sig({ tokens: [{ id: 'a', token: T1 }, { id: 'b', token: T2 }] }), 'order does not matter');
+});
+await test('needsFullRun: no state, other signature, too old or from the future: yes; otherwise no', () => {
+  const state = { signature: sig(), fullAt: NOW - 60000 };
+  assert.equal(needsFullRun({ signature: sig(), state, nowMs: NOW }), false);
+  assert.equal(needsFullRun({ signature: sig(), state: null, nowMs: NOW }), true);
+  assert.equal(needsFullRun({ signature: sig(), state: { signature: 1, fullAt: 1 }, nowMs: NOW }), true);
+  assert.equal(needsFullRun({ signature: sig({ rooster: 6 }), state, nowMs: NOW }), true);
+  assert.equal(needsFullRun({ signature: sig(), state: { ...state, fullAt: NOW - AGENDA_FULL_MAX_AGE_MS }, nowMs: NOW }), true);
+  assert.equal(needsFullRun({ signature: sig(), state: { ...state, fullAt: NOW + 1000 }, nowMs: NOW }), true);
+});
+await test('readAgendaSignature reads only 2 documents and the 2 link collections, and sees a changed stamp or a new link', async () => {
+  const docs = seed({ 'settings/lastUpdateRooster': { by: 'x', at: 100 }, 'settings/lastUpdateDeviation': { by: 'x', at: 200 }, 'driverCalendarTokens/f1': { token: T3, createdAt: 1 } });
+  const fs = fakeFirestore(docs); const reads = [];
+  const lists = fs.listDocuments, gets = fs.getDocument;
+  fs.listDocuments = async c => { reads.push('list ' + c); return lists(c); };
+  fs.getDocument = async p => { reads.push('get ' + p); return gets(p); };
+  const a = await readAgendaSignature({ firestore: fs, now: NOW });
+  assert.deepEqual(reads.sort(), ['get settings/lastUpdateDeviation', 'get settings/lastUpdateRooster', 'list calendarTokens', 'list driverCalendarTokens']);
+  assert.equal(a, await readAgendaSignature({ firestore: fs, now: NOW }), 'unchanged data: same signature');
+  fs.data.set('settings/lastUpdateRooster', { by: 'x', at: 101 });
+  assert.notEqual(a, await readAgendaSignature({ firestore: fs, now: NOW }), 'new stamp');
+  const b = await readAgendaSignature({ firestore: fs, now: NOW }); fs.data.set('calendarTokens/f3', { token: T3 + 'x', createdAt: 2 });
+  assert.notEqual(b, await readAgendaSignature({ firestore: fs, now: NOW }), 'new link');
+  const none = await readAgendaSignature({ firestore: fakeFirestore({}), now: NOW });
+  assert.equal(typeof none, 'string', 'an empty database is fine');
+});
+await test('the state file survives a round trip and a broken file means "do the full run"', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'az-agenda-state-')); const f = join(dir, 'sub', 'agenda.state.json');
+  try {
+    assert.equal(readAgendaState(f), null);
+    writeAgendaState(f, { signature: 'x', fullAt: 5 }); assert.deepEqual(readAgendaState(f), { signature: 'x', fullAt: 5 });
+    writeFileSync(f, '{broken'); assert.equal(readAgendaState(f), null);
+  } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

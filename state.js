@@ -131,6 +131,7 @@ export const S = {
   linksCollUnsub: null,
   sessionsUnsub: null,
   lastSeenByFamily: {},
+  sessionsByUid: {}, sessionsAllLoaded: false, linksAllLoaded: false,   // raw sessions (uid -> at) and 'both lists read' flags for the 30-day tidy-up (data.js)
   invitesUnsub: null,
   errorLogUnsub: null,
   errorLogLoaded: false,

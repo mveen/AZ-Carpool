@@ -127,6 +127,37 @@ export async function purgeStalePracticeMatches(){
   }
 }
 
+// Browsers that did not open the app for 30 days are tidied up (coordinator's app, once Beheer has loaded both lists): their session and their link go.
+// The person simply enters the invite code again when coming back; nothing else is lost. PURE decision in staleSessionPaths.
+export const SESSION_KEEP_DAYS = 30;
+const MAX_LINK_PURGE_PER_RUN = 10;
+export function staleSessionPaths({ sessions, links, me, nowMs, keepDays = SESSION_KEEP_DAYS }){
+  const cutoff = nowMs - keepDays*24*60*60*1000;
+  const fresh = at => typeof at === 'number' && at >= cutoff;
+  const out = [];
+  for(const [uid, at] of Object.entries(sessions || {})) if(uid !== me && !fresh(at)) out.push('sessions/'+uid);
+  // A link goes only when its browser has no fresh session AND the link itself is older than the keep period. When NO browser has a fresh session
+  // something is wrong with the sessions (for example the rules were not published), and then no link is touched at all.
+  const anyFresh = Object.values(sessions || {}).some(fresh);
+  if(anyFresh){
+    let n = 0;
+    for(const [uid, link] of Object.entries(links || {})){
+      if(uid === me || fresh((sessions||{})[uid]) || n >= MAX_LINK_PURGE_PER_RUN) continue;
+      if(fresh(link && link.linkedAt)) continue;
+      out.push('links/'+uid); n++;
+    }
+  }
+  return out;
+}
+export async function purgeStaleSessions(){
+  if(!db || !isRealCoordinator() || S.impersonateFamilyId || !S.linksAllLoaded || !S.sessionsAllLoaded) return 0;
+  let n = 0;
+  for(const path of staleSessionPaths({ sessions: S.sessionsByUid, links: S.links, me: S.me, nowMs: Date.now() })){
+    if(await purgeDelete(path)) n++;
+  }
+  return n;
+}
+
 // Rides that have taken place are logged for the solidarity overview in Beheer (see ride-log.js). Only the coordinator's app does it,
 // and only once the log and the deviations have been read; it runs before old deviations are purged, so a one-off change is counted too.
 export async function logPassedShifts(){
@@ -473,21 +504,28 @@ export function syncListeners(){
   }
   syncWeekRequests();   // the Afwijkend weekrooster requests: only for a person with a linked family
   const coord = isRealCoordinator();
-  if(coord && !S.linksCollUnsub){
+  // Links, sessions and invite codes of ALL browsers (about 120 documents) are only shown in Beheer, so, like the logs below, the coordinator's app
+  // listens to them only after Beheer was opened. Until then S.links holds only this browser's own link (app.js).
+  const beheerOpen = coord && S.beheerOpened;
+  if(beheerOpen && !S.linksCollUnsub){
     S.linksCollUnsub = db.collection("links").onSnapshot(snap=>{
       const next={}; snap.docs.forEach(d=>next[d.id]=d.data());
       S.links = next;
+      S.linksAllLoaded = true;
       renderBeheer();
+      purgeStaleSessions();
     }, err=>{});
   }
-  if(coord && !S.sessionsUnsub){
+  if(beheerOpen && !S.sessionsUnsub){
     S.sessionsUnsub = db.collection("sessions").onSnapshot(snap=>{
-      const next={}; snap.docs.forEach(d=>{ const {familyId,at}=d.data(); if(familyId && at>(next[familyId]||0)) next[familyId]=at; });
-      S.lastSeenByFamily = next;
+      const next={}, byUid={}; snap.docs.forEach(d=>{ const {familyId,at}=d.data(); byUid[d.id]=at; if(familyId && at>(next[familyId]||0)) next[familyId]=at; });
+      S.lastSeenByFamily = next; S.sessionsByUid = byUid;
+      S.sessionsAllLoaded = true;
       renderBeheer();
+      purgeStaleSessions();
     }, err=>{});
   }
-  if(coord && !S.invitesUnsub){
+  if(beheerOpen && !S.invitesUnsub){
     S.invitesUnsub = db.collection("invites").onSnapshot(snap=>{
       S.invitesByCode={}; S.inviteByFamily={};
       snap.docs.forEach(d=>{ const fid=d.data().familyId; if(fid){ S.invitesByCode[d.id]=fid; S.inviteByFamily[fid]=d.id; } });
@@ -526,8 +564,8 @@ export function syncListeners(){
     if(S.errorLogUnsub){ S.errorLogUnsub(); S.errorLogUnsub=null; S.errorLog={}; S.errorLogLoaded=false; }
     if(S.rideLogUnsub){ S.rideLogUnsub(); S.rideLogUnsub=null; S.rideLog={}; S.rideLogLoaded=false; }
     if(S.periodBackupsUnsub){ S.periodBackupsUnsub(); S.periodBackupsUnsub=null; S.periodBackups={}; }
-    if(S.linksCollUnsub){ S.linksCollUnsub(); S.linksCollUnsub=null; const mine=S.links[S.me]; S.links={}; if(mine) S.links[S.me]=mine; }
-    if(S.sessionsUnsub){ S.sessionsUnsub(); S.sessionsUnsub=null; S.lastSeenByFamily={}; }
+    if(S.linksCollUnsub){ S.linksCollUnsub(); S.linksCollUnsub=null; S.linksAllLoaded=false; const mine=S.links[S.me]; S.links={}; if(mine) S.links[S.me]=mine; }
+    if(S.sessionsUnsub){ S.sessionsUnsub(); S.sessionsUnsub=null; S.lastSeenByFamily={}; S.sessionsByUid={}; S.sessionsAllLoaded=false; }
     if(S.invitesUnsub){ S.invitesUnsub(); S.invitesUnsub=null; S.invitesByCode={}; S.inviteByFamily={}; }
   }
 }

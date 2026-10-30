@@ -8,7 +8,7 @@
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json). Writes only inside the agenda folder.
 process.env.TZ = 'Europe/Amsterdam';   // the shift times are Amsterdam time, whatever time zone the host is in
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
@@ -19,6 +19,39 @@ import { skipReason, lastRunAt, markRun } from './lib/run-window.mjs';
 // does its work at most once an hour (the cron line may stay every 30 minutes) and not at night. Reads cost quota (Firestore free plan: 50,000 a day).
 export const AGENDA_QUIET = { fromHour: 0, toHour: 6 };
 export const AGENDA_MIN_GAP_MS = 50 * 60 * 1000;
+
+// Change check (quota): most runs find nothing new. Before reading the 9 collections the job reads a handful of small documents: the two "last
+// update" stamps of the app (Rooster, Wijzigen) and the two link collections (a new or removed link must show up at once). Together with the Amsterdam
+// date and whether the planning week has ended (the 3 weeks of the calendar move at Friday 19:00 and at midnight) that is the SIGNATURE of the data.
+// Same signature as at the last full run, and that run less than AGENDA_FULL_MAX_AGE_MS ago: nothing is read or written. The stamps are best effort in
+// the app and not every change records one (a period, a match carpool, a family), so a full run still happens every 3 hours as a safety net.
+export const AGENDA_FULL_MAX_AGE_MS = 3 * 60 * 60 * 1000;
+const STATE_FILE = 'agenda.state.json';
+
+// PURE. The signature from what was read ({ rooster, deviation }: the `at` of the stamp or ''; tokens: [{ id, token }] of both link collections).
+export function agendaSignature({ rooster = '', deviation = '', tokens = [], nowMs, weekEnded = false }) {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Amsterdam', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(nowMs));
+  const links = tokens.map(t => t.id + ':' + t.token).sort().join(',');
+  return JSON.stringify({ rooster: String(rooster), deviation: String(deviation), links, day, weekEnded: !!weekEnded });
+}
+// PURE. true = do the full run. A missing or unreadable state, a changed signature, a last full run in the future or too long ago: yes.
+export function needsFullRun({ signature, state, nowMs, maxAgeMs = AGENDA_FULL_MAX_AGE_MS }) {
+  if (!state || typeof state.signature !== 'string' || typeof state.fullAt !== 'number') return true;
+  if (state.signature !== signature) return true;
+  if (state.fullAt > nowMs || nowMs - state.fullAt >= maxAgeMs) return true;
+  return false;
+}
+// The small reads (about 11 documents). Never throws for a missing document; a read error does throw, and the caller then does the full run.
+export async function readAgendaSignature({ firestore, now = Date.now() }) {
+  const atOf = async path => { const d = await firestore.getDocument(path); const f = d ? decodeFields(d.fields) : null; return f && f.at != null ? f.at : ''; };
+  const list = async (path, role) => (await firestore.listDocuments(path)).filter(d => d.createTime)
+    .map(d => ({ id: role + '/' + d.name.slice(d.name.lastIndexOf('/') + 1), token: (decodeFields(d.fields) || {}).token || '' }));
+  const [rooster, deviation, girl, driver] = await Promise.all([atOf('settings/lastUpdateRooster'), atOf('settings/lastUpdateDeviation'), list('calendarTokens', 'girl'), list('driverCalendarTokens', 'driver')]);
+  const d = new Date(now), weekEnded = d.getDay() === 6 || d.getDay() === 0 || (d.getDay() === 5 && d.getHours() >= 19);
+  return agendaSignature({ rooster, deviation, tokens: [...girl, ...driver], nowMs: now, weekEnded });
+}
+export function readAgendaState(file) { try { return JSON.parse(readFileSync(file, 'utf8')); } catch (e) { return null; } }
+export function writeAgendaState(file, state) { try { mkdirSync(dirname(file), { recursive: true }); writeFileSync(file, JSON.stringify(state), { mode: 0o600 }); } catch (e) { /* best effort */ } }
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const AGENDA_APP_MODULES = ['calendar-feed.js', 'rides.js', 'period.js', 'state.js', 'i18n.js'];
@@ -124,7 +157,16 @@ if (isMainModule(import.meta.url)) {
     const { projectId } = loadConfig();
     const account = readServiceAccount(join(secretsDir(), 'calendar-key.json'));
     const firestore = createFirestore({ projectId, getToken: tokenProvider({ account }) });
+    const stateFile = join(dataDir(), STATE_FILE);
+    let signature = null;
+    try { signature = await readAgendaSignature({ firestore }); } catch (e) { console.error('Agenda: change check failed (' + e.message + '), doing the full run'); }
+    if (signature && !needsFullRun({ signature, state: readAgendaState(stateFile), nowMs: Date.now() })) {
+      markRun(stamp, Date.now());
+      console.log('Agenda: nothing changed, nothing done');
+      process.exit(0);
+    }
     await runAgenda({ firestore, app: await loadAgendaApp(), outDir: agendaDir() });
     markRun(stamp, Date.now());
+    if (signature) writeAgendaState(stateFile, { signature, fullAt: Date.now() });
   } catch (e) { console.error('AGENDA FAILED: ' + e.message); process.exit(1); }
 }

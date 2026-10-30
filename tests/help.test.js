@@ -369,6 +369,10 @@ test('the Rooster article says the Rooster opens on Deze week', () => {
   const r = JSON.stringify(articles.find(a => a.title === 'Wat staat er in het Rooster?'));
   assert.ok(r.includes('Het Rooster opent op Deze week') && r.includes('Vast rooster'));
 });
+test('the privacy article says a phone that was not used for 30 days is disconnected and the code is entered again', () => {
+  const all = JSON.stringify(articles);
+  assert.match(all, /30 dagen niet is gebruikt, wordt automatisch losgekoppeld/); assert.match(all, /opnieuw je toegangscode/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
