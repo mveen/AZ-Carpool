@@ -11,13 +11,13 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleFlexParentState, assertNoUnusedImports } from './test-support.js';
+import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleGroups, sampleFlexParentState, assertNoUnusedImports } from './test-support.js';
 import { S } from '../state.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
 import { updateTimeChangesBadge } from '../ui-beheer.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
-import { weekroosterActionCount, weekroosterDayDot, scheduleDayExtrasHtml, myWeekActionCardsHtml, actionCardHtml, wireMyWeekActions } from '../ui-weekrooster-rooster.js';
+import { weekroosterActionCount, weekroosterDayDot, scheduleDayExtrasHtml, myWeekActionCardsHtml, actionCardHtml, adviceLineOf, wireMyWeekActions } from '../ui-weekrooster-rooster.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -30,13 +30,15 @@ const seed = () => ({
   'weekRequests/2026-W40_Do_f4': doc('Do', 'f4', { status: 'direct', rides: false, heen: '', terug: '', updatedAt: new Date('2026-09-30T08:30:00+02:00').getTime() }),
 });
 const tick = () => new Promise(r => setImmediate(r));
+const car = (dir, n, driver, girls, dep) => ({ ['Do_' + dir + '_' + n]: { day: 'Do', direction: dir, girlIds: girls, driverFamilyId: driver, reserveFamilyIds: [], departureTime: dep } });
+const CARS = { ...sampleGroups(), ...car('heen', 1, 'f1', ['f1', 'f3'], '07:30'), ...car('heen', 2, 'f2', ['f2', 'f4'], '09:15'), ...car('terug', 1, 'f1', ['f1', 'f3'], '17:00'), ...car('terug', 2, 'f2', ['f2', 'f4'], '18:00') };
 const asDecider = async (patch = {}) => { useFakeDb(seed()); sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', ...patch }); syncWeekRequests(); await tick(); };
 const rooster = () => { withFakeNow(NOW, () => renderSchedule()); return dom.html('tab-schedule'); };
 const mijnWeek = () => { withFakeNow(NOW, () => renderMyWeek()); return dom.html('tab-myweek'); };
 
 console.log('=== the card, also without buttons ===');
 await testAsync('actionCardHtml: the same card with or without its buttons and its advice line; nothing when nothing waits', async () => {
-  await asDecider();
+  await asDecider({ groups: CARS });
   withFakeNow(NOW, () => {
     const full = actionCardHtml('Do', { buttons: true }), plain = actionCardHtml('Do');
     assert.match(full, /data-wraction="Do"/); assert.match(full, /data-wrtake="Do"/); assert.match(full, /data-wrlook="Do"/);
@@ -44,6 +46,15 @@ await testAsync('actionCardHtml: the same card with or without its buttons and i
     assert.doesNotMatch(actionCardHtml('Do', { advice: false }), /Advies: /);
     assert.equal(actionCardHtml('Vr', { buttons: true }), '');
     assert.equal(myWeekActionCardsHtml(), full);
+  });
+});
+await testAsync('the advice line: the cars as they are; when it does not fit there is no line and nothing to take over in one tap', async () => {
+  await asDecider({ groups: CARS });
+  withFakeNow(NOW, () => { assert.match(adviceLineOf('Do'), /^Advies: past in de bestaande auto’s/); assert.equal(adviceLineOf('Vr'), null); });
+  await asDecider();   // no cars on Thursday
+  withFakeNow(NOW, () => {
+    assert.equal(adviceLineOf('Do'), null);
+    const full = actionCardHtml('Do', { buttons: true }); assert.match(full, /data-wrlook="Do"/); assert.doesNotMatch(full, /data-wrtake/); assert.doesNotMatch(text(full), /Advies: /);
   });
 });
 
@@ -82,14 +93,14 @@ await testAsync('the line of the day coordinator says "Jij bent dagcoördinator 
   assert.match(html, /sectionHead__note">Aankomst bij AFC/);   // the direction title says what the time means; her own time sits on her chip
 });
 await testAsync('Mijn week: the card "Actie nodig voor donderdag" with the request (Aanvraag), the direct one (Direct) and "Bekijk"', async () => {
-  await asDecider(); const html = mijnWeek(), s = text(html);
+  await asDecider({ groups: CARS }); const html = mijnWeek(), s = text(html);
   assert.match(html, /alertCard alertCard--stack" data-wraction="Do"/); assert.match(s, /Actie nodig voor donderdag/);
   assert.match(s, /Anouk: Heen 11:00 · Terug 18:00 Aanvraag/); assert.match(s, /Evi: Rijdt niet mee Direct/);
   assert.match(html, /data-wrlook="Do"/); assert.doesNotMatch(noStyle(html), /style="/);
-  assert.match(s, /Advies: (scheelt \d+ auto|zelfde aantal auto|\d+ auto.{0,3} erbij)/, 'one line of advice'); assert.match(html, /data-wrtake="Do"/); assert.match(s, /Overnemen/);
+  assert.match(s, /Advies: past in de bestaande auto’s/, 'one line of advice'); assert.match(html, /data-wrtake="Do"/); assert.match(s, /Overnemen/);
 });
 await testAsync('"Overnemen" on the card accepts the request and shows the toast; Bekijk and Overnemen sit side by side', async () => {
-  await asDecider(); const btn = { dataset: { wrtake: 'Do' }, onclick: null, disabled: false };
+  await asDecider({ groups: CARS }); const btn = { dataset: { wrtake: 'Do' }, onclick: null, disabled: false };
   wireMyWeekActions({ querySelectorAll: sel => (sel === '[data-wrtake]' ? [btn] : []) });
   await withFakeNowAsync(NOW, () => btn.onclick());
   assert.equal(S.dayRequests['2026-W40_Do_f3'].status, 'accepted'); assert.doesNotMatch(text(mijnWeek()), /Actie nodig voor donderdag/);
@@ -145,8 +156,8 @@ await testAsync('nobody linked, or a Flex family: none of it exists', async () =
 await testAsync('the "Actie nodig" block has the button "Advies bekijken" for the day coordinator', async () => {
   await asDecider(); const html = rooster();
   assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Advies bekijken/);
-  assert.match(html, /data-wredit="Do"/); assert.match(text(html), /Zelf indelen/);   // next to Advies bekijken, easy to find
-  assert.equal((html.match(/data-wredit="Do"/g) || []).length, 1, 'with the amber card on screen the button sits next to Advies bekijken only');
+  assert.match(text(html), /Advies bekijken en aanpassen/);
+  assert.doesNotMatch(html, /data-wredit="Do"/); assert.doesNotMatch(text(html), /Zelf indelen/);   // with requests waiting there is ONE way in: the flow
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

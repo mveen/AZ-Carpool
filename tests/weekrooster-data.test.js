@@ -7,10 +7,10 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState } from './test-support.js';
+import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime, ovGirlsFor } from '../rides.js';
-import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, directPlan, releaseNotRidingRequest, currentMarks } from '../weekrooster-data.js';
+import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, directPlan, releaseNotRidingRequest, currentMarks, planOf, planStats } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -365,6 +365,48 @@ await testAsync('next week the own day of a day coordinator stays a request (its
 await testAsync('directPlan: nothing to plan gives null, so the request stays a request', async () => {
   await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
   await withFakeNowAsync(NOW, async () => { assert.equal(directPlan('Do', { id: 'x', weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: rideTime('f3', 'Do', 'heen'), terug: rideTime('f3', 'Do', 'terug'), status: 'pending' }), null); });
+});
+console.log('=== the advice with the cars as they are: plan, numbers, saving ===');
+const gcar = (dir, n, driver, girls, dep) => ({ ['Do_' + dir + '_' + n]: { day: 'Do', direction: dir, girlIds: girls, driverFamilyId: driver, reserveFamilyIds: [], departureTime: dep } });
+const withCars = { groups: { ...sampleGroups(), ...gcar('heen', 1, 'f1', ['f1', 'f3'], '07:30'), ...gcar('heen', 2, 'f2', ['f2', 'f4'], '09:15'), ...gcar('terug', 1, 'f1', ['f1', 'f3'], '17:00'), ...gcar('terug', 2, 'f2', ['f2', 'f4'], '18:00') } };
+const lois = { 'weekRequests/2026-W40_Do_f5': advDoc('Do', 'f5', { heen: '09:00', terug: '17:00' }) };
+await testAsync('adviceForDay also holds the advice with the cars as they are; planOf picks advice, alternative or the older variants', async () => {
+  await asDay(lois, withCars);
+  await withFakeNowAsync(NOW, async () => {
+    const a = adviceForDay('Do'), k = a.directions.heen.keep;
+    assert.deepEqual(Object.keys(a.directions), ['heen']); assert.ok(k.best && k.alt && !k.fallback); assert.ok(a.directions.heen.variants.zuinig);
+    const best = planOf(a, 'best'), alt = planOf(a, 'alt'), old = planOf(a, 'zuinig');
+    assert.equal(best.blocked, false); assert.equal(best.fallback, false); assert.deepEqual(best.dirs.heen.cars, k.best.cars); assert.deepEqual(alt.dirs.heen.cars, k.alt.cars);
+    assert.deepEqual(old.dirs.heen.cars, a.directions.heen.variants.zuinig.cars); assert.deepEqual(best.dirs.heen.times, { f5: '09:00' });
+    const edited = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f4', 'f5'], departureTime: '08:00' }];
+    const p = planOf(a, 'best', { heen: edited }); assert.equal(p.dirs.heen.edited, true); assert.equal(p.dirs.heen.cars, edited); assert.deepEqual(p.dirs.heen.times, { f5: '09:00' });
+    const st = planStats(a, best); assert.equal(st.extraWait, 30); assert.deepEqual(st.moved, []); assert.deepEqual(st.familiesChanged, ['f1']); assert.deepEqual(st.problems, []);
+  });
+});
+await testAsync('planOf: when nothing fits in the existing cars the plan is the normal advice and says so', async () => {
+  await asDay(lois, { groups: sampleGroups() });
+  await withFakeNowAsync(NOW, async () => {
+    const a = adviceForDay('Do'), p = planOf(a, 'best');
+    assert.equal(a.directions.heen.keep.best, null); assert.equal(p.fallback, true); assert.equal(p.blocked, false); assert.equal(p.dirs.heen.fallback, true);
+    assert.deepEqual(p.dirs.heen.cars, a.directions.heen.variants.zuinig.cars);
+  });
+});
+await testAsync('acceptDay(day, "best", edits) saves the cars as changed by hand and accepts the requests; empty cars are not stored; Ongedaan puts it back', async () => {
+  const fake = await asDay(lois, withCars);
+  await withFakeNowAsync(NOW, async () => {
+    const edits = { heen: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f3'], departureTime: '07:30' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f4', 'f5'], departureTime: '08:00' }, { driverFamilyId: 'f6', girlIds: [], departureTime: '' }] };
+    const r = await acceptDay('Do', 'best', edits); assert.equal(r.ok, true); assert.equal(r.n, 1);
+    const dev = fake.get('deviations/Do_heen'); assert.deepEqual(dev.cars.map(c => c.driverFamilyId), ['f1', 'f2']); assert.deepEqual(dev.cars[1].girlIds.slice().sort(), ['f2', 'f4', 'f5']); assert.deepEqual(dev.times, { f5: '09:00' });
+    assert.equal(fake.get('weekRequests/2026-W40_Do_f5').status, 'accepted');
+    assert.equal(await r.undo(), true); assert.equal(fake.get('weekRequests/2026-W40_Do_f5').status, 'pending'); assert.equal(fake.get('deviations/Do_heen').times, undefined);
+  });
+});
+await testAsync('acceptDay "best" without edits saves the advice; the older "zuinig" and "gedoe" keep working', async () => {
+  const fake = await asDay(lois, withCars);
+  await withFakeNowAsync(NOW, async () => {
+    assert.equal((await acceptDay('Do', 'best')).ok, true);
+    assert.deepEqual(fake.get('deviations/Do_heen').cars.find(c => c.driverFamilyId === 'f1').girlIds.slice().sort(), ['f1', 'f3', 'f5']);
+  });
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

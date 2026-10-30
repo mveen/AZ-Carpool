@@ -363,6 +363,14 @@ test('the texts of the redesign of Mijn week and Rooster are there', () => {
   assert.equal(t('contact.open_met', { p1: 'Jan' }), 'Neem contact op met Jan');
 });
 
+test('the flow of the day coordinator (Indeling, Controleren, Doorvoeren) has its texts, and the old counters are gone', () => {
+  ['step1', 'step2', 'step3', 'segAdvice', 'segAlt', 'wait0', 'moved0', 'notice0', 'adjust', 'toCheck', 'notFit', 'pickTitle', 'adjustTitle', 'chipNoSwap', 'chipSeatsOk', 'summary', 'apply', 'applySub', 'backToPlan', 'doneTitle', 'undoAll', 'undoSure'].forEach(k => assert.ok(hasKey('weekrooster.flow.' + k), k));
+  assert.equal(t('weekrooster.flow.wait', { p1: 30 }), '30 min extra wachten'); assert.equal(t('weekrooster.flow.movedN', { p1: 2 }), '2 speelsters in een andere auto');
+  assert.equal(t('weekrooster.flow.chipRequests', { p1: 3, p2: 3 }), '3 van 3 aanvragen'); assert.equal(t('weekrooster.flow.undoAll'), 'Alles terugdraaien');
+  assert.equal(t('weekrooster.advice.look'), 'Advies bekijken en aanpassen'); assert.equal(t('weekrooster.action.adviceFitsWait', { p1: 30 }), 'Advies: past in de bestaande auto’s, 30 min extra wachten.');
+  ['weekrooster.action.adviceLess1', 'weekrooster.action.adviceLessN', 'weekrooster.action.adviceSame', 'weekrooster.action.adviceMore1', 'weekrooster.action.adviceMoreN'].forEach(k => assert.equal(hasKey(k), false, k));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
@@ -421,3 +429,4 @@ test('the connection error asks to check the internet and has a retry label, wit
   assert.match(t('common.kan_geen_verbinding_maken_met'), /internetverbinding/); assert.doesNotMatch(t('common.kan_geen_verbinding_maken_met'), /Firebase/);
   assert.equal(t('common.opnieuw_proberen'), 'Opnieuw proberen');
 });
+

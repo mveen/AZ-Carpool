@@ -520,6 +520,34 @@ details.fold--quiet .foldLabel:first-child{margin-top:0}
 .wrStack--tight{gap:var(--space-3);margin-bottom:0}
 .wrStack>*,.wrStack .carCard{margin-top:0;margin-bottom:0}
 .wrStack .btn{width:100%}
+/* The day coordinator's flow (Advies / Controleren), Rooster. Three named steps: green = done, amber = the one you are on and the ones to come. */
+.flowSteps{display:flex;gap:var(--space-3);list-style:none;margin:0 0 var(--space-3);padding:0}
+.flowSteps__step{flex:1;display:flex;flex-direction:column;gap:var(--space-2);min-width:0}
+.flowSteps__bar{height:var(--space-2);border-radius:var(--radius-pill);background:var(--warn-icon)}
+.flowSteps__step--done .flowSteps__bar{background:var(--ok)}
+.flowSteps__name{font:var(--type-caption);color:var(--text-muted)}
+.flowSteps__step--current .flowSteps__name{color:var(--text-1);font-weight:800}
+.flowStats{margin:0}
+.wrStack .segmented{margin:0}
+.wrStack .segmented button.active{background:var(--tab);color:var(--tab-ink)}
+.planRow{display:flex;align-items:center;gap:var(--space-4);width:100%;text-align:left;background:var(--surface-card);color:var(--text-1);border:1px solid var(--edge);border-radius:var(--radius-card);padding:var(--space-4) var(--space-6);min-height:var(--hit-min);font:var(--type-small)}
+button.planRow{cursor:pointer}
+.planRow svg{width:16px;height:16px;fill:currentColor;color:var(--text-muted);flex:none}
+.planRow__who{display:flex;flex-direction:column;flex:1;min-width:0}
+.planRow__name{font:var(--type-card-title)}
+.planRow__sub{font:var(--type-caption);color:var(--text-muted)}
+.planRow__car{display:flex;flex-direction:column;align-items:flex-end;font:var(--type-card-title)}
+.planRow__car .diffLabel{margin-top:0}
+.planRow--quiet{border-color:transparent;background:var(--surface-soft);padding:var(--space-3) var(--space-6);min-height:0;gap:var(--space-4)}
+.planRow--quiet .planRow__who{flex:none;flex-direction:row}
+.planRow__time{font:var(--type-time-md);flex:none}
+.planSum{display:flex;flex-direction:column;gap:var(--space-2)}
+.planSum__dir{font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted);margin-top:var(--space-3)}
+.applyBox{display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
+.applyBox .btn{width:100%}
+.applyBox__sub{margin:0;font:var(--type-caption);color:var(--text-muted);text-align:center}
+.adjCar{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4) 0;border-top:1px solid var(--line)}
+.adjCar__title{font:var(--type-card-title)}
 .diffLabel{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
 .noteCard{display:flex;align-items:flex-start;gap:var(--space-3);margin:var(--space-3) 0 0;padding:var(--space-3) var(--space-5);border-radius:var(--radius-panel);background:var(--warn-soft);color:var(--warn-ink);font:var(--type-small)}
 .actionBar{display:flex;gap:var(--space-3);margin-top:var(--space-3)}

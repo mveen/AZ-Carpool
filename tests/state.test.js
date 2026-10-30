@@ -137,5 +137,7 @@ test('Beheer has not been opened at start, so the coordinator does not read the 
 
 test('Mijn week starts on its default day (no day chosen under the day pills)', () => { assert.equal(S.myWeekDay, ''); });
 
+test('The day coordinator\'s flow starts closed, and "Auto\'s aanpassen" has no free-text place open', () => { assert.equal(S.wrAdvice, null); assert.equal(S.adjFree, null); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

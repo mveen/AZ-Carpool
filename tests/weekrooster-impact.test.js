@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { sampleFamilies, assertNoUnusedImports } from './test-support.js';
-import { expectedImpact, buildAdvice } from '../weekrooster-impact.js';
+import { expectedImpact, buildAdvice, buildKeepAdvice, evaluateCars } from '../weekrooster-impact.js';
 
 const families = sampleFamilies();
 const run = (requests, extra = {}) => expectedImpact({
@@ -77,6 +77,113 @@ test('nothing is changed in what was handed in (pure)', () => {
   const ctx = { day: 'Ma', direction: 'heen', cars: two, requests: [{ familyId: 'f2', rides: true, time: '08:45' }], timeOf: id => families[id].schedule.Ma.heen, families, settings: {}, prefs: { rules: [] }, priority: {} };
   const before = JSON.stringify(ctx); buildAdvice(ctx); assert.equal(JSON.stringify(ctx), before);
 });
+console.log('=== the advice with the cars as they are (buildKeepAdvice) ===');
+const fam = (time, cap = 4) => ({ capacity: cap, schedule: { Ma: { heen: time, terug: time } }, availability: { Ma: { heen: true, terug: true } } });
+const kf = { saar: fam('17:00'), noor: fam('17:00'), lotte: fam('17:00'), eva: fam('17:00'), fenna: fam('17:00'), julia: fam('17:00'), sara: fam('17:00'), roos: fam('17:00') };
+const kcars = [
+  { driverFamilyId: 'saar', girlIds: ['eva', 'noor'], departureTime: '16:00' },
+  { driverFamilyId: 'lotte', girlIds: ['lotte', 'fenna'], departureTime: '16:00' },
+  { driverFamilyId: 'julia', girlIds: ['julia', 'sara'], departureTime: '16:00' },
+  { driverFamilyId: 'roos', girlIds: ['roos'], departureTime: '16:00' },
+];
+const keep = (requests, extra = {}) => buildKeepAdvice({ day: 'Ma', direction: 'heen', cars: kcars, requests, timeOf: id => kf[id].schedule.Ma.heen, families: kf, settings: {}, prefs: { rules: [] }, priority: {}, ...extra });
+const ask = [{ familyId: 'eva', rides: true, time: '17:30' }, { familyId: 'lotte', rides: true, time: '17:30' }];
+test('keep: the best plan has the least waiting, uses only the cars that drive now, and nobody gets a new chauffeur', () => {
+  const a = keep(ask);
+  assert.equal(a.fallback, null);
+  assert.equal(a.best.waitMinutes, 0);
+  assert.equal(a.best.extraWait, 0);
+  assert.deepEqual(a.best.cars.map(c => c.driverFamilyId).sort(), ['julia', 'lotte', 'roos', 'saar'], 'the same four drivers');
+  const together = a.best.cars.find(c => c.girlIds.includes('eva'));
+  assert.ok(together.girlIds.includes('lotte'), 'Eva and Lotte ride together, so both arrive at 17:30 without waiting');
+  assert.equal(together.departureTime, '16:30', 'heen: 17:30 minus the 60 minutes of driving');
+  assert.ok(a.best.familiesChanged.length <= 3 && !a.best.familiesChanged.includes('julia') && !a.best.familiesChanged.includes('roos'), 'the drivers who are not involved do not notice');
+  assert.deepEqual(a.best.times, { eva: '17:30', lotte: '17:30' });
+});
+test('keep: the alternative has MORE waiting than the best plan (it is the second best, not a copy with two girls swapped)', () => {
+  const a = keep(ask);
+  assert.ok(a.alt, 'there is an alternative'); assert.ok(a.alt.waitMinutes > a.best.waitMinutes);
+  assert.deepEqual(a.alt.cars.map(c => c.driverFamilyId).sort(), ['julia', 'lotte', 'roos', 'saar']);
+});
+test('keep: a girl whose time moved is not counted as moving; only girls that change car are', () => {
+  const a = keep(ask);
+  assert.ok(a.best.moved.length >= 1 && a.best.moved.length <= 2);
+  assert.ok(!a.best.moved.includes('roos') && !a.best.moved.includes('julia') && !a.best.moved.includes('sara'));
+  const none = keep([{ familyId: 'noor', rides: true, time: '17:00' }]);
+  assert.deepEqual(none.best.moved, [], 'a request that changes nothing moves nobody');
+});
+test('keep: seats and the time spread are hard: a full car does not take a girl, a car does not span more than 3 hours', () => {
+  const small = { ...kf, lotte: fam('17:00', 3) };   // 2 seats: Lotte and Fenna fill it
+  const a = keep([{ familyId: 'eva', rides: true, time: '17:30' }], { families: small });
+  const lotte = a.best.cars.find(c => c.driverFamilyId === 'lotte');
+  assert.ok(lotte.girlIds.length <= 2);
+  const far = keep([{ familyId: 'eva', rides: true, time: '23:00' }]);
+  far.best.cars.forEach(c => { const m = c.girlIds.map(id => (far.best.times[id] || '17:00')); assert.ok(m.length === 1 || !m.includes('23:00') || m.every(x => x === '23:00')); });
+});
+test('keep: "rijdt niet mee" takes the girl out; a car that still has a girl keeps at least one', () => {
+  const a = keep([{ familyId: 'noor', rides: false, time: '' }, { familyId: 'eva', rides: false, time: '' }]);
+  assert.ok(!a.best.cars.some(c => c.girlIds.includes('eva') || c.girlIds.includes('noor')));
+  assert.ok(!a.best.cars.some(c => c.driverFamilyId === 'saar'), 'the car of Saar had only those two girls: it does not drive');
+  assert.deepEqual(a.best.times, { noor: '', eva: '' });
+});
+test('keep: terug waits for the last one; the waiting is counted the other way round', () => {
+  const a = keep([{ familyId: 'eva', rides: true, time: '16:30' }], { direction: 'terug' });
+  assert.equal(a.best.waitMinutes, 0, 'Eva is in a car with girls at 17:00 only if she waits 30; the plan puts her where nobody waits');
+  const lot = a.best.cars.find(c => c.girlIds.includes('eva'));
+  assert.equal(lot.departureTime, lot.girlIds.length === 1 ? '16:30' : '17:00');
+});
+test('keep: "eigen ouder rijdt mee" (terug) is hard: the girl sits in the car of her own parent', () => {
+  const rules = [{ type: 'ownCar', girlId: 'saar' }];
+  const cars2 = [{ driverFamilyId: 'saar', girlIds: ['saar', 'noor'], departureTime: '17:00' }, { driverFamilyId: 'lotte', girlIds: ['lotte'], departureTime: '17:00' }];
+  const a = keep([{ familyId: 'saar', rides: true, time: '17:30' }], { direction: 'terug', cars: cars2, prefs: { rules } });
+  assert.ok(a.best.cars.find(c => c.driverFamilyId === 'saar').girlIds.includes('saar'));
+});
+test('keep: when nothing fits in the existing cars, there is no best plan and the normal advice is given as the fallback', () => {
+  const tiny = { ...kf, saar: fam('17:00', 2) };
+  const a = buildKeepAdvice({ day: 'Ma', direction: 'heen', cars: [{ driverFamilyId: 'saar', girlIds: ['noor'], departureTime: '16:00' }], requests: [{ familyId: 'eva', rides: true, time: '17:00' }, { familyId: 'fenna', rides: true, time: '17:00' }], timeOf: id => kf[id].schedule.Ma.heen, families: tiny, settings: {}, prefs: { rules: [] }, priority: {} });
+  assert.equal(a.best, null); assert.ok(a.fallback && Array.isArray(a.fallback.cars));
+});
+test('keep: "samen reizen" is a tie-breaker after the waiting', () => {
+  const rules = [{ type: 'together', ids: ['eva', 'noor'] }];
+  const a = keep([{ familyId: 'lotte', rides: true, time: '17:30' }], { prefs: { rules } });
+  const car = a.best.cars.find(c => c.girlIds.includes('eva'));
+  assert.ok(car.girlIds.includes('noor'));
+});
+test('keep: deterministic and pure', () => {
+  const ctx = { day: 'Ma', direction: 'heen', cars: kcars, requests: ask, timeOf: id => kf[id].schedule.Ma.heen, families: kf, settings: {}, prefs: { rules: [] }, priority: {} };
+  const before = JSON.stringify(ctx), x = JSON.stringify(buildKeepAdvice(ctx)), y = JSON.stringify(buildKeepAdvice(ctx));
+  assert.equal(x, y); assert.equal(JSON.stringify(ctx), before);
+});
+console.log('=== the numbers of a changed proposal (evaluateCars) ===');
+{
+  const fm = { saar: fam('16:00'), lotte: fam('16:30'), julia: fam('17:00', 5), roos: fam('15:00') };
+  const base = { day: 'Ma', direction: 'heen', families: fm, settings: {}, prefs: { rules: [] }, timeOf: id => ({ saar: '16:00', lotte: '16:30', julia: '17:00', roos: '15:00' })[id],
+    cars: [{ driverFamilyId: 'saar', girlIds: ['saar'], departureTime: '15:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }], requests: [] };
+  test('evaluate: waiting is measured from the departure time that is set on the car; late is not waiting', () => {
+    const e = evaluateCars(base, [{ driverFamilyId: 'saar', girlIds: ['saar', 'lotte'], departureTime: '15:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }]);
+    assert.equal(e.waitOf.saar, 0); assert.equal(e.waitOf.lotte, 30); assert.equal(e.waitOf.roos, 0); assert.equal(e.waitOf.julia, 120);
+    assert.equal(e.waitMinutes, 150); assert.deepEqual(e.late, []); assert.deepEqual(e.moved, []);
+    const late = evaluateCars(base, [{ driverFamilyId: 'saar', girlIds: ['saar'], departureTime: '16:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }]);
+    assert.deepEqual(late.late, ['saar']); assert.ok(late.problems.some(p => p.key === 'late'));
+  });
+  test('evaluate: seats, the time spread and girls without a car are problems; the drivers who notice it are counted', () => {
+    const e = evaluateCars({ ...base, families: { ...fm, saar: fam('16:00', 2) } }, [{ driverFamilyId: 'saar', girlIds: ['saar', 'lotte'], departureTime: '15:00' }, { driverFamilyId: 'julia', girlIds: ['julia'], departureTime: '16:00' }]);
+    assert.ok(e.problems.some(p => p.key === 'seats' && p.id === 'saar')); assert.ok(e.problems.some(p => p.key === 'unplaced' && p.ids.includes('roos')));
+    const far = evaluateCars({ ...base, timeOf: id => ({ saar: '08:00', lotte: '16:30', julia: '17:00', roos: '15:00' })[id] }, [{ driverFamilyId: 'saar', girlIds: ['saar', 'lotte'], departureTime: '07:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }]);
+    assert.ok(far.problems.some(p => p.key === 'gap'));
+    const moved = evaluateCars(base, [{ driverFamilyId: 'saar', girlIds: ['saar', 'roos'], departureTime: '14:00' }, { driverFamilyId: 'julia', girlIds: ['julia'], departureTime: '16:00' }]);
+    assert.deepEqual(moved.moved, ['roos']); assert.deepEqual(moved.familiesChanged.sort(), ['julia', 'saar']);
+  });
+  test('evaluate: terug counts the waiting from her time until the car leaves; a girl who asks is not a driver who "notices it"', () => {
+    const b = { ...base, direction: 'terug', requests: [{ familyId: 'lotte', rides: true, time: '17:30' }] };
+    const e = evaluateCars(b, [{ driverFamilyId: 'saar', girlIds: ['saar', 'lotte'], departureTime: '17:30' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '17:00' }]);
+    assert.equal(e.waitOf.saar, 90); assert.equal(e.waitOf.lotte, 0); assert.ok(!e.familiesChanged.includes('lotte'));
+  });
+  test('keep advice: familiesChanged only holds drivers, not the parents of the girls in the car', () => {
+    const r = buildKeepAdvice({ ...base, requests: [{ familyId: 'roos', rides: true, time: '16:30' }] });
+    assert.ok(r.best.familiesChanged.every(id => base.cars.some(c => c.driverFamilyId === id)));
+  });
+}
 test('weekrooster-impact.js imports nothing it does not use', () => assertNoUnusedImports('weekrooster-impact.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

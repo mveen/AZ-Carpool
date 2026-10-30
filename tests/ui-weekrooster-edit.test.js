@@ -80,9 +80,9 @@ await testAsync('Terug (and Toch zelf wijzigen) leave the requests open: only th
 await testAsync('from Zelf indelen there is a way back to the Advies (next to Klaar), for who decides the day and only while an advice exists', async () => {
   const req = { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
   await setup({ dayCoordinators: { Do: 'f2' } }, req); S.wrEdit = { day: 'Do', override: false };
-  let html = rooster(); assert.match(text(html.slice(html.indexOf('<div class="actionBar"'))), /^ *Advies bekijken Klaar/);
+  let html = rooster(); assert.match(text(html.slice(html.indexOf('<div class="actionBar"'))), /^ *Advies bekijken en aanpassen Klaar/);
   wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditAdvice').onclick());
-  assert.equal(S.wrEdit, null); assert.deepEqual(S.wrAdvice, { day: 'Do' }); html = rooster(); assert.match(html, /id="wrAdvice"/); assert.match(html, /id="wrSelf"/);   // and on to Zelf indelen again
+  assert.equal(S.wrEdit, null); assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'plan'); html = rooster(); assert.match(html, /id="wrAdvice"/); assert.match(html, /id="wrAdjust"/); assert.doesNotMatch(html, /wrSelf/);   // the flow has its own way to change the cars
   S.wrAdvice = null;
   await setup({ dayCoordinators: { Do: 'f3' } }, req); S.wrEdit = { day: 'Do', override: true };   // a parent after the warning: no advice of his own
   assert.doesNotMatch(rooster(), /wrEditAdvice/); assert.match(rooster(), /id="wrEditDone"/);
@@ -179,12 +179,11 @@ await testAsync('the day coordinator gets "Zelf indelen" under his day and goes 
   openDayEditor('Do'); assert.deepEqual(S.wrEdit, { day: 'Do', override: false }); assert.equal(dom.doc.body.children.length, before, 'no sheet');
   assert.doesNotMatch(text(scheduleEditHtml()), /rechtstreeks aan/);
 });
-await testAsync('the Advies view has "Zelf indelen" next to Overnemen; it closes the advice and opens the editor', async () => {
+await testAsync('the Advies flow has no "Zelf indelen" any more: the cars are changed in the flow itself', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
-  S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
-  const html = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.match(html, /id="wrSelf"/); assert.match(html, /id="wrAccept"/);
-  wireAdvice({ querySelectorAll: () => [] }); dom.doc.getElementById('wrSelf').onclick();
-  assert.equal(S.wrAdvice, null); assert.deepEqual(S.wrEdit, { day: 'Do', override: false });
+  S.wrAdvice = { day: 'Do' };
+  const html = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.doesNotMatch(html, /wrSelf|data-wredit/); assert.match(html, /id="wrAdjust"/); assert.match(html, /id="wrToCheck"/);
+  S.wrAdvice = null;
 });
 await testAsync('the old way in (Mijn week "Regelen", the Wijzigen link) lands in the Rooster editor; without a day it stays as it was', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } });

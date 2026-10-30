@@ -13,7 +13,7 @@ import { activateTab } from './app.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
-import { acceptDay, adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, requestsForDeciding } from './weekrooster-data.js';
+import { acceptDay, adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, planOf, planStats, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekroosterActive } from './ui-weekrooster-form.js';
 
 const wk = () => S.currentWeekKey;
@@ -32,7 +32,7 @@ const requestLine = r => `${girlName(r.familyId)}: ${summaryOf(r)}`;
 
 // The ONE line about the day coordinator in Rooster "Deze week". It is also "Jij bent dagcoördinator {dag}" when that is you (the line above the
 // switch is then left out, see renderSchedule). Whoever may plan this day gets "Zelf indelen" here, on the line of the role, with no extra row,
-// except when the amber card "Actie nodig" is on screen: that card has the same button next to "Advies bekijken" (withAction = false).
+// except when the amber card "Actie nodig" is on screen: with requests waiting the only way in is "Advies bekijken en aanpassen" (withAction = false).
 function coordLineHtml(day, withAction = true) {
   const id = deciderFamilyOf(day), name = esc(deciderName(day) || t('weekrooster.decider.unknown'));
   const me = !!id && id === myFamilyId();
@@ -75,7 +75,7 @@ export function scheduleDayExtrasHtml(day) {
       ? `<div class="devAlert" id="wrAlert"><p class="devAlertTitle">${phIcon('warning-circle-fill')} ${esc(t(n === 1 ? 'weekrooster.alert.titleOne' : 'weekrooster.alert.titleMany', { p1: n, p2: lower(dayName(day)) }))}</p>
           ${rows}
           <p class="devAlertBody">${esc(t('weekrooster.alert.body'))}${hasDirect ? ' ' + esc(t('weekrooster.alert.bodyDirect')) : ''}</p>
-          <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button><button type="button" class="btn small secondary" data-wredit="${day}">${esc(t('weekrooster.edit.self'))}</button></div></div>`
+          <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button></div></div>`
       : '';
     return coordLineHtml(day, !n) + alert + logHtml(day);
   }
@@ -89,15 +89,13 @@ export function scheduleDayExtrasHtml(day) {
 }
 
 // Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).
-// The advice for the day in one line (cars saved or added, all directions, "Zuinigst"); null when there is no sound arrangement.
+// The advice for the day in one line (the cars as they are, least waiting); null when it does not fit in the existing cars: the day coordinator
+// then decides in the flow, so there is nothing to take over in one tap.
 export function adviceLineOf(day) {
-  const advice = adviceForDay(day), dirs = Object.keys(advice.directions);
-  if (!dirs.length || dirs.some(d => advice.directions[d].variants.zuinig.noSolution)) return null;
-  const diff = dirs.reduce((sum, d) => sum + advice.directions[d].variants.zuinig.carsAfter - advice.directions[d].carsBefore, 0);
-  if (diff === 0) return t('weekrooster.action.adviceSame');
-  const n = Math.abs(diff);
-  if (diff < 0) return n === 1 ? t('weekrooster.action.adviceLess1') : t('weekrooster.action.adviceLessN', { p1: n });
-  return n === 1 ? t('weekrooster.action.adviceMore1') : t('weekrooster.action.adviceMoreN', { p1: n });
+  const advice = adviceForDay(day), plan = planOf(advice, 'best');
+  if (!Object.keys(advice.directions).length || plan.blocked || plan.fallback) return null;
+  const wait = planStats(advice, plan).extraWait;
+  return wait ? t('weekrooster.action.adviceFitsWait', { p1: wait }) : t('weekrooster.action.adviceFits');
 }
 
 // The amber card "Actie nodig voor {dag}": what waits (and what came in directly) and the advice in one line.
@@ -128,7 +126,7 @@ export function wireMyWeekActions(box) {
     hapticTap();
     const day = b.dataset.wrtake;
     b.disabled = true;
-    const r = await acceptDay(day, 'zuinig');
+    const r = await acceptDay(day, 'best');
     if (!r.ok) { b.disabled = false; return; }
     S.wrAdvice = null; S.wrDone = null;
     showToast(t(r.n === 1 ? 'weekrooster.advice.doneOne' : 'weekrooster.advice.doneMany', { p1: r.n }), {

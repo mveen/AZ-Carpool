@@ -105,5 +105,7 @@ test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(N
 
 test('APP_VERSION is at least v160 (own-daughter chip grey with a green dot, plain was-time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
 
+test('APP_VERSION is at least v161 (the day coordinator\'s flow; the undo icon exists)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 161); assert.ok(PH_PATHS['arrow-counter-clockwise']); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
