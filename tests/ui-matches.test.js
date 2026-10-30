@@ -246,6 +246,24 @@ await testAsync('saving an edit replaces only that car (also for someone who is 
   assert.deepEqual(d.cars[1], { driverFamilyId: 'f3', girlIds: ['f4', 'f5'], departureTime: '07:45', fromId: 'busstation', fromText: '' });
   assert.equal(S.openMatchCarpoolForm, null); assert.equal(S.editMatchCarIdx, null); assert.equal(toast(), 'Carpool bijgewerkt ✓');
 });
+await testAsync('saving an edit closes the form, and tapping Opslaan twice never makes a second car', async () => {
+  const one = { ...carpool, cars: [cars[0]] };
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: one }); state({ matchCarpools: { [SLUG]: one } }); render();
+  reg()('[data-editmatchcar]')[0].onclick();
+  setForm('f1', '07:00', ['f2', 'f4']);
+  const save = reg()('[data-savematchcar]')[0];
+  const first = withFakeNow(NOW, () => save.onclick()); const second = withFakeNow(NOW, () => save.onclick());   // two quick taps
+  await Promise.all([first, second]);
+  assert.equal(fake.get('matchCarpools/' + SLUG).cars.length, 1);
+  assert.doesNotMatch(boxHtml, /matchCarDriver_/);                                                                // form is gone
+  assert.equal(S.openMatchCarpoolForm, null);
+});
+await testAsync('a quick double tap on "Ik rij ook" adds the car once', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); render();
+  const btn = reg()('[data-iride]')[0];
+  await Promise.all([withFakeNow(NOW, () => btn.onclick()), withFakeNow(NOW, () => btn.onclick())]);
+  assert.equal(fake.get('matchCarpools/' + SLUG).cars.length, 1);
+});
 await testAsync('editing a car that has been removed meanwhile stores nothing', async () => {
   const fake = useFakeDb(sampleDbSeed()); state(); render();
   reg()('[data-addmatchcar]')[0].onclick(); S.editMatchCarIdx = 3;
