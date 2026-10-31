@@ -84,11 +84,11 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.match(s, /Advies 30 min extra wachten Alternatief 135 min extra wachten/);   // what each choice costs, worked out per variant
   assert.match(s, /0 speelsters in andere auto 1 chauffeur met impact 30 min extra wachten/);   // the wait tile is the last of the three
   assert.match(s, /Lois moet er om 09:00 zijn/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
-  assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 auto vertrekt Jan Jansen/); assert.match(s, /3\/3/);
-  assert.match(s, /Lois vroeg 09:00\. Lois wacht 30 min haar tijd 09:00 · was niet ingedeeld Anouk, Eline · ongewijzigd/);   // the car's why, the rider with her time and wait, the ones who do not change
-  assert.match(s, /09:15 auto vertrekt Piet Pieters Evi, Jahaimy/); assert.match(s, /Impact voor: Jan Jansen/);
+  assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /3\/3/); assert.doesNotMatch(s, /auto vertrekt|Aanvraag/);   // no "auto vertrekt", no "Aanvraag" caption
+  assert.match(s, /Lois vroeg 09:00\. Wijzigingen \+1 Lois 09:00 wacht 30 min Bezetting 3\/3 Anouk Eline \+ Lois/);   // the car's why, then the blocks: who is new (time, wait), who sits in it
+  assert.match(s, /09:15 Piet Pieters Evi, Jahaimy · Busstation → AFC '34 2\/4/); assert.match(s, /Impact voor: Jan Jansen/);
   assert.doesNotMatch(s, /\bWas\b.*\bWordt\b|eerder dan gevraagd|later dan gevraagd/);   // no Was/Wordt table and no "gevraagd" without the sum behind it
-  assert.match(html, /id="wrAdjust"/); assert.match(s, /Auto’s aanpassen: tijd, chauffeur, plek/); assert.match(html, /id="wrToCheck"/); assert.match(s, /Nog niets doorgevoerd/);
+  assert.doesNotMatch(html, /id="wrAdjust"/); assert.doesNotMatch(s, /tijd, chauffeur, plek/); assert.match(html, /data-wradjust="heen"/); assert.match(s, /Heen Lois moet er om 09:00 zijn Aanpassen/); assert.match(html, /id="wrToCheck"/); assert.match(s, /Nog niets doorgevoerd/);
   assert.doesNotMatch(html, /id="wrToPlan"|id="wrSelf"|id="wrAccept"/);
   assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
 });
@@ -125,7 +125,7 @@ await testAsync('a request that fits as it is: the scene says nothing changes an
   S.wrAdvice = { day: 'Do', step: 'plan' };
   const s = text(view());
   assert.match(s, /Anouk moet er om 08:45 zijn/); assert.match(s, /Past in de bestaande auto’s: hier verandert niets\./);
-  assert.match(s, /Anouk .* haar tijd 08:45 · aanvraag/);   // she is shown: the reader sees why this shift is here
+  assert.match(s, /Anouk .*08:45/);   // she is shown: the reader sees why this shift is here
   assert.doesNotMatch(s, /Komt door/);   // nothing waits longer, so no sum to explain
 });
 await testAsync('the girl rows: only girls who asked or who change car; old values in the state do not matter', async () => {
@@ -133,7 +133,7 @@ await testAsync('the girl rows: only girls who asked or who change car; old valu
   view(); assert.equal(S.wrAdvice.variant, 'best'); assert.equal(S.wrAdvice.step, 'requests');
   S.wrAdvice.step = 'plan';
   const html = view(); assert.match(html, /data-wrgirl="heen\|f5"/);
-  assert.doesNotMatch(html, /data-wrgirl="[a-z]+\|f3"/);
+  assert.match(html, /data-wrgirl="heen\|f3"/);   // every passenger is a button (a tap = another car)
 });
 await testAsync('a day without cars does not fit: the note, the normal advice and no switch between advice and alternative', async () => {
   await setup({}, { groups: sampleGroups() }); S.wrAdvice = { day: 'Do', step: 'plan' };
@@ -178,7 +178,7 @@ await testAsync('a girl to another car: the sheet lists the cars (seats, waiting
   const heen = S.wrAdvice.edits.heen;
   assert.deepEqual(heen.find(c => c.driverFamilyId === 'f2').girlIds.slice().sort(), ['f2', 'f4', 'f5']);
   assert.equal(heen.find(c => c.driverFamilyId === 'f2').departureTime, '08:00'); assert.deepEqual(heen.find(c => c.driverFamilyId === 'f1').girlIds, ['f1', 'f3']);
-  const s = text(view()); assert.match(s, /08:00 auto vertrekt was 09:15 Piet Pieters/); assert.match(s, /Lois vroeg 09:00\. Lois 0 min haar tijd 09:00 · was niet ingedeeld/);
+  const s = text(view()); assert.match(s, /08:00 was 09:15 Piet Pieters/); assert.match(s, /Lois vroeg 09:00\. Wijzigingen \+1 Lois 09:00 0 min/);
 });
 await testAsync('a full car stays closed: choosing it changes nothing', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };   // Jan's car is full after the advice: Eline, Anouk and Lois
@@ -196,36 +196,60 @@ await testAsync('Alternatief shows the cars with the riders who move: where they
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan', variant: 'alt' };
   const s = text(view());
   assert.match(s, /135 min extra wachten/); assert.match(s, /Komt door \(minuten\): Evi \+105 · Lois \+30/);   // 105 + 30 = 135
-  assert.match(s, /Jahaimy 0 min haar tijd 10:15 · was bij Piet Pieters/); assert.match(s, /Uit deze auto: Anouk, Eline \(de auto vertrekt nu 09:15\)/);
-  assert.match(s, /09:15 auto vertrekt was 07:30 Jan Jansen/);
+  assert.match(s, /Komen uit Piet Pieters Jahaimy 10:15 0 min/); assert.match(s, /Niet meer in deze auto Anouk Eline/); assert.doesNotMatch(s, /Rijden mee met/);
+  assert.match(s, /09:15 was 07:30 Jan Jansen/);
+  assert.match(s, /Komen uit Jan Jansen Anouk en Eline 08:30 0 min/);   // equal outcomes on one line
   assert.match(s, /Waarom 07:30: Lois vroeg 09:00\./);
 });
-await testAsync('Auto\'s aanpassen: time by hand (it stays) and back to calculated, another driver, place, arrival', async () => {
+await testAsync('Aanpassen per richting: the fields come inside the car cards (time and driver side by side), Klaar closes them', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
-  press('wrAdjust');
-  assert.match(text(lastSheet.innerHTML), /Auto’s aanpassen/); assert.match(lastSheet.innerHTML, /data-adj="deptime" data-key="heen\|f1" value="07:30"/); assert.match(text(lastSheet.innerHTML), /Automatisch berekend/);   // one time field, filled with the calculated time: no extra tap
-  assert.doesNotMatch(lastSheet.innerHTML, /data-adj="depmode"/);
-  assert.match(lastSheet.innerHTML, /class="adjDir scene--heen"/); assert.match(lastSheet.innerHTML, /adjDir__head"><span class="scene__badge">/);   // the same tint and badge as the steps
-  assert.match(lastSheet.innerHTML, /class="adjCar__fields"><div class="adjCar__time">/); assert.doesNotMatch(lastSheet.innerHTML, /devFormTop/);   // roomy fields, not the 110px column
-  let e = adj('deptime', 'heen|f1'); e.value = '07:10'; e.onchange();
+  let html = view(); assert.doesNotMatch(html, /data-adj=|carCard--editing/);
+  wired(html).querySelectorAll('[data-wradjust]').find(b => b.dataset.wradjust === 'heen').onclick();
+  assert.equal(S.wrAdvice.editDir, 'heen');
+  html = view(); const s = text(html);
+  assert.match(html, /carCard--editing/); assert.match(html, /data-wradjust="heen"[^>]*aria-pressed="true"/); assert.match(s, /Heen .* Klaar/);
+  assert.match(html, /class="devFormTop">\s*<label class="devField"><span>Vertrektijd<\/span><input type="time" class="devInput timeBig" data-adj="deptime" data-key="heen\|f1" value="07:30">/);   // time next to driver, as in the Rooster
+  assert.match(html, /data-adj="driver" data-key="heen\|f1"/); assert.match(s, /Automatisch berekend\. Zelf kiezen: pas de tijd aan\./);
+  assert.doesNotMatch(html, /data-adj="[a-z]*" data-key="terug/);   // only the direction in edit mode
+  assert.match(html, /data-wradd="heen\|f2"/); assert.doesNotMatch(html, /data-wradd="heen\|f1"/);   // a full car has no + Passagier
+  wired(html).querySelectorAll('[data-wradjust]').find(b => b.dataset.wradjust === 'heen').onclick(); assert.equal(S.wrAdvice.editDir, null);
+  assert.doesNotMatch(view(), /data-adj=/);
+});
+await testAsync('Aanpassen: time by hand (it stays) and back to calculated, another driver, place, arrival', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan', editDir: 'heen' };
+  const fields = () => wired(view());
+  const get = (box, kind, key) => box.querySelectorAll('[data-adj]').find(e => e.dataset.adj === kind && (!key || e.dataset.key === key));
+  let box = fields(), e = get(box, 'deptime', 'heen|f1'); e.value = '07:10'; e.onchange();
   assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').departureTime, '07:10'); assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').depManual, true);
-  assert.match(text(lastSheet.innerHTML), /Terug naar berekend \(07:30\)/);
-  e = adj('depreset', 'heen|f1'); e.onclick();
+  assert.match(text(view()), /Terug naar berekend \(07:30\)/);
+  box = fields(); e = get(box, 'depreset', 'heen|f1'); e.onclick();
   assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').departureTime, '07:30'); assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').depManual, undefined);
-  e = adj('driver', 'heen|f1'); e.value = 'f6'; e.onchange();
+  box = fields(); e = get(box, 'driver', 'heen|f1'); e.value = 'f6'; e.onchange();
   assert.deepEqual(S.wrAdvice.edits.heen.map(c => c.driverFamilyId), ['f6', 'f2']);
-  e = adj('place', 'heen|f2'); e.value = 'busstation'; e.onchange();
+  box = fields(); e = get(box, 'place', 'heen|f2'); e.value = 'busstation'; e.onchange();
   assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f2').locationId, 'busstation');
-  e = adj('dest', 'heen|f2'); e.onclick();
-  e = lastSheet.querySelectorAll('[data-adj]').find(x => x.dataset.adj === 'dest' && x.dataset.key === 'heen|f2' && x.dataset.dest === 'ATC'); e.onclick();
+  box = fields(); e = box.querySelectorAll('[data-adj]').find(x => x.dataset.adj === 'dest' && x.dataset.key === 'heen|f2' && x.dataset.dest === 'ATC'); e.onclick();
   assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f2').destination, 'ATC');
   assert.match(text(view()), /Lois/);
 });
 await testAsync('a car for another driver can be added and then used', async () => {
-  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
-  press('wrAdjust'); const e = adj('addcar'); assert.ok(e); e.dataset.dir = 'heen'; e.value = 'f6'; e.onchange();
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan', editDir: 'heen' };
+  const e = wired(view()).querySelectorAll('[data-adj]').find(x => x.dataset.adj === 'addcar'); assert.ok(e); e.value = 'f6'; e.onchange();
   assert.deepEqual(S.wrAdvice.edits.heen.map(c => c.driverFamilyId), ['f1', 'f2', 'f6']);
   girlBtn(wired(view()), 'f5').onclick(); assert.match(text(lastSheet.innerHTML), /Tom Visser/);
+});
+await testAsync('+ Passagier: a sheet with the girls of the other cars; the choice puts her in this car', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan', editDir: 'heen' };
+  const add = wired(view()).querySelectorAll('[data-wradd]').find(b => b.dataset.wradd === 'heen|f2'); assert.ok(add); add.onclick();
+  const sheet = text(lastSheet.innerHTML); assert.match(sheet, /Wie komt erbij in deze auto\?/); assert.match(sheet, /De auto van Piet Pieters/); assert.match(sheet, /Lois Nu bij Jan Jansen · haar tijd 09:00/);
+  assert.doesNotMatch(sheet, /meisje/);
+  pickItem(lastSheet.innerHTML.split('data-sheetidx').slice(1).findIndex(x => /Lois/.test(x)));
+  assert.deepEqual(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f2').girlIds.slice().sort(), ['f2', 'f4', 'f5']);
+});
+await testAsync('the word "scène" and "meisje" are not in the texts of the flow', async () => {
+  const fs = await import('node:fs'); const src = fs.readFileSync(new URL('../texts-nl.js', import.meta.url), 'utf8');
+  const lines = src.split('\n').filter(l => l.includes('weekrooster.flow.'));
+  assert.ok(lines.length > 50); lines.forEach(l => assert.doesNotMatch(l.replace(/^\s*"[^"]+":/, ''), /scène|scene|meisje/i, l));
 });
 
 console.log('=== Controleren and Doorvoeren ===');
@@ -238,7 +262,7 @@ await testAsync('Controleren: the chips, who notices it, the summary and ONE but
   assert.match(s, /Impact voor: Jan Jansen/); assert.match(s, /Zo rijden ze donderdag/);
   assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/);
   assert.equal((html.match(/id="wrAccept"/g) || []).length, 1); assert.match(s, /Doorvoeren voor donderdag/); assert.match(s, /Direct daarna kun je alles ongedaan maken/);
-  assert.doesNotMatch(html, /id="wrToCheck"|id="wrAdjust"/); assert.match(html, /id="wrBackToPlan"/); assert.match(s, /Terug naar indeling/);
+  assert.doesNotMatch(html, /id="wrToCheck"|data-wradjust/); assert.match(html, /id="wrBackToPlan"/); assert.match(s, /Terug naar indeling/);
   press('wrBackToPlan'); assert.equal(S.wrAdvice.step, 'plan');
 });
 await testAsync('Controleren warns about a car that is too full, someone who comes too late, and a girl without a car', async () => {

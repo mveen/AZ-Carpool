@@ -105,7 +105,7 @@ await testAsync('"Advies bekijken en aanpassen" on Mijn week opens the same flow
   const btn = { dataset: { wrlook: 'Do' }, onclick: null };
   wireMyWeekActions({ querySelectorAll: sel => (sel === '[data-wrlook]' ? [btn] : []) });
   withFakeNow(NOW, () => btn.onclick()); assert.equal(S.scheduleDay, 'Do'); assert.equal(S.roosterMode, 'week');
-  assert.deepEqual(S.wrAdvice, { day: 'Do', step: 'requests', variant: 'best', edits: {} }); assert.equal(S.wrDone, null);
+  assert.deepEqual(S.wrAdvice, { day: 'Do', step: 'requests', variant: 'best', edits: {}, editDir: null }); assert.equal(S.wrDone, null);
   const html = dom.html('tab-schedule');
   assert.match(html, /id="wrAlert"/, 'Rooster was drawn again for the day of the request, not left on Monday'); assert.match(text(html), /1 aanvraag voor donderdag/);
 });
