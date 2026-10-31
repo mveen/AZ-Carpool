@@ -28,15 +28,21 @@ export function renderImpersonateBanner(){
   }
 }
 
+// The tab the user is on now ('myweek' when none is marked).
+function currentTab(){ const on=document.querySelector('nav button.active'); return (on && on.dataset && on.dataset.tab) || 'myweek'; }
+
+// Starts (or switches) the test view as another parent. The user stays on the tab they were on; only Beheer is
+// not shown to a parent, so from Beheer the view moves to Mijn week.
 export function startImpersonate(familyId){
   if(!familyId) return;
+  const tab=currentTab();
   S.impersonateFamilyId=familyId;
   recomputeCanEdit();
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display='none';
   showToast(t('profile.testweergave_gestart'));
-  S.roosterMode='week';
+  if(tab==='beheer') S.roosterMode='week';
   renderAll();
-  activateTab('myweek');
+  if(tab==='beheer') activateTab('myweek');
 }
 
 export function stopImpersonate(){
@@ -44,9 +50,7 @@ export function stopImpersonate(){
   recomputeCanEdit();
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=S.canEdit?'':'none';
   showToast(t('profile.terug_naar_coordinatorweergave'));
-  S.roosterMode='week';
-  renderAll();
-  activateTab('beheer');
+  renderAll();   // the user stays on the tab they are on
 }
 
 // ---------- Weekschema edits wait for confirmation ----------

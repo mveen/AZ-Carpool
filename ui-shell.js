@@ -7,7 +7,8 @@ import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast 
 import { APP_VERSION } from './constants.js';
 import { weekRangeLabel } from './dates.js';
 import { fam } from './rides.js';
-import { canSwitchViewFor, myFamilyId, recomputeCanEdit } from './coordinator.js';
+import { canSwitchViewFor, isRealCoordinator, myFamilyId, recomputeCanEdit } from './coordinator.js';
+import { startImpersonate, stopImpersonate } from './ui-profile.js';
 import { openHelp } from './ui-help.js';
 import { sendWhatsAppUpdate } from './ui-deviation.js';
 import { AVATARS, avatarOf, avatarInner, avatarClass, avatarLabel } from './avatars.js';
@@ -64,12 +65,58 @@ export function updateHeader(tab){
   if(ctx) ctx.textContent = contextLine(screen);
   const share = document.getElementById('shareToggle');
   if(share) share.hidden = !SHOWS_SHARE.has(screen);
+  const sw = document.getElementById('switchParentBtn');
+  if(sw){
+    sw.hidden = !isRealCoordinator();   // real coordinator rights, so it stays when the Beheer tab is hidden in a test view
+    const ic = document.getElementById('switchParentIcon');
+    if(ic) ic.innerHTML = phIcon('users') + `<span class="roundBtn__badge">${phIcon('arrows-left-right-fill')}</span>`;
+    if(sw.classList) sw.classList.toggle('on', !!S.impersonateFamilyId);
+  }
   const av = document.getElementById('avatarInitials');
   if(av){
     const pick = ownAvatar();
     av.innerHTML = avatarInner(pick, initials(parentName()) || (S.canEdit ? t('shell.avatar_coordinator') : '?'));
     const btn = document.getElementById('avatarBtn'); if(btn && btn.classList) btn.classList.toggle('avatar--icon', !!pick);
   }
+}
+
+// The list behind the switch button: every parent (name first, daughter below), plus "Terug naar mezelf" while a test view runs.
+export function switchParentRows(){
+  return Object.keys(S.families || {})
+    .map(id => ({ id, parent: (S.families[id].parentName || '').trim(), girl: (S.families[id].girlName || '').trim() }))
+    .filter(r => r.parent || r.girl)
+    .sort((a, b) => (a.parent || a.girl).localeCompare(b.parent || b.girl, 'nl'));
+}
+
+export function openSwitchParent(){
+  if(!isRealCoordinator()) return;
+  closeSheet();
+  const cur = S.impersonateFamilyId || '';
+  const rows = switchParentRows();
+  const self = cur ? `<button type="button" class="sheetItem sheetItem--self" data-switch-self="1">${phIcon('arrow-left')}<span class="sheetItem__label">${esc(t('shell.switch_self'))}<br><span class="sub">${esc(t('shell.switch_self_sub'))}</span></span></button>` : '';
+  const item = r => `<button type="button" class="sheetItem${r.id === cur ? ' sheetItem--current' : ''}" data-switch-id="${esc(r.id)}" data-q="${esc((r.parent + ' ' + r.girl).toLowerCase())}"${r.id === cur ? ' aria-current="true"' : ''}>${phIcon('user')}<span class="sheetItem__label">${esc(r.parent || r.girl)}${r.parent && r.girl ? `<br><span class="sub">${esc(t('shell.parent_of', { name: r.girl }))}</span>` : ''}</span>${r.id === cur ? `<span class="tag tag--ok">${esc(t('shell.switch_current'))}</span>` : ''}</button>`;
+  const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${esc(t('shell.switch_title'))}</h3><p class="sheet__sub">${esc(t('shell.switch_sub'))}</p>
+    ${self}
+    <input type="search" id="switchSearch" class="switchSearch" placeholder="${esc(t('shell.switch_search'))}" aria-label="${esc(t('shell.switch_search_label'))}" autocomplete="off">
+    <div id="switchList">${rows.map(item).join('')}</div>
+    <p class="sheet__sub" id="switchNone" hidden>${esc(t('shell.switch_none'))}</p>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
+  const selfBtn = ov.querySelector('[data-switch-self]'); if(selfBtn) selfBtn.onclick = () => { closeSheet(); stopImpersonate(); };
+  ov.querySelectorAll('[data-switch-id]').forEach(b => b.onclick = () => {
+    const id = b.dataset.switchId; closeSheet();
+    if(id !== S.impersonateFamilyId) startImpersonate(id);
+  });
+  const search = ov.querySelector('#switchSearch');
+  if(search) search.oninput = () => {
+    const q = String(search.value || '').trim().toLowerCase(); let shown = 0;
+    ov.querySelectorAll('[data-switch-id]').forEach(b => { const ok = !q || String(b.dataset.q || '').includes(q); b.hidden = !ok; if(ok) shown++; });
+    const none = ov.querySelector('#switchNone'); if(none) none.hidden = shown > 0;
+  };
 }
 
 // "Mijn week delen": a sheet with the text and one Delen button. The phone's own share menu opens when the browser has one (any app);
@@ -216,6 +263,7 @@ export function initShell(onNavigate, onViewChange){
   const av = document.getElementById('avatarBtn');
   if(av) av.onclick = () => openSettings(onNavigate, onViewChange);
   const sh = document.getElementById('shareToggle'); if(sh) sh.onclick = openShare;
+  const sw = document.getElementById('switchParentBtn'); if(sw) sw.onclick = openSwitchParent;
   initContact();
   syncAppHeight();
   for(const ev of ['resize', 'orientationchange', 'pageshow']) window.addEventListener(ev, syncAppHeight);
