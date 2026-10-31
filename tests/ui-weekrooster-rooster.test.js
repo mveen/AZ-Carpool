@@ -85,12 +85,12 @@ await testAsync('two requests are counted together; with none waiting there is n
   const html = rooster(); assert.doesNotMatch(html, /id="wrAlert"/); assert.match(html, /id="wrLog"/); assert.equal(weekroosterActionCount(), 0);
   assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wredit="Do"/, 'no card: the link Zelf indelen is at the bottom of the day');
 });
-await testAsync('there is no line about the day coordinator above the day, and the direction titles say where the time is', async () => {
+await testAsync('there is no line about the day coordinator above the day, and the cars show the direction as a mark (no Heen/Terug titles)', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '07:30', terug: '16:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const html = rooster(), s = text(html);
   assert.doesNotMatch(s, /Jij bent dagcoördinator|Dagcoördinator donderdag:/);
-  assert.match(html, /sectionHead__note">Aankomst bij AFC/);   // the direction title says what the time means; her own time sits on her chip
+  assert.doesNotMatch(html, /sectionHead__note/); assert.match(html, /dirMark dirMark--heen/);   // the direction is the sun/moon mark and the tint; her own time sits on her chip
 });
 await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Verzoeken verwerken")', async () => {
   await asDecider({ groups: CARS }); const html = mijnWeek(), s = text(html), room = rooster();

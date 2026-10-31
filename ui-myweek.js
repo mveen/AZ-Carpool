@@ -5,11 +5,10 @@ import { esc, hapticTap, isAndroidDevice, locationsCfg, phIcon, renderLoadingIfN
 import { setReturnByPublicTransport } from './data.js';
 import { releaseNotRidingRequest } from './weekrooster-data.js';
 import { distanceInfo, hasApiKey } from './distance.js';
-import { mapLink, isOverride, matchFromName, routeLabel } from './locations.js';
+import { mapLink, matchFromName, routeLabel } from './locations.js';
 import { S } from './state.js';
 import { myFamilyId } from './coordinator.js';
-import { activeDeviation, baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
-import { dayChanges } from './day-changes.js';
+import { baseCars, effectiveCars, fam, girlName, ovGirlsFor, plainGirlName, rideTime, sortGirlIds } from './rides.js';
 import { DAYS, KM_COST_EUR, todayKeyNow } from './constants.js';
 import { dateForWeekday, dayUp } from './dates.js';
 import { renderDeviationTab } from './ui-deviation.js';
@@ -23,7 +22,7 @@ import { openDayEditor } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { timeChangeOf } from './driver-car.js';
-import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
+import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, openAskedTimeOf, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
 export function matchDistanceText(m){
@@ -90,6 +89,12 @@ export function renderMyWeek(){
 
   // One ride = one white card (with a border): time and direction on the left, "Chauffeur" and who drives in the middle, one round button on
   // the right (your own car: Tijd en plek; another car: contact), then the route, the passengers of the car you drive, and her own time with the switch.
+  // Names with their own time (heen: there at, terug: ready at), earliest first: the driver needs to know when to pick up whom.
+  function timedNames(girlIds, day, direction){
+    return sortGirlIds(girlIds).map(id=>({ id, time: openAskedTimeOf(id,day,direction) || rideTime(id,day,direction) }))
+      .sort((a,b)=> a.time===b.time? 0 : !a.time? 1 : !b.time? -1 : a.time<b.time? -1 : 1)
+      .map(({id,time})=> time? `${girlName(id)} ${esc(time)}` : girlName(id)).join(', ');
+  }
   function rideRow(day,direction){
     let s = rideTime(myId, day, direction);   // the handed-in time where the temporary rooster applies, else the standard time
     const cars = effectiveCars(day,direction);
@@ -103,9 +108,6 @@ export function renderMyWeek(){
     const drivingIdx = cars.findIndex(c=>c.driverFamilyId===myId);
     const ownCar = daughterIdx>=0 ? cars[daughterIdx] : null;
     const dep = ownCar ? (ownCar.departureTime||s) : s;
-    // Only a ride that really differs from the standard rooster gets the tag (a saved deviation that changes nothing does not).
-    const differsFromStandard = !!activeDeviation(day,direction) && dayChanges(baseCars(day,direction), cars).length>0;
-    const changedTag = ((differsFromStandard || (ownCar && isOverride(ownCar,direction,cfg,day))) ? `<span class="tag tag--warn">${esc(t('myweek.gewijzigd'))}</span>` : '');
     const route = routeLabel(ownCar||{},direction,cfg,day);
     const iDrive = !!(ownCar && ownCar.driverFamilyId===myId);
 
@@ -113,7 +115,7 @@ export function renderMyWeek(){
     if(ownCar){
       if(iDrive){
         // Full passenger list, including your own daughter — not just "everyone else".
-        const names = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
+        const names = timedNames(ownCar.girlIds, day, direction);
         who = `<div class="rideRow__who rideRow__who--me">${phIcon('steering-wheel-fill')}${esc(t('ride.jij'))}</div>`;
         act = driverCarButtonHtml(day,direction);
         passengers = names? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${names}</div>` : '';
@@ -135,7 +137,7 @@ export function renderMyWeek(){
     let extra = '';
     if(drivingIdx>=0 && drivingIdx!==daughterIdx){
       const dg = cars[drivingIdx];
-      const names = sortGirlIds(dg.girlIds).map(id=>girlName(id)).join(', ');
+      const names = timedNames(dg.girlIds, day, direction);
       extra = `<div class="rideRow__extra"><span>${phIcon('steering-wheel-fill')} ${esc(t('myweek.jouw_rijbeurt_om'))} ${esc(dg.departureTime||'?')} · ${names}</span>${driverCarButtonHtml(day,direction)}</div>${timeChangedLine(dg)}`;
     }
     // Her own time: when she has to be there (heen) / when she is done (terug).
@@ -147,7 +149,7 @@ export function renderMyWeek(){
       ? `<span class="swWrap"><button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button><span class="swCap">${esc(t(isOvMe?'myweek.switch_off':'myweek.switch_on'))}</span></span>` : '';
     return `<div class="rideRow${isOvMe?' rideRow--off':''}${iDrive||drivingIdx>=0?' rideRow--mine':''}" data-rideday="${day}" data-ridedir="${direction}">
       <div class="rideRow__head">
-        <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ownTimeChange ? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(ownTimeChange.from)}</div>` : ''}${changedTag}</div>
+        <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ownTimeChange ? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(ownTimeChange.from)}</div>` : ''}</div>
         <div class="rideRow__mid"><div class="rideRow__lab">${esc(t('ride.chauffeur'))}</div>${who}</div>
         ${act? `<div class="rideRow__act">${act}</div>` : ''}
       </div>

@@ -387,6 +387,11 @@ test('the "Jij" text exists and the old "Jij rijdt" badge texts are gone (no chi
   assert.match(src, /"ride.jij": "Jij"/); assert.doesNotMatch(src, /"schedule.jij_rijdt"|"myweek.jij_rijdt_tag"/);
 });
 
+test('the unused Gewijzigd label text is gone and the single-ride text exists', () => {
+  const src = readSrcFile(new URL('../texts-nl.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /"myweek.gewijzigd"/); assert.match(src, /"schedule.een_rit": "1 rit"/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

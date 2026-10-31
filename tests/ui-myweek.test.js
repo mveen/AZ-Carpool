@@ -87,14 +87,14 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
   assert.match(s, /Maandag 28 sep 07:30 Heen Chauffeur Jan Jansen Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 Terug Chauffeur Jij AFC (&#39;|')34 → Busstation Passagiers Eline, Jahaimy, Saar Jahaimy klaar om 17:30/);
+  assert.match(s, /17:30 Terug Chauffeur Jij AFC (&#39;|')34 → Busstation Passagiers Eline 17:00, Jahaimy 17:30, Saar 17:30 Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
 });
-test('a ride with a deviation this week is tagged "Gewijzigd", also when she has no car yet', () => {
+test('a ride with a deviation this week carries no yellow "Gewijzigd" label any more (owner, 2026-10-31), also when she has no car yet', () => {
   const s = text(renderAt(MON, {}));
-  assert.match(s, /Dinsdag 29 sep 10:15 Heen Gewijzigd Chauffeur Nog geen rit Busstation → AFC (&#39;|')34/);
+  assert.match(s, /Dinsdag 29 sep 10:15 Heen Chauffeur Nog geen rit Busstation → AFC (&#39;|')34/); assert.doesNotMatch(s, /Gewijzigd/);
 });
 test('days without any time for this girl are not shown (Wednesday)', () => {
   assert.ok(!/WO 30/.test(text(render({}))));
@@ -323,11 +323,10 @@ test('outside the days with a temporary rooster the week is exactly as before', 
   assert.match(s, /Do heen · aankomst 10:15/); assert.match(s, /Vr heen · aankomst 11:00/);
   assert.equal(text(render({ periods: {} })), text(render({})));
 });
-test('the pill "Gewijzigd" sits in the time column of the ride, under "vertrek", and not next to the driver', () => {
+test('a changed departure shows only "was 12:00" under the time (no yellow label, no strike-through)', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const html = renderAt(MON, { ...period40(), deviations: dev });
-  assert.match(html, /<div class="rideRow__sub">was 12:00<\/div><span class="tag tag--warn">Gewijzigd<\/span><\/div>/); assert.doesNotMatch(html, /<s>12:00/, 'was {time} is not struck through');
-  assert.ok(html.indexOf('tag--warn">Gewijzigd') < html.indexOf('rideRow__mid', html.indexOf('tag--warn">Gewijzigd')), 'the pill is in the time column, before the driver column');
+  assert.match(html, /<div class="rideRow__sub">was 12:00<\/div><\/div>/); assert.doesNotMatch(html, /<s>12:00|Gewijzigd/, 'was {time} is not struck through and there is no label');
 });
 test('the driver button ends in a (neutral) phone icon, not in ">"', () => {
   const html = renderAt(MON, { ...period40() });
@@ -338,7 +337,7 @@ test('the driver button ends in a (neutral) phone icon, not in ">"', () => {
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 Terug was 12:00 Gewijzigd Chauffeur Jan Jansen AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
+  assert.match(s, /12:30 Terug was 12:00 Chauffeur Jan Jansen AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {
@@ -485,7 +484,7 @@ test('every ride is its own white card: time and direction, "Chauffeur", route, 
 test('the card you drive has the green edge, the quiet green "Jij" (no badge) and a labelled passenger list; another driver\'s card does not', () => {
   const h = renderDayAt(MON, {});
   const [heen, terug] = h.split(/(?=<div class="rideRow[ "])/).filter(x => x.startsWith('<div class="rideRow'));
-  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /rideRow__who rideRow__who--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt/); assert.match(terug, /Passagiers<\/span>Eline, Jahaimy, Saar/);
+  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /rideRow__who rideRow__who--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt/); assert.match(terug, /Passagiers<\/span>Eline 17:00, Jahaimy 17:30, Saar 17:30/);
   assert.match(terug, /class="roundBtn" data-drivercar/, 'Tijd en plek: a round icon button, top right'); assert.match(heen, /class="roundBtn" data-contact="f3"|class="roundBtn" data-contact="f/, 'someone else drives: the round phone button');
 });
 test('a ride she does not take part in says so (no car, no time) and the switch is off; the other ride of that day stays as it is', () => {
@@ -507,5 +506,11 @@ await testAsync('a day somebody else decides, with a request of another family: 
   assert.doesNotMatch(h, /data-fold="wrtake|data-wrtakeover|Dagcoördinator: Kees de Vries|wrroost/);
   useFakeDb(sampleDbSeed());
 });
+test('the line "Jouw rijbeurt" names the passengers with their own time, earliest first', () => {
+  const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f3'], departureTime: '12:30' }, { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
+  const s = text(renderAt(MON, { ...period40(), deviations: dev }));
+  assert.match(s, /Jouw rijbeurt om 12:30 · Eline 17:30, Anouk Jahaimy klaar om/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

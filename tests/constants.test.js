@@ -43,6 +43,9 @@ test('the Beheer section icons exist and are Phosphor paths', () => {
 test('the Phosphor icons of the design system v2 exist, regular and -fill (tab bar and header)', () => {
   for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat','steering-wheel','warning-circle','whatsapp-logo','phone','megaphone']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
 });
+test('the sun and moon icons for the direction mark exist', () => {
+  for (const k of ['sun','moon']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
+});
 test('the lightning icon is gone from the whole app (owner, 2026-10-31)', () => {
   assert.ok(!PH_PATHS['lightning'] && !PH_PATHS['lightning-fill']);
 });

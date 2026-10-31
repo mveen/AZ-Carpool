@@ -292,7 +292,7 @@ test('the avatar article quotes names that exist in the app', () => {
 });
 
 test('help reflects the server jobs, the new host and the "Aanwezig om" texts', () => {
-  assert.match(allText(findArticle('mijn-week')), /gele pil "Gewijzigd"/); assert.match(allText(findArticle('mijn-week')), /telefoon-icoon/); assert.match(allText(articles.find(x => x.id === 'afwijkend-weekrooster')), /standaard dicht/);
+  assert.doesNotMatch(allText(findArticle('mijn-week')), /gele pil/); assert.match(allText(findArticle('mijn-week')), /telefoon-icoon/); assert.match(allText(articles.find(x => x.id === 'afwijkend-weekrooster')), /standaard dicht/);
   assert.match(allText(findArticle('mijn-week')), /aanwezig om/); assert.ok(Object.values(nl).includes('{name} aanwezig om'));
   assert.match(allText(findArticle('over-privacy')), /mijn\.host[\s\S]*Back-ups[\s\S]*30 dagen/);
   assert.match(allText(findArticle('over-diensten')), /Opschonen[\s\S]*vrijdag kort na 19:00/);
@@ -377,11 +377,11 @@ test('the privacy article says a phone that was not used for 30 days is disconne
   assert.match(all, /30 dagen niet is gebruikt, wordt automatisch losgekoppeld/); assert.match(all, /opnieuw je toegangscode/);
 });
 
-test('the help explains the redesign: day pills and the card you drive in Mijn week, blue Rooster with Aankomst bij and ATC blocks', () => {
+test('the help explains the redesign: day pills and the card you drive in Mijn week, blue Rooster as a list with sun and moon and the route (ATC in the route)', () => {
   const body = id => articles.find(x => x.id === id).body.join(' ');
   assert.match(body('mijn-week'), /kies je een dag/); assert.match(body('mijn-week'), /groene rand/); assert.match(body('mijn-week'), /ingeklapt onder de dag/);
   const r = articles.find(x => /Wat staat er in het Rooster/.test(x.title)).body.join(' ');
-  assert.match(r, /blauw/); assert.match(r, /Aankomst bij/); assert.match(r, /ATC Wijdewormer/);
+  assert.match(r, /blauw/); assert.match(r, /zon op een blauwgrijze kaart/); assert.match(r, /ATC Wijdewormer/);
 });
 
 test('the coordinator help explains the switch-parent icon and that the tab stays the same', () => {
@@ -399,6 +399,11 @@ test('help names the share button by its icon (three connected dots), not as an 
 test('help describes "Jij" in green, not a Jij rijdt label', () => {
   const all = JSON.stringify(articles);
   assert.doesNotMatch(all, /label Jij rijdt/); assert.match(all, /in het groen \\"Jij\\" bij Chauffeur/);
+});
+
+test('help describes the Rooster list with sun and moon, and no yellow Gewijzigd pill in Mijn week', () => {
+  const all = JSON.stringify(articles);
+  assert.doesNotMatch(all, /gele pil|meiden erin|in een eigen blok/); assert.match(all, /Een zon op een blauwgrijze kaart is een heenrit/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
