@@ -162,12 +162,18 @@ test('actionCardHtml: the amber dot in front of each request only with dots on',
   const html = actionCardHtml('Do', { dots: true }), plain = actionCardHtml('Do');
   if (html) { assert.match(html, /class="reqDot"/); assert.doesNotMatch(plain, /reqDot/); }
 });
-await testAsync('Mijn week: the entry card is there every day until it is arranged (no more fold on other days)', async () => {
+await testAsync('Mijn week: the entry card is open only on the day before the carpool day, otherwise one folded line with the number', async () => {
   await asDecider({ groups: CARS });
-  for (const iso of ['2026-09-28T10:00:00+02:00', '2026-09-30T10:00:00+02:00', '2026-10-01T10:00:00+02:00']) {
-    let h; withFakeNow(iso, () => { renderMyWeek(); h = dom.html('tab-myweek'); });
-    assert.match(h, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/, iso); assert.doesNotMatch(h, /fold--alert/, iso);
+  const at = iso => { let h; withFakeNow(iso, () => { renderMyWeek(); h = dom.html('tab-myweek'); }); return h; };
+  const open = at('2026-09-30T10:00:00+02:00');   // Wednesday: Thursday is tomorrow
+  assert.match(open, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/); assert.doesNotMatch(open, /fold--alert/); assert.match(text(open), /1 aanvraag voor donderdag/);
+  for (const iso of ['2026-09-28T10:00:00+02:00', '2026-09-29T10:00:00+02:00', '2026-10-01T10:00:00+02:00']) {   // Mon, Tue, and the carpool day itself
+    const h = at(iso);
+    assert.match(h, /<details class="fold fold--alert"[^>]*data-fold="wraction\|Do"/, iso); assert.doesNotMatch(h, /<details[^>]*data-fold="wraction\|Do"[^>]* open/, iso);
+    assert.match(text(h), /Actie nodig voor donderdag 1/, iso); assert.match(h, /data-wrlook="Do"/, 'the button stays inside the fold');
+    assert.doesNotMatch(text(h), /1 aanvraag voor donderdag/, 'the fold has the title, the card inside does not repeat it');
   }
+  S.folds = { 'wraction|Do': true }; assert.match(at('2026-09-28T10:00:00+02:00'), /data-fold="wraction\|Do" open/); S.folds = {};
 });
 test('ui-weekrooster-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-rooster.js'));
 

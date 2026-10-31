@@ -6,6 +6,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
+import { dateForWeekday } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
 import { essenceHtml } from './ui-weekrooster-essence.js';
@@ -80,14 +81,14 @@ export function scheduleDayExtrasHtml(day) {
 
 // The card that announces what waits for the day coordinator: how many requests, the advice in one line and "Regel dit" (opens the flow).
 // One design for Rooster (above the day) and Mijn week. `attr` is the data attribute of the button, `extra` more attributes of the card.
-export function entryCardHtml(day, n, attr, extra = '') {
+export function entryCardHtml(day, n, attr, extra = '', title = true) {
   if (!n) return '';
   const hasDirect = recentChanges(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).some(r => r.state === 'direct');   // "Rijdt niet mee" is only mentioned when one was really processed
   const line = (adviceLineOf(day) || t('weekrooster.alert.body')) + (hasDirect ? ' ' + t('weekrooster.alert.bodyDirect') : '');
   const advice = adviceForDay(day), plan = planOf(advice, 'best');
   const rows = Object.keys(advice.directions).length && !plan.blocked && !plan.fallback ? essenceHtml(advice, plan, 'entryCard__more') : '';   // the core of the advice: who rides with whom, what leaves at another time
   return `<div class="entryCard${rows ? ' entryCard--stack' : ''}"${extra}><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>
-    <div class="entryCard__text"><b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b><span>${esc(line)}</span></div>
+    <div class="entryCard__text">${title ? `<b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b>` : ''}<span>${esc(line)}</span></div>
     <button type="button" class="btn small" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button>${rows}</div>`;
 }
 
@@ -117,9 +118,22 @@ export function actionCardHtml(day, { advice = true, dots = false } = {}) {
     ${line ? `<div class="alertCard__text">${esc(line)}</div>` : ''}</div>`;
 }
 
+// Only on the calendar day before the carpool day does the card show open: that is the moment the day coordinator really has to arrange it.
+// Before that (and on the day itself) it is one folded line, so it does not dominate Mijn week. The person can still open it (the fold remembers that).
+export function isDayBefore(day, now = new Date()) {
+  const prev = new Date(dateForWeekday(day)); prev.setDate(prev.getDate() - 1);
+  return prev.toDateString() === now.toDateString();
+}
+
 export function myWeekActionCardsHtml() {
   if (!weekroosterActive()) return '';
-  return myDeciderDays().map(day => entryCardHtml(day, pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length, 'data-wrlook', ` data-wraction="${day}"`)).join('');
+  return myDeciderDays().map(day => {
+    const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
+    if (!n) return '';
+    const extra = ` data-wraction="${day}"`;
+    if (isDayBefore(day)) return entryCardHtml(day, n, 'data-wrlook', extra);
+    return foldHtml('wraction|' + day, `${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))} <b>${n}</b>`, entryCardHtml(day, n, 'data-wrlook', extra, false), 'fold--alert', 'wrAction' + day);
+  }).join('');
 }
 
 export function wireMyWeekActions(box) {
