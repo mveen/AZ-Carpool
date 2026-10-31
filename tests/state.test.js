@@ -139,5 +139,6 @@ test('Mijn week starts on its default day (no day chosen under the day pills)', 
 
 test('The day coordinator\'s flow starts closed, and "Auto\'s aanpassen" has no free-text place open', () => { assert.equal(S.wrAdvice, null); assert.equal(S.adjFree, null); });
 
+test('Vast rooster: no car is unfolded at the start', () => { assert.equal(S.stdEditGid, null); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

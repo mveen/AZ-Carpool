@@ -4,7 +4,7 @@ import { S } from './state.js';
 import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
 import { baseCars, driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
 import { dateForWeekday, dayUp } from './dates.js';
-import { ATC_NAME, CITY_AFC, CITY_ATC, arrivalLabel, arrivalPlaces, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
+import { ATC_NAME, CITY_AFC, CITY_ATC, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
 import { esc, foldHtml, hapticTap, locationsCfg, openSheet, phIcon, renderLoadingIfNeeded, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
 import { goToWijzigen, renderMyWeek } from './ui-myweek.js';
@@ -13,7 +13,7 @@ import { dayCoordinatorFor, myLinkedFamilyId } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandardShift, useOption } from './data.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
-import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
+import { scheduleDayExtrasHtml, scheduleDayLogHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
 import { openAskedTimeOf } from './ui-weekrooster-form.js';
 import { minutesToTime } from './planning.js';
 import { renderFlowScreen, wireAdviceEntry } from './ui-weekrooster-advice.js';
@@ -73,7 +73,7 @@ export function renderSchedule(){
       <button type="button" data-rmode="week" class="${mode==='week'?'active':''}" aria-pressed="${mode==='week'}">${t('schedule.deze_week')}</button>
       <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">${t('schedule.standaardrooster')}</button>${periodMode? `<button type="button" data-rmode="period" class="${mode==='period'?'active':''}" aria-pressed="${mode==='period'}">${esc(periodModeLabel())}</button>` : ''}
     </div>
-    ${mode==='week' ? '' : `<div class="infoLine"><span class="infoLine__text">${mode==='period'? periodModeInfoHtml() : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span></div>`}`;
+    ${mode==='period' ? `<div class="infoLine"><span class="infoLine__text">${periodModeInfoHtml()}</span></div>` : ''}`;   // the Vast rooster has no info line (the switch says what it is)
   // Zelf indelen is one task: while it is open it is the whole screen (no coordinator line, tabs or Weekoverzicht). The Advies flow is its
   // own layer on top of the app (renderFlowScreen below).
   const focusHtml = mode==='week' ? scheduleEditHtml() : '';
@@ -82,7 +82,7 @@ export function renderSchedule(){
     + segHtml
     + (mode==='period'
       ? periodViewHtml()
-      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + (mode==='week'? scheduleDayExtrasHtml(S.scheduleDay) : '') + renderDay(S.scheduleDay, label) + (mode==='week'? scheduleDayFootHtml(S.scheduleDay) : ''));
+      : `<div class="dayPills" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>` + (mode==='week'? scheduleDayExtrasHtml(S.scheduleDay) : '') + renderDay(S.scheduleDay, label) + (mode==='week'? scheduleDayLogHtml(S.scheduleDay) + scheduleDayFootHtml(S.scheduleDay) : ''));
   document.querySelectorAll('[data-schedday]').forEach(b=>b.onclick=()=>{
     S.scheduleDay=b.dataset.schedday; hapticTap(); renderSchedule();
   });
@@ -113,7 +113,8 @@ export function renderDay(day,label){
     ${renderDirection(day,'terug')}
   </div>`;
   }
-  return `<div class="daysection"><h3 class="srOnly">${label}</h3>
+  const n = carsCountFor(day,'standard');
+  return `<div class="daysection"><h3 class="dayHead">${esc(label)} <small>${esc(n===1? t('schedule.een_rit') : t('schedule.auto_aantal',{p1:n}))}</small></h3>
     ${renderDirection(day,'heen')}
     ${renderDirection(day,'terug')}
   </div>`;
@@ -219,7 +220,7 @@ export function carRouteHtml(car,direction,day,opts){
 function shiftToolsHtml(day,direction,grps){
   const cfg = locationsCfg();
   const place = (cfg.places.find(p=>p.id===carStdId(grps[0][1],cfg,day,direction))||{}).name || '';
-  return `<div class="shiftTools">
+  return `<div class="rideRow__lab">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div><div class="shiftTools">
     <button type="button" class="btn secondary pill" data-cycleplace="${day}|${direction}">${phIcon('map-pin')}${t('schedule.ophalen')} ${esc(place)}</button>
     <button type="button" class="btn secondary pill" data-replan="${day}|${direction}">${phIcon('shuffle')}${t('schedule.opnieuw_indelen')}</button>
   </div>`;
@@ -234,15 +235,6 @@ function unplacedBoxHtml(day,direction){
     ? `<button type="button" class="btn small" data-gowijzig="${day}">${t('myweek.regelen')}</button>`
     : (S.canEdit? `<button type="button" class="btn small secondary" data-gosugg="${direction}">${t('schedule.voorstellen')}</button>` : '');
   return `<div class="dashBox" role="alert"><b>${t('schedule.niet_ingedeeld_box')}</b> ${l.map(([id])=>girlName(id)).join(', ')}${action? `<div class="dashBox__actions">${action}</div>` : ''}</div>`;
-}
-
-// The section title of one direction ("Heen" / "Terug") with what the time at the sports park means: "Aankomst bij AFC '34" (heen) /
-// "Vertrek bij AFC '34" (terug). `places` = the arrival places [{ key, name, city }] of the cars under this title.
-function directionHeadHtml(day,direction,devTagHtml,places){
-  const cfg = locationsCfg();
-  const where = (places && places.length? places : arrivalPlaces([],cfg)).map(arrivalLabel).join(' · ');
-  const note = t(direction==='heen'? 'schedule.aankomst_bij' : 'schedule.vertrek_bij', { p1: where });
-  return `<div class="sectionHead sectionHead--dir"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}<span class="sectionHead__note">${esc(note)}</span> ${devTagHtml||''}</div></div>`;
 }
 
 // One car of "Deze week", built like a ride of Mijn week: time (and "was"), who drives (the round button next to it: your own car = Tijd en plek,
@@ -290,39 +282,51 @@ export function renderDirectionStandard(day,direction){
   const ungrouped = girlsFor(day,direction).filter(([id])=>!grouped.has(id));
   const myId = myLinkedFamilyId();
 
-  const groupHtml = grps.map(([gid,g],gi)=>{
+  // Each car is a ride card like in "Deze week" (time, driver, seats, route, passengers with their own time). The coordinator edits a car with the
+  // pencil: it unfolds time, driver, place and the trash. Tapping a passenger still moves her to another car.
+  const sorted = grps.map(([gid,g],gi)=>{
     const times = (g.girlIds||[]).map(id=>famTime(id,day,direction)).filter(Boolean).sort();
     const departureFallback = direction==='terug' ? times[times.length-1] : times[0];
-    const departure = g.departureTime || departureFallback || '--:--';
+    return { gid, g, gi, departure: g.departureTime || departureFallback || '--:--' };
+  }).sort((a,b)=> a.departure===b.departure? 0 : a.departure==='--:--'? 1 : b.departure==='--:--'? -1 : a.departure<b.departure? -1 : 1);
+  const groupHtml = sorted.map(({gid,g,gi,departure})=>{
     const driver = g.driverFamilyId? fam(g.driverFamilyId):null;
     const otherGroups = grps.filter(([oid])=>oid!==gid);
+    const own = !!(myId && g.driverFamilyId===myId);
+    const editing = S.canEdit && S.stdEditGid===gid;
     // Only offer drivers who aren't already committed to another car this same trip —
     // prevents double-booking instead of fixing it up after the fact.
     const busyElsewhere = new Set(otherGroups.map(([,og])=>og.driverFamilyId).filter(Boolean));
     const eligible = eligibleDrivers(day,direction,g.girlIds.length).filter(([id])=>!busyElsewhere.has(id));
     const driverOptions = `<option value="" disabled ${!g.driverFamilyId?'selected':''}>${t('schedule.kies_chauffeur')}</option>` + eligible.map(([id,f])=>`<option value="${id}" ${id===g.driverFamilyId?'selected':''}>${esc(f.parentName)} (${seats(f)} ${t('beheer.pl')}</option>`).join('');
-    const timeHtml = S.canEdit
-      ? `<input type="time" class="timeBig" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd auto ${gi+1}">`
-      : `<span class="carCard__time">${esc(departure)}</span>`;
-    const pills = sortGirlIds(g.girlIds).map(id=>{
+    const timed = sortGirlIds(g.girlIds).map(id=>({ id, time: famTime(id,day,direction) }))
+      .sort((a,b)=> a.time===b.time? 0 : !a.time? 1 : !b.time? -1 : a.time<b.time? -1 : 1);
+    const pills = timed.map(({id,time})=>{
       const cls = `chip${id===myId?' chip--mine':''}${isFlex(fam(id))?' chip--flex':''}`;
+      const inner = `${girlName(id)}${flexSuffix(id)}${time?` <span class="chipTime">${esc(time)}</span>`:''}`;
       return (S.canEdit && otherGroups.length)
-        ? `<button type="button" class="${cls}" data-movepill="${gid}|${id}" aria-label="${t('schedule.verplaats',{p1:girlName(id)})}" aria-haspopup="dialog">${girlName(id)}${flexSuffix(id)}</button>`
-        : `<span class="${cls}">${girlName(id)}${flexSuffix(id)}</span>`;
+        ? `<button type="button" class="${cls}" data-movepill="${gid}|${id}" aria-label="${t('schedule.verplaats',{p1:girlName(id)})}" aria-haspopup="dialog">${inner}</button>`
+        : `<span class="${cls}">${inner}</span>`;
     }).join('');
-    const driverHtml = S.canEdit
-      ? `<select class="carCard__select" data-swap="${gid}" aria-label="${t('schedule.vaste_chauffeur')} ${gi+1}">${driverOptions}</select>`
-      : driverLineHtml(g.driverFamilyId,myId);
-    return `<div class="carCard" data-gid="${gid}">
-      <div class="carCard__head">
-        ${timeHtml}
-        <div class="carCard__who">${S.canEdit? '' : driverHtml}${carRouteHtml({...g, departureTime:departure!=='--:--'?departure:''},direction,day,{edit:S.canEdit, gid})}</div>
-        ${driver? `<span class="tag" aria-label="${g.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${g.girlIds.length}/${seats(driver)}</span>` : ''}
-        ${S.canEdit? `<button type="button" class="iconbtn danger" data-delgroup="${gid}" aria-label="Verwijder auto ${gi+1}" title="${t('schedule.verwijder_auto')}">${phIcon('trash')}</button>` : ''}
+    const seatsHtml = driver? `<span class="seats" aria-label="${g.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${phIcon('users')}<b>${g.girlIds.length}/${seats(driver)}</b></span>` : '';
+    const pencil = S.canEdit? `<button type="button" class="roundBtn" data-stdedit="${gid}" aria-expanded="${editing}" aria-label="${esc(t('schedule.auto_wijzigen'))}" title="${esc(t('schedule.auto_wijzigen'))}">${phIcon('pencil')}</button>` : '';
+    const who = driverLineHtml(g.driverFamilyId,myId);
+    const car = {...g, departureTime:departure!=='--:--'?departure:''};
+    const editHtml = editing? `<div class="carCard__edit">
+        <input type="time" class="timeBig" data-deptime="${gid}" value="${departure!=='--:--'?departure:''}" aria-label="Vertrektijd auto ${gi+1}">
+        <select class="carCard__select" data-swap="${gid}" aria-label="${t('schedule.vaste_chauffeur')} ${gi+1}">${driverOptions}</select>
+        ${carRouteHtml(car,direction,day,{edit:true,gid})}
+        <button type="button" class="iconbtn danger" data-delgroup="${gid}" aria-label="Verwijder auto ${gi+1}" title="${t('schedule.verwijder_auto')}">${phIcon('trash')}</button>
+      </div>` : '';
+    return `<div class="rideRow scene--${direction}${own? ' rideRow--mine' : ''}" data-gid="${gid}">
+      <div class="rideRow__head">
+        <div class="rideRow__time"><div class="rideRow__dep">${esc(departure)}</div></div>
+        <div class="rideRow__mid"><div class="rideRow__lab">${esc(t('ride.chauffeur'))}</div><div class="rideRow__who">${who}</div></div>
+        <div class="rideRow__act rideRow__act--seats">${seatsHtml}${pencil}</div>
       </div>
-      ${S.canEdit? `<div class="carCard__edit">${driverHtml}</div>` : ''}
-      <div class="chips">${pills}</div>
-      ${neededTimesHtml(day,direction,g.girlIds,undefined,g)}
+      ${editing? '' : carRouteHtml(car,direction,day,{row:true})}
+      ${editHtml}
+      <div class="rideRow__pass"><div class="chips">${pills}</div></div>
       ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn-icon)">
           <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
@@ -403,12 +407,14 @@ export function renderDirectionStandard(day,direction){
   }
   const dev = activeDeviation(day,direction);
   const cars = grps.map(([,g])=>g);
+  const reserveIds = tripReserveIds(day,direction,cars);
+  const backup = reserveIds.length? foldHtml(`roostervast|${day}|${direction}`, `<span>${t('schedule.fold.backup')} <b>${reserveIds.length}</b></span>`, `<div class="chips">${reserveIds.map(id=>`<span class="chip chip--muted">${esc(fam(id).parentName||'?')}</span>`).join('')}</div>`, 'fold--quiet') : '';
   return `<div>
-    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${t('schedule.deze_week_gewijzigd')}</span>`:'',arrivalPlaces(grps.map(([,g])=>g),locationsCfg()))}
-    ${S.canEdit && grps.length? shiftToolsHtml(day,direction,grps) : ''}
     ${groupHtml}
+    ${dev? `<div class="carCard__note"><span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${t('schedule.deze_week_gewijzigd')}</span></div>` : ''}
     ${unplacedBoxHtml(day,direction)}
-    ${tripReserveHtml(day,direction,cars)}
+    ${backup}
+    ${S.canEdit && grps.length? shiftToolsHtml(day,direction,grps) : ''}
     ${suggestHtml}${pickerHtml}
   </div>`;
 }
@@ -530,6 +536,7 @@ export function attachScheduleHandlers(){
       await useOption(day,direction,opt.assignment);
     }
   });
+  document.querySelectorAll('[data-stdedit]').forEach(btn=>btn.onclick=()=>{ const gid=btn.dataset.stdedit; S.stdEditGid = S.stdEditGid===gid? null : gid; hapticTap(); renderSchedule(); });
   document.querySelectorAll('[data-cycleplace]').forEach(btn=>btn.onclick=()=>{ const [day,direction]=btn.dataset.cycleplace.split('|'); hapticTap(); cycleShiftPlace(day,direction); });
   document.querySelectorAll('[data-replan]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn,t('schedule.opnieuw_zeker'),async ()=>{ const [day,direction]=btn.dataset.replan.split('|'); await replanStandardShift(day,direction); }));
   document.querySelectorAll('[data-delgroup]').forEach(btn=>btn.onclick=async ()=>{

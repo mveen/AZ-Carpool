@@ -3,6 +3,7 @@ export const S = {
   scheduleDay: null,
   roosterMode: 'week',
   pendingSwapRequest: null,
+  stdEditGid: null,   // Vast rooster: the car (group id) whose edit fields are unfolded by the pencil
   periodSwap: null,   // temporary rooster: a move into a full car waiting for a rider to swap with { iso, direction, girlId, toIndex }
   me: null,
   canEdit: false,

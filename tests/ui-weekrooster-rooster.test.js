@@ -63,7 +63,7 @@ await testAsync('Rooster on his day: the entry card, the day coordinator line, t
   await asDecider(); const html = rooster(), s = text(html);
   assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Verzoeken verwerken/); assert.doesNotMatch(s, /Advies|Het vaste rooster geldt/);   // Rooster only lists the requests
   assert.doesNotMatch(s, /Dagcoördinator donderdag:|Jij bent dagcoördinator/);   // no line about the day coordinator above the day any more
-  assert.match(html, /<details class="fold fold--quiet"[^>]*id="wrLog"/); assert.match(s, /Recente wijzigingen 1/);   // folded history: only what is settled
+  assert.match(html, /<details class="fold fold--quiet"[^>]*id="wrLog"/); assert.ok(html.indexOf('id="wrLog"') > html.lastIndexOf('rideRow scene--terug'), '"Recente wijzigingen" sits at the bottom, under the cars of terug'); assert.ok(html.indexOf('id="wrLog"') > html.indexOf('rideRow scene--heen')); assert.match(s, /Recente wijzigingen 1/);   // folded history: only what is settled
   assert.match(s, /Evi: Rijdt niet mee Direct wo 08:30/);
   assert.match(html, /class="entryCard entryCard--stack entryCard--plain" id="wrAlert"/); assert.doesNotMatch(html.slice(html.indexOf('id="wrAlert"')).split('data-wradvice')[0], /entryCard__icon/);   // the normal white card, no warning icon assert.doesNotMatch(html, /alertCard__row|devAlert/);   // the requests themselves are listed in step 1 of the flow, not in the Rooster
   assert.doesNotMatch(html, /logItem__dot"[^>]*><\/span>\s*<span class="logItem__main">Anouk/, 'and is not listed a second time below');

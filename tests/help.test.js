@@ -326,9 +326,14 @@ test('the Afwijkend weekrooster parent article explains the form and Mijn week; 
   assert.match(w, /Rooster/); assert.match(w, /Zelf indelen/); assert.match(w, /Toch zelf wijzigen/);
 });
 
+test('the Rooster article says the Vast rooster looks like Deze week and the pencil edits a car', () => {
+  const s = JSON.stringify(articles.find(a => a.title === 'Wat staat er in het Rooster?'));
+  assert.match(s, /Vast rooster ziet er hetzelfde uit als Deze week/); assert.match(s, /potlood/);
+});
+
 test('the day coordinator article tells what he sees (action card, Recente wijzigingen, dot, number)', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
-  assert.match(s, /aanvragen voor die dag/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
+  assert.match(s, /aanvragen voor die dag/); assert.match(s, /Onderaan de dag[^"]*Recente wijzigingen/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
 });
 test('the day coordinator article says the card in Mijn week is folded until the day before', () => {
   assert.match(JSON.stringify(findArticle('dagcoordinator-aanvragen')), /ingeklapt tot de dag voor de carpooldag/);

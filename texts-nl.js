@@ -434,6 +434,7 @@ export default {
   "schedule.gewijzigd": "gewijzigd",
   "schedule.kies_chauffeur": "-- kies chauffeur --",
   "schedule.verwijder_auto": "Verwijder auto",
+  "schedule.auto_wijzigen": "Auto wijzigen",
   "schedule.geen_plek_meer_in_deze": "Geen plek meer in deze auto (",
   "schedule.bezet_wil_je": "bezet). Wil je",
   "schedule.wisselen_met_een_andere_passagier": "wisselen met een andere passagier?",

@@ -517,6 +517,12 @@ details.fold--quiet>summary::after{margin-left:auto}
 details.fold--quiet .sep{color:var(--text-muted)}
 details.fold--quiet .foldLabel{margin:var(--space-3) 0 var(--space-2);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
 details.fold--quiet .foldLabel:first-child{margin-top:0}
+/* An open quiet fold (Back-up, Recente wijzigingen): the content sits right under the title and the fold stands apart from the next card */
+details.fold--quiet[open]>summary{margin-bottom:0}
+details.fold--quiet>.foldBody{padding-bottom:var(--space-6)}
+details.fold--quiet .chips{gap:var(--space-2)}
+/* Vast rooster, unfolded car: the trash is a small icon button at the right, not a bar over the full width */
+.carCard__edit>.iconbtn{justify-self:end}
 .carCard select{margin-top:var(--space-3)}
 .dashBox{margin-top:var(--space-3);border:2px dashed var(--warn-icon);border-radius:var(--radius-car);padding:var(--space-4) var(--space-6);font:var(--type-small);color:var(--warn-ink)}
 .quickAssign{display:flex;flex-direction:column;align-items:stretch;gap:var(--space-3);margin-top:var(--space-3)}

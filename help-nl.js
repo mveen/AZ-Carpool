@@ -173,7 +173,7 @@ export default [
       'Verzoeken verwerken (in Mijn week: Advies bekijken en aanpassen) opent een eigen scherm in drie stappen. Stap 1, Aanvragen: wat ouders vragen en wat het advies is. Stap 2, Indeling: per auto wanneer die vertrekt, welke speelsters meerijden met hun eigen tijd en hoe lang ze wachten, en waarom; tik op een speelster om haar in een andere auto te zetten; wissel met de knoppen Advies en Alternatief, of pas auto\'s aan. Stap 3, Controleren: wat er verandert en wie het merkt. Tot de laatste stap verandert er niets.',
       'Met Doorvoeren op stap 3 worden de wijzigingen doorgevoerd en krijgen de aanvragen de status akkoord. Daarna kun je het Dagbericht delen in de WhatsApp-groep, het scherm sluiten of alles terugdraaien.',
       'Liever zelf indelen? Tik in stap 2 bij Heen of Terug op Aanpassen, of kies in Mijn week Tijden wijzigen. Het formulier Zelf indelen opent dan in Rooster.',
-      'Onder Recente wijzigingen, standaard dicht, staat wat al is afgehandeld: akkoord, direct doorgevoerd of door een ouder zelf gewijzigd.',
+      'Onderaan de dag, onder de ritten van Heen en Terug, staat Recente wijzigingen, standaard dicht. Daar staat wat al is afgehandeld: akkoord, direct doorgevoerd of door een ouder zelf gewijzigd.',
       'Een ouder die toch zelf wil wijzigen, kiest Toch zelf wijzigen onder de dag en krijgt eerst een waarschuwing met jouw naam. Zo\'n wijziging staat daarna als Zelf gewijzigd bij jouw Recente wijzigingen. Er gaat geen melding uit.',
     ],
     tab: 'schedule',
@@ -206,7 +206,7 @@ export default [
     keywords: 'rooster vast rooster deze week standaard alle ritten auto passagier verplaatsen tijdelijk rooster vakantie periode weekoverzicht pdf afdrukken printen',
     body: [
       'Het Rooster laat per dag alle auto\'s zien in één lijst op tijd, net als Mijn week: wie rijdt en welke speelsters erin zitten. Het Rooster is blauw, zodat je ziet waar je bent. Onder elke dag in de dagbalk staat hoeveel ritten er rijden. Een blauwgrijze kaart is een heenrit, een paarse kaart is een terugrit. Bij elke rit staat de route, bijvoorbeeld Busstation → AFC \'34. Gaat een auto naar een andere plek, bijvoorbeeld ATC Wijdewormer, dan staat dat in de route van die auto.',
-      'Het Rooster opent op Deze week (met eventuele wijzigingen). Kies bovenaan Vast rooster voor hoe het elke week is.',
+      'Het Rooster opent op Deze week (met eventuele wijzigingen). Kies bovenaan Vast rooster voor hoe het elke week is. Het Vast rooster ziet er hetzelfde uit als Deze week. De coördinator wijzigt er een auto met het potlood (tijd, chauffeur, plek of verwijderen) en verplaatst een speelster door op haar naam te tikken.',
       'Mag jij de dag indelen (coördinator of dagcoördinator)? Dan open je via Regelen of Tijden wijzigen het formulier Zelf indelen. Daarmee verplaats je speelsters en wissel je chauffeurs voor die dag. Wachten er aanvragen? Dan begin je met Verzoeken verwerken in de kaart boven de dag; Zelf indelen staat onder aan stap 1.',
       'Bij elk speelster in een auto staat haar eigen tijd: heen wanneer ze er moet zijn, terug wanneer ze klaar is. De speelsters staan op tijd (de vroegste eerst) en bij dezelfde tijd op alfabet. Is de vertrektijd van een auto gewijzigd, dan staat onder de tijd klein "was" met de oude tijd. Komt de auto bij een heenrit later aan dan een speelster er moet zijn, of is ze bij een terugrit pas klaar nadat de auto vertrekt, dan staat er een gele waarschuwing.',
       'Onder de auto\'s staat één regel: Rijdt niet mee en Back-up, elk met het aantal. Tik erop om de namen te zien. Tik op de naam van een back-up om die chauffeur te vragen via WhatsApp of Bellen.',
@@ -295,7 +295,7 @@ export default [
     keywords: 'ophaalplek ophalen afzetten plek busstation locatie waar adres',
     body: [
       'Bij elke rit staat de tijd en de plek, bijvoorbeeld "07:05 Busstation → AFC \'34".',
-      'De vaste plek van elke auto staat in het Rooster (Vast rooster): tik op de plek van een auto om het vertrek en de aankomst van alleen die auto te kiezen. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of kies Ander adres… en vul zelf een adres of plek in. Dat wordt niet als vaste plek bewaard en verdwijnt aan het eind van de week.',
+      'De vaste plek van elke auto staat in het Rooster (Vast rooster): tik op het potlood van een auto en dan op de plek om het vertrek en de aankomst van alleen die auto te kiezen. Voor één keer een andere plek kiezen kan in Wijzigen, bij de auto: kies een andere plek of kies Ander adres… en vul zelf een adres of plek in. Dat wordt niet als vaste plek bewaard en verdwijnt aan het eind van de week.',
     ],
     tab: 'deviation',
   },

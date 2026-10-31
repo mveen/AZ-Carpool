@@ -53,6 +53,11 @@ export function isWithin24h(day, now = new Date()) {
   return start.getTime() - now.getTime() <= 24 * 3600 * 1000;
 }
 
+// "Recente wijzigingen" of the day, BELOW the day (after the cars of heen and terug). Only for the day coordinator of that day.
+export function scheduleDayLogHtml(day) {
+  return weekroosterActive() && myDeciderDays().includes(day) ? logHtml(day) : '';
+}
+
 // Above the day in Rooster "Deze week": the requests of every day, for everybody, folded. Open when this person is the day coordinator and the
 // day is less than 24 hours away. Empty for a person without a family of their own.
 export function scheduleDayExtrasHtml(day) {
@@ -62,7 +67,7 @@ export function scheduleDayExtrasHtml(day) {
     const n = counts()[day] || 0;
     // The requests that wait are listed in the card (as they are asked, per heen and terug); "Verzoeken verwerken" opens the flow.
     const card = entryCardHtml(day, n, 'data-wradvice', ' id="wrAlert"', false, true);
-    return (card ? foldHtml('wrroost|' + day, `${icon}<span class="entryCard__title"><b>${esc(titleOf(n, day))}</b></span>`, card, 'fold--alert', 'wrRoost' + day, isWithin24h(day)) : '') + logHtml(day);
+    return card ? foldHtml('wrroost|' + day, `${icon}<span class="entryCard__title"><b>${esc(titleOf(n, day))}</b></span>`, card, 'fold--alert', 'wrRoost' + day, isWithin24h(day)) : '';
   }
   // Somebody else decides this day: the same card, with the name of the day coordinator and "Overnemen" (after a warning). Always folded.
   const card = takeOverCardHtml(day, { title: false });
