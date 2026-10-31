@@ -69,7 +69,7 @@ export function updateHeader(tab){
   if(sw){
     sw.hidden = !isRealCoordinator();   // real coordinator rights, so it stays when the Beheer tab is hidden in a test view
     const ic = document.getElementById('switchParentIcon');
-    if(ic) ic.innerHTML = phIcon('users') + `<span class="roundBtn__badge">${phIcon('arrows-left-right-fill')}</span>`;
+    if(ic) ic.innerHTML = phIcon('user-switch');
     if(sw.classList) sw.classList.toggle('on', !!S.impersonateFamilyId);
   }
   const av = document.getElementById('avatarInitials');

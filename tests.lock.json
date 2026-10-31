@@ -252,8 +252,8 @@
     "test": "a579397d5138b1e464294dc1274a663f0e4504d7e599419f178ae93f48e57dbd"
   },
   "ui-shell.js": {
-    "module": "e70225b0a73346c746569dffb63849b76bb9a54125d40fa9fa2b91af0ad0ba2d",
-    "test": "11b3f3e8b41164e7a4b0a59b0f28db9bc91ecb2b95c648dbe7c995f2b955aa9d"
+    "module": "affc43985524f9bdae77762554829fbf6d520abc6095d936cb454cb5e8e730aa",
+    "test": "d6c53384681f7a8209a2ebcbbbf1bee63da5233bc972f6acf9deab68dc09fafb"
   },
   "ui-weekrooster-advice.js": {
     "module": "534cf377d033afc2f50ca6885e2074129adf9132c1baf4c576fc14a2ae35be06",

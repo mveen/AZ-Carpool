@@ -9,6 +9,7 @@ function test(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, useFakeDb } from './test-support.js';
 import { S } from '../state.js';
 import { startImpersonate } from '../ui-profile.js';
+import { phIcon } from '../ui-common.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
 import { contextLine, initials, updateHeader, openSwitchParent, switchParentRows, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
@@ -268,7 +269,8 @@ console.log('\n=== wissel van ouder (coordinator) ===');
 test('the switch button shows for the real coordinator only, and stays while a test view runs', () => {
   sampleParentState(); updateHeader('myweek'); assert.equal(dom.el('switchParentBtn').hidden, true);
   sampleCoordinatorState(); updateHeader('myweek'); assert.equal(dom.el('switchParentBtn').hidden, false);
-  assert.match(dom.el('switchParentIcon').innerHTML, /<svg[\s\S]*roundBtn__badge[\s\S]*<svg/, 'two people with the swap badge');
+  assert.match(dom.el('switchParentIcon').innerHTML, /^<svg[^>]*>[\s\S]*<\/svg>$/, 'one Phosphor icon (user-switch)');
+  assert.equal(dom.el('switchParentIcon').innerHTML, phIcon('user-switch'));
   sampleCoordinatorState({ impersonateFamilyId: 'f2', canEdit: false }); updateHeader('myweek');
   assert.equal(dom.el('switchParentBtn').hidden, false, 'still there in the test view (Beheer is hidden then)');
   sampleCoordinatorState({ viewAsParent: true, links: { coord: { familyId: 'f1' } }, canEdit: false }); updateHeader('myweek');
