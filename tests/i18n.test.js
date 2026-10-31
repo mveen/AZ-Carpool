@@ -324,8 +324,8 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
 });
 
 test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {
-  ['look', 'headline', 'accept', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
-  assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.headline', { p1: 'vrijdag 23 okt' }), 'Advies · vrijdag 23 okt');
+  ['look', 'headline', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
+  assert.equal(hasKey('weekrooster.advice.accept'), false); assert.equal(t('weekrooster.advice.headline', { p1: 'vrijdag 23 okt' }), 'Advies · vrijdag 23 okt');
   assert.equal(t('weekrooster.advice.doneMany', { p1: 3 }), '3 wijzigingen doorgevoerd');
   assert.equal(t('weekrooster.edit.settledOne'), '1 aanvraag afgehandeld'); assert.equal(t('weekrooster.edit.settledMany', { p1: 3 }), '3 aanvragen afgehandeld');
   // the screen has no reason, no variant switch and no counters any more: those texts are gone

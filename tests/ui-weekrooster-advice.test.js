@@ -83,7 +83,7 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.match(html, /data-wrvariant="best"[^>]*aria-pressed="true"/); assert.match(html, /data-wrvariant="alt"[^>]*aria-pressed="false"/);
   assert.match(s, /Advies 30 min extra wachten Alternatief 135 min extra wachten/);   // what each choice costs, worked out per variant
   assert.match(s, /30 min extra wachten 0 speelsters in andere auto 1 chauffeur merkt het/);
-  assert.match(s, /Lois komt om 09:00/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
+  assert.match(s, /Lois moet er om 09:00 zijn/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
   assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 auto vertrekt Jan Jansen/); assert.match(s, /3\/3/);
   assert.match(s, /Lois vroeg 09:00\. Lois wacht 30 min haar tijd 09:00 · was niet ingedeeld Anouk, Eline · ongewijzigd/);   // the car's why, the rider with her time and wait, the ones who do not change
   assert.match(s, /09:15 auto vertrekt Piet Pieters Evi, Jahaimy/); assert.match(s, /Merken het: Jan Jansen/);
@@ -99,6 +99,14 @@ await testAsync('step 1: "Advies bekijken" goes to step 2, "Zelf indelen" closes
   S.wrAdvice = { day: 'Do' }; press('wrNav'); assert.equal(S.wrAdvice, null);
   S.wrAdvice = { day: 'Do', step: 'plan' }; press('wrNav'); assert.equal(S.wrAdvice.step, 'requests');
   S.wrAdvice = { day: 'Do', step: 'check' }; press('wrNav'); assert.equal(S.wrAdvice.step, 'plan');
+});
+await testAsync('a request that fits as it is: the scene says nothing changes and still shows her in her car with her time', async () => {
+  await setup({ 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { status: 'accepted' }), 'weekRequests/2026-W40_Do_f3': doc('Do', 'f3', { heen: '08:45', terug: '17:00' }) });
+  S.wrAdvice = { day: 'Do', step: 'plan' };
+  const s = text(view());
+  assert.match(s, /Anouk moet er om 08:45 zijn/); assert.match(s, /Past in de bestaande auto’s: hier verandert niets\./);
+  assert.match(s, /Anouk .* haar tijd 08:45 · aanvraag/);   // she is shown: the reader sees why this shift is here
+  assert.doesNotMatch(s, /Komt door/);   // nothing waits longer, so no sum to explain
 });
 await testAsync('the girl rows: only girls who asked or who change car; old values in the state do not matter', async () => {
   await setup(); S.wrAdvice = { day: 'Do', direction: 'nonsense', variant: 'nonsense', step: 'nonsense', edits: null };

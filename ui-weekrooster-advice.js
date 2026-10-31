@@ -174,9 +174,9 @@ function waitChanges(adv, plan) {
   });
   return out;
 }
-const waitSumHtml = (adv, plan) => {
+const waitSumHtml = (adv, plan, stats) => {
   const ch = waitChanges(adv, plan).sort((a, b) => b.dl - a.dl);
-  if (!ch.length) return '';
+  if (!ch.length || !stats.extraWait) return '';   // only where it explains a number above 0: otherwise plus and minus cancel and it only confuses
   const items = ch.slice(0, 5).map(x => `${rawGirl(x.id)} ${x.dl > 0 ? '+' : '−'}${Math.abs(x.dl)}`).join(' · ');
   return `<p class="statTiles__sum">${esc(t('weekrooster.flow.waitSum', { p1: items }))}${ch.length > 5 ? ' …' : ''}</p>`;
 };
@@ -188,7 +188,7 @@ function sceneHtml(dir, adv, plan, stats) {
   p.cars.forEach(c => {
     const old = now.find(o => o.driverFamilyId === c.driverFamilyId);
     const same = old && sameKids(old, c) && (old.departureTime || '') === (c.departureTime || '');
-    (same ? plain : changed).push({ c, old });
+    (same && !c.girlIds.some(id => askedBy.has(id)) ? plain : changed).push({ c, old, diff: !same });   // a car with someone who asked always shows her (time and wait), also when nothing changes
   });
   const gone = now.filter(o => !p.cars.some(c => c.driverFamilyId === o.driverFamilyId && c.girlIds.length));
   const riding = new Set(p.cars.flatMap(c => c.girlIds));
@@ -197,6 +197,7 @@ function sceneHtml(dir, adv, plan, stats) {
   const names = ev.familiesChanged.map(rawParent).map(esc);
   return `<section class="scene" data-wrdir="${dir}">
     <div class="scene__head"><b>${esc(sceneTitle(dir, d.ctx))}</b><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span></div>
+    ${changed.every(x => !x.diff) && !gone.length && !notRiding.length ? `<p class="scene__ok">${phIcon('check')}<span>${esc(t('weekrooster.flow.sceneNoChange'))}</span></p>` : ''}
     <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, p.cars) }))}</div>
       ${changed.map(x => carCardHtml(dir, d, ev, x.c, x.old, false, askedBy)).join('')}${gone.map(goneCardHtml).join('')}${plain.map(x => carCardHtml(dir, d, ev, x.c, null, true, askedBy)).join('')}
       ${notRiding.map(id => `<div class="rider rider--off"><b class="rider__name">${girlName(id)}</b><span class="chip chip--muted">${esc(t('weekrooster.flow.capHome'))}</span></div>`).join('')}</div>
@@ -210,7 +211,7 @@ function planStep(adv, f, plan, stats) {
   const opt = (v, key) => `<button type="button" class="tog__opt${f.variant === v ? ' on' : ''}" data-wrvariant="${v}" aria-pressed="${f.variant === v}"><b>${esc(t(key))}</b><span>${esc(sub(v))}</span></button>`;
   const seg = hasAlt ? `<div class="tog" role="group" aria-label="${esc(t('weekrooster.flow.segAria'))}">${opt('best', 'weekrooster.flow.segAdvice')}${opt('alt', 'weekrooster.flow.segAlt')}</div>` : '';
   const n = stats.familiesChanged.length, m = stats.moved.length;
-  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}</div>${waitSumHtml(adv, plan)}`;
+  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}</div>${waitSumHtml(adv, plan, stats)}`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
     body: `<div class="flowStack">${seg}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}

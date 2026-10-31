@@ -5,15 +5,14 @@
 // These are status views, not notifications. Everything here only exists for a person with a family of their own (not Flex).
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, foldHtml, hapticTap, phIcon, showToast } from './ui-common.js';
+import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { dateForWeekday } from './dates.js';
 import { renderSchedule } from './ui-schedule.js';
-import { renderMyWeek } from './ui-myweek.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
-import { acceptDay, adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, planOf, planStats, requestsForDeciding } from './weekrooster-data.js';
+import { adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, planOf, planStats, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekroosterActive } from './ui-weekrooster-form.js';
 
 const wk = () => S.currentWeekKey;
@@ -111,7 +110,7 @@ export function actionCardHtml(day, { buttons = false, advice = true, dots = fal
   const line = buttons || advice ? adviceLineOf(day) : null;
   return `<div class="alertCard alertCard--stack"${buttons ? ` data-wraction="${day}"` : ''}>${title ? `<div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>` : ''}${rows}
     ${line && advice ? `<div class="alertCard__text">${esc(line)}</div>` : ''}
-    ${buttons ? `<div class="formActions formActions--stack"><button type="button" class="btn" data-wrlook="${day}">${esc(t('weekrooster.advice.look'))}</button>${line ? `<button type="button" class="btn secondary" data-wrtake="${day}">${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button>` : ''}</div>` : ''}</div>`;
+    ${buttons ? `<div class="formActions"><button type="button" class="btn" data-wrlook="${day}">${esc(t('weekrooster.advice.look'))}</button></div>` : ''}</div>`;
 }
 
 // Only on the calendar day before the carpool day does the card show open: that is the moment the day coordinator really has to arrange it.
@@ -134,16 +133,4 @@ export function myWeekActionCardsHtml() {
 
 export function wireMyWeekActions(box) {
   box.querySelectorAll('[data-wrlook]').forEach(b => b.onclick = () => { hapticTap(); S.scheduleDay = b.dataset.wrlook; S.roosterMode = 'week'; S.wrDone = null; S.wrAdvice = { day: b.dataset.wrlook, step: 'requests', variant: 'best', edits: {} }; renderSchedule(); });   // the same flow as "Regel dit" in Rooster: its own screen, step 1, over the tab you are on
-  box.querySelectorAll('[data-wrtake]').forEach(b => b.onclick = async () => {
-    hapticTap();
-    const day = b.dataset.wrtake;
-    b.disabled = true;
-    const r = await acceptDay(day, 'best');
-    if (!r.ok) { b.disabled = false; return; }
-    S.wrAdvice = null; S.wrDone = null;
-    showToast(t(r.n === 1 ? 'weekrooster.advice.doneOne' : 'weekrooster.advice.doneMany', { p1: r.n }), {
-      action: { label: t('deviation.ongedaan'), run: async () => { if (await r.undo()) { showToast(t('weekrooster.advice.undone')); renderSchedule(); renderMyWeek(); } } },
-    });
-    renderSchedule(); renderMyWeek();
-  });
 }
