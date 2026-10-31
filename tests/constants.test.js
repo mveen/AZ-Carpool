@@ -102,6 +102,7 @@ test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { as
 test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 156); });
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });
 test('APP_VERSION is at least v165 (the Advies flow as its own full screen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
+test('APP_VERSION is at least v168 (step 2 of the Advies flow: cars first, one meaning per time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 168); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
 test('APP_VERSION is at least v159 (wissel van ouder in de header)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 159); });
 

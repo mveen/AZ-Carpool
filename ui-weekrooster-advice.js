@@ -2,8 +2,8 @@
 // The flow is its own screen on top of the app (renderFlowScreen), one screen per step, like the design "Morgen regelen":
 //   1  Aanvragen   what the parents asked, the advice in one card (waiting, girls in another car), "Advies bekijken en aanpassen" or "Zelf indelen".
 //                  The way in is the small card in Rooster (ui-weekrooster-rooster.js).
-//   2  Indeling    per shift one situation ("Eva en Lotte komen om 17:30"): per girl was → wordt (tap = another car), then the cars with what
-//                  changes; Advies or Alternatief; every change by hand (time, driver, place). Nothing is saved yet.
+//   2  Indeling    per shift one situation ("Eva en Lotte komen om 17:30"): the cars, each with its departure once, why, and the riders with their
+//                  own time and wait (tap a rider = another car); Advies or Alternatief; every change by hand (time, driver, place). Nothing is saved yet.
 //   3  Controleren one summary, one button "Doorvoeren voor {dag}" (weekrooster-data.js acceptDay). After it: "Alles terugdraaien" and the Dagbericht.
 // The state is S.wrAdvice = { day, step: 'requests'|'plan'|'check', variant: 'best'|'alt', edits: { heen?: cars, terug?: cars } }; the changes by hand
 // are pure functions in weekrooster-plan.js. Planning a day without requests by hand is the editor (ui-weekrooster-edit.js).
@@ -124,45 +124,68 @@ function sceneTitle(dir, ctx) {
   return t(heen ? 'weekrooster.flow.sceneHeenMixed' : 'weekrooster.flow.sceneTerugMixed');
 }
 
-// One girl: what she was (car and time), what she becomes (tap = another car), and in a few words how that is for her.
-function girlRowHtml(dir, d, plan, ev, id, asked) {
-  const car = plan.dirs[dir].cars.find(c => c.girlIds.includes(id)), old = d.cars.find(c => (c.girlIds || []).includes(id));
-  const tm = timeAfter(d.ctx, id), was = d.ctx.timeOf(id) || '', w = ev.waitOf[id], heen = dir === 'heen';
-  let cap = '', warn = false;
-  if (!tm) cap = t('weekrooster.flow.capHome');
-  else if (w < 0) { cap = t('weekrooster.flow.pickLate'); warn = true; }
-  else if (w > 0) { cap = t(heen ? 'weekrooster.flow.capEarly' : 'weekrooster.flow.capLate', { p1: w }); warn = true; }
-  else cap = t(asked ? 'weekrooster.flow.capAsked' : heen ? 'weekrooster.flow.capSameHeen' : 'weekrooster.flow.capSameTerug');
-  const wasHtml = old ? `${esc(rawParent(old.driverFamilyId))}${was ? `<i>${esc(was)}</i>` : ''}` : esc(t('weekrooster.flow.wasNone'));
-  const changed = !old || !car || old.driverFamilyId !== car.driverFamilyId || was !== tm;
-  const now = tm && car
-    ? `<button type="button" class="wwSel${changed ? '' : ' wwSel--same'}" data-wrgirl="${dir}|${esc(id)}" aria-label="${esc(t('weekrooster.flow.pickAria', { p1: rawGirl(id) }))}"><span>${esc(rawParent(car.driverFamilyId))}<i>${esc(tm)}</i></span>${phIcon('caret-down')}</button>`
-    : `<div class="wwSel wwSel--off"><span>${esc(t('weekrooster.flow.capHome'))}</span></div>`;
-  return `<div class="wwRow"><div class="wwRow__top"><b>${girlName(id)}</b><span class="wwRow__cap${warn ? ' wwRow__cap--warn' : tm ? '' : ' wwRow__cap--off'}">${esc(cap)}</span></div>
-    <div class="ww"><div class="wwWas">${wasHtml}</div><span class="wwArrow">${phIcon('caret-right')}</span>${now}</div></div>`;
+// A rider in a car, with HER time, how long she waits and (when she moves) where she comes from. Tap = another car.
+// Vocabulary (the same everywhere in this step): "haar tijd" = her own time, "vertrek" = when the car leaves, "wacht" = the difference.
+function waitChip(w) {
+  if (w < 0) return `<span class="chip chip--bad">${esc(t('weekrooster.flow.riderLate'))}</span>`;
+  return w > 0 ? `<span class="chip chip--warn">${esc(t('weekrooster.flow.riderWait', { p1: w }))}</span>` : `<span class="chip chip--ok">${esc(t('weekrooster.flow.riderZero'))}</span>`;
 }
+function riderHtml(dir, d, ev, id, car, asked) {
+  const tm = timeAfter(d.ctx, id), old = d.cars.find(c => (c.girlIds || []).includes(id));
+  const bits = [t('weekrooster.flow.riderTime', { p1: tm || '--:--' })];
+  if (!old) bits.push(t('weekrooster.flow.girlNew'));
+  else if (old.driverFamilyId !== car.driverFamilyId) bits.push(t('weekrooster.flow.riderFrom', { p1: rawParent(old.driverFamilyId) }));
+  else if (asked) bits.push(t('weekrooster.flow.riderAsked'));
+  return `<button type="button" class="rider" data-wrgirl="${dir}|${esc(id)}" aria-label="${esc(t('weekrooster.flow.pickAria', { p1: rawGirl(id) }))}"><b class="rider__name">${girlName(id)}</b>${waitChip(ev.waitOf[id])}${phIcon('arrows-left-right')}<span class="rider__sub">${esc(bits.join(' · '))}</span></button>`;
+}
+const namesOf = ids => sortGirlIds(ids).map(rawGirl).map(esc).join(', ');
 
-// A car of the shift. `old` = the same driver's car now (null: a new car); plain = nothing changes in it.
-function carCardHtml(dir, ctx, c, old, plain) {
-  const cfg = locationsCfg(), max = seats(fam(c.driverFamilyId)), was = old ? old.girlIds || [] : [];
+// A car of the shift: its departure once and big, why it is that time, the riders who ask or move (with their time and wait), who leaves it.
+// `old` = the same driver's car now (null: a new car); plain = nothing changes in it.
+function carCardHtml(dir, d, ev, c, old, plain, askedBy) {
+  const ctx = d.ctx, cfg = locationsCfg(), max = seats(fam(c.driverFamilyId)), was = old ? old.girlIds || [] : [];
   const route = esc(routeLabel(c, dir, cfg, S.wrAdvice.day));
   const timeChanged = old && (old.departureTime || '') !== (c.departureTime || '');
-  const time = `<div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span>${timeChanged ? `<span class="carCard__was">${esc(t('weekrooster.flow.girlWas', { p1: old.departureTime || '--:--' }))}</span>` : ''}</div>`;
+  const time = `<div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span><span class="carCard__cap">${esc(t('weekrooster.flow.carDeparts'))}</span>${timeChanged ? `<span class="carCard__was">${esc(t('weekrooster.flow.girlWas', { p1: old.departureTime || '--:--' }))}</span>` : ''}</div>`;
   const head = (sub, tag) => `<div class="carCard__head">${time}<div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${old || plain ? '' : `<span class="tag tag--warn">${esc(t('weekrooster.advice.new'))}</span>`}<div class="carCard__route">${sub}</div></div>${tag}</div>`;
   const tag = `<span class="tag">${c.girlIds.length}/${max}</span>`;
   if (plain) return `<div class="carCard carCard--plain">${head(`${sortGirlIds(c.girlIds).map(rawGirl).map(esc).join(', ')} · ${route}`, tag)}</div>`;
-  const chipTime = id => { const tm = timeAfter(ctx, id); return tm ? ` <span class="chipTime">${esc(tm)}</span>` : ''; };
-  const chips = sortGirlIds(c.girlIds).map(id => { const add = old && !was.includes(id); return `<span class="chip${add ? ' chip--add' : ''}">${add ? '+ ' : ''}${girlName(id)}${chipTime(id)}</span>`; }).join('')
-    + sortGirlIds(was.filter(id => !c.girlIds.includes(id))).map(id => `<span class="chip chip--gone">${girlName(id)}</span>`).join('');
-  return `<div class="carCard carCard--changed">${head(route, tag)}<div class="chips">${chips}</div></div>`;
+  const key = id => askedBy.has(id) || !old || !was.includes(id);
+  const riders = sortGirlIds(c.girlIds).filter(key), rest = sortGirlIds(c.girlIds).filter(id => !key(id));
+  const askers = sortGirlIds(c.girlIds.filter(id => { const r = askedBy.get(id); return r && r.rides && r.time; }));
+  const askTimes = [...new Set(askers.map(id => askedBy.get(id).time))];
+  const why = !askers.length ? ''
+    : askTimes.length === 1 ? t(askers.length === 1 ? 'weekrooster.flow.whyAsked1' : 'weekrooster.flow.whyAskedN', { p1: niceList(askers.map(rawGirl)), p2: askTimes[0] })
+    : t('weekrooster.flow.whyAskedMixed', { p1: niceList(askers.map(rawGirl)) });
+  const left = sortGirlIds(was.filter(id => !c.girlIds.includes(id)));
+  return `<div class="carCard carCard--changed">${head(route, tag)}
+    ${why ? `<p class="carCard__why">${timeChanged ? `<b>${esc(t('weekrooster.flow.whyTime', { p1: c.departureTime || '--:--' }))}</b> ` : ''}${esc(why)}</p>` : ''}
+    ${riders.map(id => riderHtml(dir, d, ev, id, c, askedBy.has(id))).join('')}
+    ${left.length ? `<p class="carCard__out"><span>${esc(t('weekrooster.flow.leaves'))}</span> <s>${left.map(rawGirl).map(esc).join(', ')}</s>${timeChanged ? ` ${esc(t('weekrooster.flow.leavesWhy', { p1: c.departureTime || '--:--' }))}` : ''}</p>` : ''}
+    ${rest.length ? `<p class="carCard__rest">${namesOf(rest)} · ${esc(t('weekrooster.flow.restUnchanged'))}</p>` : ''}</div>`;
 }
 const goneCardHtml = c => `<div class="carCard carCard--gone"><div class="carCard__head"><div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span></div>
   <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span></div><span class="tag">${esc(t('weekrooster.advice.gone'))}</span></div></div>`;
 
+// Who waits longer or shorter than now: the plan against the cars as they are today (the same sum as "extra wachten", per person).
+function waitChanges(adv, plan) {
+  const out = [];
+  Object.keys(plan.dirs).forEach(dir => {
+    const d = adv.directions[dir], after = evaluateCars(d.ctx, plan.dirs[dir].cars).waitOf, before = evaluateCars(d.ctx, d.cars).waitOf;
+    Object.keys(after).forEach(id => { const dl = Math.max(0, after[id]) - Math.max(0, before[id] || 0); if (dl) out.push({ id, dl }); });
+  });
+  return out;
+}
+const waitSumHtml = (adv, plan) => {
+  const ch = waitChanges(adv, plan).sort((a, b) => b.dl - a.dl);
+  if (!ch.length) return '';
+  const items = ch.slice(0, 5).map(x => `${rawGirl(x.id)} ${x.dl > 0 ? '+' : '−'}${Math.abs(x.dl)}`).join(' · ');
+  return `<p class="statTiles__sum">${esc(t('weekrooster.flow.waitSum', { p1: items }))}${ch.length > 5 ? ' …' : ''}</p>`;
+};
+
 function sceneHtml(dir, adv, plan, stats) {
   const d = adv.directions[dir], p = plan.dirs[dir], ev = stats.perDir[dir], now = d.cars.filter(c => (c.girlIds || []).length);
-  const asking = d.ctx.requests.map(r => r.familyId);
-  const ids = sortGirlIds([...new Set([...asking, ...ev.moved])]);
+  const askedBy = new Map(d.ctx.requests.map(r => [r.familyId, r]));
   const changed = [], plain = [];
   p.cars.forEach(c => {
     const old = now.find(o => o.driverFamilyId === c.driverFamilyId);
@@ -170,14 +193,15 @@ function sceneHtml(dir, adv, plan, stats) {
     (same ? plain : changed).push({ c, old });
   });
   const gone = now.filter(o => !p.cars.some(c => c.driverFamilyId === o.driverFamilyId && c.girlIds.length));
+  const riding = new Set(p.cars.flatMap(c => c.girlIds));
+  const notRiding = sortGirlIds([...new Set([...askedBy.keys(), ...ev.moved])].filter(id => !riding.has(id)));
   const heen = dir === 'heen';
   const names = ev.familiesChanged.map(rawParent).map(esc);
   return `<section class="scene" data-wrdir="${dir}">
     <div class="scene__head"><b>${esc(sceneTitle(dir, d.ctx))}</b><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span></div>
-    <div class="ww ww--cols" aria-hidden="true"><span>${esc(t('weekrooster.flow.colWas'))}</span><span></span><span class="ww__now">${esc(t('weekrooster.flow.colNow'))}</span></div>
-    ${ids.map(id => girlRowHtml(dir, d, plan, ev, id, asking.includes(id))).join('')}
     <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, p.cars) }))}</div>
-      ${changed.map(x => carCardHtml(dir, d.ctx, x.c, x.old, false)).join('')}${gone.map(goneCardHtml).join('')}${plain.map(x => carCardHtml(dir, d.ctx, x.c, null, true)).join('')}</div>
+      ${changed.map(x => carCardHtml(dir, d, ev, x.c, x.old, false, askedBy)).join('')}${gone.map(goneCardHtml).join('')}${plain.map(x => carCardHtml(dir, d, ev, x.c, null, true, askedBy)).join('')}
+      ${notRiding.map(id => `<div class="rider rider--off"><b class="rider__name">${girlName(id)}</b><span class="chip chip--muted">${esc(t('weekrooster.flow.capHome'))}</span></div>`).join('')}</div>
     <div class="scene__note">${phIcon('info')}<span>${names.length ? t('weekrooster.flow.notice', { p1: names.join(', ') }) : esc(t('weekrooster.flow.notice0'))}</span></div></section>`;
 }
 
@@ -188,7 +212,7 @@ function planStep(adv, f, plan, stats) {
   const opt = (v, key) => `<button type="button" class="tog__opt${f.variant === v ? ' on' : ''}" data-wrvariant="${v}" aria-pressed="${f.variant === v}"><b>${esc(t(key))}</b><span>${esc(sub(v))}</span></button>`;
   const seg = hasAlt ? `<div class="tog" role="group" aria-label="${esc(t('weekrooster.flow.segAria'))}">${opt('best', 'weekrooster.flow.segAdvice')}${opt('alt', 'weekrooster.flow.segAlt')}</div>` : '';
   const n = stats.familiesChanged.length, m = stats.moved.length;
-  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}</div>`;
+  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}</div>${waitSumHtml(adv, plan)}`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
     body: `<div class="flowStack">${seg}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
@@ -315,25 +339,29 @@ const setCars = (f, dir, cars) => { f.edits = { ...f.edits, [dir]: cars }; };
 // A girl to another car: the cars of this shift, with the time, the free seats and what it means for her.
 function openGirlSheet(dir, id) {
   const f = flowState(), adv = adviceForDay(f.day), d = adv.directions[dir], cars = currentCars(adv, f, dir);
-  const here = cars.find(c => c.girlIds.includes(id));
+  const here = cars.find(c => c.girlIds.includes(id)), ev0 = evaluateCars(d.ctx, cars), tm = timeAfter(d.ctx, id);
   const items = cars.map(c => {
     const free = seats(fam(c.driverFamilyId)) - c.girlIds.length + (c.girlIds.includes(id) ? 1 : 0);
     const next = withGirlIn(d.ctx, [...cars], id, c.driverFamilyId);
     const ev = evaluateCars(d.ctx, next), w = ev.waitOf[id];
-    const nextCar = next.find(x => x.driverFamilyId === c.driverFamilyId);
+    const nextCar = next.find(x => x.driverFamilyId === c.driverFamilyId), nextDep = (nextCar && nextCar.departureTime) || c.departureTime || '--:--';
     const bits = [c === here ? t('weekrooster.flow.pickHere') : free <= 0 ? t('weekrooster.flow.pickFull') : t(free === 1 ? 'weekrooster.flow.pickSeats1' : 'weekrooster.flow.pickSeatsN', { p1: free })];
-    if (c !== here && free > 0) bits.push(w < 0 ? t('weekrooster.flow.pickLate') : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : '');
+    const more = [];
+    if (c !== here && free > 0) {
+      bits.push(w < 0 ? t('weekrooster.flow.pickLate') : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : '');
+      if (nextDep !== (c.departureTime || '--:--')) more.push(t('weekrooster.flow.pickDepChange', { p1: nextDep, p2: rawGirl(id) }));
+      const worse = (nextCar ? nextCar.girlIds : []).filter(o => o !== id && Math.max(0, ev.waitOf[o] || 0) > Math.max(0, ev0.waitOf[o] || 0));
+      if (worse.length) more.push(t(worse.length === 1 ? 'weekrooster.flow.pickOthers1' : 'weekrooster.flow.pickOthersN', { p1: niceList(sortGirlIds(worse).map(rawGirl)) }));
+    }
     return { icon: c === here ? 'check' : 'arrows-left-right', muted: c !== here && free <= 0,
-      label: esc(t('weekrooster.flow.pickItem', { p1: fam(c.driverFamilyId).parentName || '?', p2: (nextCar && nextCar.departureTime) || c.departureTime || '--:--' })),
-      sub: esc(bits.filter(Boolean).join(' · ')),
+      label: esc(t('weekrooster.flow.pickItem', { p1: fam(c.driverFamilyId).parentName || '?', p2: c.departureTime || '--:--' })),
+      sub: esc(bits.filter(Boolean).join(' · ')), more: more.map(esc),
       onClick: () => { if (c === here || free <= 0) return; setCars(f, dir, withGirlIn(d.ctx, cars, id, c.driverFamilyId)); redraw(); } };
   });
-  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.pickTitle', { p1: girlName(id) }))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.pickSub'))}</p>
-    ${items.map((it, i) => `<button type="button" class="sheetItem${it.muted ? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${phIcon(it.icon)}<span class="sheetItem__label">${it.label}</span><span class="sub">${it.sub}</span></button>`).join('')}`);
+  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.pickTitle', { p1: girlName(id) }))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.pickSubTime', { p1: tm || '--:--' }))}</p>
+    ${items.map((it, i) => `<button type="button" class="sheetItem${it.muted ? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${phIcon(it.icon)}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${[it.sub, ...it.more].filter(Boolean).join('</span><span class="sheetItem__more">')}</span></span></button>`).join('')}`);
   ov.querySelectorAll('[data-sheetidx]').forEach(b => b.onclick = () => { const it = items[+b.dataset.sheetidx]; closeSheet(); it.onClick(); });
 }
-
-// "Auto's aanpassen": per car the departure (calculated or chosen), the driver, the pickup / drop-off place and the arrival; plus a car for another driver.
 function openAdjustSheet() {
   const f = flowState(), adv = adviceForDay(f.day), cfg = locationsCfg();
   const draw = () => {
