@@ -166,15 +166,19 @@ export function buildAdvice(ctx) {
 }
 
 // ---------- the advice with the cars as they are (the flow of the day coordinator) ----------
-// The day coordinator wants the existing cars and drivers to stay: nobody becomes a driver, nobody stops driving unless every girl of the car
-// stays home, and the girls may ride earlier or later than asked. From all valid divisions of the girls over those cars it picks
-//   1  the least total waiting (heen: a girl arrives earlier than she needs to; terug: a girl waits for the last one),
-//   2  then the fewest drivers who did not ask and still notice it (their car gets other girls or another departure time),
-//   3  then the fewest broken "samen reizen" rules,
-//   4  then the fewest girls who change car.
-// "best" is that division; "alt" is the best of the divisions with MORE waiting than best (the second best in waiting, not a copy of
-// best with two girls swapped). Hard rules: seats, the time spread of a car (gapThresholdHours), "eigen ouder rijdt mee" (terug), and a car
-// that still has a girl keeps at least one. When no division of the existing cars is valid, `fallback` is the normal advice
+// PRINCIPLE (owner, 2026-10-31): parents drive out of necessity, not for fun. The daughters want to play football; their parents sacrifice
+// their time so the daughters get there. Longer waiting for a daughter is acceptable, as long as she is on time; without carpooling the
+// daughters would need public transport: far more travel time and money. So fewer cars come FIRST, even when girls wait longer.
+// Nobody becomes a driver; the existing drivers are used, and a car may end up empty (that driver does not drive). From all valid divisions
+// of the girls over those cars it picks
+//   1  the fewest cars (parents who have to drive), within seats and the time spread of a car,
+//   2  then the least total waiting (heen: a girl arrives earlier than she needs to; terug: a girl waits for the last one),
+//   3  then the fewest drivers who did not ask and still notice it (their car gets other girls, another departure time, or stops),
+//   4  then the fewest broken "samen reizen" rules,
+//   5  then the fewest girls who change car.
+// "best" is that division; "alt" is the best of the divisions with a WORSE (cars, waiting) than best (the second best, not a copy of
+// best with two girls swapped). Hard rules: seats, the time spread of a car (gapThresholdHours), "eigen ouder rijdt mee" (terug).
+// When no division of the existing cars is valid, `fallback` is the normal advice
 // (buildAdvice 'zuinig'), which may need a new car or another driver: the screen then says it does not fit and the day coordinator decides.
 // Same ctx as buildAdvice. Result: { carsBefore, best, alt, fallback, waitNow }
 //   Option: { cars: [{ ...car, driverFamilyId, girlIds, departureTime }], times, waitMinutes, extraWait (waiting that the requests add to
@@ -207,7 +211,6 @@ export function buildKeepAdvice(ctx) {
   const cand = current.filter(c => c.driverFamilyId && families[c.driverFamilyId] && c.girlIds.length);
   const seats = cand.map(c => seatsOf(families[c.driverFamilyId]));
   const wasIn = new Map(); cand.forEach((c, i) => c.girlIds.forEach(id => wasIn.set(id, i)));
-  const stays = cand.map(c => c.girlIds.some(id => after.get(id) != null));   // a car that still has a girl keeps one
   const waitOfPlan = groups => {   // groups: array (per car) of rider ids
     let total = 0; const waitOf = {};
     groups.forEach(g => {
@@ -244,17 +247,17 @@ export function buildKeepAdvice(ctx) {
   const groups = cand.map(() => []), anchors = cand.map(() => null);
   let best = null, alt = null, nodes = 0, capped = false;
   const keyOf = () => groups.map(g => g.join(',')).join('|');
-  const lower = (x, y) => x.wait !== y.wait ? x.wait < y.wait : x.notice !== y.notice ? x.notice < y.notice : x.broken !== y.broken ? x.broken < y.broken : x.moved !== y.moved ? x.moved < y.moved : x.key < y.key;
-  const dfs = (i, total, moved) => {
+  const BIG = 100000;   // more than any total waiting: the number of cars weighs first, then the waiting
+  const lower = (x, y) => x.score !== y.score ? x.score < y.score : x.notice !== y.notice ? x.notice < y.notice : x.broken !== y.broken ? x.broken < y.broken : x.moved !== y.moved ? x.moved < y.moved : x.key < y.key;
+  const dfs = (i, total, moved, used) => {
     if (capped) return;
     if (++nodes > MAX_NODES) { capped = true; return; }
-    if (alt && total > alt.wait) return;
+    if (alt && used * BIG + total > alt.score) return;
     if (i === riders.length) {
-      if (groups.some((g, k) => stays[k] && !g.length)) return;
-      const entry = { wait: total, notice: noticed(groups), broken: brokenTogether(groups), moved, key: keyOf(), groups: groups.map(g => [...g]) };
+      const entry = { score: used * BIG + total, cars: used, wait: total, notice: noticed(groups), broken: brokenTogether(groups), moved, key: keyOf(), groups: groups.map(g => [...g]) };
       if (!best) { best = entry; return; }
-      if (entry.wait === best.wait) { if (lower(entry, best)) best = entry; return; }
-      if (entry.wait < best.wait) { const old = best; best = entry; if (!alt || lower(old, alt)) alt = old; return; }
+      if (entry.score === best.score) { if (lower(entry, best)) best = entry; return; }
+      if (entry.score < best.score) { const old = best; best = entry; if (!alt || lower(old, alt)) alt = old; return; }
       if (!alt || lower(entry, alt)) alt = entry;
       return;
     }
@@ -268,12 +271,12 @@ export function buildKeepAdvice(ctx) {
       const cost = first ? 0 : Math.abs(tm - anchor);
       const mv = wasIn.has(id) && wasIn.get(id) !== k ? 1 : 0;
       groups[k].push(id); if (first) anchors[k] = tm;
-      dfs(i + 1, total + cost, moved + mv);
+      dfs(i + 1, total + cost, moved + mv, used + (first ? 1 : 0));
       groups[k].pop(); if (first) anchors[k] = null;
     }
   };
-  if (riders.length) dfs(0, 0, 0);
-  else best = { wait: 0, notice: 0, broken: 0, moved: 0, key: '', groups: cand.map(() => []) };
+  if (riders.length) dfs(0, 0, 0, 0);
+  else best = { score: 0, cars: 0, wait: 0, notice: 0, broken: 0, moved: 0, key: '', groups: cand.map(() => []) };
   if (!best) return { carsBefore, best: null, alt: null, fallback: fallbackOf(), waitNow };
 
   const option = e => {

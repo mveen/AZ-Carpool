@@ -49,7 +49,7 @@ await testAsync('actionCardHtml: the same card with or without its buttons and i
 });
 await testAsync('the advice line: the cars as they are; when it does not fit there is no line and nothing to take over in one tap', async () => {
   await asDecider({ groups: CARS });
-  withFakeNow(NOW, () => { assert.match(adviceLineOf('Do'), /^Advies: 2 speelsters in een andere auto, 45 min extra wachten\.$/); assert.equal(adviceLineOf('Vr'), null); });
+  withFakeNow(NOW, () => { assert.match(adviceLineOf('Do'), /^Advies: 2 speelsters in een andere auto, 420 min extra wachten\.$/); assert.equal(adviceLineOf('Vr'), null); });
   await asDecider();   // no cars on Thursday
   withFakeNow(NOW, () => {
     assert.equal(adviceLineOf('Do'), null);
@@ -94,7 +94,7 @@ await testAsync('the line of the day coordinator says "Jij bent dagcoördinator 
 await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Regel dit")', async () => {
   await asDecider({ groups: CARS }); const html = mijnWeek(), s = text(html), room = rooster();
   assert.match(html, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Regel dit/); assert.match(html, /data-wrlook="Do"/);
-  assert.match(s, /Advies: 2 speelsters in een andere auto, 45 min extra wachten/, 'one line of advice'); assert.match(s, /Rijdt niet mee. is al verwerkt/);
+  assert.match(s, /Advies: 2 speelsters in een andere auto, 420 min extra wachten/, 'one line of advice'); assert.match(s, /Rijdt niet mee. is al verwerkt/);
   assert.doesNotMatch(html, /alertCard|fold--alert|data-wrtake/); assert.doesNotMatch(s, /Actie nodig|Overnemen/); assert.doesNotMatch(noStyle(html), /style="/);
   const inner = h => text(h.slice(h.indexOf('class="entryCard"'))).split('Regel dit')[0].replace(/^[^>]*>/, '');
   assert.equal(inner(html).replace(/\s+/g, ' '), inner(room).replace(/\s+/g, ' '));   // the same words as in Rooster

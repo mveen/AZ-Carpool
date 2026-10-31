@@ -623,6 +623,14 @@ button.planRow{cursor:pointer}
 .waitCalc__row--head{font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
 .waitCalc__row--sum{font-weight:700;border-top:1px solid var(--line);padding-top:var(--space-3)}
 .waitCalc__num{text-align:right;font-family:var(--font-mono,inherit);font-variant-numeric:tabular-nums}
+.whyLine{display:flex;align-items:center;gap:var(--space-3);width:100%;padding:var(--space-4) var(--space-1);background:none;border:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);font:var(--type-caption);color:var(--text-2);text-align:left;cursor:pointer}
+.whyLine>span{flex:1;min-width:0}
+.whyLine b{color:var(--text-1)}
+.whyTable{display:flex;flex-direction:column}
+.whyRow{padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
+.whyRow__n{font-style:normal;color:var(--text-muted);margin-right:var(--space-2)}
+.whyWin{background:var(--ok-soft);color:var(--ok-ink);border-radius:var(--radius-pill);padding:0 var(--space-3)}
+.whyVerdict{display:flex;gap:var(--space-3);align-items:flex-start;color:var(--ok-ink)}
 .waitCalc__result,.waitCalc__final{margin:0;font:var(--type-caption);color:var(--text-2)}
 .waitCalc__final{font:var(--type-card-title);color:var(--text-1)}
 .statTile--ok b{color:var(--ok-ink)}

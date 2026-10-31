@@ -21,7 +21,6 @@ import { evaluateCars } from './weekrooster-impact.js';
 import { acceptDay, adviceForDay, planOf, planStats, withManual } from './weekrooster-data.js';
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace, withoutGirl } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
-import { essenceHtml } from './ui-weekrooster-essence.js';
 
 const dayLabel = dayName;
 const adviceOf = f => withManual(adviceForDay(f.day), f.edits);   // the advice with the girls taken out / added by hand worked in
@@ -241,6 +240,32 @@ function sceneHtml(dir, adv, plan, stats, editDir) {
     <div class="scene__note">${phIcon('info')}<span>${names.length ? t('weekrooster.flow.notice', { p1: names.join(', ') }) : esc(t('weekrooster.flow.notice0'))}</span></div></section>`;
 }
 
+// The reasoning of the advice, in the order the planner weighs it (see buildKeepAdvice): fewest cars, least waiting, fewest drivers who notice,
+// fewest broken rules, fewest girls in another car. One value per criterion for a variant: lower is better.
+const REASONS = ['cars', 'wait', 'notice', 'broken', 'moved'];
+const reasonText = k => ({ cars: t('weekrooster.flow.why_cars'), wait: t('weekrooster.flow.why_wait'), notice: t('weekrooster.flow.why_notice'), broken: t('weekrooster.flow.why_broken'), moved: t('weekrooster.flow.why_moved') })[k];
+const reasonWin = k => ({ cars: t('weekrooster.flow.whyWin_cars'), wait: t('weekrooster.flow.whyWin_wait'), notice: t('weekrooster.flow.whyWin_notice'), broken: t('weekrooster.flow.whyWin_broken'), moved: t('weekrooster.flow.whyWin_moved') })[k];
+function reasonValues(adv, v) {
+  const plan = planOf(adv, v, {}), st = planStats(adv, plan);
+  const dirs = Object.keys(plan.dirs);
+  return { cars: dirs.reduce((n, dir) => n + plan.dirs[dir].cars.filter(c => (c.girlIds || []).length).length, 0), wait: st.extraWait, notice: st.familiesChanged.length,
+    broken: dirs.reduce((n, dir) => { const k = adv.directions[dir].keep, o = k && (v === 'alt' ? k.alt : k.best); return n + ((o && o.broken) || 0); }, 0), moved: st.moved.length };
+}
+const whyLine = () => `<button type="button" class="whyLine" data-wrwhy="1">${phIcon('info')}<span><b>${esc(t('weekrooster.flow.whyLine'))}</b> ${esc(t('weekrooster.flow.whyFirst'))}</span>${phIcon('caret-right')}</button>`;
+function openWhySheet() {
+  const f = flowState(), adv = adviceOf(f);
+  const hasAlt = Object.values(adv.directions).some(d => d.keep && d.keep.alt);
+  const a = reasonValues(adv, 'best'), b = hasAlt ? reasonValues(adv, 'alt') : null;
+  const win = (x, y) => y != null && x < y;
+  const head = `<div class="waitCalc__row waitCalc__row--head whyRow"><span>${esc(t('weekrooster.flow.whyOrder'))}</span><span class="waitCalc__num">${esc(t('weekrooster.flow.segAdvice'))}</span>${b ? `<span class="waitCalc__num">${esc(t('weekrooster.flow.segAlt'))}</span>` : ''}</div>`;
+  const rows = REASONS.map((k, i) => `<div class="waitCalc__row whyRow"><span><i class="whyRow__n">${i + 1}</i> ${esc(reasonText(k))}</span><span class="waitCalc__num${b && win(a[k], b[k]) ? ' whyWin' : ''}">${k === 'wait' ? esc(t('weekrooster.flow.calcMin', { p1: a[k] })) : a[k]}</span>${b ? `<span class="waitCalc__num${win(b[k], a[k]) ? ' whyWin' : ''}">${k === 'wait' ? esc(t('weekrooster.flow.calcMin', { p1: b[k] })) : b[k]}</span>` : ''}</div>`).join('');
+  const first = b ? REASONS.findIndex(k => a[k] !== b[k]) : -1;
+  const verdict = !b ? t('weekrooster.flow.whyOnly') : first < 0 ? t('weekrooster.flow.whyEqual') : t(a[REASONS[first]] < b[REASONS[first]] ? 'weekrooster.flow.whyAdviceWins' : 'weekrooster.flow.whyAltWins', { p1: first + 1, p2: reasonWin(REASONS[first]) });
+  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.whyTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.whySub'))}</p><div class="whyTable">${head}${rows}</div>
+    <p class="waitCalc__final whyVerdict">${phIcon('check')}<b>${esc(verdict)}</b></p><p class="sheet__sub">${esc(t('weekrooster.flow.calcClose'))}</p>`);
+  ov.addEventListener('click', closeSheet);
+}
+
 function planStep(adv, f, plan, stats) {
   const hasAlt = !plan.fallback && Object.values(adv.directions).some(d => d.keep && d.keep.alt);
   // The subtitle is what the choice costs, worked out per variant (never a fixed claim).
@@ -251,7 +276,7 @@ function planStep(adv, f, plan, stats) {
   const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}${waitTile(stats)}</div>${waitSumHtml(adv, plan, stats)}`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
-    body: `<div class="flowStack">${seg}${plan.fallback ? '' : essenceHtml(adv, plan)}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
+    body: `<div class="flowStack">${seg}${plan.fallback ? '' : whyLine()}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
       ${Object.keys(plan.dirs).map(dir => sceneHtml(dir, adv, plan, stats, f.editDir)).join('')}
       ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
       ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(rawGirl).join(', ') }))}</div>` : ''}</div>`,
@@ -553,6 +578,7 @@ export function wireAdvice(box) {
   box.querySelectorAll('[data-wradjust]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); if (!f) return; f.editDir = f.editDir === b.dataset.wradjust ? null : b.dataset.wradjust; S.adjFree = null; renderSchedule(); });
   box.querySelectorAll('[data-wradd]').forEach(b => b.onclick = () => { hapticTap(); const [dir, id] = b.dataset.wradd.split('|'); openAddSheet(dir, id); });
   wireEdit(box);
+  box.querySelectorAll('[data-wrwhy]').forEach(b => b.onclick = () => { hapticTap(); openWhySheet(); });
   box.querySelectorAll('[data-wrwait]').forEach(b => b.onclick = () => { hapticTap(); openWaitSheet(); });
   on('wrToCheck', () => { hapticTap(); flowState().step = 'check'; renderSchedule(); });
   on('wrBackToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });
