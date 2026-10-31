@@ -464,6 +464,9 @@ test('the reasoning of the advice names the criteria in the order of the planner
   assert.match(t('weekrooster.flow.whySub'), /Ouders rijden omdat het moet/); assert.equal(t('weekrooster.flow.why_cars'), 'Auto’s');
   assert.equal(t('weekrooster.flow.whyAdviceWins', { p1: 2, p2: 'minste extra wachttijd' }), 'Advies wint op 2, de belangrijkste verschillende regel: minste extra wachttijd.');
 });
+test('the per-girl "Komt door" line is gone from the texts (the wait tile explains the sum)', () => {
+  assert.equal(nl['weekrooster.flow.waitSum'], undefined);
+});
 test('the driver notice says "Impact voor", not "merken het"', () => {
   assert.equal(t('weekrooster.flow.notice0'), 'Geen impact voor chauffeurs'); assert.equal(t('weekrooster.flow.notice', { p1: 'Jan' }), 'Impact voor: Jan');
   assert.equal(t('weekrooster.flow.tileNoticeN'), 'chauffeurs met impact');

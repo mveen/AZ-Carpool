@@ -194,22 +194,6 @@ function carCardHtml(dir, d, ev, c, old, plain, askedBy, edit, all) {
 const goneCardHtml = c => `<div class="carCard carCard--gone"><div class="carCard__head"><div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span></div>
   <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span></div><span class="tag">${esc(t('weekrooster.advice.gone'))}</span></div></div>`;
 
-// Who waits longer or shorter than now: the plan against the cars as they are today (the same sum as "extra wachten", per person).
-function waitChanges(adv, plan) {
-  const out = [];
-  Object.keys(plan.dirs).forEach(dir => {
-    const d = adv.directions[dir], after = evaluateCars(d.ctx, plan.dirs[dir].cars).waitOf, before = evaluateCars(d.ctx, d.cars).waitOf;
-    Object.keys(after).forEach(id => { const dl = Math.max(0, after[id]) - Math.max(0, before[id] || 0); if (dl) out.push({ id, dl }); });
-  });
-  return out;
-}
-const waitSumHtml = (adv, plan, stats) => {
-  const ch = waitChanges(adv, plan).sort((a, b) => b.dl - a.dl);
-  if (!ch.length || !stats.extraWait) return '';   // only where it explains a number above 0: otherwise plus and minus cancel and it only confuses
-  const items = ch.slice(0, 5).map(x => `${rawGirl(x.id)} ${x.dl > 0 ? '+' : '−'}${Math.abs(x.dl)}`).join(' · ');
-  return `<p class="statTiles__sum">${esc(t('weekrooster.flow.waitSum', { p1: items }))}${ch.length > 5 ? ' …' : ''}</p>`;
-};
-
 function sceneHtml(dir, adv, plan, stats, editDir) {
   const d = adv.directions[dir], p = plan.dirs[dir], ev = stats.perDir[dir], now = d.cars.filter(c => (c.girlIds || []).length);
   const askedBy = new Map(d.ctx.requests.filter(r => !r.manual).map(r => [r.familyId, r]));
@@ -273,7 +257,7 @@ function planStep(adv, f, plan, stats) {
   const opt = (v, key) => `<button type="button" class="tog__opt${f.variant === v ? ' on' : ''}" data-wrvariant="${v}" aria-pressed="${f.variant === v}"><b>${esc(t(key))}</b><span>${esc(sub(v))}</span></button>`;
   const seg = hasAlt ? `<div class="tog" role="group" aria-label="${esc(t('weekrooster.flow.segAria'))}">${opt('best', 'weekrooster.flow.segAdvice')}${opt('alt', 'weekrooster.flow.segAlt')}</div>` : '';
   const n = stats.familiesChanged.length, m = stats.moved.length;
-  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}${waitTile(stats)}</div>${waitSumHtml(adv, plan, stats)}`;
+  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}${waitTile(stats)}</div>`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
     body: `<div class="flowStack">${seg}${plan.fallback ? '' : whyLine()}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}

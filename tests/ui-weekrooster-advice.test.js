@@ -86,7 +86,7 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.match(s, /Alternatief 135 min extra wachten Gekozen op: zo min mogelijk auto’s, dan zo min mogelijk wachttijd 0 speelsters/);   // the reasoning is one line between the choice and the numbers
   assert.doesNotMatch(s, /Heen Lois rijdt mee met/, 'no summary cards of heen and terug in step 2');
   assert.doesNotMatch(html, /essRows/, "the summary cards are not in step 2");
-  assert.match(s, /Lois moet er om 09:00 zijn/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
+  assert.match(s, /Lois moet er om 09:00 zijn/); assert.doesNotMatch(s, /Komt door/, 'the line with the minutes per girl is gone: the tile explains it');
   assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /3\/3/); assert.doesNotMatch(s, /auto vertrekt|Aanvraag/);   // no "auto vertrekt", no "Aanvraag" caption
   assert.match(s, /Lois vroeg 09:00\. Wijzigingen \+1 Lois 09:00 wacht 30 min Bezetting 3\/3 Anouk Eline \+ Lois/);   // the car's why, then the blocks: who is new (time, wait), who sits in it
   assert.match(s, /09:15 Piet Pieters Evi, Jahaimy · Busstation → AFC '34 2\/4/); assert.match(s, /Impact voor: Jan Jansen/);
@@ -138,7 +138,7 @@ await testAsync('PRINCIPLE: a girl stays home and the rest fits in fewer cars: t
   const s = text(view());
   assert.match(s, /Anouk moet er om 08:45 zijn/); assert.match(s, /2 auto’s wijzigen/); assert.match(s, /Jan Jansen Rijdt niet/);
   assert.match(s, /Anouk .*08:45/);   // she is shown: the reader sees why this shift is here
-  assert.match(s, /Komt door/);   // the merge makes girls wait longer: the sum explains it
+  assert.doesNotMatch(s, /Komt door/);
 });
 await testAsync('the girl rows: only girls who asked or who change car; old values in the state do not matter', async () => {
   await setup(); S.wrAdvice = { day: 'Do', direction: 'nonsense', variant: 'nonsense', step: 'nonsense', edits: null };
@@ -207,7 +207,7 @@ await testAsync('a full car stays closed: choosing it changes nothing', async ()
 await testAsync('Alternatief shows the cars with the riders who move: where they come from, their time, how long they wait, who leaves, and the sum behind "extra wachten"', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan', variant: 'alt' };
   const s = text(view());
-  assert.match(s, /135 min extra wachten/); assert.match(s, /Komt door \(minuten\): Evi \+105 · Lois \+30/);   // 105 + 30 = 135
+  assert.match(s, /135 min extra wachten/); assert.doesNotMatch(s, /Komt door/);
   assert.match(s, /Komen uit Piet Pieters Jahaimy 10:15 0 min/); assert.match(s, /Niet meer in deze auto Anouk Eline/); assert.doesNotMatch(s, /Rijden mee met/);
   assert.match(s, /09:15 was 07:30 Jan Jansen/);
   assert.match(s, /Komen uit Jan Jansen Anouk en Eline 08:30 0 min/);   // equal outcomes on one line

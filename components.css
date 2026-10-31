@@ -667,7 +667,6 @@ button.planRow{cursor:pointer}
 .chip--ok{background:var(--ok-soft);color:var(--ok-ink);font-weight:800}
 .chip--warn{background:var(--warn-soft);color:var(--warn-ink);font-weight:800}
 .chip--bad{background:var(--accent-soft);color:var(--accent-ink);font-weight:800}
-.statTiles__sum{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-2)}
 .carCard__why{font:var(--type-caption);color:var(--text-2);background:var(--surface-soft);border-radius:var(--radius-control);padding:var(--space-2) var(--space-4);margin-top:var(--space-4)}
 .carCard__why b{color:var(--text-1)}
 .sheetItem__more{display:block;font:var(--type-caption);font-weight:400;color:var(--text-muted)}

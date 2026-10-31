@@ -1421,7 +1421,6 @@ export default {
   "weekrooster.flow.whyAskedN": "{p1} vroegen {p2}.",
   "weekrooster.flow.whyAskedMixed": "Aanvraag van {p1}.",
   "weekrooster.flow.whyTime": "Waarom {p1}:",
-  "weekrooster.flow.waitSum": "Komt door (minuten): {p1}",
   "weekrooster.flow.pickSubTime": "Haar tijd: {p1}. Alleen auto’s die nu al rijden.",
   "weekrooster.flow.pickDepChange": "Vertrek wordt {p1} als {p2} hier rijdt",
   "weekrooster.flow.pickOthers1": "{p1} wacht dan langer",
