@@ -104,7 +104,7 @@ test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.o
 test('APP_VERSION is at least v165 (the Advies flow as its own full screen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
 test('APP_VERSION is at least v168 (step 2 of the Advies flow: cars first, one meaning per time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 168); });
 test('APP_VERSION is at least v169 (Mijn week: the same button as the flow, Advies bekijken en aanpassen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 169); });
-test('APP_VERSION is at least v174 (step 1 without Zelf indelen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 174); });
+test('APP_VERSION is at least v175 (wait tile opens the sum)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 175); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
 test('APP_VERSION is at least v159 (wissel van ouder in de header)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 159); });
 

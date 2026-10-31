@@ -69,7 +69,8 @@ function headHtml(step, day) {
 const tile = (value, label, ok) => `<div class="statTile${ok ? ' statTile--ok' : ''}"><b>${esc(value)}</b><span>${esc(label)}</span></div>`;
 const movedLabel = n => t(n === 1 ? 'weekrooster.flow.tileMoved1' : 'weekrooster.flow.tileMovedN');
 const noticeLabel = n => t(n === 1 ? 'weekrooster.flow.tileNotice1' : 'weekrooster.flow.tileNoticeN');
-const waitTile = stats => tile(t('weekrooster.flow.tileMin', { p1: stats.extraWait }), t('weekrooster.flow.tileWait'), !stats.extraWait);
+// The wait tile is a button: it opens the sum behind the number (now against the proposal).
+const waitTile = stats => `<button type="button" class="statTile statTile--btn${stats.extraWait ? '' : ' statTile--ok'}" data-wrwait="1" aria-haspopup="dialog"><b>${esc(t('weekrooster.flow.tileMin', { p1: stats.extraWait }))}</b><span>${esc(t('weekrooster.flow.tileWait'))} ${phIcon('info')}</span></button>`;
 
 // ---------- step 1: the requests ----------
 function requestRowHtml(adv, r) {
@@ -90,7 +91,7 @@ function heroHtml(adv, plan, stats) {
   return `<div class="adviceHero">
     <span class="tag tag--ink">${esc(t(fits ? 'weekrooster.flow.heroTag' : 'weekrooster.flow.heroTagNoFit'))}</span>
     <h2 class="adviceHero__title">${esc(fits ? t(n === 1 ? 'weekrooster.flow.heroFits1' : 'weekrooster.flow.heroFitsN', { p1: n }) : t('weekrooster.flow.heroNoFit'))}</h2>
-    ${fits ? `<div class="statTiles">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}</div>` : ''}
+    ${fits ? `<div class="statTiles">${tile(String(m), movedLabel(m), false)}${waitTile(stats)}</div>` : ''}
     <p class="adviceHero__text">${esc(t(fits ? 'weekrooster.flow.heroBody' : 'weekrooster.flow.notFit'))}</p></div>`;
 }
 
@@ -211,7 +212,7 @@ function planStep(adv, f, plan, stats) {
   const opt = (v, key) => `<button type="button" class="tog__opt${f.variant === v ? ' on' : ''}" data-wrvariant="${v}" aria-pressed="${f.variant === v}"><b>${esc(t(key))}</b><span>${esc(sub(v))}</span></button>`;
   const seg = hasAlt ? `<div class="tog" role="group" aria-label="${esc(t('weekrooster.flow.segAria'))}">${opt('best', 'weekrooster.flow.segAdvice')}${opt('alt', 'weekrooster.flow.segAlt')}</div>` : '';
   const n = stats.familiesChanged.length, m = stats.moved.length;
-  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}</div>${waitSumHtml(adv, plan, stats)}`;
+  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}${waitTile(stats)}</div>${waitSumHtml(adv, plan, stats)}`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
     body: `<div class="flowStack">${seg}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
@@ -361,6 +362,26 @@ function openGirlSheet(dir, id) {
     ${items.map((it, i) => `<button type="button" class="sheetItem${it.muted ? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${phIcon(it.icon)}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${[it.sub, ...it.more].filter(Boolean).join('</span><span class="sheetItem__more">')}</span></span></button>`).join('')}`);
   ov.querySelectorAll('[data-sheetidx]').forEach(b => b.onclick = () => { const it = items[+b.dataset.sheetidx]; closeSheet(); it.onClick(); });
 }
+// The sum behind "extra wachten": per direction, per person the waiting now (old times, the cars as they are) against the proposal.
+// Any tap closes it (no button needed).
+function openWaitSheet() {
+  const f = flowState(), adv = adviceForDay(f.day), plan = planOf(adv, f.variant, f.edits);
+  let extra = 0;
+  const groups = Object.keys(plan.dirs).map(dir => {
+    const d = adv.directions[dir], ev = evaluateCars(d.ctx, plan.dirs[dir].cars);
+    const ids = sortGirlIds([...new Set([...Object.keys(ev.baseOf), ...Object.keys(ev.waitOf)])]);
+    const dirExtra = Math.max(0, ev.waitMinutes - ev.baseWait); extra += dirExtra;
+    const min = n => t('weekrooster.flow.calcMin', { p1: n });
+    const rows = ids.map(id => `<div class="waitCalc__row"><span>${girlName(id)}</span><span class="waitCalc__num">${ev.baseOf[id] == null ? '–' : esc(min(ev.baseOf[id]))}</span><span class="waitCalc__num">${ev.waitOf[id] == null ? '–' : esc(min(Math.max(0, ev.waitOf[id])))}</span></div>`).join('');
+    return `<section class="adjDir scene--${dir}"><div class="adjDir__head"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>
+      <div class="waitCalc__row waitCalc__row--head"><span></span><span class="waitCalc__num">${esc(t('weekrooster.flow.calcNow'))}</span><span class="waitCalc__num">${esc(t('weekrooster.flow.calcPlan'))}</span></div>${rows}
+      <div class="waitCalc__row waitCalc__row--sum"><span>${esc(t('weekrooster.flow.calcTotal'))}</span><span class="waitCalc__num">${esc(min(ev.baseWait))}</span><span class="waitCalc__num">${esc(min(ev.waitMinutes))}</span></div>
+      <p class="waitCalc__result">${esc(t('weekrooster.flow.calcDir', { p1: ev.waitMinutes, p2: ev.baseWait, p3: dirExtra }))}</p></section>`;
+  }).join('');
+  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.calcTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.calcSub'))}</p>${groups}
+    <p class="waitCalc__final"><b>${esc(t('weekrooster.flow.calcFinal', { p1: extra }))}</b></p><p class="sheet__sub">${esc(t('weekrooster.flow.calcClose'))}</p>`);
+  ov.addEventListener('click', closeSheet);   // every tap closes
+}
 function openAdjustSheet() {
   const f = flowState(), adv = adviceForDay(f.day), cfg = locationsCfg();
   const draw = () => {
@@ -448,6 +469,7 @@ export function wireAdvice(box) {
   on('wrNav', () => { hapticTap(); navBack(); });
   on('wrToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });
   on('wrAdjust', () => { hapticTap(); openAdjustSheet(); });
+  box.querySelectorAll('[data-wrwait]').forEach(b => b.onclick = () => { hapticTap(); openWaitSheet(); });
   on('wrToCheck', () => { hapticTap(); flowState().step = 'check'; renderSchedule(); });
   on('wrBackToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });
   on('wrAccept', async () => {

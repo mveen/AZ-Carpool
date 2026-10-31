@@ -141,3 +141,4 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - Each scene in step 2 has its own glow: **heen = morning mist** (slate blue, sun badge), **terug = evening red** (plum, moon badge). Tokens `--heen-*` / `--terug-*` (glow, edge, ink, badge) in `tokens.css`, both themes; classes `.scene--heen` / `.scene--terug`. Never use these colours for status.
 - Status stays explicit in every scene: green "Past in de bestaande auto’s: hier verandert niets." or an amber chip "N auto’s wijzigen". Amber/green mean status; slate/plum only mean direction.
 - Step 3 (Controleren) uses the same tint and badge on its summary groups (`.planSum__group.scene--heen/terug`, v172).
+- The wait tile is a button (`.statTile--btn`) that opens a sheet with the sum: per direction per person now against proposal (`.waitCalc__*`, v175); it is the last of the three tiles; any tap closes the sheet.

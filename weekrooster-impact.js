@@ -301,7 +301,7 @@ export function buildKeepAdvice(ctx) {
 
 // What a set of cars (the proposal, possibly changed by hand) means for one shift: the numbers of the screen.
 // ctx as buildKeepAdvice; cars: [{ driverFamilyId, girlIds, departureTime }] as they would run. Nothing is saved or planned.
-// Result: { waitMinutes, extraWait, waitOf: { id: minutes }, late: [id], moved: [id], familiesChanged: [id], carsAfter, problems: [{ key, ids|id }] }
+// Result: { waitMinutes, baseWait (what the cars as they are now wait: the part that is not extra), baseOf: { id: minutes }, extraWait, waitOf: { id: minutes }, late: [id], moved: [id], familiesChanged: [id], carsAfter, problems: [{ key, ids|id }] }
 //   waiting is measured from the departure time that is set on the car (a time chosen by hand counts): heen she arrives at departure + lead and
 //   waits for what is left to her time; terug she waits from her time until the car leaves. A negative number is "late": she is not on time.
 export function evaluateCars(ctx, cars) {
@@ -344,11 +344,11 @@ export function evaluateCars(ctx, cars) {
     if (asking.has(id)) return;
     if (JSON.stringify((before.get(id) || []).sort()) !== JSON.stringify((afterSig.get(id) || []).sort())) changed.push(id);
   });
-  let base = 0;
+  let base = 0; const baseOf = {};
   current.filter(c => c.girlIds.length).forEach(c => {
     const ids = c.girlIds.filter(id => timeNow(id) != null); if (!ids.length) return;
     const ts = ids.map(timeNow), anchor = heen ? Math.min(...ts) : Math.max(...ts);
-    ids.forEach(id => { base += Math.abs(timeNow(id) - anchor); });
+    ids.forEach(id => { const w = Math.abs(timeNow(id) - anchor); baseOf[id] = w; base += w; });
   });
-  return { waitMinutes: total, extraWait: Math.max(0, total - base), waitOf, late, moved, familiesChanged: changed, carsAfter: keepCars.length, problems };
+  return { waitMinutes: total, baseWait: base, baseOf, extraWait: Math.max(0, total - base), waitOf, late, moved, familiesChanged: changed, carsAfter: keepCars.length, problems };
 }

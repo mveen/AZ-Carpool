@@ -159,6 +159,11 @@ console.log('=== the numbers of a changed proposal (evaluateCars) ===');
   const fm = { saar: fam('16:00'), lotte: fam('16:30'), julia: fam('17:00', 5), roos: fam('15:00') };
   const base = { day: 'Ma', direction: 'heen', families: fm, settings: {}, prefs: { rules: [] }, timeOf: id => ({ saar: '16:00', lotte: '16:30', julia: '17:00', roos: '15:00' })[id],
     cars: [{ driverFamilyId: 'saar', girlIds: ['saar'], departureTime: '15:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }], requests: [] };
+  test('evaluate: gives the sum behind extraWait: what the cars wait now (baseWait, per person baseOf) against the proposal', () => {
+    const e = evaluateCars(base, [{ driverFamilyId: 'saar', girlIds: ['saar', 'lotte'], departureTime: '15:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }]);
+    assert.equal(e.baseWait, 120); assert.deepEqual(e.baseOf, { saar: 0, julia: 120, roos: 0 });
+    assert.equal(e.extraWait, Math.max(0, e.waitMinutes - e.baseWait)); assert.equal(e.extraWait, 30);
+  });
   test('evaluate: waiting is measured from the departure time that is set on the car; late is not waiting', () => {
     const e = evaluateCars(base, [{ driverFamilyId: 'saar', girlIds: ['saar', 'lotte'], departureTime: '15:00' }, { driverFamilyId: 'julia', girlIds: ['julia', 'roos'], departureTime: '14:00' }]);
     assert.equal(e.waitOf.saar, 0); assert.equal(e.waitOf.lotte, 30); assert.equal(e.waitOf.roos, 0); assert.equal(e.waitOf.julia, 120);

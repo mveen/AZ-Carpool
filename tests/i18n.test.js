@@ -454,3 +454,7 @@ test('the scene status texts say how many cars change, in singular and plural', 
 test('the time field of Auto’s aanpassen explains the automatic time and offers a way back', () => {
   assert.match(t('weekrooster.flow.depAuto'), /Automatisch berekend/); assert.equal(t('weekrooster.flow.depReset', { p1: '07:30' }), 'Terug naar berekend (07:30)');
 });
+test('the sum behind extra wachten has texts for title, columns, per-direction line and the final line', () => {
+  assert.equal(t('weekrooster.flow.calcTitle'), 'Zo is het berekend'); assert.equal(t('weekrooster.flow.calcDir', { p1: 165, p2: 150, p3: 15 }), 'Extra = 165 − 150, nooit onder 0: 15 min');
+  assert.equal(t('weekrooster.flow.calcFinal', { p1: 15 }), 'Extra wachten: 15 min'); assert.match(t('weekrooster.flow.calcClose'), /Tik ergens/);
+});

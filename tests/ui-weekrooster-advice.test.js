@@ -82,7 +82,7 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.match(s, /Voorstel voor morgen/); assert.match(html, /id="wrNav"[^>]*aria-label="Terug"/);
   assert.match(html, /data-wrvariant="best"[^>]*aria-pressed="true"/); assert.match(html, /data-wrvariant="alt"[^>]*aria-pressed="false"/);
   assert.match(s, /Advies 30 min extra wachten Alternatief 135 min extra wachten/);   // what each choice costs, worked out per variant
-  assert.match(s, /30 min extra wachten 0 speelsters in andere auto 1 chauffeur merkt het/);
+  assert.match(s, /0 speelsters in andere auto 1 chauffeur merkt het 30 min extra wachten/);   // the wait tile is the last of the three
   assert.match(s, /Lois moet er om 09:00 zijn/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
   assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 auto vertrekt Jan Jansen/); assert.match(s, /3\/3/);
   assert.match(s, /Lois vroeg 09:00\. Lois wacht 30 min haar tijd 09:00 · was niet ingedeeld Anouk, Eline · ongewijzigd/);   // the car's why, the rider with her time and wait, the ones who do not change
@@ -103,6 +103,15 @@ await testAsync('step 3 Controleren: the summary groups use the same heen/terug 
   await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
   const html = view();
   assert.match(html, /class="planSum__group scene--heen"/); assert.match(html, /planSum__dir"><span class="scene__badge">/);
+});
+await testAsync('the wait tile is a button that opens the sum (now against the proposal); any tap closes it', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = view(); assert.match(html, /<button type="button" class="statTile statTile--btn[^"]*" data-wrwait="1"/);
+  const box = wired(html); box.querySelectorAll('[data-wrwait]')[0].onclick();
+  const s = text(lastSheet.innerHTML);
+  assert.match(s, /Zo is het berekend/); assert.match(s, /Nu Voorstel/); assert.match(s, /Lois – 30 min/);   // she asked, so she has no "now"
+  assert.match(s, /Samen \d+ min \d+ min/); assert.match(s, /Extra = \d+ − \d+, nooit onder 0: \d+ min/); assert.match(s, /Extra wachten: 30 min/); assert.match(s, /Tik ergens om te sluiten/);
+  assert.match(lastSheet.innerHTML, /class="adjDir scene--heen"/);
 });
 await testAsync('step 1: "Advies bekijken" goes to step 2, "Zelf indelen" closes the flow and opens the day editor, X closes the flow', async () => {
   await setup(); S.wrAdvice = { day: 'Do' };
