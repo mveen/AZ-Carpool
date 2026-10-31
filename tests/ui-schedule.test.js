@@ -389,9 +389,10 @@ test('Rooster shows the spinner while the data is loading', () => {
   assert.doesNotMatch(render(() => sampleParentState({})), /class="spinner"/);
 });
 
-test('the Rooster week view shows the Advies view in place of the day when S.wrAdvice is open (and nothing of it by default)', () => {
+test('the Advies flow is its own screen: the Rooster itself never holds it (open or closed)', () => {
   sampleParentState({ scheduleDay: 'Do', roosterMode: 'week' }); S.wrAdvice = null;
   withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAdvice|wrAccept/);
+  S.wrAdvice = { day: 'Do' }; withFakeNow(NOW, () => renderSchedule()); assert.doesNotMatch(dom.html('tab-schedule'), /wrAdvice|wrAccept/); S.wrAdvice = null;
 });
 test('Advies and Zelf indelen replace the whole Rooster header block: no coordinator line, tabs, Weekoverzicht or day pills', () => {
   const state = edit => () => { sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', dayCoordinators: { Do: 'f2' } }); S.wrAdvice = null; S.wrEdit = edit; };

@@ -66,16 +66,15 @@ export function scheduleDayExtrasHtml(day) {
   const decides = myDeciderDays().includes(day);
   if (decides) {
     const n = counts()[day] || 0;
-    // The requests that wait, as rows in the card (no second list below it). "Rijdt niet mee" is only mentioned when one was really processed.
+    // The requests that wait are not listed here: "Regel dit" opens the flow, whose first step shows them. This card only says how many and
+    // what the advice would be (the cars as they are, least waiting), in one line.
     const now = Date.now(), end = dayEndMs(wk(), day);
-    const waiting = pendingForDay(requestsForDeciding(), wk(), day, now, end);
-    const hasDirect = recentChanges(requestsForDeciding(), wk(), day, now, end).some(r => r.state === 'direct');
-    const rows = waiting.map(r => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span><span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span></div>`).join('');
+    const hasDirect = recentChanges(requestsForDeciding(), wk(), day, now, end).some(r => r.state === 'direct');   // "Rijdt niet mee" is only mentioned when one was really processed
+    const line = n ? (adviceLineOf(day) || t('weekrooster.alert.body')) + (hasDirect ? ' ' + t('weekrooster.alert.bodyDirect') : '') : '';
     const alert = n
-      ? `<div class="devAlert" id="wrAlert"><p class="devAlertTitle">${phIcon('warning-circle-fill')} ${esc(t(n === 1 ? 'weekrooster.alert.titleOne' : 'weekrooster.alert.titleMany', { p1: n, p2: lower(dayName(day)) }))}</p>
-          ${rows}
-          <p class="devAlertBody">${esc(t('weekrooster.alert.body'))}${hasDirect ? ' ' + esc(t('weekrooster.alert.bodyDirect')) : ''}</p>
-          <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button></div></div>`
+      ? `<div class="entryCard" id="wrAlert"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>
+          <div class="entryCard__text"><b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b><span>${esc(line)}</span></div>
+          <button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.entry.go'))}</button></div>`
       : '';
     return coordLineHtml(day, !n) + alert + logHtml(day);
   }

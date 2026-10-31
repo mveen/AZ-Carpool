@@ -156,7 +156,7 @@ import nl from '../texts-nl.js';
 // Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
 const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
   'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Ander adres…', 'Plek toevoegen',
-  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Advies bekijken', 'Zelf indelen', 'Toch zelf wijzigen', 'Overnemen'];
+  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Regel dit', 'Zelf indelen', 'Toch zelf wijzigen', 'Doorvoeren'];
 const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
 const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
 test('every quoted name exists in the app texts', () => {
@@ -331,9 +331,9 @@ test('the day coordinator article tells what he sees (action card, Recente wijzi
   assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
 });
 
-test('the day coordinator article explains the advice: variants, Overnemen, Ongedaan, Dagbericht', () => {
+test('the day coordinator article explains the flow: Regel dit, the three steps, Advies/Alternatief, Doorvoeren, terugdraaien, Dagbericht', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
-  assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/); assert.match(s, /Overnemen/); assert.match(s, /Ongedaan/); assert.match(s, /Dagbericht/);
+  assert.match(s, /Regel dit/); assert.match(s, /Aanvragen/); assert.match(s, /Alternatief/); assert.match(s, /Controleren/); assert.match(s, /Doorvoeren/); assert.match(s, /terugdraaien/); assert.match(s, /Dagbericht/); assert.doesNotMatch(s, /Zuinigst|Minste gedoe|Overnemen/);
 });
 
 test('the day coordinator article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {

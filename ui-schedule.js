@@ -17,7 +17,7 @@ import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
 import { openAskedTimeOf, weekroosterActive } from './ui-weekrooster-form.js';
 import { minutesToTime } from './planning.js';
-import { scheduleAdviceHtml, wireAdvice } from './ui-weekrooster-advice.js';
+import { renderFlowScreen, wireAdviceEntry } from './ui-weekrooster-advice.js';
 import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { timeChangeOf } from './driver-car.js';
@@ -78,8 +78,9 @@ export function renderSchedule(){
       ? t('schedule.het_standaardrooster_met_de_wijzigingen', { p1: weekRangeLabel() })
       : mode==='period'? periodModeInfoHtml()
       : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span>${mode!=='period'? `<button type="button" class="btn secondary chipBtn pill" id="ovOpen">${phIcon('table')}${t('overview.open')}</button>` : ''}</div>`;
-  // Advies and Zelf indelen are one task: while one is open it is the whole screen (no coordinator line, tabs or Weekoverzicht).
-  const focusHtml = mode==='week' ? (scheduleEditHtml() || scheduleAdviceHtml()) : '';
+  // Zelf indelen is one task: while it is open it is the whole screen (no coordinator line, tabs or Weekoverzicht). The Advies flow is its
+  // own layer on top of the app (renderFlowScreen below).
+  const focusHtml = mode==='week' ? scheduleEditHtml() : '';
   // The line about the day coordinator under the days already says it for the day in view, so the banner above the switch is left out then.
   const bannerDup = mode==='week' && weekroosterActive() && (dayCoordinatorTarget()||{}).day === S.scheduleDay;
   box.innerHTML = focusHtml || (bannerDup? '' : dayCoordinatorHtml())
@@ -103,12 +104,13 @@ export function renderSchedule(){
   const ovOpen = document.getElementById('ovOpen');
   if(ovOpen) ovOpen.onclick = ()=>{ hapticTap(); openOverview(); };
   wireTimeChangesCard();
-  wireAdvice(box);
+  wireAdviceEntry(box);
   wireEdit(box);
   wireDriverCar(box, ()=>{ renderSchedule(); renderMyWeek(); });
   updateTimeChangesBadge();
   attachScheduleHandlers();
   wirePeriodRooster();
+  renderFlowScreen();
 }
 
 export function renderDay(day,label){

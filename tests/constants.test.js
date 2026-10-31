@@ -101,6 +101,7 @@ test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { as
 
 test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 156); });
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });
+test('APP_VERSION is at least v165 (the Advies flow as its own full screen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
 test('APP_VERSION is at least v159 (wissel van ouder in de header)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 159); });
 
@@ -110,6 +111,7 @@ test('APP_VERSION is at least v161 (the day coordinator\'s flow; the undo icon e
 
 test('APP_VERSION is at least v163 (screen after Doorvoeren, Rooster tab resets)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 163); });
 test('APP_VERSION is at least v165 (Flex-gezinnen onderaan bij wissel van ouder)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
+test('APP_VERSION is at least v166 (wissel van ouder samengevoegd met de dagcoördinator-flow)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 166); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

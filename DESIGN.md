@@ -129,3 +129,9 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - **Heen / Terug titles** always say what the time means: `.sectionHead__note` "Aankomst bij AFC '34" / "Vertrek bij AFC '34". Cars with another arrival place (ATC Wijdewormer) form their own block with their own title (no pill); `arrivalPlaces()` / `arrivalLabel()` in `locations.js`.
 - **Own daughter** `.chip--mine`: a grey chip with a green dot, not red (red reads as an alarm). **"was 07:00"** under a changed time (`.rideRow__sub`) is plain text, no strikethrough, the same as `.wasTime` in Rooster.
 - Matches of the week are one folded `.matchTile` under the day they are played on (no separate block); a weekend day with a match gets its own pill.
+
+## The Advies flow as its own full screen (v165)
+- The day coordinator's flow is a layer of its own: `#flowScreen.flowScreen` (fixed, above Rooster and the tab bar, below sheets and the toast), drawn by `renderFlowScreen()` in `ui-weekrooster-advice.js`. The Rooster only holds a small entry card.
+- Three steps with a steps bar (`.flowSteps`): 1 Aanvragen, 2 Indeling, 3 Controleren; then the done screen. Every step has a head (`.flowHead`: round back/close button, context line, title), a scrolling body (`.flowScreen__body`) and a foot with the one primary action (`.flowScreen__foot`).
+- New blocks: `.entryCard` (Rooster, "Regel dit"), `.reqPanel`/`.reqItem` (requests), `.adviceHero` + `.tag--ink`, `.statTiles` + `.statTile` (the three numbers), `.infoNote`, `.tog` + `.tog__opt` (Advies / Alternatief, the subtitle is the computed waiting time), `.scene` with `.wwRow` (was → wordt), `.carCard__t`, `.chipTime`, `.lnkRow`, `.btn.flowApply`.
+- Rules: no fixed claims about what a variant is; every number comes from `planStats`/`evaluateCars`. Tapping Doorvoeren is the only step that writes (`acceptDay`); steps 1 and 2 never change data.
