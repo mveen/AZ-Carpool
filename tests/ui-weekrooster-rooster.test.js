@@ -127,7 +127,7 @@ await testAsync('a parent: the own request is in the card of that day, with the 
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '12:15', terug: '17:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const s = text(rooster());
-  assert.match(s, /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries Heen .*Jahaimy aanwezig om 12:15 .*Terug .*Jahaimy klaar om 17:00 .*Bel Kees de Vries Overnemen/);
+  assert.match(s, /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries Heen .*Jahaimy aanwezig om 12:15 .*Terug .*Jahaimy klaar om 17:00 .*Contact met Kees de Vries Overnemen/);
   assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen \d|Jouw aanvraag|Verzoeken verwerken/);
 });
 

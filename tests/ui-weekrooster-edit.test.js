@@ -182,7 +182,7 @@ await testAsync('the day coordinator gets the link "Zelf indelen" under his day 
 await testAsync('a day somebody else decides: Overnemen shows the warning in the card, Ja opens Zelf indelen with the note, Annuleren puts the buttons back', async () => {
   await setup({ dayCoordinators: { Do: 'f3' } }, { 'weekRequests/2026-W40_Do_f4': { weekKey: '2026-W40', day: 'Do', familyId: 'f4', rides: true, heen: '12:15', terug: '17:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
   const html = rooster(), s = text(html);
-  assert.match(html, /data-wrtake="Do"/); assert.match(s, /1 aanvraag voor donderdag Dagcoördinator: Kees de Vries/); assert.match(s, /Bel Kees de Vries/); assert.match(s, /Overnemen/);
+  assert.match(html, /data-wrtake="Do"/); assert.match(s, /1 aanvraag voor donderdag Dagcoördinator: Kees de Vries/); assert.match(s, /Contact met Kees de Vries/); assert.match(s, /Overnemen/);
   assert.match(html, /data-take-warn hidden/); assert.match(s, /Let op: dit is de taak van Kees de Vries/); assert.match(s, /Kees de Vries ziet je wijzigingen terug onder Recente wijzigingen/);
   assert.doesNotMatch(html.slice(html.indexOf('data-wrtake="Do"')).split('data-wrtakeover')[0], /entryCard__icon/);   // Rooster: no signal
   const btns = { hidden: false }, warn = { hidden: true }, card = { querySelector: sel => (sel === '[data-take-btns]' ? btns : warn) };

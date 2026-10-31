@@ -1349,7 +1349,7 @@ export default {
   "weekrooster.entry.titleMany": "{p1} aanvragen voor {p2}",
   "weekrooster.entry.go": "Verzoeken verwerken",
   "weekrooster.take.coord": "Dagcoördinator:",
-  "weekrooster.take.call": "Bel {p1}",
+  "weekrooster.take.call": "Contact met {p1}",
   "weekrooster.take.go": "Overnemen",
   "weekrooster.take.warnTitle": "Let op: dit is de taak van {p1}",
   "weekrooster.take.warnText": "Neem alleen over als dat is afgesproken. {p1} ziet je wijzigingen terug onder Recente wijzigingen.",

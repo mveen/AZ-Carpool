@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "78b5c808dbe123be9a91da09fccb0f17f7457c14528ebde581291cc8c8d75873",
-    "test": "4bb7f83e81f99bec935dc439d8d2fa045a9f3bd966432f9ce1d14f938ff361f2"
+    "module": "510d6c03a35d19890462445e17188b74326889d2a37b221c3a4ac473f8158704",
+    "test": "c5b5c01d19dd7ddec65c92dd44970d5ee577bf4b81b4aa7682d440bdbe35bf28"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -69,7 +69,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "39c544a583ff20a1d50ae2c364b3bda82e3e791d7d778d83a3887990b14be424"
+    "test": "c52875669c65190145b6a6d1a0ea7dc9d03d2a5d83033e9ba21137824b98aa8e"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -164,8 +164,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "39ee2c084b0f152f76f992a8a87c031e2cbc080af5fff69ff54319c29927ade5",
-    "test": "39c544a583ff20a1d50ae2c364b3bda82e3e791d7d778d83a3887990b14be424"
+    "module": "f6e113832248df5e38fd686d929f0d1d9f434b47c481b58ea40cfee068a4f2a3",
+    "test": "c52875669c65190145b6a6d1a0ea7dc9d03d2a5d83033e9ba21137824b98aa8e"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
@@ -261,7 +261,7 @@
   },
   "ui-weekrooster-edit.js": {
     "module": "d9220c5d1a5868b9fbf610a9eb0a89b2dfa08935764aaf85c64b78373d42f195",
-    "test": "a153c72412b5be14f4cbb1ab508cfdff4cf03e3609d8e72284399976bda85855"
+    "test": "6d4fe407bef094a403d7b90013dc85d025eb53c25a1723763d61926bc82d35b8"
   },
   "ui-weekrooster-essence.js": {
     "module": "5e5908fdf8b14a2888579363e5d73863f6220e5bfe6f18c02bd0ea75a25ae68d",
@@ -273,7 +273,7 @@
   },
   "ui-weekrooster-rooster.js": {
     "module": "0d45c243051736cee4639378cbeb4390881e99b47cf9255ecfd619394f764d00",
-    "test": "9758f63425901fa36bd16ca079773c56a9c3346196a18c1505e70aa1e5cac663"
+    "test": "1a13b42632de66884bf64d7e0767ab6f70878838444431c41400e5d518a1d682"
   },
   "weekrooster-data.js": {
     "module": "206a5ce23740fd5116ca26ca0e8cdf15be5fba8f1a2fe7ff26064ae1d3792520",
