@@ -943,7 +943,7 @@ div.settingsRow{cursor:default}
 .rbRide .btn.pill.small{height:40px;padding:0 var(--space-6);font-size:13px}
 
 .sheetItem>svg{flex:none;fill:currentColor}
-.sheetItem__label{flex:1;font:var(--type-card-title);font-weight:600}
+.sheetItem__label{flex:1;min-width:0;font:var(--type-card-title);font-weight:600}
 .sheetItem--muted{opacity:.45}
 
 .shiftTools{display:flex;gap:var(--space-3);margin:var(--space-3) 0 0}
@@ -1057,5 +1057,14 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .scene__head button.btn.small{margin-left:auto}
 .carEdit .devInput{margin:0;width:100%;min-height:var(--hit-min)}
 .carEdit input.timeBig{width:100%!important}
-.sheet__more{width:100%;margin-top:var(--space-5)}
 .sheetItem--remove{color:var(--accent)}
+.sheet{overflow-x:hidden}
+.sheetOverlay--still,.sheetOverlay--still .sheet{animation:none}
+@keyframes paneFromRight{from{transform:translateX(100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes paneFromLeft{from{transform:translateX(-100%);opacity:0}to{transform:none;opacity:1}}
+.sheetPane--fromRight{animation:paneFromRight .22s ease-out}
+.sheetPane--fromLeft{animation:paneFromLeft .22s ease-out}
+@media (prefers-reduced-motion:reduce){.sheetPane--fromRight,.sheetPane--fromLeft{animation:none}}
+.sheetHead{display:flex;align-items:flex-start;gap:var(--space-4)}
+.sheetHead>div{min-width:0}
+.sheetItem--menu>svg:last-child{margin-left:auto;flex:none;color:var(--text-muted)}

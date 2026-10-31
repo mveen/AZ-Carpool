@@ -358,10 +358,11 @@ export function renderFlowScreen() {
 }
 
 // ---------- the sheets ----------
-function overlay(inner) {
+// `from` ('Right' | 'Left'): a follow-up screen inside the same sheet; the sheet itself stays, only the content slides in from that side.
+function overlay(inner, from = '') {
   closeSheet();
-  const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
-  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="sheet__handle"></div>${inner}</div>`;
+  const ov = document.createElement('div'); ov.className = 'sheetOverlay' + (from ? ' sheetOverlay--still' : ''); ov.id = 'sheetOverlay';
+  ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="sheet__handle"></div><div class="sheetPane${from ? ' sheetPane--from' + from : ''}">${inner}</div></div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if (e.target === ov) closeSheet(); });
   return ov;
@@ -442,7 +443,7 @@ function openWaitSheet() {
 }
 // Add a passenger to this car: the girls of the other cars and who is not placed. "Ook speelsters zonder rit" (one more tap) lists the ones with no ride this way
 // (flex players, a girl who is not on the standard rooster); for them the time is asked first.
-function openAddSheet(dir, driverId, more) {
+function openAddSheet(dir, driverId, more, from = '') {
   const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
   const target = cars.find(c => c.driverFamilyId === driverId); if (!target) return;
   const ev0 = evaluateCars(d.ctx, cars), riding = new Set(cars.flatMap(c => c.girlIds));
@@ -460,9 +461,14 @@ function openAddSheet(dir, driverId, more) {
     return { id, label: esc(rawGirl(id)), sub: esc(bits.filter(Boolean).join(' · ')) };
   });
   const list = items.length ? items.map((it, i) => `<button type="button" class="sheetItem" data-sheetidx="${i}">${phIcon('arrows-left-right')}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${it.sub}</span></span></button>`).join('') : `<p class="sheet__sub">${esc(t('weekrooster.flow.addEmpty'))}</p>`;
-  const foot = more ? '' : `<button type="button" class="btn secondary sheet__more" data-sheetmore="1">${esc(t('weekrooster.flow.addMore'))}</button>`;
-  const ov = overlay(`<h3 id="sheetTitle">${esc(t(more ? 'weekrooster.flow.addMoreTitle' : 'weekrooster.flow.addTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.addSub', { p1: fam(driverId).parentName || '?' }))}</p>${list}${foot}`);
-  ov.querySelectorAll('[data-sheetmore]').forEach(b => b.onclick = () => { closeSheet(); openAddSheet(dir, driverId, true); });
+  // The first screen ends with a menu item to the second (to the right); the second has a way back (to the left).
+  const foot = more ? '' : `<button type="button" class="sheetItem sheetItem--menu" data-sheetmore="1">${phIcon('users')}<span class="sheetItem__label">${esc(t('weekrooster.flow.addMore'))}<span class="sheetItem__more">${esc(t('weekrooster.flow.addMoreSub'))}</span></span>${phIcon('caret-right')}</button>`;
+  const head = more
+    ? `<div class="sheetHead"><button type="button" class="roundBtn" id="wrSheetBack" aria-label="${esc(t('weekrooster.flow.prev'))}">${phIcon('arrow-left')}</button><div><h3 id="sheetTitle">${esc(t('weekrooster.flow.addMore'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.addSub', { p1: fam(driverId).parentName || '?' }))}</p></div></div>`
+    : `<h3 id="sheetTitle">${esc(t('weekrooster.flow.addTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.addSub', { p1: fam(driverId).parentName || '?' }))}</p>`;
+  const ov = overlay(`${head}${list}${foot}`, from);
+  const back = document.getElementById('wrSheetBack'); if (back) back.onclick = () => { hapticTap(); openAddSheet(dir, driverId, false, 'Left'); };
+  ov.querySelectorAll('[data-sheetmore]').forEach(b => b.onclick = () => { hapticTap(); openAddSheet(dir, driverId, true, 'Right'); });
   ov.querySelectorAll('[data-sheetidx]').forEach(b => b.onclick = () => {
     const it = items[+b.dataset.sheetidx]; closeSheet();
     if (!more) { setCars(f, dir, withGirlIn(d.ctx, cars, it.id, driverId)); redraw(); return; }

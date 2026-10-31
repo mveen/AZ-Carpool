@@ -258,14 +258,19 @@ await testAsync('a passenger out of the car: the sheet has "Uit deze auto halen"
   const s = text(view()); assert.match(s, /Lois Rijdt niet mee/); assert.match(s, /Anouk, Eline/);
   S.wrAdvice.step = 'check'; assert.doesNotMatch(text(view()), /Iemand heeft geen auto/);   // on purpose: not a problem
 });
-await testAsync('+ Passagier: "Ook speelsters zonder rit tonen" lists flex players and others with no ride; her time is asked, then she joins', async () => {
+await testAsync('+ Passagier: a menu item "Speelsters zonder rit" opens a follow-up screen (from the right, with a way back to the left); her time is asked, then she joins', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan', editDir: 'heen' };
   S.families.f7 = { ...S.families.f5, parentName: 'Fleur Flex', girlName: 'Fenna', familyType: 'flex', schedule: {} };
   wired(view()).querySelectorAll('[data-wradd]').find(b => b.dataset.wradd === 'heen|f2').onclick();
-  assert.doesNotMatch(text(lastSheet.innerHTML), /Fenna/); assert.match(text(lastSheet.innerHTML), /Ook speelsters zonder rit tonen/);   // hidden by default
+  assert.doesNotMatch(text(lastSheet.innerHTML), /Fenna/); assert.match(text(lastSheet.innerHTML), /Speelsters zonder rit Flexers en wie niet op het rooster staat/);   // hidden by default, a menu item like the cards above it
+  assert.match(lastSheet.innerHTML, /class="sheetItem sheetItem--menu" data-sheetmore="1"/); assert.doesNotMatch(lastSheet.innerHTML, /wrSheetBack|sheetOverlay--still/);
   lastSheet.querySelectorAll('[data-sheetmore]')[0].onclick();
+  assert.match(lastSheet.className, /sheetOverlay--still/); assert.match(lastSheet.innerHTML, /sheetPane sheetPane--fromRight/);   // the sheet stays, the content comes in from the right
+  assert.match(lastSheet.innerHTML, /id="wrSheetBack" aria-label="Terug"/);
   const list = text(lastSheet.innerHTML); assert.match(list, /Speelsters zonder rit/); assert.match(list, /Fenna · flex Geen rit in deze richting/); assert.match(list, /Saar Geen rit/);
   const idx = lastSheet.innerHTML.split('data-sheetidx').slice(1).findIndex(x => /Fenna/.test(x)); assert.ok(idx >= 0);
+  dom.doc.getElementById('wrSheetBack').onclick(); assert.match(lastSheet.innerHTML, /sheetPane--fromLeft/); assert.doesNotMatch(text(lastSheet.innerHTML), /Fenna/);   // back to the left: the first screen again
+  lastSheet.querySelectorAll('[data-sheetmore]')[0].onclick();
   pickItem(idx);
   assert.match(text(lastSheet.innerHTML), /Hoe laat rijdt Fenna mee\?/); assert.match(text(lastSheet.innerHTML), /Moet er zijn om/);
   dom.doc.getElementById('wrAddTime').value = '10:00'; dom.doc.getElementById('wrTimeYes').onclick();
