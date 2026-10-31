@@ -24,7 +24,7 @@ const MINE = { driverFamilyId: 'f2', girlIds: ['f1', 'f2'], reserveFamilyIds: []
 const setup = async (cars = [MINE], patch = {}, extra = {}) => {
   const devs = { Do_terug: DEV('Do', 'terug', cars), ...extra };
   const fake = useFakeDb({ ...sampleDbSeed(), ...Object.fromEntries(Object.entries(devs).map(([k, v]) => ['deviations/' + k, v])) });
-  sampleParentState({ dayCoordinators: { Do: 'f3' }, deviations: { ...sampleDeviations(), ...devs }, scheduleDay: 'Do', roosterMode: 'week', ...patch });
+  sampleParentState({ dayCoordinators: { Do: 'f3' }, deviations: { ...sampleDeviations(), ...devs }, scheduleDay: 'Do', myWeekDay: new Date(2026, 9, 1).toDateString(), roosterMode: 'week', ...patch });   // Mijn week shows one day at a time: Thursday
   syncWeekRequests(); await tick(); return fake;
 };
 const rooster = () => { withFakeNow(NOW, () => renderSchedule()); return dom.html('tab-schedule'); };
@@ -34,7 +34,7 @@ const open = (day = 'Do', dir = 'terug') => { withFakeNow(NOW, () => openDriverC
 console.log('=== the button ===');
 await testAsync('the driver sees "Tijd en plek" under the own car in Rooster and in Mijn week', async () => {
   await setup();
-  const r = rooster(); assert.match(r, /data-drivercar="Do\|terug"/); assert.match(text(r), /Tijd en plek/);
+  const r = rooster(); assert.match(r, /data-drivercar="Do\|terug"/); assert.match(r, /aria-label="Tijd en plek"/, 'icon only: the words are its label');
   assert.match(myweek(), /data-drivercar="Do\|terug"/);
 });
 await testAsync('nobody else sees it: not a passenger\'s parent, not on a shift without my car, not without a family of their own, not on a day that is over', async () => {
@@ -43,7 +43,7 @@ await testAsync('nobody else sees it: not a passenger\'s parent, not on a shift 
   await setup([MINE], { links: {} });
   assert.doesNotMatch(rooster(), /data-drivercar/); assert.doesNotMatch(myweek(), /data-drivercar/);
   await setup([MINE]);
-  withFakeNow(NOW, () => { assert.equal(driverCarButtonHtml('Do', 'heen'), '', 'I do not drive Thursday heen'); assert.equal(driverCarButtonHtml('Ma', 'terug'), '', 'Monday is over'); assert.match(driverCarButtonHtml('Do', 'terug'), /data-drivercar/); assert.match(driverCarButtonHtml('Do', 'terug'), /class="linkbtn"/); assert.match(driverCarButtonHtml('Do', 'terug', 'btn secondary small'), /class="btn secondary small" data-drivercar/); });
+  withFakeNow(NOW, () => { assert.equal(driverCarButtonHtml('Do', 'heen'), '', 'I do not drive Thursday heen'); assert.equal(driverCarButtonHtml('Ma', 'terug'), '', 'Monday is over'); assert.match(driverCarButtonHtml('Do', 'terug'), /data-drivercar/); assert.match(driverCarButtonHtml('Do', 'terug'), /class="roundBtn"/); assert.match(driverCarButtonHtml('Do', 'terug', 'btn secondary small'), /class="btn secondary small" data-drivercar/); });
 });
 await testAsync('the day coordinator gets the button for the own car as well (the car editor stays for the other cars)', async () => {
   await setup([MINE], { dayCoordinators: { Do: 'f2' } });
@@ -109,11 +109,11 @@ await testAsync('a change by a driver shows in "Recente wijzigingen" as a change
 console.log('=== Mijn week says it ===');
 await testAsync('a changed departure time shows "was 18:00" under the new time at my ride; an unchanged one says nothing', async () => {
   await setup([{ ...MINE, departureTime: '18:45' }], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } } });
-  assert.match(text(myweek()), /18:45 was 18:00/);
+  assert.match(text(myweek()), /18:45 Terug was 18:00/);
   await setup([MINE], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } } });
   assert.doesNotMatch(text(myweek()), /was 18:00/);
   await setup([{ ...MINE, departureTime: '18:45' }], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } }, links: { p1: { familyId: 'f1' } } });
-  assert.match(text(myweek()), /18:45 was 18:00/, 'the parent of a girl in that car sees it too');
+  assert.match(text(myweek()), /18:45 Terug was 18:00/, 'the parent of a girl in that car sees it too');
 });
 
 await testAsync('ui-driver-car.js imports nothing it does not use', async () => assertNoUnusedImports('ui-driver-car.js'));

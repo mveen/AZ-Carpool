@@ -135,5 +135,9 @@ test('Afwijkend weekrooster (phase 4): no Advies view and no finished Overnemen 
 test('Afwijkend weekrooster (phase 5): no car editor open in Rooster at start', () => { assert.equal(S.wrEdit, null); });
 test('Beheer has not been opened at start, so the coordinator does not read the ride log, error log and back-ups yet (quota)', () => { assert.equal(S.beheerOpened, false); });test('Zelf indelen: the Dagbericht starts folded', () => { assert.equal(S.wrMsgOpen, false); });
 
+test('Mijn week starts on its default day (no day chosen under the day pills)', () => { assert.equal(S.myWeekDay, ''); });
+
+test('The day coordinator\'s flow starts closed, and "Auto\'s aanpassen" has no free-text place open', () => { assert.equal(S.wrAdvice, null); assert.equal(S.adjFree, null); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

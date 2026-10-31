@@ -23,9 +23,9 @@ test('"rijdt niet mee" is always direct', () => {
   assert.equal(decideMode({ ownDaughter: true, rides: false, isDayCoordinator: false }), 'direct');
   assert.equal(decideMode({ ownDaughter: true, rides: false, isDayCoordinator: true }), 'direct');
 });
-test('new times: a request, unless it is the own day of the day coordinator', () => {
+test('new times are always a request, also for the day coordinator on the own day', () => {
   assert.equal(decideMode({ ownDaughter: true, rides: true, isDayCoordinator: false }), 'pending');
-  assert.equal(decideMode({ ownDaughter: true, rides: true, isDayCoordinator: true }), 'direct');
+  assert.equal(decideMode({ ownDaughter: true, rides: true, isDayCoordinator: true }), 'pending');
 });
 
 console.log('=== the request documents ===');
@@ -44,10 +44,10 @@ test('"rijdt niet mee" is direct and keeps no times', () => {
   assert.deepEqual(r.writes[0].doc, { weekKey: WK, day: 'Wo', familyId: 'f2', rides: false, heen: '', terug: '', status: 'direct', createdAt: 1000, updatedAt: 1000 });
   assert.ok(isValidRequest(r.writes[0].doc));
 });
-test('a week can be mixed: own day direct, another day a request', () => {
-  const r = buildRequests({ ...base, days: { Do: { rides: true, heen: '16:30', terug: '17:00' }, Vr: { rides: true, heen: '14:00', terug: '16:00' } } });
-  assert.deepEqual(r.writes.map(w => [w.doc.day, w.doc.status]), [['Do', 'pending'], ['Vr', 'direct']]);
-  assert.equal(r.writes[1].doc.decidedBy, 'f2'); assert.equal(r.writes[1].doc.decidedAt, 1000);
+test('a week can be mixed: only "rijdt niet mee" is direct, new times (also on the own day of the day coordinator) are requests', () => {
+  const r = buildRequests({ ...base, days: { Do: { rides: true, heen: '16:30', terug: '17:00' }, Vr: { rides: true, heen: '14:00', terug: '16:00' }, Wo: { rides: false } } });
+  assert.deepEqual(r.writes.map(w => [w.doc.day, w.doc.status]), [['Wo', 'direct'], ['Do', 'pending'], ['Vr', 'pending']]);
+  assert.ok(r.writes.every(w => !('decidedBy' in w.doc) && !('decidedAt' in w.doc)));
   assert.ok(r.writes.every(w => isValidRequest(w.doc)));
 });
 test('days that equal the fixed rooster, past days and incomplete times are skipped, in week order', () => {
@@ -150,11 +150,6 @@ test('a request may have just one direction (the other stays empty), but not non
   assert.equal(isValidRequest({ ...good, heen: '', terug: '' }), false);
   const r = buildRequests({ ...base, days: { Do: { rides: true, heen: '', terug: '17:45' } } });
   assert.equal(r.writes.length, 1); assert.equal(r.writes[0].doc.heen, ''); assert.ok(isValidRequest(r.writes[0].doc));
-});
-test('directTimes false: even the own day of the day coordinator stays a request; "rijdt niet mee" stays direct', () => {
-  const r = buildRequests({ ...base, directTimes: false, days: { Vr: { rides: true, heen: '14:00', terug: '16:00' }, Wo: { rides: false } } });
-  assert.deepEqual(r.writes.map(w => [w.doc.day, w.doc.status]), [['Wo', 'direct'], ['Vr', 'pending']]);
-  assert.ok(r.writes.every(w => isValidRequest(w.doc)));
 });
 test('the next week, also over the end of a year (W52, W53 and a year with no W53)', () => {
   assert.equal(nextWeekKey('2026-W40'), '2026-W41');

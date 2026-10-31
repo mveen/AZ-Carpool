@@ -136,6 +136,13 @@ export function activateTab(tab){
   if(tab==='beheer' && !S.beheerOpened){ S.beheerOpened = true; syncListeners(); }
 }
 
+// A tap on a tab in the bottom bar. Tapping Rooster always brings back the normal Rooster: an open flow (Advies, Zelf indelen)
+// or the screen after Doorvoeren closes.
+export function openTab(tab){
+  if(tab==='schedule' && (S.wrAdvice || S.wrDone || S.wrEdit)){ S.wrAdvice=null; S.wrDone=null; S.wrEdit=null; renderSchedule(); }
+  activateTab(tab);
+}
+
 export function chooseDefaultTab(){
   if(S.defaultTabChosen || !S.appReady) return;
   S.defaultTabChosen = true;
@@ -194,7 +201,7 @@ export function bootstrap(){
 
   window.addEventListener('appinstalled', ()=>{ S.appIsInstalled=true; S.deferredInstallPrompt=null; renderProfile(); });
 
-  document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>activateTab(b.dataset.tab)));
+  document.querySelectorAll('nav button[data-tab]').forEach(b=>b.addEventListener('click',()=>openTab(b.dataset.tab)));
 
   initSwipeTabs(activateTab);
 

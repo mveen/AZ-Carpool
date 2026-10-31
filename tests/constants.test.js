@@ -101,8 +101,21 @@ test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { as
 
 test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 156); });
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });
+test('APP_VERSION is at least v165 (the Advies flow as its own full screen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
+test('APP_VERSION is at least v168 (step 2 of the Advies flow: cars first, one meaning per time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 168); });
+test('APP_VERSION is at least v169 (Mijn week: the same button as the flow, Advies bekijken en aanpassen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 169); });
+test('APP_VERSION is at least v186 (aanvragen per kind in Mijn week en Rooster)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 186); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
 test('APP_VERSION is at least v159 (wissel van ouder in de header)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 159); });
+
+test('APP_VERSION is at least v160 (own-daughter chip grey with a green dot, plain was-time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
+
+test('APP_VERSION is at least v161 (the day coordinator\'s flow; the undo icon exists)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 161); assert.ok(PH_PATHS['arrow-counter-clockwise']); });
+
+test('APP_VERSION is at least v163 (screen after Doorvoeren, Rooster tab resets)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 163); });
+test('APP_VERSION is at least v165 (Flex-gezinnen onderaan bij wissel van ouder)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
+test('APP_VERSION is at least v166 (Mijn week: dagpil met afkorting, actiekaart dagcoördinator ingeklapt)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 166); });
+test('APP_VERSION is at least v167 (wissel van ouder samengevoegd met de laatste redesign)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 167); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

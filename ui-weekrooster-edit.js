@@ -61,7 +61,7 @@ export function scheduleEditHtml() {
     <button type="button" class="linkbtn" id="wrEditBack">${phIcon('arrow-left')}${esc(t('weekrooster.advice.back'))}</button>
     <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.edit.headline', { p1: `${dayName(day).toLowerCase()} ${isoDayLabel(iso, '')}` }))}</div></div>
     ${override ? `<p class="noteLine">${esc(t('weekrooster.edit.override', { p1: deciderLabel(day) }))}</p>` : ''}
-    ${actionCardHtml(day, { advice: false, dots: true })}
+    ${actionCardHtml(day)}
     <div class="daysection"><h3 class="srOnly">${esc(dayName(day))}</h3>${renderDevDirection(day, 'heen')}${renderDevDirection(day, 'terug')}${pendingOfDay(day).length ? `<p class="noteLine reqDot">${esc(t('weekrooster.edit.legend'))}</p>` : ''}${conclusieCardHtml(day, { collapsed: true })}</div>
     ${hasAdvice(day) && (activeDeviation(day, 'heen') || activeDeviation(day, 'terug')) ? `<p class="noteCard" id="wrEditRecalc">${phIcon('info')}<span>${esc(t('weekrooster.edit.recalc'))}</span></p>` : ''}
     <div class="actionBar">${hasAdvice(day) ? `<button type="button" class="btn secondary" id="wrEditAdvice">${esc(t('weekrooster.advice.look'))}</button>` : ''}<button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
@@ -86,7 +86,7 @@ async function settleDay(day) {
 export function wireEdit(box) {
   box.querySelectorAll('[data-wredit]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wredit); });
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
-  const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day }; S.wrDone = null; renderSchedule(); };
+  const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day, step: 'plan' }; S.wrDone = null; renderSchedule(); };
   const back = document.getElementById('wrEditBack'); if (back) back.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); };
   // Klaar = the day coordinator is done: the open requests of the day are settled. Not for "Toch zelf wijzigen" (a parent who does not decide).
   const done = document.getElementById('wrEditDone');

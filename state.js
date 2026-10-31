@@ -63,13 +63,15 @@ export const S = {
   dayRequests: {},         // weekRequests/* of OTHER families for the days this person decides (day coordinator), this week only
   dayRequestsKey: '',
   dayRequestsUnsubs: [],
-  wrAdvice: null,          // the Advies view open in Rooster: { day, direction, variant } (null = closed)
+  wrAdvice: null,          // the Advies flow open in Rooster: { day, step: 'plan'|'check', variant: 'best'|'alt', edits: { heen?: cars, terug?: cars } } (null = closed)
+  adjFree: null,           // "Auto's aanpassen": the car ('dir|driverId') whose pickup place is typed as free text
   wrEdit: null,            // the car editor open in Rooster: { day, override } (override = a parent changing it after the warning)
   wrMsgOpen: false,        // Zelf indelen: the Dagbericht text is unfolded
-  wrDone: null,            // right after Overnemen: { day } (shows the Dagbericht)
+  wrDone: null,            // right after Doorvoeren: { day, n, undo } (shows the Dagbericht and "Alles terugdraaien")
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
   wrBusy: false,           // a request is being saved (a double tap makes no double request)
+  myWeekDay: '',   // Mijn week: the day shown under the day pills (a Date toDateString); empty = today, else the first day
   myWeekNextOpen: false,   // Mijn week: the block "Volgende week" (open requests) is unfolded; closed by default
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id

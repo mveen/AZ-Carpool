@@ -77,5 +77,10 @@ test('the contact sheet shows the avatar icon of that family, initials when ther
   delete S.families.f2.avatar; ov = installSheet(); openContactSheet('f2'); assert.match(ov.html, />PP</);
 });
 
+test('contactButtonHtml: an icon-only button gets an aria-label, a name button does not need one', () => {
+  assert.match(contactButtonHtml('f2', '<svg></svg>', '', 'roundBtn', 'Neem contact op met Jan'), /class="roundBtn" data-contact="f2" aria-label="Neem contact op met Jan"/);
+  assert.doesNotMatch(contactButtonHtml('f2', 'Jan'), /aria-label/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

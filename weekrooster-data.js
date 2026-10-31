@@ -8,7 +8,7 @@ import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } fr
 import { showToast } from './ui-common.js';
 import { effectiveCars, rideTime, famTime, computeRideDeparture, ovGirlsFor } from './rides.js';
 import { keepOv } from './ov.js';
-import { buildAdvice } from './weekrooster-impact.js';
+import { buildAdvice, buildKeepAdvice, evaluateCars } from './weekrooster-impact.js';
 import { deviationExpiryMs, deviationKey, weekKeyDayIso } from './dates.js';
 import { cleanCars, currentDeviationDoc, db, recordLastUpdate, returnByPublicTransportDoc } from './data.js';
 import { renderDeviationTab } from './ui-deviation.js';
@@ -154,7 +154,7 @@ export function currentMarks(familyId) {
 }
 
 // A family hands in the week form (one document per changed day, in one batch). days: { Do: { rides, heen, terug } } for every day of the form.
-// - New times wait for the day coordinator ('pending'); "rijdt niet mee" is applied at once on the current week ('direct'): the whole day as a request
+// - New times wait for the day coordinator ('pending', also those of the day coordinator's own daughter); "rijdt niet mee" is applied at once on the current week ('direct'): the whole day as a request
 //   plus a mark per shift, one emptied time (or the unticked day) only as the mark of that shift (the database only takes 'direct' for a whole day off).
 // - A day put back to the fixed rooster withdraws the request that was open for it (and puts a "rijdt niet mee" back).
 // Returns { ok, written, skipped } (ok false = nothing was saved).
@@ -167,25 +167,15 @@ export async function submitWeekRequests(which, days) {
   S.wrBusy = true;
   try {
     const built = buildRequests({
-      weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs, directTimes: which === 'this',   // next week has no cars yet: there it stays a request
+      weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs,
       shiftOff: which === 'this',
       isPast: day => isDayPast(weekKey, day),
-      deciderOf: deciderFamilyOf,
     });
     // This week the marks per shift follow the form: only the shifts whose mark really changes are written.
     const wanted = which === 'this' ? desiredMarks({ days, standard: standardTimes(familyId, which), isPast: day => isDayPast(weekKey, day) }) : {};
     const markChanges = {};
     Object.entries(wanted).forEach(([day, m]) => ['heen', 'terug'].forEach(dir => { if (m[dir] !== ovGirlsFor(day, undefined, dir).includes(familyId)) (markChanges[day] = markChanges[day] || []).push(dir); }));
-    // The own day of a day coordinator is direct: the cars change at once (same change as Overnemen). Without a sound arrangement it stays a request.
     const devDocs = {};
-    built.writes.forEach(w => {
-      if (w.doc.status !== 'direct' || w.doc.rides === false) return;
-      // A day whose marks change in the same save stays a request: the cars of this day are changed by the marks, not planned twice.
-      if (markChanges[w.doc.day]) { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; return; }
-      const plan = directPlan(w.doc.day, { ...w.doc, id: w.id });
-      if (plan) Object.assign(devDocs, plan);
-      else { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; }
-    });
     const batch = db.batch();
     built.writes.forEach(w => batch.set('weekRequests/' + w.id, w.doc));
     // Days back on the fixed rooster: withdraw what was open (pending, direct or accepted), undo an earlier "rijdt niet mee" and take the
@@ -268,32 +258,71 @@ export function pendingOfDay(day) {
 }
 
 // The advice for one day: for every direction a pending request changes, the two variants (see weekrooster-impact.js).
-// Result: { requests, directions: { heen?: { cars (now), variants }, terug?: ... } }. Nothing is saved.
+// Result: { requests, directions: { heen?: { cars (now), variants, ctx, keep }, terug?: ... } }. Nothing is saved.
+// `keep` is the advice with the cars as they are (buildKeepAdvice: best, alt, fallback); `variants` is the older engine (zuinig, gedoe).
 export function adviceForDay(day, only) {
   const requests = only || pendingOfDay(day), directions = {};
   DIRECTIONS.forEach(dir => {
     const touching = requests.filter(r => (r[dir] || '') !== (rideTime(r.familyId, day, dir) || ''));
     if (!touching.length) return;
     const cars = effectiveCars(day, dir).map(c => ({ ...c, girlIds: [...(c.girlIds || [])] }));
-    const res = buildAdvice({
+    const ctx = {
       day, direction: dir, cars, requests: touching.map(r => ({ familyId: r.familyId, rides: true, time: r[dir] || '' })),
       timeOf: id => rideTime(id, day, dir), families: S.families, settings: S.settings, prefs: S.prefs, priority: (S.shiftPriority || {})[day + '_' + dir],
-    });
-    directions[dir] = { cars, ...res };
+    };
+    const res = buildAdvice(ctx);
+    directions[dir] = { cars, ctx, keep: buildKeepAdvice(ctx), ...res };
   });
   return { requests, directions };
 }
 
-// A day coordinator changing the own daughter on a day he decides himself: the same one-off change as "Overnemen", for this one request.
-// Returns the deviation documents to write ({ key: doc }), or null when that is not possible (no sound arrangement) or nothing changes:
-// the caller then keeps it a normal request.
-export function directPlan(day, request) {
-  const advice = adviceForDay(day, [request]), dirs = Object.keys(advice.directions);
-  if (!dirs.length || dirs.some(d => advice.directions[d].variants.zuinig.noSolution)) return null;
-  const out = {};
-  dirs.forEach(dir => {
-    const prev = currentDeviationDoc(day, dir), v = advice.directions[dir].variants.zuinig;
-    out[deviationKey(day, dir)] = { day, direction: dir, weekKey: S.currentWeekKey, expiresAt: deviationExpiryMs(), cars: cleanCars(v.cars), ...keepOv(prev, v.cars), times: { ...((prev && prev.times) || {}), ...v.times } };
+// The plan of a day for a variant: 'best' | 'alt' (the cars as they are, see buildKeepAdvice) or 'zuinig' | 'gedoe' (the older engine).
+// `edits` = { heen?: cars, terug?: cars }: what the day coordinator changed by hand in a direction; it replaces the cars, the times of the
+// askers stay those of the variant. Result: { dirs: { heen?: { cars, times, edited, fallback, noSolution } }, blocked, fallback }
+// `fallback`: the girls do not fit in the existing cars (best is null); the plan is then the normal advice and the day coordinator decides.
+export function planOf(advice, variant, edits) {
+  const dirs = {}; let blocked = false, fallback = false;
+  Object.entries(advice.directions).forEach(([dir, d]) => {
+    let base;
+    if (variant === 'zuinig' || variant === 'gedoe') base = { ...d.variants[variant], noSolution: d.variants[variant].noSolution };
+    else {
+      const opt = d.keep && d.keep.best ? (variant === 'alt' && d.keep.alt ? d.keep.alt : d.keep.best) : null;
+      base = opt ? { ...opt, noSolution: false } : { ...d.keep.fallback, fallback: true };
+      if (!opt) fallback = true;
+    }
+    const ed = edits && edits[dir];
+    if (base.noSolution && !ed) blocked = true;
+    const cars = ed || base.cars || [], inCar = id => cars.some(c => (c.girlIds || []).includes(id));
+    // By hand: a girl taken out of her car does not ride this way ('' = no ride), a girl added who had no ride gets the time that was chosen.
+    const times = { ...(base.times || {}) };
+    ((edits && edits.off && edits.off[dir]) || []).forEach(id => { if (!inCar(id)) times[id] = ''; });
+    Object.entries((edits && edits.add && edits.add[dir]) || {}).forEach(([id, tm]) => { if (inCar(id)) times[id] = tm; });
+    dirs[dir] = { cars, times, edited: !!ed, fallback: !!base.fallback, noSolution: !!base.noSolution && !ed };
+  });
+  return { dirs, blocked, fallback };
+}
+
+// The advice with the manual changes worked into what each girl rides: edits.off[dir] = girls taken out of a car (no ride), edits.add[dir] = { girlId: 'HH:MM' }
+// for girls without a ride who were added. They count as (marked) requests, so the numbers of the screen follow. Nothing is saved.
+export function withManual(advice, edits) {
+  const off = (edits && edits.off) || {}, add = (edits && edits.add) || {}, directions = {};
+  Object.entries(advice.directions).forEach(([dir, d]) => {
+    const extra = [...(off[dir] || []).map(id => ({ familyId: id, rides: false, time: '', manual: true })), ...Object.entries(add[dir] || {}).map(([id, time]) => ({ familyId: id, rides: true, time, manual: true }))];
+    directions[dir] = extra.length ? { ...d, ctx: { ...d.ctx, requests: [...(d.ctx.requests || []).filter(r => !extra.some(x => x.familyId === r.familyId)), ...extra] } } : d;
+  });
+  return { ...advice, directions };
+}
+
+// The numbers of a plan: what the requests add in waiting, who rides in another car, which drivers notice it, and what is wrong with it.
+// { extraWait, moved: [familyId], familiesChanged: [familyId], problems: [{ dir, key, id|ids }], perDir: { dir: evaluateCars result } }
+export function planStats(advice, plan) {
+  const out = { extraWait: 0, moved: [], familiesChanged: [], problems: [], perDir: {} };
+  Object.entries(plan.dirs).forEach(([dir, p]) => {
+    const d = advice.directions[dir], e = evaluateCars(d.ctx, p.cars);
+    out.perDir[dir] = e; out.extraWait += e.extraWait;
+    e.moved.forEach(id => { if (!out.moved.includes(id)) out.moved.push(id); });
+    e.familiesChanged.forEach(id => { if (!out.familiesChanged.includes(id)) out.familiesChanged.push(id); });
+    e.problems.forEach(pr => out.problems.push({ dir, ...pr }));
   });
   return out;
 }
@@ -301,20 +330,22 @@ export function directPlan(day, request) {
 // "Overnemen": the cars of the chosen variant become this week's one-off change (the same deviations as Wijzigen: cars + the one-off times
 // of the askers), and all pending requests of the day become 'accepted'. ONE batch: all or nothing, and the first decision wins (the rules
 // refuse a request that is no longer pending). Returns { ok, n, undo } where undo() puts everything back.
-export async function acceptDay(day, variant) {
+export async function acceptDay(day, variant, edits) {
   if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return { ok: false }; }
   if (!myLinkedFamilyId() || S.wrBusy) return { ok: false };
   const advice = adviceForDay(day), dirs = Object.keys(advice.directions);
   if (!advice.requests.length) return { ok: false };
-  if (dirs.some(d => advice.directions[d].variants[variant].noSolution)) { showToast(t('weekrooster.advice.noSolution')); return { ok: false }; }
+  const plan = planOf(advice, variant, edits);
+  if (plan.blocked) { showToast(t('weekrooster.advice.noSolution')); return { ok: false }; }
   const wk = S.currentWeekKey, nowMs = Date.now(), me = myFamilyId();
   S.wrBusy = true;
   try {
     const batch = db.batch(), prevDocs = {}, nextDocs = {};
     dirs.forEach(dir => {
-      const key = deviationKey(day, dir), prev = currentDeviationDoc(day, dir), v = advice.directions[dir].variants[variant];
+      const key = deviationKey(day, dir), prev = currentDeviationDoc(day, dir), v = plan.dirs[dir];
       prevDocs[key] = prev ? JSON.parse(JSON.stringify(prev)) : { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(advice.directions[dir].cars) };
-      nextDocs[key] = { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(v.cars), ...keepOv(prev, v.cars), times: { ...((prev && prev.times) || {}), ...v.times } };
+      const cars = v.cars.filter(c => (c.girlIds || []).length);   // a car without girls is not stored
+      nextDocs[key] = { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(cars), ...keepOv(prev, cars), times: { ...((prev && prev.times) || {}), ...v.times } };
       batch.set('deviations/' + key, nextDocs[key]);
     });
     const agreed = advice.requests.map(r => ({ id: r.id, before: stripId(r), after: acceptRequest(stripId(r), me, nowMs) }));

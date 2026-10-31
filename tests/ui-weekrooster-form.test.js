@@ -15,6 +15,7 @@ import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleDb
 import { S } from '../state.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderMyWeek } from '../ui-myweek.js';
+import { dateForWeekday } from '../dates.js';
 import { redrawAfterTyping, weekroosterActive, submitWeekForm, toggleRide, myWeekWeekroosterHtml, requestBlockHtml, openAskedTime, openAskedTimeOf, myWeekNextWeekHtml, wireMyWeekWeekrooster, summaryOf, deciderLabel, upperFirst, lower, dayName } from '../ui-weekrooster-form.js';
 import { myFamilyId } from '../coordinator.js';
 import { shownTime } from '../rides.js';
@@ -26,7 +27,9 @@ const noStyle = h => h.replace(/<svg[\s\S]*?<\/svg>/g, '');   // the Phosphor ic
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
 const toast = () => text(dom.html('toast'));
 const wijzigen = () => { withFakeNow(NOW, () => renderDeviationTab()); return dom.html('tab-deviation'); };
-const mijnWeek = () => { withFakeNow(NOW, () => renderMyWeek()); return dom.html('tab-myweek'); };
+// Mijn week shows one day at a time (the day pills): `day` picks it, none = the default (today).
+const mijnWeek = day => { withFakeNow(NOW, () => { S.myWeekDay = day ? dateForWeekday(day).toDateString() : ''; renderMyWeek(); }); return dom.html('tab-myweek'); };
+const mijnWeekDays = (...days) => days.map(d => mijnWeek(d)).join('');
 const setField = (id, v) => { dom.el(id).value = v; };
 // The fake page has no real inputs: put the form's own values in them (as a browser would show them), the way a person sees them.
 const fillInputs = (pastDays = ['Ma', 'Di']) => {
@@ -130,7 +133,7 @@ await testAsync('design B, Mijn week: the button is secondary and there is no am
 });
 await testAsync('design B, Mijn week: in the request block the time that holds now is struck through, the asked time is normal (no arrow), and "klaar" is always on its own line', async () => {
   await parentOn(); await submitThis([['Do', '11:00', '18:00'], ['Vr', '', '16:00']]);
-  const [block, blockVr] = blocksOf(mijnWeek());
+  const [block, blockVr] = blocksOf(mijnWeekDays('Do', 'Vr'));
   assert.match(block, /aanwezig <s>10:15<\/s> <b>11:00<\/b>/, 'old struck through, new normal');
   assert.doesNotMatch(block, /<s>18:00/, 'an unchanged time is not struck through');
   assert.doesNotMatch(text(block), /→|heen 11:00|terug 18:00/, 'no arrow, and "aanwezig" / "klaar" instead of "heen" / "terug"');
@@ -140,12 +143,12 @@ await testAsync('design B, Mijn week: in the request block the time that holds n
 });
 await testAsync('design B, Mijn week: Intrekken withdraws that day only', async () => {
   await parentOn(); await submitThis([['Do', '11:00', '18:00'], ['Vr', '10:00', '16:00']]);
-  assert.equal((mijnWeek().match(/class="reqBlock"/g) || []).length, 2);
+  assert.equal((mijnWeekDays('Do', 'Vr').match(/class="reqBlock"/g) || []).length, 2);
   assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), true);
-  const html = mijnWeek();
+  const html = mijnWeekDays('Do', 'Vr');
   assert.equal((html.match(/class="reqBlock"/g) || []).length, 1); assert.match(html, /data-wrwithdraw="Vr"/); assert.doesNotMatch(html, /data-wrwithdraw="Do"/);
   assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), false, 'nothing left of that day to withdraw');
-  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this')), true); assert.doesNotMatch(mijnWeek(), /reqBlock/);
+  assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this')), true); assert.doesNotMatch(mijnWeekDays('Do', 'Vr'), /reqBlock/);
 });
 await testAsync('design B, Mijn week: the requests for next week are ONE compact card under the days (day, times, who decides)', async () => {
   await parentOn(); await submitNext([['Ma', '08:15', '17:00']]); S.myWeekNextOpen = true;
@@ -299,10 +302,10 @@ await testAsync('the form opens fresh after a toggle in Mijn week (no old copy o
 });
 await testAsync('Mijn week: an open request already counts for HER own time ("aanwezig om" / "klaar om"); only the car waits for the coordinator, and the other days keep the standard time', async () => {
   await parentOn(); await submitThis([['Do', '12:30', '19:00']]);
-  const html = mijnWeek(), card = html.slice(html.indexOf('Donderdag')), s = text(card);
+  const html = mijnWeek('Do'), card = html.slice(html.indexOf('Donderdag')), s = text(card);
   assert.match(s, /aanwezig om 12:30/, 'her asked arrival time, not the standard 10:15'); assert.match(s, /klaar om 19:00/);
   assert.doesNotMatch(card.slice(0, card.indexOf('reqBlock')), /aanwezig om 10:15/, 'the standard time is no longer shown as hers');
-  const other = html.slice(html.indexOf('Vrijdag')); assert.doesNotMatch(text(other), /aanwezig om 12:30/, 'another day is not touched');
+  const other = mijnWeek('Vr'); assert.doesNotMatch(text(other), /aanwezig om 12:30/, 'another day is not touched');
   assert.equal(openAskedTime('Do', 'heen'), '12:30'); assert.equal(openAskedTime('Vr', 'heen'), '');
   assert.equal(openAskedTimeOf(myFamilyId(), 'Do', 'terug'), '19:00'); assert.equal(openAskedTimeOf('', 'Do', 'terug'), '', 'no family, no time');
   assert.equal(shownTime(myFamilyId(), 'Do', 'terug'), '19:00', 'the screens that only know rides.js see the asked time too (registered by this module)');
@@ -310,7 +313,7 @@ await testAsync('Mijn week: an open request already counts for HER own time ("aa
 await testAsync('Mijn week: her own time follows the request the moment it is withdrawn (back to the standard time)', async () => {
   await parentOn(); await submitThis([['Do', '12:30', '19:00']]);
   assert.equal(await withFakeNowAsync(NOW, () => withdrawWeekRequests('this', 'Do')), true); await tick();
-  const s = text(mijnWeek()); assert.doesNotMatch(s, /aanwezig om 12:30|klaar om 19:00/); assert.match(s, /aanwezig om 10:15/);
+  const s = text(mijnWeek('Do')); assert.doesNotMatch(s, /aanwezig om 12:30|klaar om 19:00/); assert.match(s, /aanwezig om 10:15/);
 });
 await testAsync('a time field with the focus (picker open on a phone): live data does not redraw the form; after the field is left it does', async () => {
   await parentOn(); wijzigen(); fillInputs(); setField('wrHeen_Do', '11:15');

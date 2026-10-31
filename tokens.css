@@ -19,7 +19,7 @@
   /* ---------- Palette (raw values: use the semantic roles below in components, never these) ---------- */
   --az-red:#d7001e; --red-50:#fde8eb; --red-700:#b0001a;
   --ink-900:#14161a; --ink-700:#3a3d42; --ink-500:#6b6f76; --ink-400:#8d9096; --ink-300:#b9b8b4;
-  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea;
+  --paper-0:#ffffff; --paper-50:#fafaf8; --paper-100:#f1f0ed; --paper-150:#efeeea; --paper-200:#e2e0da;
   --green-500:#1fa463; --green-50:#e3f6ec; --green-700:#11734a;
   --amber-50:#fff3dc; --amber-400:#f0b545; --amber-500:#c27200; --amber-700:#8a5200;
   --violet-50:#efeafd; --violet-700:#5b36c9;
@@ -32,6 +32,9 @@
   --surface-soft:var(--paper-100);      /* chips, segmented track, icon tiles */
   --surface-inset:var(--paper-50);      /* inputs, inner panels inside a card */
   --line:var(--paper-150);
+  --edge:var(--paper-200);              /* border of cards and day pills (white cards on the page, no grey fills) */
+  --tab-ink:var(--action-ink);          /* text on --tab */
+  --tab:var(--action-bg);               /* colour of the selected day / switch of the current tab: ink, Rooster overrides it with --info */
   --control-line:var(--ink-400);        /* edge of inputs and buttons that must reach 3:1 contrast */
   --text-1:var(--ink-900);
   --text-2:var(--ink-700);
@@ -39,9 +42,9 @@
   --action-bg:var(--ink-900);           /* primary buttons are INK, never red */
   --action-ink:#ffffff;
   --on-accent:#ffffff;                  /* text on a red or green fill */
-  --accent:var(--az-red);               /* app icon, active tab, "vandaag", own daughter, badges, destructive confirm */
+  --accent:var(--az-red);               /* app icon, active tab, "vandaag", badges, destructive confirm */
   --accent-soft:var(--red-50);
-  --accent-ink:var(--red-700);          /* own daughter's chip, destructive text */
+  --accent-ink:var(--red-700);          /* destructive text */
   --ok:var(--green-500);                /* switch on, "standaard" fill */
   --ok-soft:var(--green-50);
   --ok-ink:var(--green-700);            /* "Jij rijdt" */
@@ -98,11 +101,15 @@
   /* Bottom safe-area inset, used everywhere via var(--sab). The <head> script sets .no-bottom-inset for
      Firefox on Android in a normal tab, where its own toolbar already covers that area. */
   --sab:env(safe-area-inset-bottom,0px);
+
+  /* Dagdelen in de Advies-flow: heen = ochtendmist (leisteen), terug = avondrood (pruim). Gloed, rand, inkt, badge. */
+  --heen-glow:#dbe5ee; --heen-edge:#b4c5d6; --heen-ink:#3c5f85; --heen-badge:#e3ebf3;
+  --terug-glow:#ecdbe8; --terug-edge:#d7b9d0; --terug-ink:#8a3b78; --terug-badge:#f3e6f0;
 }
 :root.no-bottom-inset{--sab:0px}
 
 [data-theme="dark"]{
-  --surface-page:#0f1012; --surface-card:#1a1c1f; --surface-soft:#26282c; --surface-inset:#0f1012; --line:#2a2c30; --control-line:#6b6f76;
+  --surface-page:#0f1012; --surface-card:#1a1c1f; --surface-soft:#26282c; --surface-inset:#0f1012; --line:#2a2c30; --edge:#34373c; --control-line:#6b6f76;
   --text-1:#f3f2ef; --text-2:#cfd0d3; --text-muted:#9a9da3;
   --action-bg:#f3f2ef; --action-ink:#14161a;
   --accent-soft:#3d1218; --accent-ink:#ff7584;
@@ -111,5 +118,7 @@
   --match-soft:#251d40; --match-ink:#b9a6ff;
   --info-soft:#122036;
   --shadow-card:0 0 0 1px #24262a;
+  --heen-glow:#1c2833; --heen-edge:#364a5e; --heen-ink:#9bbbe0; --heen-badge:#202d3a;
+  --terug-glow:#33202f; --terug-edge:#5e3d58; --terug-ink:#e0a0d2; --terug-badge:#3a2536;
   color-scheme:dark;
 }

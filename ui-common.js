@@ -87,6 +87,38 @@ export function openSheet(title, subtitle, items){
 }
 
 export function closeSheet(){ const ov=document.getElementById('sheetOverlay'); if(ov) ov.remove(); }
+// Drag the handle of a sheet (or Help panel) down to close it: the whole top strip is the touch zone, so no tiny target is needed.
+// A drag of more than 80 px, or a quick flick, closes it; a shorter one springs back.
+const DRAG_CLOSE_PX = 80, FLICK_PX_PER_MS = 0.5;
+let drag = null;
+export function sheetDragStart(e){
+  const h = e && e.target && e.target.closest ? e.target.closest('.sheet__handle') : null;
+  const panel = h && h.closest('.sheet, .helpPanel'); if(!panel) return false;
+  drag = { panel, y0: e.clientY, t0: Date.now(), dy: 0 };
+  panel.classList.remove('sheet--snap'); panel.classList.add('sheet--dragging');
+  if(h.setPointerCapture && e.pointerId != null){ try{ h.setPointerCapture(e.pointerId); }catch(_){} }
+  return true;
+}
+export function sheetDragMove(e){
+  if(!drag) return false;
+  drag.dy = Math.max(0, e.clientY - drag.y0); drag.panel.style.transform = `translateY(${drag.dy}px)`;
+  return true;
+}
+export function sheetDragEnd(){
+  if(!drag) return false;
+  const { panel, dy, t0 } = drag; drag = null;
+  panel.classList.remove('sheet--dragging');
+  const quick = dy > 20 && dy / Math.max(1, Date.now() - t0) > FLICK_PX_PER_MS;
+  if(dy > DRAG_CLOSE_PX || quick){ const ov = panel.closest('#sheetOverlay, #helpOverlay'); if(ov) ov.remove(); return true; }
+  panel.classList.add('sheet--snap'); panel.style.transform = '';
+  return true;
+}
+if(typeof document!=='undefined' && document.addEventListener){
+  document.addEventListener('pointerdown', sheetDragStart);
+  document.addEventListener('pointermove', sheetDragMove);
+  document.addEventListener('pointerup', sheetDragEnd);
+  document.addEventListener('pointercancel', sheetDragEnd);
+}
 // Escape closes the open sheet or the Help panel (laptops have no back gesture).
 export function closeOnEscape(e){
   if(!e || e.key !== 'Escape') return false;

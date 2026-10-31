@@ -28,13 +28,13 @@ test('the agenda article: how to add the calendar, how fast it updates, who may 
   assert.match(all, /komende 3 weken/); assert.match(all, /alleen om te lezen/); assert.match(all, /Zet in mijn agenda/); assert.match(all, /Kopieer link/);
   assert.match(all, /Zet in Google Agenda/); assert.match(all, /ICSx⁵/); assert.match(all, /Via URL/); assert.match(all, /één keer in/); assert.match(all, /tot een dag/); assert.match(all, /Proton Calendar/); assert.match(all, /4 tot 16 uur/); assert.match(all, /Mijn week/); assert.match(all, /alleen met wie de ritten mag zien/);
   assert.match(all, /Er is geen knop om een nieuwe link te maken/);
-  assert.match(all, /twee agenda's: Mijn agenda met alleen de ritten die jullie zelf rijden/); assert.match(all, /Deel met \(je dochter\)/); assert.match(all, /in Mijn agenda alleen als jullie in die carpool rijden/); assert.match(all, /In Mijn agenda staan ook de voornamen van de meisjes die jullie rijden/); assert.match(all, /alleen in als je dochter in de carpool van die wedstrijd is ingedeeld/);
+  assert.match(all, /twee agenda's: Mijn agenda met alleen de ritten die jullie zelf rijden/); assert.match(all, /Deel met \(je dochter\)/); assert.match(all, /in Mijn agenda alleen als jullie in die carpool rijden/); assert.match(all, /In Mijn agenda staan ook de voornamen van de speelsters die jullie rijden/); assert.match(all, /alleen in als je dochter in de carpool van die wedstrijd is ingedeeld/);
   assert.ok(searchHelp('agenda', { canEdit: false }).some(a => a.id === 'agenda'));
   assert.ok(searchHelp('kalender iphone', { canEdit: false }).some(a => a.id === 'agenda'));
 });
 test('privacy and services say what the agenda link shows and where the file is', () => {
   const privacy = allText(articles.find(a => a.id === 'over-privacy')), services = allText(articles.find(a => a.id === 'over-diensten'));
-  assert.match(privacy, /Agenda-link:.*voornaam van de dochter, tijden, plekken en naam van de chauffeur/); assert.match(privacy, /in Mijn agenda de voornamen van de meisjes die het gezin rijdt/); assert.match(privacy, /mijn\.host in Nederland/);
+  assert.match(privacy, /Agenda-link:.*voornaam van de dochter, tijden, plekken en naam van de chauffeur/); assert.match(privacy, /in Mijn agenda de voornamen van de speelsters die het gezin rijdt/); assert.match(privacy, /mijn\.host in Nederland/);
   assert.match(services, /Agenda van je dochter en Mijn agenda: twee agenda-bestanden per gezin/);
 });
 test('every article has a unique id, a title, keywords and at least one paragraph', () => {
@@ -156,7 +156,7 @@ import nl from '../texts-nl.js';
 // Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
 const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
   'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Ander adres…', 'Plek toevoegen',
-  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Advies bekijken', 'Zelf indelen', 'Toch zelf wijzigen', 'Overnemen'];
+  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Verzoeken verwerken', 'Zelf indelen', 'Toch zelf wijzigen', 'Doorvoeren'];
 const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
 const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
 test('every quoted name exists in the app texts', () => {
@@ -262,7 +262,7 @@ test('the Afwijkend weekrooster is always on: no Beheer switch article any more,
   const a = findArticle('afwijkend-weekrooster'), b = findArticle('dagcoordinator-aanvragen');
   assert.ok(a && !a.coordinatorOnly && a.tab === 'deviation'); assert.ok(b && !b.coordinatorOnly && b.tab === 'schedule');
   const s = allText(a);
-  assert.match(s, /Rijdt niet mee geldt direct/); assert.match(s, /het vaste rooster geldt tot de dagcoördinator akkoord geeft/i); assert.match(s, /Er hoeft geen reden bij/);
+  assert.match(s, /Rijdt niet mee geldt direct/); assert.match(s, /het vaste rooster geldt tot de dagcoördinator akkoord geeft/i); assert.match(s, /Er hoeft geen reden bij/); assert.doesNotMatch(s, /dan gelden je tijden voor deze week direct/, 'a day coordinator\'s own times are a request too');
   assert.doesNotMatch(allText(a) + allText(b), /schakelaar|database-regels|Test en Aan/i, 'nothing about a switch');
   assert.ok(ids('afwijkend weekrooster').includes('afwijkend-weekrooster')); assert.ok(ids('aanvragen dagcoordinator').includes('dagcoordinator-aanvragen'));
 });
@@ -328,12 +328,15 @@ test('the Afwijkend weekrooster parent article explains the form and Mijn week; 
 
 test('the day coordinator article tells what he sees (action card, Recente wijzigingen, dot, number)', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
-  assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
+  assert.match(s, /aanvragen voor die dag/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
+});
+test('the day coordinator article says the card in Mijn week is folded until the day before', () => {
+  assert.match(JSON.stringify(findArticle('dagcoordinator-aanvragen')), /ingeklapt tot de dag voor de carpooldag/);
 });
 
-test('the day coordinator article explains the advice: variants, Overnemen, Ongedaan, Dagbericht', () => {
+test('the day coordinator article explains the flow: Verzoeken verwerken, the three steps, Advies/Alternatief, Doorvoeren, terugdraaien, Dagbericht', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
-  assert.match(s, /Zuinigst/); assert.match(s, /Minste gedoe/); assert.match(s, /Overnemen/); assert.match(s, /Ongedaan/); assert.match(s, /Dagbericht/);
+  assert.match(s, /in Mijn week: Advies bekijken en aanpassen/); assert.match(s, /Verzoeken verwerken/); assert.match(s, /Aanvragen/); assert.match(s, /Alternatief/); assert.match(s, /Controleren/); assert.match(s, /Doorvoeren/); assert.match(s, /terugdraaien/); assert.match(s, /Dagbericht/); assert.doesNotMatch(s, /Zelf indelen onder aan stap 1/); assert.match(s, /stap 2 bij Heen of Terug op Aanpassen/); assert.doesNotMatch(s, /Zuinigst|Minste gedoe|Overnemen/);
 });
 
 test('the day coordinator article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
@@ -372,6 +375,13 @@ test('the Rooster article says the Rooster opens on Deze week', () => {
 test('the privacy article says a phone that was not used for 30 days is disconnected and the code is entered again', () => {
   const all = JSON.stringify(articles);
   assert.match(all, /30 dagen niet is gebruikt, wordt automatisch losgekoppeld/); assert.match(all, /opnieuw je toegangscode/);
+});
+
+test('the help explains the redesign: day pills and the card you drive in Mijn week, blue Rooster with Aankomst bij and ATC blocks', () => {
+  const body = id => articles.find(x => x.id === id).body.join(' ');
+  assert.match(body('mijn-week'), /kies je een dag/); assert.match(body('mijn-week'), /groene rand/); assert.match(body('mijn-week'), /ingeklapt onder de dag/);
+  const r = articles.find(x => /Wat staat er in het Rooster/.test(x.title)).body.join(' ');
+  assert.match(r, /blauw/); assert.match(r, /Aankomst bij/); assert.match(r, /ATC Wijdewormer/);
 });
 
 test('the coordinator help explains the switch-parent icon and that the tab stays the same', () => {

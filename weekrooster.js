@@ -6,7 +6,7 @@
 // There is deliberately NO field for a reason or any free text (privacy). The fixed rooster counts until a request is accepted.
 //   { weekKey, day, familyId, rides, heen, terug, status, createdAt, updatedAt, [decidedAt, decidedBy], [test] }
 //   status: 'pending'   waits for the day coordinator (a request)
-//           'direct'    applied at once (a daughter who does not ride along, or a day coordinator on their own day)
+//           'direct'    applied at once (only "rijdt niet mee"; a day coordinator's own new times are a request like any other)
 //           'accepted'  the day coordinator agreed (decidedBy = the family id of whoever decided)
 //           'withdrawn' the family took it back
 //   A pending request whose day has passed counts as 'expired' (derived, never written).
@@ -42,13 +42,12 @@ export function isValidRequest(d) {
 
 // Direct or a request? Rules (section 2 of the brief):
 //  - only the own daughter can be changed (otherwise null: this is not allowed at all);
-//  - "rijdt niet mee" is always direct;
-//  - a day coordinator changing the own daughter on a day they coordinate themselves is direct;
-//  - everything else waits for the day coordinator.
-export function decideMode({ ownDaughter, rides, isDayCoordinator }) {
+//  - "rijdt niet mee" is always direct (also for a day coordinator);
+//  - everything else waits for the day coordinator, who plans the day on ALL changes at once. That includes the day coordinator's own
+//    daughter: her new times are a request in the same advice, so she can be moved up (voorgetrokken) when that fits the day best.
+export function decideMode({ ownDaughter, rides }) {
   if (!ownDaughter) return null;
-  if (rides === false) return 'direct';
-  return isDayCoordinator ? 'direct' : 'pending';
+  return rides === false ? 'direct' : 'pending';
 }
 
 // Which shifts of a form day say "rijdt niet mee": the unticked day, or an emptied time. Only a shift she has in the fixed rooster can be off
@@ -79,13 +78,11 @@ export function desiredMarks({ days, standard, isPast }) {
 //   days: { Do: { rides: true, heen: '16:30', terug: '17:45' }, ... }  (only the days the form shows as changed)
 //   standard: { Do: { heen: '16:00', terug: '17:00' }, ... }  the fixed rooster of the daughter
 //   isPast(day): true for a day that is over (not changeable)
-//   deciderOf(day): family id of the day coordinator (or of the real coordinator when none is set)
 //   existing: { <requestId>: doc }  what is stored already, to keep createdAt when a request is replaced
 // Returns { writes: [{ id, doc }], skipped: [{ day, why }] }. A day that equals the fixed rooster is skipped ('same'), a past day too ('past'),
 // and a day that equals what is already handed in or applied ('unchanged').
-// directTimes (default true): may new times be applied at once on the own day of a day coordinator? The caller passes false for next week
-// (its cars do not exist yet), so there it stays a request. "Rijdt niet mee" is always direct.
-export function buildRequests({ weekKey, familyId, days, standard, isPast, deciderOf, existing, nowMs, directTimes = true, shiftOff = false }) {
+// New times are always a request; "Rijdt niet mee" is always direct.
+export function buildRequests({ weekKey, familyId, days, standard, isPast, existing, nowMs, shiftOff = false }) {
   const writes = [], skipped = [];
   for (const day of REQUEST_DAYS) {
     const f = days && days[day];
@@ -112,9 +109,8 @@ export function buildRequests({ weekKey, familyId, days, standard, isPast, decid
     const old = existing && existing[id];
     // What is already handed in (or applied) for this day is not written again: it would turn an accepted request back into a pending one.
     if (old && ['pending', 'direct', 'accepted'].includes(old.status) && old.rides === rides && old.heen === heen && old.terug === terug) { skipped.push({ day, why: 'unchanged' }); continue; }
-    const mode = decideMode({ ownDaughter: true, rides, isDayCoordinator: directTimes && deciderOf ? deciderOf(day) === familyId : false });
+    const mode = decideMode({ ownDaughter: true, rides });
     const doc = { weekKey, day, familyId, rides, heen, terug, status: mode, createdAt: old && typeof old.createdAt === 'number' ? old.createdAt : nowMs, updatedAt: nowMs };
-    if (mode === 'direct' && rides) { doc.decidedAt = nowMs; doc.decidedBy = familyId; }
     writes.push({ id, doc });
   }
   return { writes, skipped };

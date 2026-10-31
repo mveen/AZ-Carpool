@@ -47,7 +47,7 @@ function ownAvatar(){ const id = ownFamilyId(); return id ? avatarOf(fam(id)) : 
 // The small line above the screen title (design v2): Mijn week shows the week, the other screens say what they are for.
 export function contextLine(screen){
   const week = S.currentWeekKey ? weekRangeLabel() : '';
-  if(screen === 'myweek') return week || t('shell.context_gezin');
+  if(screen === 'myweek') return S.currentWeekKey ? t('shell.context_mijnweek', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
   if(screen === 'schedule') return S.currentWeekKey ? t('shell.context_rooster', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
   if(screen === 'deviation') return t('shell.context_wijzigen');
   if(screen === 'matches'){ const team = (S.matchFeeds && S.matchFeeds[0] && S.matchFeeds[0].label) || ''; return team ? t('shell.context_wedstrijden', { team: team.replace(/^AZ\s+/i, '') }) : t('shell.context_wedstrijden_plain'); }

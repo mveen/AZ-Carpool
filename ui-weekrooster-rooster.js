@@ -5,15 +5,15 @@
 // These are status views, not notifications. Everything here only exists for a person with a family of their own (not Flex).
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, foldHtml, hapticTap, phIcon, showToast } from './ui-common.js';
+import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
+import { dateForWeekday } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
+import { requestRowsHtml } from './ui-weekrooster-essence.js';
 import { contactButtonHtml } from './ui-contact.js';
-import { activateTab } from './app.js';
 import { renderSchedule } from './ui-schedule.js';
-import { renderMyWeek } from './ui-myweek.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
-import { acceptDay, adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, requestsForDeciding } from './weekrooster-data.js';
+import { adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, planOf, planStats, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderLabel, deciderName, lower, summaryOf, upperFirst, weekroosterActive } from './ui-weekrooster-form.js';
 
 const wk = () => S.currentWeekKey;
@@ -32,7 +32,7 @@ const requestLine = r => `${girlName(r.familyId)}: ${summaryOf(r)}`;
 
 // The ONE line about the day coordinator in Rooster "Deze week". It is also "Jij bent dagcoördinator {dag}" when that is you (the line above the
 // switch is then left out, see renderSchedule). Whoever may plan this day gets "Zelf indelen" here, on the line of the role, with no extra row,
-// except when the amber card "Actie nodig" is on screen: that card has the same button next to "Advies bekijken" (withAction = false).
+// except when the amber card "Actie nodig" is on screen: with requests waiting the only way in is "Advies bekijken en aanpassen" (withAction = false).
 function coordLineHtml(day, withAction = true) {
   const id = deciderFamilyOf(day), name = esc(deciderName(day) || t('weekrooster.decider.unknown'));
   const me = !!id && id === myFamilyId();
@@ -66,18 +66,9 @@ export function scheduleDayExtrasHtml(day) {
   const decides = myDeciderDays().includes(day);
   if (decides) {
     const n = counts()[day] || 0;
-    // The requests that wait, as rows in the card (no second list below it). "Rijdt niet mee" is only mentioned when one was really processed.
-    const now = Date.now(), end = dayEndMs(wk(), day);
-    const waiting = pendingForDay(requestsForDeciding(), wk(), day, now, end);
-    const hasDirect = recentChanges(requestsForDeciding(), wk(), day, now, end).some(r => r.state === 'direct');
-    const rows = waiting.map(r => `<div class="alertCard__row"><span>${esc(requestLine(r))}</span><span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span></div>`).join('');
-    const alert = n
-      ? `<div class="devAlert" id="wrAlert"><p class="devAlertTitle">${phIcon('warning-circle-fill')} ${esc(t(n === 1 ? 'weekrooster.alert.titleOne' : 'weekrooster.alert.titleMany', { p1: n, p2: lower(dayName(day)) }))}</p>
-          ${rows}
-          <p class="devAlertBody">${esc(t('weekrooster.alert.body'))}${hasDirect ? ' ' + esc(t('weekrooster.alert.bodyDirect')) : ''}</p>
-          <div class="formActions"><button type="button" class="btn small" data-wradvice="${day}">${esc(t('weekrooster.advice.look'))}</button><button type="button" class="btn small secondary" data-wredit="${day}">${esc(t('weekrooster.edit.self'))}</button></div></div>`
-      : '';
-    return coordLineHtml(day, !n) + alert + logHtml(day);
+    // The requests that wait are not listed here: "Regel dit" opens the flow, whose first step shows them. This card only says how many and
+    // what the advice would be (the cars as they are, least waiting), in one line.
+    return coordLineHtml(day, !n) + entryCardHtml(day, n, 'data-wradvice', ' id="wrAlert"', true, true) + logHtml(day);
   }
   // A parent: the own open request of this day as a note, and the open requests of the other families.
   const own = openRequestsOf(S.weekRequests, wk(), myFamilyId(), Date.now(), d => dayEndMs(wk(), d)).filter(r => r.day === day && r.status === 'pending');
@@ -88,52 +79,54 @@ export function scheduleDayExtrasHtml(day) {
   return coordLineHtml(day) + notes + others;
 }
 
-// Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).
-// The advice for the day in one line (cars saved or added, all directions, "Zuinigst"); null when there is no sound arrangement.
-export function adviceLineOf(day) {
-  const advice = adviceForDay(day), dirs = Object.keys(advice.directions);
-  if (!dirs.length || dirs.some(d => advice.directions[d].variants.zuinig.noSolution)) return null;
-  const diff = dirs.reduce((sum, d) => sum + advice.directions[d].variants.zuinig.carsAfter - advice.directions[d].carsBefore, 0);
-  if (diff === 0) return t('weekrooster.action.adviceSame');
-  const n = Math.abs(diff);
-  if (diff < 0) return n === 1 ? t('weekrooster.action.adviceLess1') : t('weekrooster.action.adviceLessN', { p1: n });
-  return n === 1 ? t('weekrooster.action.adviceMore1') : t('weekrooster.action.adviceMoreN', { p1: n });
+// The card that announces what waits for the day coordinator: how many requests, the requests as they are asked (per heen and terug, per girl) and
+// "Verzoeken verwerken" (opens the flow). `attr` is the data attribute of the button, `extra` more attributes of the card.
+// Mijn week: amber with a warning icon. Rooster (`plain`): the normal white card, nothing to signal there.
+export function entryCardHtml(day, n, attr, extra = '', title = true, plain = false) {
+  if (!n) return '';
+  const rows = requestRowsHtml(adviceForDay(day));
+  const head = title ? `<div class="entryCard__head">${plain ? '' : `<span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>`}<b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b></div>` : '';
+  return `<div class="entryCard entryCard--stack${plain ? ' entryCard--plain' : ''}"${extra}>${head}${rows}
+    <button type="button" class="btn entryCard__go" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button></div>`;
 }
 
-// The amber card "Actie nodig voor {dag}": what waits (and what came in directly) and the advice in one line.
-// Mijn week shows it with buttons. The Advies and Zelf indelen views show the same card on top, without buttons, so the requests stay
-// in sight while the day is planned. Empty when nothing waits.
-export function actionCardHtml(day, { buttons = false, advice = true, dots = false } = {}) {
-  const now = Date.now();
-  const pending = pendingForDay(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
-  if (!pending.length) return '';
-  const direct = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state === 'direct');
-  const row = (r, tag) => `<div class="alertCard__row"><span${dots ? ' class="reqDot"' : ''}>${esc(requestLine(r))}</span>${tag}</div>`;
-  const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
-    .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
-  const line = buttons || advice ? adviceLineOf(day) : null;
-  return `<div class="alertCard alertCard--stack"${buttons ? ` data-wraction="${day}"` : ''}><div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>${rows}
-    ${line && advice ? `<div class="alertCard__text">${esc(line)}</div>` : ''}
-    ${buttons ? `<div class="formActions"><button type="button" class="btn small secondary" data-wrlook="${day}">${esc(t('weekrooster.action.look'))}</button>${line ? `<button type="button" class="btn small" data-wrtake="${day}">${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button>` : ''}</div>` : ''}</div>`;
+// Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).
+// The advice for the day in one line (the cars as they are, least waiting); null when it does not fit in the existing cars: the day coordinator
+// then decides in the flow, so there is nothing to take over in one tap.
+export function adviceLineOf(day) {
+  const advice = adviceForDay(day), plan = planOf(advice, 'best');
+  if (!Object.keys(advice.directions).length || plan.blocked || plan.fallback) return null;
+  const st = planStats(advice, plan), wait = st.extraWait, n = st.moved.length;
+  if (n) return t(n === 1 ? 'weekrooster.action.adviceMoved1' : 'weekrooster.action.adviceMovedN', { p1: t(wait ? 'weekrooster.action.waitSome' : 'weekrooster.action.waitNone', { p1: wait }), p2: n });   // somebody in another car: say so, the details are below
+  return wait ? t('weekrooster.action.adviceFitsWait', { p1: wait }) : t('weekrooster.action.adviceFits');
+}
+
+// The requests of the day in the normal white card, without a button: the Zelf indelen view shows it on top, so the requests stay in sight
+// while the day is planned. Empty when nothing waits.
+export function actionCardHtml(day) {
+  const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
+  if (!n) return '';
+  return `<div class="entryCard entryCard--stack entryCard--plain"><div class="entryCard__head"><b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b></div>${requestRowsHtml(adviceForDay(day))}</div>`;
+}
+
+// Only on the calendar day before the carpool day does the card show open: that is the moment the day coordinator really has to arrange it.
+// Before that (and on the day itself) it is one folded line, so it does not dominate Mijn week. The person can still open it (the fold remembers that).
+export function isDayBefore(day, now = new Date()) {
+  const prev = new Date(dateForWeekday(day)); prev.setDate(prev.getDate() - 1);
+  return prev.toDateString() === now.toDateString();
 }
 
 export function myWeekActionCardsHtml() {
   if (!weekroosterActive()) return '';
-  return myDeciderDays().map(day => actionCardHtml(day, { buttons: true })).join('');
+  return myDeciderDays().map(day => {
+    const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
+    if (!n) return '';
+    const extra = ` data-wraction="${day}"`;
+    if (isDayBefore(day)) return entryCardHtml(day, n, 'data-wrlook', extra);
+    return foldHtml('wraction|' + day, `<span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}`, entryCardHtml(day, n, 'data-wrlook', extra, false), 'fold--alert', 'wrAction' + day);
+  }).join('');
 }
 
 export function wireMyWeekActions(box) {
-  box.querySelectorAll('[data-wrlook]').forEach(b => b.onclick = () => { hapticTap(); S.scheduleDay = b.dataset.wrlook; S.roosterMode = 'week'; S.wrAdvice = null; S.wrDone = null; renderSchedule(); activateTab('schedule'); });
-  box.querySelectorAll('[data-wrtake]').forEach(b => b.onclick = async () => {
-    hapticTap();
-    const day = b.dataset.wrtake;
-    b.disabled = true;
-    const r = await acceptDay(day, 'zuinig');
-    if (!r.ok) { b.disabled = false; return; }
-    S.wrAdvice = null; S.wrDone = null;
-    showToast(t(r.n === 1 ? 'weekrooster.advice.doneOne' : 'weekrooster.advice.doneMany', { p1: r.n }), {
-      action: { label: t('deviation.ongedaan'), run: async () => { if (await r.undo()) { showToast(t('weekrooster.advice.undone')); renderSchedule(); renderMyWeek(); } } },
-    });
-    renderSchedule(); renderMyWeek();
-  });
+  box.querySelectorAll('[data-wrlook]').forEach(b => b.onclick = () => { hapticTap(); S.scheduleDay = b.dataset.wrlook; S.roosterMode = 'week'; S.wrDone = null; S.wrAdvice = { day: b.dataset.wrlook, step: 'requests', variant: 'best', edits: {} }; renderSchedule(); });   // the same flow as "Regel dit" in Rooster: its own screen, step 1, over the tab you are on
 }

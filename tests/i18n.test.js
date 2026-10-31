@@ -30,7 +30,7 @@ test('Beheer has texts for the "Eigen ouder rijdt mee" rule (block title, explan
   assert.match(t('beheer.eigen_ouder_uitleg'), /terug: rijdt de ouder, dan zit haar dochter altijd in die auto/);
   assert.equal(t('beheer.eigen_ouder_regel', { p1: 'Eline' }), 'Eigen ouder rijdt mee (terug): Eline');
   assert.equal(t('beheer.eigen_ouder_bestaat', { p1: 'Eline' }), 'Voor Eline staat deze regel er al.');
-  assert.equal(t('beheer.kies_een_meisje'), 'Kies een meisje.');
+  assert.equal(t('beheer.kies_een_meisje'), 'Kies een speelster.');
   assert.equal(t('beheer.eigen_ouder_waarschuwing', { p1: 'Eline' }), 'Let op: de eigen ouder rijdt, maar Eline zit in een andere auto (regel Eigen ouder rijdt mee).');
 });
 test('Beheer has texts for the open-all / close-all button', () => { assert.equal(t('beheer.alles_open'), 'Alles openklappen'); assert.equal(t('beheer.alles_dicht'), 'Alles dichtklappen'); });
@@ -314,7 +314,7 @@ test('Mijn week loading texts exist: spinner line, slow line and reload button',
 });
 
 test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist and name the day', () => {
-  ['tag.request', 'tag.accepted', 'action.title', 'action.look', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
+  ['tag.request', 'tag.accepted', 'action.title', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.alert.titleOne', { p1: 1, p2: 'donderdag' }), 'Actie nodig: 1 wijziging voor donderdag');
   assert.equal(t('weekrooster.alert.titleMany', { p1: 3, p2: 'donderdag' }), 'Actie nodig: 3 wijzigingen voor donderdag');
   assert.equal(t('weekrooster.alert.body'), 'Het vaste rooster geldt tot jij akkoord geeft.');
@@ -324,8 +324,8 @@ test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist a
 });
 
 test('Afwijkend weekrooster (phase 4): the Advies texts exist, the reason is built from the planning, never typed', () => {
-  ['look', 'headline', 'accept', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
-  assert.equal(t('weekrooster.advice.accept'), 'Overnemen'); assert.equal(t('weekrooster.advice.headline', { p1: 'vrijdag 23 okt' }), 'Advies · vrijdag 23 okt');
+  ['look', 'headline', 'advice', 'gone', 'undone', 'noSolution'].forEach(k => assert.ok(hasKey('weekrooster.advice.' + k), k));
+  assert.equal(hasKey('weekrooster.advice.accept'), false); assert.equal(t('weekrooster.advice.headline', { p1: 'vrijdag 23 okt' }), 'Advies · vrijdag 23 okt');
   assert.equal(t('weekrooster.advice.doneMany', { p1: 3 }), '3 wijzigingen doorgevoerd');
   assert.equal(t('weekrooster.edit.settledOne'), '1 aanvraag afgehandeld'); assert.equal(t('weekrooster.edit.settledMany', { p1: 3 }), '3 aanvragen afgehandeld');
   // the screen has no reason, no variant switch and no counters any more: those texts are gone
@@ -359,6 +359,26 @@ test('the switch-parent button and sheet have their texts', () => {
   assert.equal(t('shell.switch_flex'), 'Flexrijders'); assert.equal(t('shell.switch_title'), 'Testweergave als ouder'); assert.equal(t('shell.switch_self'), 'Terug naar mezelf');
   assert.match(t('shell.switch_sub'), /blijft op dit tabblad/); assert.equal(t('shell.switch_open'), 'Testweergave als andere ouder');
   assert.doesNotMatch(t('shell.switch_sub') + t('shell.switch_none'), /,\s+met\b/);
+});
+
+test('the texts of the redesign of Mijn week and Rooster are there', () => {
+  assert.equal(t('myweek.passagiers'), 'Passagiers'); assert.equal(t('ride.chauffeur'), 'Chauffeur');
+  assert.equal(t('schedule.aankomst_bij', { p1: "AFC '34" }), "Aankomst bij AFC '34"); assert.equal(t('schedule.vertrek_bij', { p1: "AFC '34" }), "Vertrek bij AFC '34");
+  assert.equal(t('shell.context_mijnweek', { week: 44 }), 'Week 44 · mijn gezin'); assert.equal(t('schedule.auto_aantal', { p1: 4 }), '4 ritten');
+  assert.equal(t('contact.open_met', { p1: 'Jan' }), 'Neem contact op met Jan');
+});
+
+test('the screen after Doorvoeren has its texts', () => {
+  assert.equal(t('weekrooster.flow.doneTitle', { p1: 'Maandag' }), 'Maandag is geregeld'); assert.equal(t('weekrooster.flow.doneShare'), 'Deel in de WhatsApp-groep');
+  assert.equal(t('weekrooster.flow.doneCount1'), '1 wijziging'); assert.equal(t('weekrooster.flow.doneReqN', { p1: 2 }), '2 aanvragen'); assert.equal(t('weekrooster.flow.doneNoHeen'), 'Rijdt heen niet mee');
+});
+test('the flow of the day coordinator (Indeling, Controleren, Doorvoeren) has its texts, and the old counters are gone', () => {
+  ['step1', 'step2', 'step3', 'segAdvice', 'segAlt', 'wait0', 'moved0', 'notice0', 'adjust', 'toCheck', 'notFit', 'pickTitle', 'blockChanges', 'blockSeats', 'blockOut', 'blockEdit', 'fromCar', 'addPassenger', 'addTitle', 'addSub', 'addNow', 'addNone', 'addEmpty', 'removeItem', 'removeTitle', 'removeText', 'removeLast', 'removeNo', 'removeYes', 'addMore', 'addMoreSub', 'addNoRide', 'timeTitle', 'timeHeen', 'timeTerug', 'timeAdd', 'chipNoSwap', 'chipSeatsOk', 'summary', 'apply', 'applySub', 'backToPlan', 'doneTitle', 'undoAll', 'undoSure'].forEach(k => assert.ok(hasKey('weekrooster.flow.' + k), k));
+  ['dep', 'join1', 'joinN', 'gone', 'off'].forEach(k => assert.ok(hasKey('weekrooster.essence.' + k), k)); ['adviceMoved1', 'adviceMovedN', 'waitNone', 'waitSome'].forEach(k => assert.ok(hasKey('weekrooster.action.' + k), k));
+  assert.equal(t('weekrooster.flow.wait', { p1: 30 }), '30 min extra wachten'); assert.equal(t('weekrooster.flow.movedN', { p1: 2 }), '2 speelsters in een andere auto');
+  assert.equal(t('weekrooster.flow.chipRequests', { p1: 3, p2: 3 }), '3 van 3 aanvragen'); assert.equal(t('weekrooster.flow.undoAll'), 'Alles terugdraaien');
+  assert.equal(t('weekrooster.advice.look'), 'Advies bekijken en aanpassen'); assert.equal(t('weekrooster.action.adviceFitsWait', { p1: 30 }), 'Advies: past in de bestaande auto’s, 30 min extra wachten.');
+  ['weekrooster.action.adviceLess1', 'weekrooster.action.adviceLessN', 'weekrooster.action.adviceSame', 'weekrooster.action.adviceMore1', 'weekrooster.action.adviceMoreN'].forEach(k => assert.equal(hasKey(k), false, k));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
@@ -415,7 +435,39 @@ test('the text about one-off changes says they disappear on Friday at 19:00', ()
 test('the agenda update text names Proton and points to Mijn week', () => {
   assert.match(t('agenda.bijwerken'), /Google of Proton/); assert.match(t('agenda.bijwerken'), /Mijn week/);
 });
+test('the Advies flow: the entry card and the three step titles are in the text file, and the fixed claims about advice/alternative are gone', () => {
+  assert.equal(t('weekrooster.entry.go'), 'Verzoeken verwerken'); assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 3, p2: 'donderdag' }), '3 aanvragen voor donderdag');
+  assert.equal(t('weekrooster.flow.titleRequests', { p1: 'morgen' }), 'Wijzigingen voor morgen'); assert.equal(t('weekrooster.flow.titlePlan', { p1: 'donderdag' }), 'Voorstel voor donderdag'); assert.equal(t('weekrooster.flow.titleCheck'), 'Klaar om door te voeren?');
+  assert.equal(t('weekrooster.flow.notYet'), 'Nog niets doorgevoerd. Je bevestigt op de volgende stap.');
+  assert.equal(t('weekrooster.flow.segAdviceSub'), 'weekrooster.flow.segAdviceSub');   // the subtitle of Advies/Alternatief is worked out per variant now
+});
+test('Mijn week uses the words of the flow for its button: one text "Advies bekijken en aanpassen", the old "Bekijk" is gone', () => {
+  assert.equal(t('weekrooster.advice.look'), 'Advies bekijken en aanpassen'); assert.equal(hasKey('weekrooster.action.look'), false); assert.equal(hasKey('weekrooster.flow.reqBy'), false); assert.equal(hasKey('weekrooster.flow.reqByMe'), false);   // "Aangevraagd door ouder van …" added nothing
+});
 test('the connection error asks to check the internet and has a retry label, without developer talk about the Firebase config', () => {
   assert.match(t('common.kan_geen_verbinding_maken_met'), /internetverbinding/); assert.doesNotMatch(t('common.kan_geen_verbinding_maken_met'), /Firebase/);
   assert.equal(t('common.opnieuw_proberen'), 'Opnieuw proberen');
+});
+
+test('the scene status texts say how many cars change, in singular and plural', () => {
+  assert.equal(t('weekrooster.flow.sceneChanges1'), '1 auto wijzigt'); assert.equal(t('weekrooster.flow.sceneChangesN', { p1: 3 }), '3 auto’s wijzigen');
+});
+test('the time field of Auto’s aanpassen explains the automatic time and offers a way back', () => {
+  assert.match(t('weekrooster.flow.depAuto'), /Automatisch berekend/); assert.equal(t('weekrooster.flow.depReset', { p1: '07:30' }), 'Terug naar berekend (07:30)');
+});
+test('the sum behind extra wachten has texts for title, columns, per-direction line and the final line', () => {
+  assert.equal(t('weekrooster.flow.calcTitle'), 'Zo is het berekend'); assert.equal(t('weekrooster.flow.calcDir', { p1: 165, p2: 150, p3: 15 }), 'Extra = 165 − 150, nooit onder 0: 15 min');
+  assert.equal(t('weekrooster.flow.calcFinal', { p1: 15 }), 'Extra wachten: 15 min'); assert.match(t('weekrooster.flow.calcClose'), /Tik ergens/);
+});
+test('the reasoning of the advice names the criteria in the order of the planner: cars first, then waiting', () => {
+  assert.equal(t('weekrooster.flow.whyLine'), 'Gekozen op:'); assert.match(t('weekrooster.flow.whyFirst'), /^zo min mogelijk auto’s, dan zo min mogelijk wachttijd$/);
+  assert.match(t('weekrooster.flow.whySub'), /Ouders rijden omdat het moet/); assert.equal(t('weekrooster.flow.why_cars'), 'Auto’s');
+  assert.equal(t('weekrooster.flow.whyAdviceWins', { p1: 2, p2: 'minste extra wachttijd' }), 'Advies wint op 2, de belangrijkste verschillende regel: minste extra wachttijd.');
+});
+test('the per-girl "Komt door" line is gone from the texts (the wait tile explains the sum)', () => {
+  assert.equal(nl['weekrooster.flow.waitSum'], undefined);
+});
+test('the driver notice says "Impact voor", not "merken het"', () => {
+  assert.equal(t('weekrooster.flow.notice0'), 'Geen impact voor chauffeurs'); assert.equal(t('weekrooster.flow.notice', { p1: 'Jan' }), 'Impact voor: Jan');
+  assert.equal(t('weekrooster.flow.tileNoticeN'), 'chauffeurs met impact');
 });
