@@ -97,6 +97,7 @@ await testAsync('Mijn week: the card "Actie nodig voor donderdag" with the reque
   assert.match(html, /alertCard alertCard--stack" data-wraction="Do"/); assert.match(s, /Actie nodig voor donderdag/);
   assert.match(s, /Anouk: Heen 11:00 · Terug 18:00 Aanvraag/); assert.match(s, /Evi: Rijdt niet mee Direct/);
   assert.match(html, /data-wrlook="Do"/); assert.doesNotMatch(noStyle(html), /style="/);
+  assert.match(s, /Advies bekijken en aanpassen/); assert.doesNotMatch(s, /\bBekijk\b/); assert.match(html, /formActions formActions--stack/);   // the same words as step 1 of the flow
   assert.match(s, /Advies: past in de bestaande auto’s/, 'one line of advice'); assert.match(html, /data-wrtake="Do"/); assert.match(s, /Overnemen/);
 });
 await testAsync('"Overnemen" on the card accepts the request and shows the toast; Bekijk and Overnemen sit side by side', async () => {
@@ -105,11 +106,12 @@ await testAsync('"Overnemen" on the card accepts the request and shows the toast
   await withFakeNowAsync(NOW, () => btn.onclick());
   assert.equal(S.dayRequests['2026-W40_Do_f3'].status, 'accepted'); assert.doesNotMatch(text(mijnWeek()), /Actie nodig voor donderdag/);
 });
-await testAsync('"Bekijk" opens Rooster on that day, in "Deze week"', async () => {
+await testAsync('"Advies bekijken en aanpassen" on Mijn week opens the same flow as "Regel dit": step 1, on that day, over the tab you are on', async () => {
   await asDecider({ scheduleDay: 'Ma', roosterMode: 'standard' });
   const btn = { dataset: { wrlook: 'Do' }, onclick: null };
   wireMyWeekActions({ querySelectorAll: sel => (sel === '[data-wrlook]' ? [btn] : []) });
   withFakeNow(NOW, () => btn.onclick()); assert.equal(S.scheduleDay, 'Do'); assert.equal(S.roosterMode, 'week');
+  assert.deepEqual(S.wrAdvice, { day: 'Do', step: 'requests', variant: 'best', edits: {} }); assert.equal(S.wrDone, null);
   const html = dom.html('tab-schedule');
   assert.match(html, /id="wrAlert"/, 'Rooster was drawn again for the day of the request, not left on Monday'); assert.match(text(html), /1 aanvraag voor donderdag/);
 });

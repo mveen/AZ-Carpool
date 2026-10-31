@@ -17,7 +17,6 @@ import { wireWhatsAppButton } from './ui-deviation.js';
 import { buildConclusieMessage } from './message-texts.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
-import { myFamilyId } from './coordinator.js';
 import { evaluateCars } from './weekrooster-impact.js';
 import { acceptDay, adviceForDay, planOf, planStats } from './weekrooster-data.js';
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace } from './weekrooster-plan.js';
@@ -82,8 +81,7 @@ function requestRowHtml(adv, r) {
     if (!q.time) return `<div class="reqItem__line">${esc(t(heen ? 'weekrooster.flow.reqNoHeen' : 'weekrooster.flow.reqNoTerug'))}${was ? ` <s>${esc(was)}</s>` : ''}</div>`;
     return `<div class="reqItem__line">${esc(t(heen ? 'weekrooster.flow.reqHeen' : 'weekrooster.flow.reqTerug'))} <span class="reqItem__t">${esc(q.time)}</span>${was && was !== q.time ? ` <s>${esc(was)}</s>` : ''}</div>`;
   }).join('');
-  const by = r.familyId === myFamilyId() ? t('weekrooster.flow.reqByMe') : t('weekrooster.flow.reqBy', { p1: rawGirl(r.familyId) });
-  return `<div class="reqItem"><b>${girlName(r.familyId)}</b>${lines}<div class="reqItem__by">${esc(by)}</div></div>`;
+  return `<div class="reqItem"><b>${girlName(r.familyId)}</b>${lines}</div>`;
 }
 
 function heroHtml(adv, plan, stats) {

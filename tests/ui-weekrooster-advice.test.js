@@ -67,7 +67,7 @@ await testAsync('closed: nothing; step 1 Aanvragen: the request, the advice in s
   assert.equal((html.match(/flowSteps__step flowSteps__step--/g) || []).length, 3);
   assert.match(html, /flowSteps__step--current" aria-current="step">.*?Aanvragen/); assert.match(html, /flowSteps__step--todo[^>]*>.*?Indeling/); assert.match(html, /flowSteps__step--todo[^>]*>.*?Controleren/);
   assert.match(s, /Morgen · donderdag 1 okt/); assert.match(s, /Wijzigingen voor morgen/);
-  assert.match(s, /1 aanvraag van een ouder/); assert.match(s, /Lois Heen: aanwezig om 09:00 08:30 Aangevraagd door ouder van Lois/);
+  assert.match(s, /1 aanvraag van een ouder/); assert.match(s, /Lois Heen: aanwezig om 09:00 08:30/); assert.doesNotMatch(s, /Aangevraagd door/);
   assert.match(s, /Advies beschikbaar/); assert.match(s, /30 min extra wachten/); assert.match(s, /0 speelsters in andere auto/);
   assert.match(s, /Er verandert niets voordat je op de laatste stap bevestigt/);
   assert.match(html, /id="wrNav"[^>]*aria-label="Sluiten"/); assert.match(html, /id="wrToPlan"/); assert.match(s, /Advies bekijken en aanpassen/);

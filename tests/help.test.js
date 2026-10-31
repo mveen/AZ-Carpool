@@ -336,7 +336,7 @@ test('the day coordinator article says the card in Mijn week is folded until the
 
 test('the day coordinator article explains the flow: Regel dit, the three steps, Advies/Alternatief, Doorvoeren, terugdraaien, Dagbericht', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
-  assert.match(s, /Regel dit/); assert.match(s, /Aanvragen/); assert.match(s, /Alternatief/); assert.match(s, /Controleren/); assert.match(s, /Doorvoeren/); assert.match(s, /terugdraaien/); assert.match(s, /Dagbericht/); assert.doesNotMatch(s, /Zuinigst|Minste gedoe|Overnemen/);
+  assert.match(s, /in Mijn week: Advies bekijken en aanpassen/); assert.match(s, /Regel dit/); assert.match(s, /Aanvragen/); assert.match(s, /Alternatief/); assert.match(s, /Controleren/); assert.match(s, /Doorvoeren/); assert.match(s, /terugdraaien/); assert.match(s, /Dagbericht/); assert.doesNotMatch(s, /Zuinigst|Minste gedoe|Overnemen/);
 });
 
 test('the day coordinator article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {

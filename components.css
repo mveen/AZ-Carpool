@@ -607,7 +607,6 @@ button.planRow{cursor:pointer}
 .reqItem__line{font:var(--type-small)}
 .reqItem__t{font-family:var(--font-mono);font-weight:700}
 .reqItem__line s{font-family:var(--font-mono);color:var(--text-muted);margin-left:var(--space-2)}
-.reqItem__by{font:var(--type-caption);color:var(--text-muted)}
 .adviceHero{background:var(--surface-card);border:2px solid var(--action-bg);border-radius:var(--radius-hero);padding:var(--space-6) var(--space-7);display:flex;flex-direction:column;gap:var(--space-4)}
 .adviceHero__title{margin:0;font:var(--type-section)}
 .adviceHero__text{margin:0;font:var(--type-small);color:var(--text-2)}
@@ -853,6 +852,7 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .matchNote{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0 0;font:var(--type-caption);color:var(--match-ink)}
 .formActions{display:flex;gap:var(--space-3);margin-top:var(--space-5)}
 .formActions .btn{flex:1}
+.formActions--stack{flex-direction:column}
 .dayFormCard{background:var(--surface-inset);border:0;border-radius:var(--radius-panel);padding:var(--space-5)}
 
 /* ============================================================

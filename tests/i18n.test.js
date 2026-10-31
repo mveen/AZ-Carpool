@@ -314,7 +314,7 @@ test('Mijn week loading texts exist: spinner line, slow line and reload button',
 });
 
 test('Afwijkend weekrooster (phase 3): the texts for the day coordinator exist and name the day', () => {
-  ['tag.request', 'tag.accepted', 'action.title', 'action.look', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
+  ['tag.request', 'tag.accepted', 'action.title', 'alert.titleOne', 'alert.titleMany', 'alert.body', 'log.title', 'note.own'].forEach(k => assert.ok(hasKey('weekrooster.' + k), k));
   assert.equal(t('weekrooster.alert.titleOne', { p1: 1, p2: 'donderdag' }), 'Actie nodig: 1 wijziging voor donderdag');
   assert.equal(t('weekrooster.alert.titleMany', { p1: 3, p2: 'donderdag' }), 'Actie nodig: 3 wijzigingen voor donderdag');
   assert.equal(t('weekrooster.alert.body'), 'Het vaste rooster geldt tot jij akkoord geeft.');
@@ -439,6 +439,9 @@ test('the Advies flow: the entry card and the three step titles are in the text 
   assert.equal(t('weekrooster.flow.titleRequests', { p1: 'morgen' }), 'Wijzigingen voor morgen'); assert.equal(t('weekrooster.flow.titlePlan', { p1: 'donderdag' }), 'Voorstel voor donderdag'); assert.equal(t('weekrooster.flow.titleCheck'), 'Klaar om door te voeren?');
   assert.equal(t('weekrooster.flow.notYet'), 'Nog niets doorgevoerd. Je bevestigt op de volgende stap.');
   assert.equal(t('weekrooster.flow.segAdviceSub'), 'weekrooster.flow.segAdviceSub');   // the subtitle of Advies/Alternatief is worked out per variant now
+});
+test('Mijn week uses the words of the flow for its button: one text "Advies bekijken en aanpassen", the old "Bekijk" is gone', () => {
+  assert.equal(t('weekrooster.advice.look'), 'Advies bekijken en aanpassen'); assert.equal(hasKey('weekrooster.action.look'), false); assert.equal(hasKey('weekrooster.flow.reqBy'), false); assert.equal(hasKey('weekrooster.flow.reqByMe'), false);   // "Aangevraagd door ouder van …" added nothing
 });
 test('the connection error asks to check the internet and has a retry label, without developer talk about the Firebase config', () => {
   assert.match(t('common.kan_geen_verbinding_maken_met'), /internetverbinding/); assert.doesNotMatch(t('common.kan_geen_verbinding_maken_met'), /Firebase/);
