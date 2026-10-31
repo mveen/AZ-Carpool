@@ -154,6 +154,8 @@ test('a section is collapsed by default and open once its key is in S.folds', ()
   resetState({});
   assert.doesNotMatch(foldHtml('k1', 'Titel', '<p>x</p>', 'card'), / open/);
   S.folds['k1'] = true;
+  assert.match(foldHtml('k2', 'T', 'b', 'card', undefined, true), / open/, 'defaultOpen: open until the person closes it');
+  { const kept = S.folds; S.folds = { k2: false }; assert.doesNotMatch(foldHtml('k2', 'T', 'b', 'card', undefined, true), / open/); S.folds = kept; }
   const html = foldHtml('k1', 'Titel', '<p>x</p>', 'card', 'myId');
   assert.match(html, /<details class="fold card" id="myId" data-fold="k1" open>/); assert.match(html, /<summary>Titel<\/summary>/);
   S.folds = {};

@@ -9,7 +9,6 @@ import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
 import { dateForWeekday } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
-import { DAYS } from './constants.js';
 import { requestRowsHtml } from './ui-weekrooster-essence.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { renderSchedule } from './ui-schedule.js';
@@ -48,17 +47,28 @@ function logHtml(day) {
   return foldHtml('wrlog|' + day, `${esc(t('weekrooster.log.title'))} <b>${items.length}</b>`, rows, 'fold--quiet', 'wrLog');
 }
 
-// Above the day in Rooster "Deze week". Empty for a person without a family of their own.
+// Within 24 hours of the start of the carpool day (the day itself counts): then the day coordinator's card shows open in Rooster.
+export function isWithin24h(day, now = new Date()) {
+  const start = new Date(dateForWeekday(day)); start.setHours(0, 0, 0, 0);
+  return start.getTime() - now.getTime() <= 24 * 3600 * 1000;
+}
+
+// Above the day in Rooster "Deze week": the requests of every day, for everybody, folded. Open when this person is the day coordinator and the
+// day is less than 24 hours away. Empty for a person without a family of their own.
 export function scheduleDayExtrasHtml(day) {
   if (!weekroosterActive()) return '';
-  const decides = myDeciderDays().includes(day);
-  if (decides) {
+  const icon = `<span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>`;
+  if (myDeciderDays().includes(day)) {
     const n = counts()[day] || 0;
     // The requests that wait are listed in the card (as they are asked, per heen and terug); "Verzoeken verwerken" opens the flow.
-    return entryCardHtml(day, n, 'data-wradvice', ' id="wrAlert"', true, true) + logHtml(day);
+    const card = entryCardHtml(day, n, 'data-wradvice', ' id="wrAlert"', false, true);
+    return (card ? foldHtml('wrroost|' + day, `${icon}<span class="entryCard__title"><b>${esc(titleOf(n, day))}</b></span>`, card, 'fold--alert', 'wrRoost' + day, isWithin24h(day)) : '') + logHtml(day);
   }
-  // Somebody else decides this day: the same card, with the name of the day coordinator and "Overnemen" (after a warning).
-  return takeOverCardHtml(day, { plain: true });
+  // Somebody else decides this day: the same card, with the name of the day coordinator and "Overnemen" (after a warning). Always folded.
+  const card = takeOverCardHtml(day, { title: false });
+  if (!card) return '';
+  const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
+  return foldHtml('wrroost|' + day, `${icon}<span class="entryCard__title"><b>${esc(titleOf(n, day))}</b>${takeCaptionHtml(day)}</span>`, card, 'fold--alert', 'wrRoost' + day);
 }
 
 // The card that announces what waits for the day coordinator: how many requests, the requests as they are asked (per heen and terug, per girl) and
@@ -128,14 +138,7 @@ export function myWeekActionCardsHtml() {
     if (isDayBefore(day)) return entryCardHtml(day, n, 'data-wrlook', extra);
     return foldHtml('wraction|' + day, foldTitle(n, day, ''), entryCardHtml(day, n, 'data-wrlook', extra, false), 'fold--alert', 'wrAction' + day);
   });
-  // The days somebody else decides: folded, with the name of the day coordinator under the title.
-  const others = DAYS.map(([day]) => day).filter(day => !mine.includes(day)).map(day => {
-    const card = takeOverCardHtml(day, { title: false, othersOnly: true });
-    if (!card) return '';
-    const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
-    return foldHtml('wrtake|' + day, foldTitle(n, day, takeCaptionHtml(day)), card, 'fold--alert', 'wrTake' + day);
-  });
-  return decided.concat(others).join('');
+  return decided.join('');
 }
 
 export function wireMyWeekActions(box) {

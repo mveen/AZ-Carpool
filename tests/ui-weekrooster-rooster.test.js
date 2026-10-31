@@ -17,7 +17,8 @@ import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
 import { updateTimeChangesBadge } from '../ui-beheer.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
-import { weekroosterActionCount, weekroosterDayDot, scheduleDayExtrasHtml, myWeekActionCardsHtml, actionCardHtml, adviceLineOf, wireMyWeekActions } from '../ui-weekrooster-rooster.js';
+import { weekroosterActionCount, weekroosterDayDot, scheduleDayExtrasHtml, isWithin24h, myWeekActionCardsHtml, actionCardHtml, adviceLineOf, wireMyWeekActions } from '../ui-weekrooster-rooster.js';
+import { dateForWeekday } from '../dates.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -96,7 +97,7 @@ await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen v
   assert.match(html, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Verzoeken verwerken/); assert.match(html, /data-wrlook="Do"/);
   assert.doesNotMatch(s, /Advies/, 'the requests as they are asked, no advice'); assert.match(html, /entryCard__icon/, 'Mijn week keeps the amber card with its icon');
   assert.doesNotMatch(html, /alertCard|fold--alert|data-wrtake/); assert.doesNotMatch(s, /Actie nodig|Overnemen/); assert.doesNotMatch(noStyle(html), /style="/);
-  const inner = h => text(h.slice(h.indexOf('class="entryCard '))).split('Verzoeken verwerken')[0].replace(/^[^>]*>/, '');
+  const inner = h => text(h.slice(h.indexOf('essRows essRows--req'))).split('Verzoeken verwerken')[0];
   assert.equal(inner(html).replace(/\s+/g, ' '), inner(room).replace(/\s+/g, ' '));   // the same words as in Rooster
 });
 await testAsync('"Advies bekijken en aanpassen" on Mijn week opens the same flow as "Verzoeken verwerken": step 1, on that day, over the tab you are on', async () => {
@@ -136,8 +137,21 @@ await testAsync('a parent sees the open request of another family in the card (R
   const s = text(rooster());
   assert.match(s, /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries Heen .*Lois aanwezig om 12:15/);
   assert.doesNotMatch(s, /Evi rijdt niet mee/, 'a direct request is not listed'); assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen \d/);
-  const mw = mijnWeek();
-  assert.match(mw, /<details class="fold fold--alert"[^>]*data-fold="wrtake\|Do"/); assert.match(text(mw), /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries/); assert.match(mw, /data-wrtakeover="Do"/); assert.doesNotMatch(noStyle(mw), /style="/);
+  const mw = mijnWeek();   // Mijn week = parent + daughter: the days of other day coordinators are not shown there
+  assert.doesNotMatch(mw, /data-wrtake|wrroost|Dagcoördinator: Kees/); assert.doesNotMatch(noStyle(mw), /style="/);
+  const room = rooster(); assert.match(room, /<details class="fold fold--alert"[^>]*data-fold="wrroost\|Do"/); assert.doesNotMatch(room, /data-fold="wrroost\|Do"[^>]* open/, 'a day of somebody else is always folded');
+});
+
+await testAsync('Rooster: the requests of the day coordinator are folded, and open when the day is less than 24 hours away', async () => {
+  await asDecider(); const room = rooster();
+  assert.match(room, /<details class="fold fold--alert"[^>]*data-fold="wrroost\|Do"/);
+  assert.equal(isWithin24h('Do', new Date(NOW)), true, 'Wednesday morning, the day starts in 14 hours: open'); assert.match(room, /data-fold="wrroost\|Do"[^>]* open/);
+  assert.equal(isWithin24h('Vr', new Date(NOW)), false, 'two days ahead: folded');
+  const eve = new Date(dateForWeekday('Do')); eve.setDate(eve.getDate() - 1); eve.setHours(20, 0, 0, 0);
+  assert.equal(isWithin24h('Do', eve), true, 'the evening before: open');
+  assert.equal(isWithin24h('Do', new Date(eve.getTime() - 21 * 3600 * 1000)), false, 'more than 24 hours before the start of the day: folded');
+  S.folds = { 'wrroost|Do': false }; withFakeNow(NOW, () => assert.doesNotMatch(scheduleDayExtrasHtml('Do'), /data-fold="wrroost\|Do"[^>]* open/, 'closed by the person: stays closed'));
+  S.folds = {};
 });
 
 console.log('=== not applicable ===');

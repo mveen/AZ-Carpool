@@ -25,8 +25,9 @@ export function phIcon(name, opts){
 
 // Collapsible section (native <details>), collapsed by default. The open state is kept in S.folds so it survives a redraw.
 // `key` must be unique on the page; `cls` styles the wrapper (e.g. "card" or "group").
-export function foldHtml(key, titleHtml, bodyHtml, cls, id){
-  const open = S.folds && S.folds[key];
+export function foldHtml(key, titleHtml, bodyHtml, cls, id, defaultOpen){
+  const kept = S.folds && S.folds[key];   // `defaultOpen`: open until the person closes it (then the kept state wins)
+  const open = kept === undefined ? !!defaultOpen : kept;
   return `<details class="fold ${cls||''}"${id?` id="${id}"`:''} data-fold="${esc(key)}"${open?' open':''}><summary>${titleHtml}</summary><div class="foldBody">${bodyHtml}</div></details>`;
 }
 

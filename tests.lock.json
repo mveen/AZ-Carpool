@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "16e55f6264a5cf17fdc6d0a67e489fecd706c9aa15c24aea381e3d13d2a3467e",
-    "test": "5b978e24626e3c89ad3b80b65de4b94b8843aed1bfd4643ca29d52b040420fef"
+    "module": "78b5c808dbe123be9a91da09fccb0f17f7457c14528ebde581291cc8c8d75873",
+    "test": "4bb7f83e81f99bec935dc439d8d2fa045a9f3bd966432f9ce1d14f938ff361f2"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -176,8 +176,8 @@
     "test": "3b32ef4fe76ba4da01ed1edbb7f5734833a60572edd6b161c0425fedb61842fc"
   },
   "ui-common.js": {
-    "module": "21fa9096ed3330ce8783b0755dccba5ce6e9e0d5f9e262b1cf1d6a4a1f37bd75",
-    "test": "bc5e8144b4d01dec881110f62c0a978f0312f1961294e450a1c5b7ef8039396d"
+    "module": "e5a150c24638ebe45b6a34a927fe81845c627296841baeda0fb91ba73d7678de",
+    "test": "ca9c4547302fa40487300a80757a5ca8524ba382358ff63ef7afb90209235113"
   },
   "ui-contact.js": {
     "module": "072ec625a16537eb353f776d2be0bb64ceb4da940cc4772ffa322db87cbde626",
@@ -209,7 +209,7 @@
   },
   "ui-myweek.js": {
     "module": "fe8f467e5b5941fd8f96d63637243eaf7c95c9ea84ed179bbce70a98b2fc04ef",
-    "test": "0c556b1ee51af122c826bea65158b998b010820bff7e269f288a7d4865e118d4"
+    "test": "7579490395cb7cf0c5faa3c76f746e02927751f1d4f814f5a33c0ef4c8f07a46"
   },
   "ui-notice.js": {
     "module": "7d865a1452c65c3f140e18eceba721b8a37985a8ccb709de53877d070af42554",
@@ -272,8 +272,8 @@
     "test": "99bbf0bfbc15ea3a81212e8010b88d1f3672a98cb9b861f71e6bfdd581991dfe"
   },
   "ui-weekrooster-rooster.js": {
-    "module": "7001e6b0d5cc19bbbe0188d129c4cbfc8094e7a1c3fe9f8d85f07fe5750c2e42",
-    "test": "8ac05a5a09b9fcc5c6765a8dbd9a6dd9be4dd69e8c2144c9d994fb3253be122c"
+    "module": "0d45c243051736cee4639378cbeb4390881e99b47cf9255ecfd619394f764d00",
+    "test": "9758f63425901fa36bd16ca079773c56a9c3346196a18c1505e70aa1e5cac663"
   },
   "weekrooster-data.js": {
     "module": "206a5ce23740fd5116ca26ca0e8cdf15be5fba8f1a2fe7ff26064ae1d3792520",
