@@ -2,6 +2,7 @@
 // Gate (phone + invite code), first-run coordinator claim, "Mijn gezin" profile tab, saving the profile,
 // and the coordinator's test view as another parent.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -491,6 +492,10 @@ test('design v2: the test view is a black bar (class testBar) with an eye and a 
 
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-profile.js imports nothing it does not use', () => assertNoUnusedImports('ui-profile.js'));
+
+test('no lightning icon in this screen (owner, 2026-10-31)', () => {
+  assert.doesNotMatch(readSrcFile(new URL('../ui-profile.js', import.meta.url), 'utf8'), /lightning/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

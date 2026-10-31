@@ -1,6 +1,7 @@
 // Run with: node i18n.test.js
 // Every text the app shows comes from texts-nl.js through t(); these tests keep that dictionary honest.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -379,6 +380,11 @@ test('the flow of the day coordinator (Indeling, Controleren, Doorvoeren) has it
   assert.equal(t('weekrooster.flow.chipRequests', { p1: 3, p2: 3 }), '3 van 3 aanvragen'); assert.equal(t('weekrooster.flow.undoAll'), 'Alles terugdraaien');
   assert.equal(t('weekrooster.advice.look'), 'Advies bekijken en aanpassen'); assert.equal(t('weekrooster.action.adviceFitsWait', { p1: 30 }), 'Advies: past in de bestaande auto’s, 30 min extra wachten.');
   ['weekrooster.action.adviceLess1', 'weekrooster.action.adviceLessN', 'weekrooster.action.adviceSame', 'weekrooster.action.adviceMore1', 'weekrooster.action.adviceMoreN'].forEach(k => assert.equal(hasKey(k), false, k));
+});
+
+test('the "Jij" text exists and the old "Jij rijdt" badge texts are gone (no chip any more)', () => {
+  const src = readSrcFile(new URL('../texts-nl.js', import.meta.url), 'utf8');
+  assert.match(src, /"ride.jij": "Jij"/); assert.doesNotMatch(src, /"schedule.jij_rijdt"|"myweek.jij_rijdt_tag"/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

@@ -114,7 +114,7 @@ export function renderMyWeek(){
       if(iDrive){
         // Full passenger list, including your own daughter — not just "everyone else".
         const names = sortGirlIds(ownCar.girlIds).map(id=>girlName(id)).join(', ');
-        who = `<div class="rideRow__who"><span class="tag tag--drive">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>`;
+        who = `<div class="rideRow__who rideRow__who--me">${phIcon('steering-wheel-fill')}${esc(t('ride.jij'))}</div>`;
         act = driverCarButtonHtml(day,direction);
         passengers = names? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${names}</div>` : '';
       } else {
@@ -173,7 +173,7 @@ export function renderMyWeek(){
     const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
     const passengers = sortGirlIds(r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
     const status = r.driving
-      ? `<div class="rideRow__drives"><span class="tag tag--drive">${phIcon('steering-wheel-fill')}${esc(t('myweek.jij_rijdt_tag'))}</span></div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}`
+      ? `<div class="rideRow__who rideRow__who--me">${phIcon('steering-wheel-fill')}${esc(t('ride.jij'))}</div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}`
       : driverButtonHtml(r.car.driverFamilyId);
     return `<div class="rideRow rideRow--match${r.driving? ' rideRow--mine' : ''}">
       <div class="rideRow__head">

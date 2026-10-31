@@ -146,7 +146,7 @@ test('a shift that is not made says the standard rooster applies', () => {
 test('a parent sees the same, read only: no selects, no buttons; their own car has no amber border', () => {
   parent({ periodCars: madeCars, roosterMode: 'period', periodDay: '2026-10-27' }); const h = render();
   assert.doesNotMatch(h, /data-pdrv|data-pmove|data-preplan|periodOverview_2026-10-26/); assert.match(text(h), /13:00/);
-  assert.match(text(h), /Jij rijdt/); assert.match(text(h), /Mo Bakker/); assert.match(h, /class="carCard__driver carCard__driver--me"/);
+  assert.match(text(h), /Jij/); assert.match(text(h), /Mo Bakker/); assert.match(h, /class="carCard__driver carCard__driver--me"/);
   assert.match(h, /class="chip chip--mine">Jahaimy</); assert.doesNotMatch(h, /carCard--mine/);   /* design v2: the car you drive has no amber border (amber = a changed car) */
 });
 test('the coordinator sees a driver select per car, a move select per rider and "Opnieuw indelen" per direction', () => {

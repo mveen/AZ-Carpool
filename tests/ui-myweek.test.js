@@ -87,7 +87,7 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
   assert.match(s, /Maandag 28 sep 07:30 Heen Chauffeur Jan Jansen Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 Terug Chauffeur Jij rijdt AFC (&#39;|')34 → Busstation Passagiers Eline, Jahaimy, Saar Jahaimy klaar om 17:30/);
+  assert.match(s, /17:30 Terug Chauffeur Jij AFC (&#39;|')34 → Busstation Passagiers Eline, Jahaimy, Saar Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
@@ -482,10 +482,10 @@ test('every ride is its own white card: time and direction, "Chauffeur", route, 
   assert.match(h, /rideRow__lab">Chauffeur/); assert.match(h, /rideRow__route">[^]*?Busstation → AFC/); assert.match(h, /class="rideRow__kid"/);
   assert.doesNotMatch(h, /class="rideRow__driver|driverOnce|vertrek/, 'the name is plain text, the contact is the round phone button');
 });
-test('the card you drive has the green edge, the filled "Jij rijdt" badge and a labelled passenger list; another driver\'s card does not', () => {
+test('the card you drive has the green edge, the quiet green "Jij" (no badge) and a labelled passenger list; another driver\'s card does not', () => {
   const h = renderDayAt(MON, {});
   const [heen, terug] = h.split(/(?=<div class="rideRow[ "])/).filter(x => x.startsWith('<div class="rideRow'));
-  assert.doesNotMatch(heen, /rideRow--mine|tag--drive|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /tag tag--drive">[^]*?Jij rijdt/); assert.match(terug, /Passagiers<\/span>Eline, Jahaimy, Saar/);
+  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /rideRow__who rideRow__who--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt/); assert.match(terug, /Passagiers<\/span>Eline, Jahaimy, Saar/);
   assert.match(terug, /class="roundBtn" data-drivercar/, 'Tijd en plek: a round icon button, top right'); assert.match(heen, /class="roundBtn" data-contact="f3"|class="roundBtn" data-contact="f/, 'someone else drives: the round phone button');
 });
 test('a ride she does not take part in says so (no car, no time) and the switch is off; the other ride of that day stays as it is', () => {

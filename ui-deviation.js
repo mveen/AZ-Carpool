@@ -41,7 +41,7 @@ export function deviationIntentHtml(){
   const list = S.deviationIntent;
   if(!list || !list.length) return '';
   return `<div class="alertCard alertCard--stack devIntent" id="devIntent" role="status">
-    <div class="alertCard__text"><b><span class="alertCard__icon">${phIcon('lightning')}</span> ${t('deviation.intent_titel')}</b></div>
+    <div class="alertCard__text"><b>${t('deviation.intent_titel')}</b></div>
     <ul class="devIntentList">${list.map(c=>`<li>${esc(describeWeekschemaChange(c))}</li>`).join('')}</ul>
     <p class="noteLine">${t('deviation.intent_hint')}</p>
     <button type="button" class="btn small secondary" id="devIntentClose">${t('deviation.intent_sluiten')}</button>

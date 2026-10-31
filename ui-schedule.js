@@ -140,7 +140,7 @@ export function neededTimesHtml(day,direction,girlIds,timeOf=famTime,car=null){
 // wa = {day,time}: "Deze week": the contact sheet starts WhatsApp with the question to take over this ride.
 export function driverLineHtml(driverId,myId,wa){
   if(!driverId) return `<div class="carCard__driver carCard__driver--none">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
-  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me"><span class="tag tag--drive">${phIcon('steering-wheel-fill')}${t('schedule.jij_rijdt')}</span></div>`;
+  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me">${phIcon('steering-wheel-fill')} ${t('ride.jij')}</div>`;
   const name = wa? contactButtonHtml(driverId, esc(fam(driverId).parentName||'?'), driverAskText(wa.day, wa.time), 'carCard__driver') : `<span class="carCard__driver">${driverNameHtml(driverId)}</span>`;
   return `<div>${name}</div>`;
 }
@@ -267,7 +267,7 @@ export function renderDirectionWeek(day,direction){
   const base = baseCars(day,direction);
   const cfg = locationsCfg();
   const places = arrivalPlaces(cars,cfg);
-  const devTag = dev? `<span class="tag tag--warn">${phIcon('lightning')} ${t('schedule.gewijzigd')}</span>` : '';
+  const devTag = dev? `<span class="tag tag--warn">${t('schedule.gewijzigd')}</span>` : '';
   const blocks = places.map((p,i)=>{
     const inBlock = cars.filter(c=>destinationFor(c,cfg).key===p.key);
     return directionHeadHtml(day,direction,i===0? devTag : '',[p]) + (inBlock.map(c=>weekCarHtml(c,day,direction,base,myId)).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`);
@@ -402,7 +402,7 @@ export function renderDirectionStandard(day,direction){
   const dev = activeDeviation(day,direction);
   const cars = grps.map(([,g])=>g);
   return `<div>
-    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${phIcon('lightning')} ${t('schedule.deze_week_gewijzigd')}</span>`:'',arrivalPlaces(grps.map(([,g])=>g),locationsCfg()))}
+    ${directionHeadHtml(day,direction,dev? `<span class="tag tag--warn" title="${t('schedule.zie_deze_week')}">${t('schedule.deze_week_gewijzigd')}</span>`:'',arrivalPlaces(grps.map(([,g])=>g),locationsCfg()))}
     ${S.canEdit && grps.length? shiftToolsHtml(day,direction,grps) : ''}
     ${groupHtml}
     ${unplacedBoxHtml(day,direction)}

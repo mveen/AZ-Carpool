@@ -243,7 +243,7 @@ test('the coordinator of the day itself is not the one shown', () => {
 console.log('\n=== pickup and drop-off place on the ride (US-15) ===');
 test('Rooster "Deze week" and Standaardrooster show the route as plain text, without a map button', () => {
   const week = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
-  assert.match(text(week), /07:30 Chauffeur Jan Jansen 2\/3 Busstation → AFC (&#39;|')34/); assert.match(text(week), /17:30 Chauffeur Jij rijdt \d\/\d AFC (&#39;|')34 → Busstation/);
+  assert.match(text(week), /07:30 Chauffeur Jan Jansen 2\/3 Busstation → AFC (&#39;|')34/); assert.match(text(week), /17:30 Chauffeur Jij \d\/\d AFC (&#39;|')34 → Busstation/);
   assert.doesNotMatch(week, /geoBtn|geo:0,0|Kaart/);   // no map button on a shift
   const std = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
   assert.match(text(std), /Busstation → AFC (&#39;|')34/);
@@ -251,7 +251,7 @@ test('Rooster "Deze week" and Standaardrooster show the route as plain text, wit
 test('a one-off place chosen in Wijzigen shows on that ride only', () => {
   const dev = { Ma_heen: { day: 'Ma', direction: 'heen', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f2'], departureTime: '07:30', locationId: 'de-parel' }] } };
   const s = text(render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma', deviations: dev })));
-  assert.match(s, /07:30 Chauffeur Jan Jansen 2\/3 De Parel → AFC (&#39;|')34/); assert.match(s, /17:30 Chauffeur Jij rijdt \d\/\d AFC (&#39;|')34 → Busstation/);
+  assert.match(s, /07:30 Chauffeur Jan Jansen 2\/3 De Parel → AFC (&#39;|')34/); assert.match(s, /17:30 Chauffeur Jij \d\/\d AFC (&#39;|')34 → Busstation/);
 });
 
 test('without a period the switch has two views and a stale "period" mode falls back to "Deze week"', () => {
@@ -427,12 +427,12 @@ test('Rooster car: "Chauffeur", seats with the two-people icon, the route as a b
   assert.match(html, /carCard__who"><div class="rideRow__lab">Chauffeur<\/div>/); assert.match(html, /<span class="seats" aria-label="2\/3 plekken">[^]*?<b>2\/3<\/b>/);
   assert.match(html, /carCard__route carCard__route--inset">[^]*?<span>Busstation → AFC/); assert.match(html, /class="chips"/); assert.doesNotMatch(html, /chipsRow/);
 });
-test('Rooster car: your own car has the green edge, the filled "Jij rijdt" badge; another car has the round phone button', () => {
+test('Rooster car: your own car has the green edge, the quiet green "Jij" (no badge); another car has the round phone button', () => {
   const html = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
   const cars = html.split(/(?=<div class="carCard[ "])/).filter(x => x.startsWith('<div class="carCard'));
   const [heen, terug] = cars;
-  assert.doesNotMatch(heen, /carCard--mine|tag--drive/); assert.match(heen, /class="roundBtn" data-contact="f\d"[^>]*aria-label="Neem contact op met Jan Jansen"/);
-  assert.match(terug, /^<div class="carCard carCard--mine"/); assert.match(terug, /tag tag--drive">[^]*?Jij rijdt/); assert.doesNotMatch(terug.slice(0, terug.indexOf('carCard__route')), /data-contact/, 'no contact button on your own car (the pencil, Tijd en plek, is tested in ui-driver-car)');
+  assert.doesNotMatch(heen, /carCard--mine|carCard__driver--me/); assert.match(heen, /class="roundBtn" data-contact="f\d"[^>]*aria-label="Neem contact op met Jan Jansen"/);
+  assert.match(terug, /^<div class="carCard carCard--mine"/); assert.match(terug, /carCard__driver carCard__driver--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt/, 'no filled badge any more: quiet green text'); assert.doesNotMatch(terug.slice(0, terug.indexOf('carCard__route')), /data-contact/, 'no contact button on your own car (the pencil, Tijd en plek, is tested in ui-driver-car)');
 });
 
 

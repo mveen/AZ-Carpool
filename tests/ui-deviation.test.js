@@ -2,6 +2,7 @@
 // The Wijzigen tab: one-off changes for this week, open to every parent, plus the match carpools and the
 // "Deel update via WhatsApp" button.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -574,6 +575,10 @@ await testAsync('Wijzigen is not redrawn while a time field of the week form has
   document.activeElement = { classList: { contains: c => c === 'rbSel' } }; assert.equal(holdFormRedraw(), true, 'also the time lists of Ritbeurs');
   document.activeElement = null;
 });
+test('no lightning icon in this screen (owner, 2026-10-31)', () => {
+  assert.doesNotMatch(readSrcFile(new URL('../ui-deviation.js', import.meta.url), 'utf8'), /lightning/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 

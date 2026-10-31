@@ -62,7 +62,7 @@ function taskCardHtml(tk){
   const p = normalizePeriod(tk.period), girl = girlOf(tk.family);
   const locked = tk.phase==='closed';
   return `<div class="devAlert" id="periodTask_${p.firstDay}" data-periodtask="${p.firstDay}">
-      <p class="devAlertTitle">${phIcon('lightning')} ${t('period.task.title')}</p>
+      <p class="devAlertTitle">${t('period.task.title')}</p>
       <p class="devAlertBody">${esc(t(S.canEdit? 'period.task.bodyCoord' : 'period.task.body',{p1:p.name, p2:isoRangeLabel(p.firstDay,p.lastDay), p3:girl}))}</p>
       <p class="devAlertBody" style="font-weight:700">${esc(locked? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>
       <p class="devAlertBody" style="font-size:12px">${t('period.task.standardStays')}</p>

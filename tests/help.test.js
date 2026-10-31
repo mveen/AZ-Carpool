@@ -396,5 +396,10 @@ test('help names the share button by its icon (three connected dots), not as an 
   assert.match(all, /deel-knop rechtsboven \(drie verbonden bolletjes\)/);
 });
 
+test('help describes "Jij" in green, not a Jij rijdt label', () => {
+  const all = JSON.stringify(articles);
+  assert.doesNotMatch(all, /label Jij rijdt/); assert.match(all, /in het groen \\"Jij\\" bij Chauffeur/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
