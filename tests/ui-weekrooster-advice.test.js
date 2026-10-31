@@ -189,8 +189,10 @@ await testAsync('Doorvoeren saves what was changed by hand, shows "Alles terugdr
     assert.equal(heen.cars.find(c => c.driverFamilyId === 'f2').departureTime, '08:00');
     assert.match(text(dom.doc.getElementById('toast').innerHTML), /wijziging.* doorgevoerd/);
     const done = view(), s = text(done);
-    assert.match(s, /Doorgevoerd voor donderdag/); assert.match(done, /id="wrUndoAll"/); assert.match(s, /Alles terugdraaien/);
-    assert.match(s, /Het rooster van donderdag gaat terug naar de oorspronkelijke situatie\. De aanvraag staat dan weer open\./); assert.match(done, /conclusieBtn/);
+    assert.match(s, /Donderdag is geregeld/); assert.match(s, /1 wijziging doorgevoerd voor 1 aanvraag\./); assert.match(s, /Lois Rijdt heen mee met Piet Pieters, aan om 09:00/);
+    assert.match(done, /id="wrUndoAll"/); assert.match(s, /Alles terugdraaien Het rooster van donderdag gaat terug naar de oorspronkelijke situatie\. De aanvraag staat dan weer open\./);
+    assert.match(s, /Deel in de WhatsApp-groep.*Sluiten.*Alles terugdraaien/); assert.match(done, /id="conclusieBtn"/); assert.match(done, /id="wrDoneClose"/); assert.doesNotMatch(s, /Dagbericht|Gewijzigde chauffeur/);
+    assert.match(s, /1 Aanvragen 2 Indeling 3 Controleren/); assert.match(done, /flowDone__badge/);
     assert.match(done, /flowSteps__step--done/); assert.doesNotMatch(done, /flowSteps__step--(current|todo)/);
   });
 });
@@ -219,6 +221,8 @@ await testAsync('the advice on a day without cars is taken over too: the new car
   assert.equal(fake.get('weekRequests/2026-W40_Do_f5').status, 'accepted'); assert.ok(fake.get('deviations/Do_heen').cars.length >= 1);
 });
 test('the texts of the flow say what the design says', () => {
+  assert.equal(t('weekrooster.flow.doneTitle', { p1: 'Woensdag' }), 'Woensdag is geregeld'); assert.equal(t('weekrooster.flow.doneSummary', { p1: '5 wijzigingen', p2: '3 aanvragen' }), '5 wijzigingen doorgevoerd voor 3 aanvragen.');
+  assert.equal(t('weekrooster.flow.doneRideTerug', { p1: 'Ouder van Julia', p2: '19:00' }), 'Rijdt terug mee met Ouder van Julia, weg om 19:00');
   assert.equal(t('weekrooster.flow.apply', { p1: 'woensdag' }), 'Doorvoeren voor woensdag'); assert.equal(t('weekrooster.flow.applySub'), 'Direct daarna kun je alles ongedaan maken');
   assert.equal(t('weekrooster.flow.undoTextMany', { p1: 'woensdag', p2: 3 }), 'Het rooster van woensdag gaat terug naar de oorspronkelijke situatie. De 3 aanvragen staan dan weer open.');
   assert.equal(t('weekrooster.flow.carsHeen', { p1: "AFC '34" }), "Auto’s heen · aankomst bij AFC '34"); assert.equal(t('weekrooster.flow.carsTerug', { p1: "AFC '34" }), "Auto’s terug · vertrek bij AFC '34");

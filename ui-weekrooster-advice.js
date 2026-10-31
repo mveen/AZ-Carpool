@@ -11,7 +11,7 @@ import { closeSheet, esc, hapticTap, locationsCfg, phIcon, showToast } from './u
 import { driverNameHtml, fam, girlName, seats, sortGirlIds } from './rides.js';
 import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { ATC_NAME, FREE_TEXT_MAX, arrivalLabel, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
-import { conclusieCardHtml, wireWhatsAppButton } from './ui-deviation.js';
+import { wireWhatsAppButton } from './ui-deviation.js';
 import { buildConclusieMessage } from './message-texts.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
@@ -42,7 +42,7 @@ function stepsHtml(current) {
   const names = ['weekrooster.flow.step1', 'weekrooster.flow.step2', 'weekrooster.flow.step3'];
   return `<ol class="flowSteps">${names.map((k, i) => {
     const state = i + 1 < current ? 'done' : i + 1 === current ? 'current' : 'todo';
-    return `<li class="flowSteps__step flowSteps__step--${state}"${state === 'current' ? ' aria-current="step"' : ''}><span class="flowSteps__bar"></span><span class="flowSteps__name">${esc(t(k))}</span></li>`;
+    return `<li class="flowSteps__step flowSteps__step--${state}"${state === 'current' ? ' aria-current="step"' : ''}><span class="flowSteps__bar"></span><span class="flowSteps__name">${i + 1} ${esc(t(k))}</span></li>`;
   }).join('')}</ol>`;
 }
 
@@ -175,12 +175,33 @@ export function scheduleAdviceHtml() {
     ${body}</div>`;
 }
 
+// What happened per girl who asked, in words, for the screen after Doorvoeren: [{ name, lines: [text] }]. Made before saving, from the plan.
+function resultRows(adv, plan) {
+  return adv.requests.map(r => {
+    const lines = [];
+    DIRS.forEach(dir => {
+      const d = adv.directions[dir]; if (!d || !d.ctx.requests.some(x => x.familyId === r.familyId)) return;
+      const tm = timeAfter(d.ctx, r.familyId), car = plan.dirs[dir].cars.find(c => c.girlIds.includes(r.familyId));
+      if (!tm || !car) lines.push(t(dir === 'heen' ? 'weekrooster.flow.doneNoHeen' : 'weekrooster.flow.doneNoTerug'));
+      else lines.push(t(dir === 'heen' ? 'weekrooster.flow.doneRideHeen' : 'weekrooster.flow.doneRideTerug', { p1: fam(car.driverFamilyId).parentName || '?', p2: tm }));
+    });
+    return { name: fam(r.familyId).girlName || fam(r.familyId).parentName || '?', lines };
+  }).filter(x => x.lines.length);
+}
+const plural = (n, one, many) => (n === 1 ? t(one) : t(many, { p1: n }));
+
 function doneHtml(done) {
-  const day = dayLabel(done.day).toLowerCase();
-  return `<div class="wrStack"><div class="card" id="wrApplied">${stepsHtml(4)}<h2>${phIcon('check')} ${esc(t('weekrooster.flow.doneTitle', { p1: day }))}</h2>
-      ${done.undo ? `<button type="button" class="btn secondary" id="wrUndoAll">${phIcon('arrow-counter-clockwise')}${esc(t('weekrooster.flow.undoAll'))}</button>
-      <p class="noteLine">${esc(done.n === 1 ? t('weekrooster.flow.undoTextOne', { p1: day }) : t('weekrooster.flow.undoTextMany', { p1: day, p2: done.n }))}</p>` : ''}
-      <button type="button" class="linkbtn" id="wrDoneClose">${esc(t('weekrooster.advice.closeDone'))}</button></div>${conclusieCardHtml(done.day)}</div>`;
+  const day = dayLabel(done.day).toLowerCase(), rows = done.rows || [];
+  const changes = rows.reduce((n, r) => n + r.lines.length, 0);
+  return `<div class="wrStack flowDone" id="wrApplied">${stepsHtml(4)}
+    <div class="flowDone__badge">${phIcon('check')}</div>
+    <h2 class="flowDone__title">${esc(t('weekrooster.flow.doneTitle', { p1: day.charAt(0).toUpperCase() + day.slice(1) }))}</h2>
+    <p class="flowDone__sub">${esc(t('weekrooster.flow.doneSummary', { p1: plural(changes, 'weekrooster.flow.doneCount1', 'weekrooster.flow.doneCountN'), p2: plural(done.n, 'weekrooster.flow.doneReq1', 'weekrooster.flow.doneReqN') }))}</p>
+    ${rows.length ? `<div class="flowDone__list">${rows.map(r => `<div class="flowDone__row"><span class="flowDone__tick">${phIcon('check')}</span><span class="flowDone__what"><b>${esc(r.name)}</b>${r.lines.map(l => `<span>${esc(l)}</span>`).join('')}</span></div>`).join('')}</div>` : ''}
+    <button type="button" class="btn" id="conclusieBtn">${phIcon('whatsapp-logo-fill')}${esc(t('weekrooster.flow.doneShare'))}</button>
+    <button type="button" class="btn secondary" id="wrDoneClose">${esc(t('weekrooster.advice.closeDone'))}</button>
+    ${done.undo ? `<button type="button" class="btn secondary flowUndo" id="wrUndoAll"><span class="flowUndo__title">${phIcon('arrow-counter-clockwise')}${esc(t('weekrooster.flow.undoAll'))}</span><span class="flowUndo__text">${esc(done.n === 1 ? t('weekrooster.flow.undoTextOne', { p1: day }) : t('weekrooster.flow.undoTextMany', { p1: day, p2: done.n }))}</span></button>` : ''}
+  </div>`;
 }
 
 // ---------- the sheets ----------
@@ -299,9 +320,10 @@ export function wireAdvice(box) {
   on('wrAccept', async () => {
     hapticTap();
     const f = flowState(), { day } = f;
+    const adv = adviceForDay(day), rows = resultRows(adv, planOf(adv, f.variant, f.edits));
     const r = await acceptDay(day, f.variant, f.edits);
     if (!r.ok) return;
-    S.wrAdvice = null; S.wrDone = { day, n: r.n, undo: r.undo };
+    S.wrAdvice = null; S.wrDone = { day, n: r.n, undo: r.undo, rows };
     showToast(t(r.n === 1 ? 'weekrooster.advice.doneOne' : 'weekrooster.advice.doneMany', { p1: r.n }));
     rerender();
   });

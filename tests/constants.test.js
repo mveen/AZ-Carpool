@@ -107,5 +107,7 @@ test('APP_VERSION is at least v160 (own-daughter chip grey with a green dot, pla
 
 test('APP_VERSION is at least v161 (the day coordinator\'s flow; the undo icon exists)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 161); assert.ok(PH_PATHS['arrow-counter-clockwise']); });
 
+test('APP_VERSION is at least v163 (screen after Doorvoeren, Rooster tab resets)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 163); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

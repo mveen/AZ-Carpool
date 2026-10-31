@@ -363,6 +363,10 @@ test('the texts of the redesign of Mijn week and Rooster are there', () => {
   assert.equal(t('contact.open_met', { p1: 'Jan' }), 'Neem contact op met Jan');
 });
 
+test('the screen after Doorvoeren has its texts', () => {
+  assert.equal(t('weekrooster.flow.doneTitle', { p1: 'Maandag' }), 'Maandag is geregeld'); assert.equal(t('weekrooster.flow.doneShare'), 'Deel in de WhatsApp-groep');
+  assert.equal(t('weekrooster.flow.doneCount1'), '1 wijziging'); assert.equal(t('weekrooster.flow.doneReqN', { p1: 2 }), '2 aanvragen'); assert.equal(t('weekrooster.flow.doneNoHeen'), 'Rijdt heen niet mee');
+});
 test('the flow of the day coordinator (Indeling, Controleren, Doorvoeren) has its texts, and the old counters are gone', () => {
   ['step1', 'step2', 'step3', 'segAdvice', 'segAlt', 'wait0', 'moved0', 'notice0', 'adjust', 'toCheck', 'notFit', 'pickTitle', 'adjustTitle', 'chipNoSwap', 'chipSeatsOk', 'summary', 'apply', 'applySub', 'backToPlan', 'doneTitle', 'undoAll', 'undoSure'].forEach(k => assert.ok(hasKey('weekrooster.flow.' + k), k));
   assert.equal(t('weekrooster.flow.wait', { p1: 30 }), '30 min extra wachten'); assert.equal(t('weekrooster.flow.movedN', { p1: 2 }), '2 speelsters in een andere auto');

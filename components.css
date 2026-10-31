@@ -521,13 +521,28 @@ details.fold--quiet .foldLabel:first-child{margin-top:0}
 .wrStack>*,.wrStack .carCard{margin-top:0;margin-bottom:0}
 .wrStack .btn{width:100%}
 /* The day coordinator's flow (Advies / Controleren), Rooster. Three named steps: green = done, amber = the one you are on and the ones to come. */
-.flowSteps{display:flex;gap:var(--space-3);list-style:none;margin:0 0 var(--space-3);padding:0}
+.flowSteps{text-align:left;display:flex;gap:var(--space-3);list-style:none;margin:0 0 var(--space-3);padding:0}
 .flowSteps__step{flex:1;display:flex;flex-direction:column;gap:var(--space-2);min-width:0}
 .flowSteps__bar{height:var(--space-2);border-radius:var(--radius-pill);background:var(--warn-icon)}
 .flowSteps__step--done .flowSteps__bar{background:var(--ok)}
 .flowSteps__name{font:var(--type-caption);color:var(--text-muted)}
 .flowSteps__step--current .flowSteps__name{color:var(--text-1);font-weight:800}
 .flowStats{margin:0}
+.flowDone{align-items:stretch;text-align:center}
+.flowDone__badge{align-self:center;display:flex;align-items:center;justify-content:center;width:calc(var(--space-9) * 3.5);height:calc(var(--space-9) * 3.5);border-radius:var(--radius-pill);background:var(--ok);color:var(--on-accent);font-size:calc(var(--space-9) * 2);margin-top:var(--space-5)}
+.flowDone__badge svg{width:1em;height:1em;fill:currentColor}
+.flowDone__title{margin:0;font:var(--type-section)}
+.flowDone__sub{margin:0;font:var(--type-body);color:var(--text-2)}
+.flowDone__list{display:flex;flex-direction:column;gap:var(--space-5);text-align:left;background:var(--surface-card);border:1px solid var(--edge);border-radius:var(--radius-card);padding:var(--space-6)}
+.flowDone__row{display:flex;gap:var(--space-5);align-items:flex-start}
+.flowDone__tick{flex:none;display:flex;align-items:center;justify-content:center;width:calc(var(--space-8) * 1.5);height:calc(var(--space-8) * 1.5);border-radius:var(--radius-pill);background:var(--ok);color:var(--on-accent)}
+.flowDone__tick svg{width:60%;height:60%;fill:currentColor}
+.flowDone__what{display:flex;flex-direction:column}
+.flowDone__what b{font:var(--type-card-title)}
+.flowDone__what span{font:var(--type-small);color:var(--text-muted)}
+.btn.flowUndo{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);height:auto;min-height:0;padding:var(--space-5) var(--space-6)}
+.flowUndo__title{display:inline-flex;align-items:center;gap:var(--space-3);font:var(--type-card-title)}
+.flowUndo__text{font:var(--type-small);font-weight:500;color:var(--text-muted)}
 .wrStack .segmented{margin:0}
 .wrStack .segmented button.active{background:var(--tab);color:var(--tab-ink)}
 .planRow{display:flex;align-items:center;gap:var(--space-4);width:100%;text-align:left;background:var(--surface-card);color:var(--text-1);border:1px solid var(--edge);border-radius:var(--radius-card);padding:var(--space-4) var(--space-6);min-height:var(--hit-min);font:var(--type-small)}
