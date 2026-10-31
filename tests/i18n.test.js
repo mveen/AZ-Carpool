@@ -448,3 +448,6 @@ test('the connection error asks to check the internet and has a retry label, wit
   assert.equal(t('common.opnieuw_proberen'), 'Opnieuw proberen');
 });
 
+test('the scene status texts say how many cars change, in singular and plural', () => {
+  assert.equal(t('weekrooster.flow.sceneChanges1'), '1 auto wijzigt'); assert.equal(t('weekrooster.flow.sceneChangesN', { p1: 3 }), '3 auto’s wijzigen');
+});

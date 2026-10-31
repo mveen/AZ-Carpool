@@ -1373,6 +1373,8 @@ export default {
   "weekrooster.flow.sceneHeenN": "{p1} moeten er om {p2} zijn",
   "weekrooster.flow.sceneTerug1": "{p1} is om {p2} klaar",
   "weekrooster.flow.sceneTerugN": "{p1} zijn om {p2} klaar",
+  "weekrooster.flow.sceneChanges1": "1 auto wijzigt",
+  "weekrooster.flow.sceneChangesN": "{p1} auto’s wijzigen",
   "weekrooster.flow.sceneNoChange": "Past in de bestaande auto’s: hier verandert niets.",
   "weekrooster.flow.sceneHeenMixed": "Aanvragen heen",
   "weekrooster.flow.sceneTerugMixed": "Aanvragen terug",

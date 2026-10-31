@@ -92,6 +92,13 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.doesNotMatch(html, /id="wrToPlan"|id="wrSelf"|id="wrAccept"/);
   assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
 });
+await testAsync('step 2: heen and terug each get their own tinted scene with a sun/moon badge and an explicit status', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = view(), s = text(html);
+  assert.match(html, /class="scene scene--heen" data-wrdir="heen"/); assert.match(html, /class="scene__badge"/);
+  assert.match(s, /Heen Lois moet er om 09:00 zijn/);
+  assert.match(html, /chip chip--warn">1 auto wijzigt|chip chip--warn">\d+ auto’s wijzigen/);   // a changing scene says how many cars change
+});
 await testAsync('step 1: "Advies bekijken" goes to step 2, "Zelf indelen" closes the flow and opens the day editor, X closes the flow', async () => {
   await setup(); S.wrAdvice = { day: 'Do' };
   press('wrToPlan'); assert.equal(S.wrAdvice.step, 'plan');

@@ -136,3 +136,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - New blocks: `.entryCard` (Rooster, "Regel dit"), `.reqPanel`/`.reqItem` (requests), `.adviceHero` + `.tag--ink`, `.statTiles` + `.statTile` (the three numbers), `.infoNote`, `.tog` + `.tog__opt` (Advies / Alternatief, the subtitle is the computed waiting time), `.scene` with cars first: `.carCard` (departure once and big, `.carCard__cap`, `__why`, `__out`, `__rest`) and `.rider` rows (name, `.chip--ok/--warn/--bad` for the wait, her time), `.statTiles__sum`, `.sheetItem__more`, `.lnkRow`, `.btn.flowApply`.
 - Rules: no fixed claims about what a variant is; every number comes from `planStats`/`evaluateCars`. Tapping Doorvoeren is the only step that writes (`acceptDay`); steps 1 and 2 never change data.
 - Time vocabulary of step 2 (never mix): **haar tijd** = her own time (grey), **auto vertrekt** = the car's departure (big, mono), **wacht** = the difference (chip). One number has one meaning; a time appears once per car.
+
+## Heen and terug scenes (v171)
+- Each scene in step 2 has its own glow: **heen = morning mist** (slate blue, sun badge), **terug = evening red** (plum, moon badge). Tokens `--heen-*` / `--terug-*` (glow, edge, ink, badge) in `tokens.css`, both themes; classes `.scene--heen` / `.scene--terug`. Never use these colours for status.
+- Status stays explicit in every scene: green "Past in de bestaande auto’s: hier verandert niets." or an amber chip "N auto’s wijzigen". Amber/green mean status; slate/plum only mean direction.

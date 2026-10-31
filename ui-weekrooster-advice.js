@@ -195,9 +195,11 @@ function sceneHtml(dir, adv, plan, stats) {
   const notRiding = sortGirlIds([...new Set([...askedBy.keys(), ...ev.moved])].filter(id => !riding.has(id)));
   const heen = dir === 'heen';
   const names = ev.familiesChanged.map(rawParent).map(esc);
-  return `<section class="scene" data-wrdir="${dir}">
-    <div class="scene__head"><b>${esc(sceneTitle(dir, d.ctx))}</b><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span></div>
-    ${changed.every(x => !x.diff) && !gone.length && !notRiding.length ? `<p class="scene__ok">${phIcon('check')}<span>${esc(t('weekrooster.flow.sceneNoChange'))}</span></p>` : ''}
+  const quiet = changed.every(x => !x.diff) && !gone.length && !notRiding.length;
+  const nChanged = changed.filter(x => x.diff).length + gone.length;
+  return `<section class="scene scene--${heen ? 'heen' : 'terug'}" data-wrdir="${dir}">
+    <div class="scene__head"><span class="scene__badge">${phIcon(heen ? 'sun' : 'moon')}</span><div class="scene__headText"><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span><b>${esc(sceneTitle(dir, d.ctx))}</b></div></div>
+    ${quiet ? `<p class="scene__ok">${phIcon('check')}<span>${esc(t('weekrooster.flow.sceneNoChange'))}</span></p>` : `<p class="scene__chg"><span class="chip chip--warn">${esc(t(nChanged === 1 ? 'weekrooster.flow.sceneChanges1' : 'weekrooster.flow.sceneChangesN', { p1: nChanged }))}</span></p>`}
     <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, p.cars) }))}</div>
       ${changed.map(x => carCardHtml(dir, d, ev, x.c, x.old, false, askedBy)).join('')}${gone.map(goneCardHtml).join('')}${plain.map(x => carCardHtml(dir, d, ev, x.c, null, true, askedBy)).join('')}
       ${notRiding.map(id => `<div class="rider rider--off"><b class="rider__name">${girlName(id)}</b><span class="chip chip--muted">${esc(t('weekrooster.flow.capHome'))}</span></div>`).join('')}</div>

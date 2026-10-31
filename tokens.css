@@ -101,6 +101,10 @@
   /* Bottom safe-area inset, used everywhere via var(--sab). The <head> script sets .no-bottom-inset for
      Firefox on Android in a normal tab, where its own toolbar already covers that area. */
   --sab:env(safe-area-inset-bottom,0px);
+
+  /* Dagdelen in de Advies-flow: heen = ochtendmist (leisteen), terug = avondrood (pruim). Gloed, rand, inkt, badge. */
+  --heen-glow:#dbe5ee; --heen-edge:#b4c5d6; --heen-ink:#3c5f85; --heen-badge:#e3ebf3;
+  --terug-glow:#ecdbe8; --terug-edge:#d7b9d0; --terug-ink:#8a3b78; --terug-badge:#f3e6f0;
 }
 :root.no-bottom-inset{--sab:0px}
 
@@ -114,5 +118,7 @@
   --match-soft:#251d40; --match-ink:#b9a6ff;
   --info-soft:#122036;
   --shadow-card:0 0 0 1px #24262a;
+  --heen-glow:#1c2833; --heen-edge:#364a5e; --heen-ink:#9bbbe0; --heen-badge:#202d3a;
+  --terug-glow:#33202f; --terug-edge:#5e3d58; --terug-ink:#e0a0d2; --terug-badge:#3a2536;
   color-scheme:dark;
 }
