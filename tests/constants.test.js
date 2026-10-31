@@ -44,7 +44,7 @@ test('the Phosphor icons of the design system v2 exist, regular and -fill (tab b
   for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat','steering-wheel','warning-circle','whatsapp-logo','phone','megaphone']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
 });
 test('the other Phosphor icons of the ride rows exist (regular or bold, as used)', () => {
-  for (const k of ['caret-right','caret-down','car-profile','car-profile-bold','x-bold','user-circle-gear','shuffle','table','printer']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
+  for (const k of ['caret-right','caret-down','car-profile','car-profile-bold','share-network','x-bold','user-circle-gear','shuffle','table','printer']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
 test('the icons of the settings sheet and Mijn gezin exist, and the app version looks like a cache name', () => {
   for (const k of ['lifebuoy','user-switch','caret-left','users','moon','question','info']) assert.ok(PH_PATHS[k], k);

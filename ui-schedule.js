@@ -64,7 +64,7 @@ export function renderSchedule(){
     return `<button type="button" class="dayPill dayPill--cars${isActive?' on':''}${isToday?' dayPill--today':''}" data-schedday="${k}" aria-pressed="${isActive}" aria-label="${label}, ${carCount} ritten${unplaced? t('schedule.niet_ingedeeld_2', { p1: unplaced }):''}">
       <span class="dayPill__ab">${isToday? esc(t('myweek.vandaag').toLowerCase()) : dayUp(k).toLowerCase()}</span>
       <span class="dayPill__n">${dateForWeekday(k).getDate()}</span>
-      <span class="dayPill__cars" title="${esc(t('schedule.auto_aantal',{p1:carCount}))}">${phIcon('steering-wheel')}${carCount}</span>
+      <span class="dayPill__cars" title="${esc(t('schedule.auto_aantal',{p1:carCount}))}">${phIcon('car-profile')}${carCount}</span>
       ${(unplaced || (mode==='week' && weekroosterDayDot(k)))? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
     </button>`;
   }).join('');

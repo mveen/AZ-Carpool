@@ -14,6 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, sampleCoordinatorState, sampleParentState, sampleFlexParentState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, oneP, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
+import { PH_PATHS } from '../constants.js';
 import { groupsFor } from '../rides.js';
 import { moveGirlToGroup, renderSchedule, saveCarPlace, openCarPlaceSheet, openShiftLocationSheet, openMoveSheet, waPhone, tripReserveHtml, neededTimesHtml, driverLineHtml, pillsHtml } from '../ui-schedule.js';
 
@@ -415,8 +416,9 @@ await testAsync('in Rooster "Deze week" the driver gets the button on the own ca
 
 
 console.log('\n=== the redesign: car count, car card ===');
-test('Rooster: every day pill shows how many rides run that day (wheel + count)', () => {
+test('Rooster: every day pill shows how many rides run that day (car + count)', () => {
   const html = render(() => sampleParentState({ roosterMode: 'week', scheduleDay: 'Ma' }));
+  assert.ok(html.includes(PH_PATHS['car-profile']) && !/class="dayPill__cars"[^>]*>[^]*?steering/.test(html), 'a car, not the steering wheel (that one means "Jij rijdt")');
   const counts = [...html.matchAll(/class="dayPill__cars"[^>]*>[^]*?<\/svg>(\d+)<\/span>/g)].map(m => +m[1]);
   assert.equal(counts.length, 5); assert.equal(counts[0], 2, 'Monday: one car heen, one terug'); assert.match(html, /class="dayPill dayPill--cars on|class="dayPill dayPill--cars dayPill--today/);
 });

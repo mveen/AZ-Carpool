@@ -67,7 +67,7 @@ export default [
       'Rijd je zelf op een dag, dan staat er "Jouw rijbeurt om" met de tijd.',
       'Is er deze week iets aangepast, dan staat er "Wijziging actief" bij die dag.',
       'Mijn week is om te lezen. Wil je iets veranderen, ga dan naar Wijzigen. Alleen als je zelf rijdt, staat rechtsboven in je rit de knop Tijd en plek (een potlood): daarmee kies je zelf wanneer en waar jouw auto vertrekt.',
-      'Met de deel-knop rechtsboven tik je op Delen. Dan kies je zelf met wie en in welke app (bijvoorbeeld WhatsApp) je het overzicht deelt.',
+      'Met de deel-knop rechtsboven (drie verbonden bolletjes) tik je op Delen. Dan kies je zelf met wie en in welke app (bijvoorbeeld WhatsApp) je het overzicht deelt.',
       'Onder Wedstrijden deze week zie je de wedstrijden van het team. Staat er "carpool nog niet geregeld", tik dan op Regelen om naar Wedstrijden te gaan.',
     ],
     tab: 'myweek',

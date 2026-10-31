@@ -65,7 +65,7 @@ export function updateHeader(tab){
   const ctx = document.getElementById('headerContext');
   if(ctx) ctx.textContent = contextLine(screen);
   const share = document.getElementById('shareToggle');
-  if(share) share.hidden = !SHOWS_SHARE.has(screen);
+  if(share){ share.hidden = !SHOWS_SHARE.has(screen); const si = document.getElementById('shareIcon'); if(si) si.innerHTML = phIcon('share-network'); }
   const ovb = document.getElementById('overviewBtn');   // Weekoverzicht (PDF) lives in the header of Rooster: it costs no line in the screen
   if(ovb){ ovb.hidden = screen !== 'schedule'; const oi = document.getElementById('overviewIcon'); if(oi) oi.innerHTML = phIcon('table'); }
   const sw = document.getElementById('switchParentBtn');
@@ -142,7 +142,7 @@ export function openShare(){
     <div class="sheet__handle"></div>
     <h3 id="sheetTitle">${esc(t('shell.share_title'))}</h3><p class="sheet__sub">${esc(t('shell.share_sub'))}</p>
     <div class="sharePreview">${esc(text)}</div>
-    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-fat')}${esc(t('shell.share_button'))}</button>
+    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-network')}${esc(t('shell.share_button'))}</button>
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });

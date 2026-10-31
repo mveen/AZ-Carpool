@@ -11,7 +11,7 @@ import { S } from '../state.js';
 import { startImpersonate } from '../ui-profile.js';
 import { phIcon } from '../ui-common.js';
 import fs from 'node:fs';
-import { APP_VERSION } from '../constants.js';
+import { APP_VERSION, PH_PATHS } from '../constants.js';
 import { contextLine, initials, updateHeader, openSwitchParent, switchParentRows, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
@@ -30,6 +30,7 @@ test('Mijn week: title, week line, share button and the avatar letters of the pa
   sampleParentState(); updateHeader('myweek');
   assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); assert.match(dom.el('headerContext').textContent, /^Week \d+ /);
   assert.equal(dom.el('shareToggle').hidden, false); assert.equal(dom.el('avatarInitials').innerHTML, 'PP');
+  assert.ok(dom.el('shareIcon').innerHTML.includes(PH_PATHS['share-network']), 'the share button shows the share-network icon (three connected dots)');
 });
 test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig, deze week", Wedstrijden "<team> · komende 4 weken", Beheer "Alleen voor de coördinator"', () => {
   sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true);

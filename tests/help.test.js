@@ -391,5 +391,10 @@ test('the coordinator help explains the switch-parent icon and that the tab stay
   assert.match(body, /twee personen links van je avatar/); assert.match(body, /Terug naar mezelf/); assert.match(body, /op het tabblad waar je was/);
 });
 
+test('help names the share button by its icon (three connected dots), not as an arrow', () => {
+  const all = JSON.stringify(articles);
+  assert.match(all, /deel-knop rechtsboven \(drie verbonden bolletjes\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
