@@ -395,6 +395,11 @@ test('switching parents keeps the tab you are on; from Beheer it moves to Mijn w
   run('beheer', () => startImpersonate('f2'));
   assert.deepEqual(activated, ['myweek'], 'Beheer is hidden for a parent, so this one moves to Mijn week');
 });
+test('a parent (not the coordinator) can never start a test view', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
+  withFakeNow(NOW, () => startImpersonate('f2'));
+  assert.ok(!S.impersonateFamilyId); assert.equal(S.canEdit, false);
+});
 test('starting without a family id does nothing', () => {
   sampleCoordinatorState();
   startImpersonate('');
