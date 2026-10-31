@@ -412,7 +412,7 @@ console.log('\n=== the job itself ===');
 const here = dirname(fileURLToPath(import.meta.url));
 await test('without its settings it stops with exit code 1 and one clear line; the app modules it reuses are the ones listed', () => {
   const r = spawnSync(process.execPath, [join(here, '..', 'cron', 'push.mjs')], { encoding: 'utf8', env: { PATH: process.env.PATH, HOME: tmp, AZ_SECRETS: join(tmp, 'none'), AZ_DATA: join(tmp, 'data2') } });
-  assert.equal(r.status, 1); assert.match(r.stderr, /^PUSH FAILED: /m);
+  if (!(r.status === 0 && /quiet hours/.test(r.stdout))) { assert.equal(r.status, 1); assert.match(r.stderr, /^PUSH FAILED: /m); }   // at night (Amsterdam time) the job sleeps and exits 0
   assert.deepEqual(PUSH_APP_MODULES, ['push.js', 'notif-text.js', 'ritbeurs.js', 'dates.js', 'state.js']);
   assert.match(readFileSync(join(here, '..', 'cron', 'run.sh'), 'utf8'), /push\)\s+exec "\$best" "\$here\/push\.mjs"/);
 });

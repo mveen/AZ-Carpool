@@ -1467,7 +1467,7 @@ export default {
   "weekrooster.flow.afterApply": "na doorvoeren",
   "weekrooster.edit.headline": "Zelf indelen · {p1}",
   "weekrooster.edit.self": "Zelf indelen",
-  "weekrooster.edit.override_link": "Toch zelf wijzigen",
+  "weekrooster.edit.override_link": "Carpooldag aanpassen",
   "weekrooster.edit.override": "Je past dit rechtstreeks aan. {p1} ziet dat terug in het overzicht.",
   "weekrooster.override.title": "Dagcoördinator beslist",
   "weekrooster.override.text": "De dagcoördinator is {p1}. Hij/zij bepaalt de wijziging. Weet je zeker dat je wilt doorgaan?",

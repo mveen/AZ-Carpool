@@ -106,7 +106,7 @@ export default [
     keywords: 'wijzigen ziek ruilen rit aanpassen eenmalig afmelden niet mee meerijden andere chauffeur tijd veranderen deze week',
     body: [
       'Is je dochter ziek of rijdt ze een dag niet mee? Ga naar Wijzigen en zet bij die dag de rit uit (Rijdt niet mee). Dat geldt direct. Heeft ze een andere tijd nodig, pas die dan aan en tik op Doorgeven: de dagcoördinator beslist. Zie Een andere tijd of week doorgeven.',
-      'Wil je een rit ruilen met een andere chauffeur, of een speelster in een andere auto zetten? Dat doe je in het Rooster, bij Deze week. Ben je dagcoördinator of coördinator, tik dan op Regelen of op het potlood bij je eigen auto, of kies in Mijn week Tijden wijzigen; het formulier heet Zelf indelen. Als ouder kies je onder de dag Toch zelf wijzigen; je krijgt eerst een waarschuwing met de naam van de dagcoördinator. Heb je geen eigen dochter in de carpool, dan staat dit formulier direct in Wijzigen.',
+      'Wil je een rit ruilen met een andere chauffeur, of een speelster in een andere auto zetten? Dat doe je in het Rooster, bij Deze week. Ben je dagcoördinator of coördinator, tik dan op Regelen of op het potlood bij je eigen auto, of kies in Mijn week Tijden wijzigen; het formulier heet Zelf indelen. Als ouder kies je onder de dag Carpooldag aanpassen; je krijgt eerst een waarschuwing met de naam van de dagcoördinator. Heb je geen eigen dochter in de carpool, dan staat dit formulier direct in Wijzigen.',
       'Het formulier werkt zo. Het wijzigt alleen deze week. Het vaste rooster blijft zoals het was. Op vrijdag om 19:00 zijn alle wijzigingen vanzelf weer weg.',
       '1. Kies de dag bovenaan. Dagen met een wijziging hebben een stip.',
       '2. Elke rit is één regel: tijd, chauffeur en route, met daaronder de speelsters die meerijden. Tik op Wijzig om de rit open te klappen.',
@@ -174,7 +174,7 @@ export default [
       'Met Doorvoeren op stap 3 worden de wijzigingen doorgevoerd en krijgen de aanvragen de status akkoord. Daarna kun je het Dagbericht delen in de WhatsApp-groep, het scherm sluiten of alles terugdraaien.',
       'Liever zelf indelen? Tik in stap 2 bij Heen of Terug op Aanpassen, of kies in Mijn week Tijden wijzigen. Het formulier Zelf indelen opent dan in Rooster.',
       'Onderaan de dag, onder de ritten van Heen en Terug, staat Recente wijzigingen, standaard dicht. Daar staat wat al is afgehandeld: akkoord, direct doorgevoerd of door een ouder zelf gewijzigd.',
-      'Een ouder die toch zelf wil wijzigen, kiest Toch zelf wijzigen onder de dag en krijgt eerst een waarschuwing met jouw naam. Zo\'n wijziging staat daarna als Zelf gewijzigd bij jouw Recente wijzigingen. Er gaat geen melding uit.',
+      'Een ouder die toch zelf wil wijzigen, kiest Carpooldag aanpassen onder de dag en krijgt eerst een waarschuwing met jouw naam. Zo\'n wijziging staat daarna als Zelf gewijzigd bij jouw Recente wijzigingen. Er gaat geen melding uit.',
     ],
     tab: 'schedule',
   },

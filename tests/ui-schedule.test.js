@@ -409,7 +409,7 @@ await (async () => {
 })();
 test('Rooster week view: a Flex family has no "Toch zelf wijzigen" or "Zelf indelen" under the day', () => {
   sampleFlexParentState({ scheduleDay: 'Ma', roosterMode: 'week' }); withFakeNow(NOW, () => renderSchedule());
-  assert.doesNotMatch(dom.html('tab-schedule'), /wroverride|wredit|Toch zelf wijzigen|Zelf indelen/);
+  assert.doesNotMatch(dom.html('tab-schedule'), /wroverride|wredit|Carpooldag aanpassen|Zelf indelen/);
 });
 test('ui-schedule.js imports nothing it does not use', () => assertNoUnusedImports('ui-schedule.js'));
 

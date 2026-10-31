@@ -156,7 +156,7 @@ import nl from '../texts-nl.js';
 // Names of buttons and cards that the help quotes. If a text in the app is renamed, this test fails and the help must follow.
 const QUOTED = ['Tijden doorgeven', 'Doorgeven', 'Tijden aanpassen', 'Rijdt niet mee', 'Namens een ouder invullen', 'Actie nodig', '+ Periode toevoegen',
   'Tijdelijk rooster maken', 'Alles opnieuw indelen', 'Opnieuw indelen', 'Bevestigen: voor elke week', 'Eenmalig wijzigen', 'Ander adres…', 'Plek toevoegen',
-  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Verzoeken verwerken', 'Zelf indelen', 'Toch zelf wijzigen', 'Doorvoeren'];
+  'Rijdt niet mee', 'Weekoverzicht', 'Afdrukken / PDF', 'Deel in de groep', 'Ik neem deze rit over', 'Jouw rijbeurten', 'Stoppen', 'Auto toevoegen', 'Oefenwedstrijd', 'Terug naar standaard rooster', 'Ontkoppelen van deze dochter', 'Toegang aanvragen', 'Nu verversen', 'Tijden wijzigen', 'Aanvraag intrekken', 'Verzoeken verwerken', 'Zelf indelen', 'Carpooldag aanpassen', 'Doorvoeren'];
 const helpText = () => articles.flatMap(a => [a.title, ...a.body]).join('\n');
 const appValues = Object.values(nl).join('\n').replace(/&amp;/g, '&');
 test('every quoted name exists in the app texts', () => {
@@ -323,7 +323,7 @@ test('the Afwijkend weekrooster parent article explains the form and Mijn week; 
   const s = JSON.stringify(findArticle('afwijkend-weekrooster').body);
   assert.match(s, /Tijden wijzigen/); assert.match(s, /Volgende week/); assert.match(s, /Aanvraag intrekken/);
   const w = allText(findArticle('wijzigen'));
-  assert.match(w, /Rooster/); assert.match(w, /Zelf indelen/); assert.match(w, /Toch zelf wijzigen/);
+  assert.match(w, /Rooster/); assert.match(w, /Zelf indelen/); assert.match(w, /Carpooldag aanpassen/);
 });
 
 test('the Rooster article says the Vast rooster looks like Deze week and the pencil edits a car', () => {
@@ -346,7 +346,7 @@ test('the day coordinator article explains the flow: Verzoeken verwerken, the th
 
 test('the day coordinator article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
-  assert.match(s, /Zelf indelen/); assert.match(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);
+  assert.match(s, /Zelf indelen/); assert.match(s, /Carpooldag aanpassen/); assert.doesNotMatch(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);
 });
 
 test('the privacy item tells that the phone keeps a copy of the carpool data for speed, and that Opnieuw beginnen wipes it', () => {

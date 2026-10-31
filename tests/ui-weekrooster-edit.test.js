@@ -128,7 +128,7 @@ await testAsync('after a manual change a hint says that Advies bekijken recalcul
 console.log('=== a parent: Toch zelf wijzigen ===');
 await testAsync('under the day there is only the small link; no editor is open', async () => {
   await setup(); const html = rooster();
-  assert.match(html, /data-wroverride="Do"/); assert.match(text(html), /Toch zelf wijzigen/); assert.doesNotMatch(html, /data-wredit=|id="wrEdit"/);
+  assert.match(html, /data-wroverride="Do"/); assert.match(text(html), /Carpooldag aanpassen/); assert.doesNotMatch(text(html), /Toch zelf wijzigen/); assert.doesNotMatch(html, /data-wredit=|id="wrEdit"/);
   assert.equal(mayPlanDay('Do'), false);
 });
 await testAsync('the link first shows the warning with the name of THAT day\'s coordinator; Terug closes it and changes nothing', async () => {
@@ -220,7 +220,7 @@ console.log('=== nobody linked ===');
 await testAsync('nobody linked: no link, no editor, and Wijzigen keeps its own day editor', async () => {
   await setup({ links: {} });
   assert.equal(scheduleDayFootHtml('Do'), ''); S.wrEdit = { day: 'Do', override: true }; assert.equal(scheduleEditHtml(), '');
-  S.wrEdit = null; assert.doesNotMatch(rooster(), /wroverride|wredit|Toch zelf wijzigen/);
+  S.wrEdit = null; assert.doesNotMatch(rooster(), /wroverride|wredit|Carpooldag aanpassen/);
   withFakeNow(NOW, () => goToWijzigen('Do')); assert.equal(S.wrEdit, null); assert.equal(S.deviationDay, 'Do');
 });
 
