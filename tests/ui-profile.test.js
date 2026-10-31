@@ -372,6 +372,34 @@ test('starting the test view drops coordinator rights; stopping restores them', 
   assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true); assert.equal(S.roosterMode, 'week');
   assert.equal(dom.el('navBeheer').style.display, '');
 });
+test('switching parents keeps the tab you are on; from Beheer it moves to Mijn week; stopping never changes the tab', () => {
+  useFakeDb(sampleDbSeed());
+  const activated = [];
+  const realQS = dom.doc.querySelector;
+  const run = (tab, fn) => {
+    dom.doc.querySelector = sel => {
+      if (sel === 'nav button.active') return { dataset: { tab } };
+      const m = /nav button\[data-tab="(\w+)"\]/.exec(sel);
+      return m ? { classList: { add: () => activated.push(m[1]), remove() {} }, setAttribute() {} } : null;
+    };
+    try { withFakeNow(NOW, fn); } finally { dom.doc.querySelector = realQS; }
+  };
+  sampleCoordinatorState({ links: { coord: { familyId: 'f1' } } });
+  S.roosterMode = 'vast';
+  run('schedule', () => startImpersonate('f2'));
+  assert.deepEqual(activated, [], 'no tab switch from Rooster'); assert.equal(S.roosterMode, 'vast', 'the Rooster view is left alone');
+  run('schedule', () => startImpersonate('f3'));
+  assert.equal(S.impersonateFamilyId, 'f3'); assert.deepEqual(activated, []);
+  run('schedule', () => stopImpersonate());
+  assert.equal(S.impersonateFamilyId, null); assert.deepEqual(activated, [], 'Stoppen leaves the tab as it is'); assert.equal(S.canEdit, true);
+  run('beheer', () => startImpersonate('f2'));
+  assert.deepEqual(activated, ['myweek'], 'Beheer is hidden for a parent, so this one moves to Mijn week');
+});
+test('a parent (not the coordinator) can never start a test view', () => {
+  useFakeDb(sampleDbSeed()); sampleParentState();
+  withFakeNow(NOW, () => startImpersonate('f2'));
+  assert.ok(!S.impersonateFamilyId); assert.equal(S.canEdit, false);
+});
 test('starting without a family id does nothing', () => {
   sampleCoordinatorState();
   startImpersonate('');

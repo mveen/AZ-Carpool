@@ -298,6 +298,10 @@ main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--space
 .roundBtn{width:var(--hit-min);height:var(--hit-min);min-width:var(--hit-min);border-radius:50%;border:1px solid var(--line);background:var(--surface-card);
   color:var(--text-1);font-size:18px;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex-shrink:0}
 .roundBtn svg{width:20px;height:20px;fill:currentColor}
+.roundBtn--switch.on{background:var(--accent-soft);color:var(--accent-ink);border-color:transparent}
+.sheetItem--current{background:var(--ok-soft);border-color:transparent}
+.sheetItem[hidden]{display:none}
+.switchSearch{width:100%;margin-top:var(--space-5)}
 .avatarBtn{width:var(--hit-min);height:var(--hit-min);min-width:var(--hit-min);border-radius:50%;border:0;background:var(--action-bg);color:var(--action-ink);
   font:var(--type-button);font-size:13px;display:inline-flex;align-items:center;justify-content:center;padding:0;cursor:pointer;flex-shrink:0}
 
