@@ -71,7 +71,7 @@ await testAsync('closed: nothing; step 1 Aanvragen: the request, the advice in s
   assert.match(s, /Advies beschikbaar/); assert.match(s, /30 min extra wachten/); assert.match(s, /0 speelsters in andere auto/);
   assert.match(s, /Er verandert niets voordat je op de laatste stap bevestigt/);
   assert.match(html, /id="wrNav"[^>]*aria-label="Sluiten"/); assert.match(html, /id="wrToPlan"/); assert.match(s, /Advies bekijken en aanpassen/);
-  assert.match(html, /id="wrSelf"/); assert.match(s, /Zelf indelen/);
+  assert.doesNotMatch(html, /id="wrSelf"/); assert.doesNotMatch(s, /Zelf indelen/);   // step 1 has one way forward
   assert.doesNotMatch(html, /id="wrToCheck"|id="wrAccept"|data-wrgirl|data-wrvariant/);
   assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
 });
@@ -107,7 +107,6 @@ await testAsync('step 3 Controleren: the summary groups use the same heen/terug 
 await testAsync('step 1: "Advies bekijken" goes to step 2, "Zelf indelen" closes the flow and opens the day editor, X closes the flow', async () => {
   await setup(); S.wrAdvice = { day: 'Do' };
   press('wrToPlan'); assert.equal(S.wrAdvice.step, 'plan');
-  S.wrAdvice = { day: 'Do' }; press('wrSelf'); assert.equal(S.wrAdvice, null);
   S.wrAdvice = { day: 'Do' }; press('wrNav'); assert.equal(S.wrAdvice, null);
   S.wrAdvice = { day: 'Do', step: 'plan' }; press('wrNav'); assert.equal(S.wrAdvice.step, 'requests');
   S.wrAdvice = { day: 'Do', step: 'check' }; press('wrNav'); assert.equal(S.wrAdvice.step, 'plan');

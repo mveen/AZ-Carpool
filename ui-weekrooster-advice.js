@@ -21,7 +21,6 @@ import { evaluateCars } from './weekrooster-impact.js';
 import { acceptDay, adviceForDay, planOf, planStats } from './weekrooster-data.js';
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
-import { openDayEditor } from './ui-weekrooster-edit.js';
 
 const dayLabel = dayName;
 const parent = id => esc(fam(id).parentName || '?');
@@ -103,8 +102,7 @@ function requestsStep(adv, f, plan, stats) {
       <div class="reqPanel">${adv.requests.map(r => requestRowHtml(adv, r)).join('')}</div>
       ${heroHtml(adv, plan, stats)}
       <div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.nothingChanges'))}</span></div></div>`,
-    foot: `<button type="button" class="btn" id="wrToPlan">${esc(t('weekrooster.advice.look'))}${phIcon('arrow-right')}</button>
-      <button type="button" class="linkbtn" id="wrSelf" data-day="${esc(f.day)}">${esc(t('weekrooster.edit.self'))}</button>`,
+    foot: `<button type="button" class="btn" id="wrToPlan">${esc(t('weekrooster.advice.look'))}${phIcon('arrow-right')}</button>`,
   };
 }
 
@@ -449,7 +447,6 @@ export function wireAdvice(box) {
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
   on('wrNav', () => { hapticTap(); navBack(); });
   on('wrToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });
-  on('wrSelf', () => { hapticTap(); const day = flowState().day; S.wrAdvice = null; openDayEditor(day); });
   on('wrAdjust', () => { hapticTap(); openAdjustSheet(); });
   on('wrToCheck', () => { hapticTap(); flowState().step = 'check'; renderSchedule(); });
   on('wrBackToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });
