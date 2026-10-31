@@ -32,7 +32,8 @@ test('Mijn week: title, week line, share button and the avatar letters of the pa
   assert.equal(dom.el('shareToggle').hidden, false); assert.equal(dom.el('avatarInitials').innerHTML, 'PP');
 });
 test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig, deze week", Wedstrijden "<team> · komende 4 weken", Beheer "Alleen voor de coördinator"', () => {
-  sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true); assert.equal(dom.el('headerContext').textContent, 'Week 40 · iedereen');
+  sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true);
+  assert.equal(dom.el('overviewBtn').hidden, false); assert.match(dom.el('overviewIcon').innerHTML, /<svg/); updateHeader('myweek'); assert.equal(dom.el('overviewBtn').hidden, true); updateHeader('schedule');   // Weekoverzicht sits in the header of Rooster only assert.equal(dom.el('headerContext').textContent, 'Week 40 · iedereen');
   updateHeader('deviation'); assert.equal(dom.el('headerContext').textContent, 'Eenmalig, deze week');
   updateHeader('matches'); assert.equal(dom.el('headerTitle').textContent, 'Wedstrijden'); assert.equal(dom.el('headerContext').textContent, 'Komende 4 weken');
   S.matchFeeds = [{ calendarId: 'c', label: 'AZ O15-1' }]; updateHeader('matches'); assert.equal(dom.el('headerContext').textContent, 'O15-1 · komende 4 weken');

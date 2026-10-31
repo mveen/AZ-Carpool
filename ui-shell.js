@@ -3,7 +3,8 @@
 // (Mijn gezin, theme, Agenda, help). The tab bar itself is plain markup in index.html.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast } from './ui-common.js';
+import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast, hapticTap } from './ui-common.js';
+import { openOverview } from './ui-overview.js';
 import { APP_VERSION } from './constants.js';
 import { weekRangeLabel } from './dates.js';
 import { fam, isFlex } from './rides.js';
@@ -65,6 +66,8 @@ export function updateHeader(tab){
   if(ctx) ctx.textContent = contextLine(screen);
   const share = document.getElementById('shareToggle');
   if(share) share.hidden = !SHOWS_SHARE.has(screen);
+  const ovb = document.getElementById('overviewBtn');   // Weekoverzicht (PDF) lives in the header of Rooster: it costs no line in the screen
+  if(ovb){ ovb.hidden = screen !== 'schedule'; const oi = document.getElementById('overviewIcon'); if(oi) oi.innerHTML = phIcon('table'); }
   const sw = document.getElementById('switchParentBtn');
   if(sw){
     sw.hidden = !isRealCoordinator();   // real coordinator rights, so it stays when the Beheer tab is hidden in a test view
@@ -265,6 +268,7 @@ export function initShell(onNavigate, onViewChange){
   if(av) av.onclick = () => openSettings(onNavigate, onViewChange);
   const sh = document.getElementById('shareToggle'); if(sh) sh.onclick = openShare;
   const sw = document.getElementById('switchParentBtn'); if(sw) sw.onclick = openSwitchParent;
+  const ovb = document.getElementById('overviewBtn'); if(ovb) ovb.onclick = () => { hapticTap(); openOverview(); };
   initContact();
   syncAppHeight();
   for(const ev of ['resize', 'orientationchange', 'pageshow']) window.addEventListener(ev, syncAppHeight);

@@ -646,6 +646,19 @@ button.planRow{cursor:pointer}
 .entryCard__icon svg{width:20px;height:20px;fill:currentColor}
 .entryCard__head{display:flex;align-items:center;gap:var(--space-4);padding-bottom:var(--space-2)}
 .entryCard__head b{font:var(--type-small);font-weight:800}
+.entryCard__title{display:flex;flex-direction:column;flex:1;min-width:0}
+.entryCard__cap{font:var(--type-caption);color:var(--text-2)}
+.entryCard__cap b{font:var(--type-caption);font-weight:800}
+.takeBtns{display:grid;grid-template-columns:1.5fr 1fr;gap:var(--space-3)}
+.takeBtns[hidden],.takeWarn[hidden]{display:none}
+.takeBtns .btn{margin:0;height:52px;min-height:52px;border-radius:var(--radius-panel);font:var(--type-small);font-weight:700;gap:var(--space-3);padding:0 var(--space-4)}
+.takeBtns .btn svg{width:18px;height:18px;fill:currentColor;flex:none}
+.takeWarn{display:grid;gap:var(--space-3);border-top:1px solid var(--warn-edge);padding-top:var(--space-5)}
+.takeWarn p{margin:0}
+.takeWarn__t{font:var(--type-body)}
+.takeWarn__p{font:var(--type-small);color:var(--text-2)}
+.takeWarn__btns{display:grid;grid-template-columns:1.2fr 1fr;gap:var(--space-3);margin-top:var(--space-3)}
+.takeWarn__btns .btn{margin:0;height:48px;min-height:48px;border-radius:var(--radius-panel)}
 .entryCard .entryCard__go{width:100%;height:52px;min-height:52px;margin:0;border-radius:var(--radius-panel);font:var(--type-card-title)}
 .tog{display:grid;grid-template-columns:1fr 1fr;gap:var(--space-3)}
 .tog__opt{display:flex;flex-direction:column;align-items:flex-start;text-align:left;min-height:var(--hit-min);padding:var(--space-4) var(--space-5);border:1px solid var(--edge);background:var(--surface-card);color:var(--text-1);border-radius:var(--radius-panel);font-family:inherit;cursor:pointer}

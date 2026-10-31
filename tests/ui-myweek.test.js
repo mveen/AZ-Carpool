@@ -499,5 +499,14 @@ test('the pills never run out of room: up to seven (Ma–Vr plus a weekend match
 });
 
 
+await testAsync('a day somebody else decides, with a request of another family: a folded amber line with the title and the name of the day coordinator, the card inside (Bel, Overnemen)', async () => {
+  const doc = { weekKey: '2026-W40', day: 'Do', familyId: 'f5', rides: true, heen: '12:15', terug: '17:00', status: 'pending', createdAt: 1, updatedAt: 1 };
+  useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f5': doc });
+  sampleParentState({ dayCoordinators: { Do: 'f3' } }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  let h = ''; withFakeNow(MON, () => { S.myWeekDay = ''; renderMyWeek(); h = dom.html('tab-myweek'); });
+  assert.match(h, /<details class="fold fold--alert"[^>]*data-fold="wrtake\|Do"/); assert.doesNotMatch(h, /data-fold="wrtake\|Do"[^>]* open/);
+  assert.match(text(h), /1 aanvraag voor donderdag Dagcoördinator: Kees de Vries/); assert.match(text(h), /Bel Kees de Vries Overnemen/); assert.match(h, /data-wrtakeover="Do"/);
+  useFakeDb(sampleDbSeed());
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

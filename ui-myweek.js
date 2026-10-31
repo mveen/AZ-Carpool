@@ -18,6 +18,7 @@ import { activateTab } from './app.js';
 import { dayCoordinatorHtml } from './ui-schedule.js';
 import { isFlex, driverNameHtml } from './rides.js';
 import { myWeekActionCardsHtml, wireMyWeekActions } from './ui-weekrooster-rooster.js';
+import { wireTakeOver } from './ui-weekrooster-edit.js';
 import { openDayEditor } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { contactButtonHtml } from './ui-contact.js';
@@ -265,7 +266,7 @@ export function renderMyWeek(){
     ${dayCoordinatorHtml()}
   `;
   box.querySelectorAll('[data-mwday]').forEach(b=>b.onclick=()=>{ S.myWeekDay = b.dataset.mwday; hapticTap(); renderMyWeek(); });
-  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireDriverCar(box, renderMyWeek);
+  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireTakeOver(box); wireDriverCar(box, renderMyWeek);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';

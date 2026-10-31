@@ -61,7 +61,7 @@ console.log('=== the day coordinator ===');
 await testAsync('Rooster on his day: the entry card, the day coordinator line, the log (newest first) with tags and times', async () => {
   await asDecider(); const html = rooster(), s = text(html);
   assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Verzoeken verwerken/); assert.doesNotMatch(s, /Advies|Het vaste rooster geldt/);   // Rooster only lists the requests
-  assert.match(s, /(Dagcoördinator donderdag:|Jij bent dagcoördinator donderdag)/);
+  assert.doesNotMatch(s, /Dagcoördinator donderdag:|Jij bent dagcoördinator/);   // no line about the day coordinator above the day any more
   assert.match(html, /<details class="fold fold--quiet"[^>]*id="wrLog"/); assert.match(s, /Recente wijzigingen 1/);   // folded history: only what is settled
   assert.match(s, /Evi: Rijdt niet mee Direct wo 08:30/);
   assert.match(html, /class="entryCard entryCard--stack entryCard--plain" id="wrAlert"/); assert.doesNotMatch(html.slice(html.indexOf('id="wrAlert"')).split('data-wradvice')[0], /entryCard__icon/);   // the normal white card, no warning icon assert.doesNotMatch(html, /alertCard__row|devAlert/);   // the requests themselves are listed in step 1 of the flow, not in the Rooster
@@ -82,13 +82,13 @@ await testAsync('two requests are counted together; with none waiting there is n
   assert.match(text(rooster()), /2 aanvragen voor donderdag/); assert.equal(weekroosterActionCount(), 2);
   await asDecider(); S.dayRequests = { '2026-W40_Do_f4': S.dayRequests['2026-W40_Do_f4'] };
   const html = rooster(); assert.doesNotMatch(html, /id="wrAlert"/); assert.match(html, /id="wrLog"/); assert.equal(weekroosterActionCount(), 0);
-  assert.match(html, /<div class="coordLine coordLine--act">[^]*?data-wredit="Do"/, 'no amber card: the button Zelf indelen sits on the line of the day coordinator');
+  assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wredit="Do"/, 'no card: the link Zelf indelen is at the bottom of the day');
 });
-await testAsync('the line of the day coordinator says "Jij bent dagcoördinator donderdag" for the day coordinator himself, and the direction titles say where the time is', async () => {
+await testAsync('there is no line about the day coordinator above the day, and the direction titles say where the time is', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '07:30', terug: '16:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const html = rooster(), s = text(html);
-  assert.match(s, /Jij bent dagcoördinator donderdag/); assert.doesNotMatch(s, /Dagcoördinator donderdag:/);
+  assert.doesNotMatch(s, /Jij bent dagcoördinator|Dagcoördinator donderdag:/);
   assert.match(html, /sectionHead__note">Aankomst bij AFC/);   // the direction title says what the time means; her own time sits on her chip
 });
 await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Verzoeken verwerken")', async () => {
@@ -122,21 +122,22 @@ await testAsync('children who do not ride along sit in the quiet fold (muted nam
 });
 
 console.log('=== a parent ===');
-await testAsync('read only: the own request is a note on that day, other families\' requests are not shown, no action block', async () => {
+await testAsync('a parent: the own request is in the card of that day, with the name of the day coordinator, Bel and Overnemen; no action block', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '12:15', terug: '17:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const s = text(rooster());
-  assert.match(s, /Jouw aanvraag: heen 12:15 · terug 17:00\. Kees de Vries beslist\./); assert.match(s, /Dagcoördinator donderdag: Kees de Vries/);
-  assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen|Anouk: Heen|Evi: Rijdt/);
-  assert.doesNotMatch(text(mijnWeek()), /Actie nodig voor/);
+  assert.match(s, /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries Heen .*Jahaimy aanwezig om 12:15 .*Terug .*Jahaimy klaar om 17:00 .*Bel Kees de Vries Overnemen/);
+  assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen \d|Jouw aanvraag|Verzoeken verwerken/);
 });
 
-await testAsync('a parent sees the open request of another family on that day as a note; an accepted or direct one is not shown', async () => {
+await testAsync('a parent sees the open request of another family in the card (Rooster) and in a folded line in Mijn week; a direct one is not shown', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '12:15', terug: '17:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f3' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const s = text(rooster());
-  assert.match(s, /: aanvraag heen 12:15 · terug 17:00\. Kees de Vries beslist\./);
-  assert.doesNotMatch(s, /Evi: Rijdt/, 'a direct request is not a note'); assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen/);
+  assert.match(s, /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries Heen .*Lois aanwezig om 12:15/);
+  assert.doesNotMatch(s, /Evi rijdt niet mee/, 'a direct request is not listed'); assert.doesNotMatch(s, /Actie nodig|Recente wijzigingen \d/);
+  const mw = mijnWeek();
+  assert.match(mw, /<details class="fold fold--alert"[^>]*data-fold="wrtake\|Do"/); assert.match(text(mw), /2 aanvragen voor donderdag Dagcoördinator: Kees de Vries/); assert.match(mw, /data-wrtakeover="Do"/); assert.doesNotMatch(noStyle(mw), /style="/);
 });
 
 console.log('=== not applicable ===');
@@ -152,7 +153,7 @@ await testAsync('the entry card has the button "Verzoeken verwerken" for the day
   await asDecider(); const html = rooster();
   assert.match(html, /class="entryCard [^"]*"[^>]*id="wrAlert"/); assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Verzoeken verwerken/);
   assert.doesNotMatch(html, /devAlert/);
-  assert.doesNotMatch(html, /data-wredit="Do"/); assert.doesNotMatch(text(html), /Zelf indelen/);   // with requests waiting there is ONE way in: the flow
+  assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wredit="Do"/);   // the flow is the way in; Zelf indelen is only the small link at the bottom
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

@@ -63,7 +63,7 @@ console.log('\n=== Deze week (with this week\'s changes) ===');
 test('Tuesday: the deviation replaces the standard rooster and is marked "gewijzigd"', () => {
   const html = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Di' }));
   const s = text(html);
-  assert.match(s, /Week 40 · 28 sep – 2 okt · met wijzigingen\./);
+  assert.doesNotMatch(s, /met wijzigingen/);   // the week is in the header; Deze week has no info line of its own
   assert.match(s, /Heen Aankomst bij AFC (&#39;|')34 gewijzigd 09:15 Chauffeur Kees de Vries 2\/5 Busstation → AFC (&#39;|')34 Eline 10:15 Evi 11:00/);   // each girl with her own time
   assert.match(s, /Back-up 2 Piet Pieters Mo Bakker/);   // one fold: the count, then the names as buttons (no second label when it holds one part)
   assert.doesNotMatch(s, /Klaar om op te halen|Aankomst .* nodig/);   // no window line: the times sit on the chips
@@ -175,25 +175,31 @@ test('nothing is shown when Beheer has no coordinator for today', () => {
   assert.equal(withFakeNow(NOW, () => dayCoordinatorHtml()), '');
   assert.doesNotMatch(render(() => sampleFlexParentState({ dayCoordinators: {} })), /Dagcoördinator/);
 });
-test('Rooster shows "Dagcoördinator morgen: <naam>", the name opens the contact sheet', () => {
+const banner = fn => withFakeNow(NOW, () => { fn(); return dayCoordinatorHtml(); });
+test('Rooster has no coordinator banner above the switch any more (Mijn week keeps its line)', () => {
   const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' } }));
+  assert.doesNotMatch(text(html), /Dagcoördinator morgen|Jij bent dagcoördinator/); assert.doesNotMatch(html, /dayCoordBar/);
+  assert.doesNotMatch(render(() => sampleParentState({ dayCoordinators: { Do: 'f2' } })), /dayCoordBar/);
+});
+test('the line "Dagcoördinator morgen: <naam>" (Mijn week): the name opens the contact sheet', () => {
+  const html = banner(() => sampleParentState({ dayCoordinators: { Do: 'f3' } }));
   assert.match(text(html), /^Dagcoördinator morgen: Kees de Vries/);
   // The name opens the contact sheet; the WhatsApp text there has no name in it: "Hi! Een vraag over de carpool van morgen: "
   assert.match(html, /<button type="button" class="nameLink" data-contact="f3" data-contact-text="Hi! Een vraag over de carpool van morgen: ">Kees de Vries<\/button>/);
   assert.doesNotMatch(html, /wa\.me/);
 });
 test('the name comes from the family data, not from the code', () => {
-  const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: { ...sampleParentState().families, f3: { ...sampleParentState().families.f3, parentName: 'Merel Test' } } }));
+  const html = banner(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: { ...sampleParentState().families, f3: { ...sampleParentState().families.f3, parentName: 'Merel Test' } } }));
   assert.match(text(html), /^Dagcoördinator morgen: Merel Test/);
   assert.doesNotMatch(html, /Kees de Vries/);
 });
 test('a coordinator without a phone number still shows the name (the sheet says there is no number)', () => {
   const fams = sampleParentState().families; fams.f3 = { ...fams.f3, parentPhone1: '', parentPhone2: '' };
-  const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: fams }));
+  const html = banner(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: fams }));
   assert.match(text(html), /^Dagcoördinator morgen: Kees de Vries/); assert.doesNotMatch(html, /wa\.me/);
 });
 test('the day coordinator herself is told so, without a button to herself', () => {
-  const html = render(() => sampleParentState({ dayCoordinators: { Do: 'f2' } }));
+  const html = banner(() => sampleParentState({ dayCoordinators: { Do: 'f2' } }));
   assert.match(text(html), /^Jij bent dagcoördinator morgen/); assert.doesNotMatch(html, /dayCoordWa/);
 });
 test('a Flex driver in the "Deze week" driver line is shown by name, without a pill', () => {
@@ -259,15 +265,11 @@ test('the standard views are untouched while a period is set: same html with and
 });
 
 console.log('\n=== Weekoverzicht-knop ===');
-test('Rooster has a Weekoverzicht button in "Deze week" and in the standard rooster; it opens the overview', () => {
-  ['week', 'standard'].forEach(mode => {
-    dom.doc.body.children.length = 0;
-    const html = render(() => sampleCoordinatorState({ roosterMode: mode, scheduleDay: 'Ma' }));
-    assert.match(html, /id="ovOpen"[^>]*>[\s\S]*?Weekoverzicht/);
-    dom.el('ovOpen').onclick();
-    assert.equal(dom.doc.body.children.length, 1);
-    assert.equal(dom.doc.body.children[0].id, 'ovOverlay');
-  });
+test('the Weekoverzicht button is in the header, not in the Rooster screen: no line of its own in "Deze week", the standard rooster keeps only its text', () => {
+  const week = render(() => sampleCoordinatorState({ roosterMode: 'week', scheduleDay: 'Ma' }));
+  assert.doesNotMatch(week, /ovOpen|Weekoverzicht|infoLine/);
+  const std = render(() => sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }));
+  assert.doesNotMatch(std, /ovOpen|Weekoverzicht/); assert.match(std, /infoLine__text/);
 });
 
 test('the first option of a planning is only marked "primary" (Aanbevolen) when it is a checked complete planning', () => {
@@ -396,8 +398,8 @@ test('the Advies flow is its own screen: the Rooster itself never holds it (open
 });
 test('Advies and Zelf indelen replace the whole Rooster header block: no coordinator line, tabs, Weekoverzicht or day pills', () => {
   const state = edit => () => { sampleParentState({ scheduleDay: 'Do', roosterMode: 'week', dayCoordinators: { Do: 'f2' } }); S.wrAdvice = null; S.wrEdit = edit; };
-  const normal = render(state(null)); assert.match(normal, /data-rmode="week"/); assert.match(normal, /dayPills/); assert.match(normal, /id="ovOpen"/);
-  const focus = render(state({ day: 'Do', override: false })); assert.match(focus, /id="wrEdit"/); assert.doesNotMatch(focus, /data-rmode|dayPills|id="ovOpen"|coordLine/);
+  const normal = render(state(null)); assert.match(normal, /data-rmode="week"/); assert.match(normal, /dayPills/);
+  const focus = render(state({ day: 'Do', override: false })); assert.match(focus, /id="wrEdit"/); assert.doesNotMatch(focus, /data-rmode|dayPills|coordLine/);
   S.wrEdit = null;
 });
 console.log('\n=== the driver\'s button "Tijd en plek" ===');

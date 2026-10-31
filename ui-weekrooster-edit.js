@@ -67,10 +67,11 @@ export function scheduleEditHtml() {
     <div class="actionBar">${hasAdvice(day) ? `<button type="button" class="btn secondary" id="wrEditAdvice">${esc(t('weekrooster.advice.look'))}</button>` : ''}<button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
 }
 
-// Under the day in Rooster "Deze week": the small link "Toch zelf wijzigen" for everybody who does not plan the day.
-// A planner has the button "Zelf indelen" on the line "Dagcoördinator {dag}" at the top (coordLineHtml in ui-weekrooster-rooster.js), so nothing here.
+// Under the day in Rooster "Deze week": the small link "Zelf indelen" for who plans the day, "Toch zelf wijzigen" for everybody else.
+// (There is no line about the day coordinator above the day any more: with requests waiting the card says who decides.)
 export function scheduleDayFootHtml(day) {
-  if (!weekroosterActive() || S.wrEdit || mayPlanDay(day)) return '';
+  if (!weekroosterActive() || S.wrEdit) return '';
+  if (mayPlanDay(day)) return `<button type="button" class="linkbtn" data-wredit="${day}">${phIcon('pencil')} ${esc(t('weekrooster.edit.self'))}</button>`;
   return `<button type="button" class="linkbtn" data-wroverride="${day}">${esc(t('weekrooster.edit.override_link'))}</button>`;
 }
 
@@ -83,7 +84,17 @@ async function settleDay(day) {
   renderSchedule(); renderMyWeek();
 }
 
+// The card of a day somebody else decides: Overnemen shows the warning in the card, Ja opens Zelf indelen (with the note that the day coordinator
+// decides), Annuleren puts the buttons back.
+export function wireTakeOver(box) {
+  const show = (b, warn) => { const c = b.closest('[data-wrtake]'); if (!c) return; c.querySelector('[data-take-btns]').hidden = warn; c.querySelector('[data-take-warn]').hidden = !warn; };
+  box.querySelectorAll('[data-wrtakeover]').forEach(b => b.onclick = () => { hapticTap(); show(b, true); });
+  box.querySelectorAll('[data-wrtakeno]').forEach(b => b.onclick = () => { hapticTap(); show(b, false); });
+  box.querySelectorAll('[data-wrtakeyes]').forEach(b => b.onclick = () => { hapticTap(); const day = b.dataset.wrtakeyes; startEdit(day, !mayPlanDay(day)); });
+}
+
 export function wireEdit(box) {
+  wireTakeOver(box);
   box.querySelectorAll('[data-wredit]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wredit); });
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
   const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day, step: 'plan' }; S.wrDone = null; renderSchedule(); };

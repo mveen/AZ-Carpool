@@ -19,7 +19,7 @@ import { effectiveCars } from '../rides.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { goToWijzigen } from '../ui-myweek.js';
-import { mayPlanDay, openDayEditor, scheduleEditHtml, scheduleDayFootHtml, wireEdit } from '../ui-weekrooster-edit.js';
+import { mayPlanDay, openDayEditor, scheduleEditHtml, scheduleDayFootHtml, wireEdit, wireTakeOver } from '../ui-weekrooster-edit.js';
 import { scheduleAdviceHtml, wireAdvice } from '../ui-weekrooster-advice.js';
 
 const dom = installFakeDom();
@@ -171,14 +171,27 @@ await testAsync('a change by the planner himself is never marked', async () => {
 });
 
 console.log('=== the one who decides: Zelf indelen ===');
-await testAsync('the day coordinator gets "Zelf indelen" under his day and goes straight into the editor, without a warning', async () => {
+await testAsync('the day coordinator gets the link "Zelf indelen" under his day (no line at the top) and goes straight into the editor, without a warning', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } });
-  const html = rooster(); assert.match(html, /data-wredit="Do"/); assert.doesNotMatch(html, /data-wroverride/); assert.equal(mayPlanDay('Do'), true);
-  assert.match(html, /<div class="coordLine coordLine--act">[^]*?data-wredit="Do"[^]*?<\/div>/, 'the button sits on the line of the day coordinator, at the top');
-  assert.equal(scheduleDayFootHtml('Do'), '', 'no link at the bottom of the day any more');
+  const html = rooster(); assert.match(html, /data-wredit="Do"/); assert.doesNotMatch(html, /data-wroverride|coordLine/); assert.equal(mayPlanDay('Do'), true);
+  assert.match(scheduleDayFootHtml('Do'), /^<button type="button" class="linkbtn" data-wredit="Do">[\s\S]*Zelf indelen<\/button>$/, 'the link is at the bottom of the day');
   const before = dom.doc.body.children.length;
   openDayEditor('Do'); assert.deepEqual(S.wrEdit, { day: 'Do', override: false }); assert.equal(dom.doc.body.children.length, before, 'no sheet');
   assert.doesNotMatch(text(scheduleEditHtml()), /rechtstreeks aan/);
+});
+await testAsync('a day somebody else decides: Overnemen shows the warning in the card, Ja opens Zelf indelen with the note, Annuleren puts the buttons back', async () => {
+  await setup({ dayCoordinators: { Do: 'f3' } }, { 'weekRequests/2026-W40_Do_f4': { weekKey: '2026-W40', day: 'Do', familyId: 'f4', rides: true, heen: '12:15', terug: '17:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
+  const html = rooster(), s = text(html);
+  assert.match(html, /data-wrtake="Do"/); assert.match(s, /1 aanvraag voor donderdag Dagcoördinator: Kees de Vries/); assert.match(s, /Bel Kees de Vries/); assert.match(s, /Overnemen/);
+  assert.match(html, /data-take-warn hidden/); assert.match(s, /Let op: dit is de taak van Kees de Vries/); assert.match(s, /Kees de Vries ziet je wijzigingen terug onder Recente wijzigingen/);
+  assert.doesNotMatch(html.slice(html.indexOf('data-wrtake="Do"')).split('data-wrtakeover')[0], /entryCard__icon/);   // Rooster: no signal
+  const btns = { hidden: false }, warn = { hidden: true }, card = { querySelector: sel => (sel === '[data-take-btns]' ? btns : warn) };
+  const over = { dataset: {}, closest: () => card }, no = { dataset: {}, closest: () => card }, yes = { dataset: { wrtakeyes: 'Do' }, closest: () => card };
+  wireTakeOver({ querySelectorAll: sel => ({ '[data-wrtakeover]': [over], '[data-wrtakeno]': [no], '[data-wrtakeyes]': [yes] })[sel] || [] });
+  over.onclick(); assert.equal(btns.hidden, true); assert.equal(warn.hidden, false);
+  no.onclick(); assert.equal(btns.hidden, false); assert.equal(warn.hidden, true);
+  assert.equal(S.wrEdit, null); yes.onclick(); assert.deepEqual(S.wrEdit, { day: 'Do', override: true });   // the editor says that the day coordinator decides
+  S.wrEdit = null;
 });
 await testAsync('the plan step of the Advies flow has no "Zelf indelen": the cars are changed in the step itself', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });

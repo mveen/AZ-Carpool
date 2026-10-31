@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, todayKeyNow, weekHasEnded } from './constants.js';
 import { baseCars, driverNameHtml, isFlex, ownCarWarning, activeDeviation, alreadyGrouped, carsCountFor, computeDepartureTime, effectiveCars, eligibleDrivers, fam, famTime, girlName, girlsFor, groupsFor, ovGirlsFor, planOptions, rideTime, seats, sortGirlIds, timeToMinutes, tripReserveIds, unplacedFor } from './rides.js';
-import { dateForWeekday, dayUp, weekRangeLabel } from './dates.js';
+import { dateForWeekday, dayUp } from './dates.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, arrivalLabel, arrivalPlaces, carStdId, destinationFor, isOverride, routeLabel } from './locations.js';
 import { esc, foldHtml, hapticTap, locationsCfg, openSheet, phIcon, renderLoadingIfNeeded, setStatus, showToast, twoStepConfirm } from './ui-common.js';
 import { timeChangesCardHtml, updateTimeChangesBadge, wireTimeChangesCard } from './ui-beheer.js';
@@ -12,10 +12,9 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { dayCoordinatorFor, myLinkedFamilyId } from './coordinator.js';
 import { driverAskText, reserveAskText } from './message-texts.js';
 import { createGroupCustom, cycleShiftPlace, db, recordLastUpdate, replanStandardShift, useOption } from './data.js';
-import { openOverview } from './ui-overview.js';
 import { waPhone, contactButtonHtml } from './ui-contact.js';
 import { scheduleDayExtrasHtml, weekroosterDayDot } from './ui-weekrooster-rooster.js';
-import { openAskedTimeOf, weekroosterActive } from './ui-weekrooster-form.js';
+import { openAskedTimeOf } from './ui-weekrooster-form.js';
 import { minutesToTime } from './planning.js';
 import { renderFlowScreen, wireAdviceEntry } from './ui-weekrooster-advice.js';
 import { scheduleDayFootHtml, scheduleEditHtml, wireEdit } from './ui-weekrooster-edit.js';
@@ -74,17 +73,11 @@ export function renderSchedule(){
       <button type="button" data-rmode="week" class="${mode==='week'?'active':''}" aria-pressed="${mode==='week'}">${t('schedule.deze_week')}</button>
       <button type="button" data-rmode="standard" class="${mode==='standard'?'active':''}" aria-pressed="${mode==='standard'}">${t('schedule.standaardrooster')}</button>${periodMode? `<button type="button" data-rmode="period" class="${mode==='period'?'active':''}" aria-pressed="${mode==='period'}">${esc(periodModeLabel())}</button>` : ''}
     </div>
-    <div class="infoLine"><span class="infoLine__text">${mode==='week'
-      ? t('schedule.het_standaardrooster_met_de_wijzigingen', { p1: weekRangeLabel() })
-      : mode==='period'? periodModeInfoHtml()
-      : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span>${mode!=='period'? `<button type="button" class="btn secondary chipBtn pill" id="ovOpen">${phIcon('table')}${t('overview.open')}</button>` : ''}</div>`;
+    ${mode==='week' ? '' : `<div class="infoLine"><span class="infoLine__text">${mode==='period'? periodModeInfoHtml() : t('schedule.het_vaste_rooster_elke_week', { p1: S.canEdit? t('schedule.tik_op_een_naam_om') : '' })}</span></div>`}`;
   // Zelf indelen is one task: while it is open it is the whole screen (no coordinator line, tabs or Weekoverzicht). The Advies flow is its
   // own layer on top of the app (renderFlowScreen below).
   const focusHtml = mode==='week' ? scheduleEditHtml() : '';
-  // The line about the day coordinator under the days already says it for the day in view, so the banner above the switch is left out then.
-  const bannerDup = mode==='week' && weekroosterActive() && (dayCoordinatorTarget()||{}).day === S.scheduleDay;
-  box.innerHTML = focusHtml || (bannerDup? '' : dayCoordinatorHtml())
-    + timeChangesCardHtml()
+  box.innerHTML = focusHtml || timeChangesCardHtml()
     + periodOverviewHtml()
     + segHtml
     + (mode==='period'
@@ -101,8 +94,6 @@ export function renderSchedule(){
     const el=document.getElementById('sugg-'+b.dataset.gosugg); const m=document.querySelector('main');
     if(el && m) m.scrollTop = el.getBoundingClientRect().top - m.getBoundingClientRect().top + m.scrollTop - 8;
   });
-  const ovOpen = document.getElementById('ovOpen');
-  if(ovOpen) ovOpen.onclick = ()=>{ hapticTap(); openOverview(); };
   wireTimeChangesCard();
   wireAdviceEntry(box);
   wireEdit(box);
