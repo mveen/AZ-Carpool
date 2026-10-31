@@ -76,7 +76,7 @@ test('the Standaardrooster is built like Deze week: ride cards in one list per d
 });
 test('an open quiet fold (Back-up) has its content right under the title and room below it, so it does not touch the next card', () => {
   const css = readFileSync(new URL('../components.css', import.meta.url), 'utf8');
-  assert.match(css, /\.carCard__edit>\.iconbtn\{justify-self:end\}/); assert.match(css, /details\.fold--quiet\[open\]>summary\{margin-bottom:0\}/); assert.match(css, /details\.fold--quiet>\.foldBody\{padding-bottom:var\(--space-6\)\}/);
+  assert.match(css, /details\.fold--quiet\{margin:calc\(var\(--space-3\) \* -1\) 0 var\(--space-7\)/, 'Back-up sits up against its cars and has room below'); assert.match(css, /\.carCard__edit>\.iconbtn\{justify-self:end\}/); assert.match(css, /details\.fold--quiet\[open\]>summary\{margin-bottom:0\}/); assert.match(css, /details\.fold--quiet>\.foldBody\{padding-bottom:var\(--space-6\)\}/);
   const html = render(() => { sampleCoordinatorState({ roosterMode: 'standard', scheduleDay: 'Ma' }); S.folds = { 'roostervast|Ma|heen': true }; });
   assert.match(html, /<details class="fold fold--quiet" data-fold="roostervast\|Ma\|heen" open>/); S.folds = {};
 });

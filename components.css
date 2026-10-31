@@ -510,7 +510,7 @@ details.fold--alert>summary b{color:var(--warn-ink)}
 details.fold--alert>summary::after{margin-left:auto}
 details.fold--alert .alertCard{margin-top:0;padding:0 0 var(--space-4);background:none}
 details.fold--alert .entryCard{margin-top:0;padding:0 0 var(--space-4);background:none;border:0}
-details.fold--quiet{margin-top:var(--space-3);padding:0 var(--space-1)}
+details.fold--quiet{margin:calc(var(--space-3) * -1) 0 var(--space-7);padding:0 var(--space-1)}   /* up against the cars above (Back-up belongs to them: the 44px tap area sits in the gap), room below so the next shift reads as separate */
 details.fold--quiet>summary{justify-content:flex-start;gap:var(--space-3);font:var(--type-caption);font-weight:600;color:var(--text-2);min-height:var(--hit-min)}
 details.fold--quiet>summary b{color:var(--text-1)}
 details.fold--quiet>summary::after{margin-left:auto}
