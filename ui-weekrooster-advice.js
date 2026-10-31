@@ -1,9 +1,11 @@
 // ui-weekrooster-advice.js — Afwijkend weekrooster: the flow of the day coordinator in Rooster (Deze week), in three steps.
-//   1  Aanvragen   the amber card (ui-weekrooster-rooster.js): one button, "Advies bekijken en aanpassen".
-//   2  Indeling    the advice (the cars and drivers as they are, least waiting) or the alternative, the girls who change, the cars with what
-//                  changes, and every change by hand: a girl to another car, the time, driver and place of a car. Nothing is saved yet.
+// The flow is its own screen on top of the app (renderFlowScreen), one screen per step, like the design "Morgen regelen":
+//   1  Aanvragen   what the parents asked, the advice in one card (waiting, girls in another car), "Advies bekijken en aanpassen" or "Zelf indelen".
+//                  The way in is the small card in Rooster (ui-weekrooster-rooster.js).
+//   2  Indeling    per shift one situation ("Eva en Lotte komen om 17:30"): per girl was → wordt (tap = another car), then the cars with what
+//                  changes; Advies or Alternatief; every change by hand (time, driver, place). Nothing is saved yet.
 //   3  Controleren one summary, one button "Doorvoeren voor {dag}" (weekrooster-data.js acceptDay). After it: "Alles terugdraaien" and the Dagbericht.
-// The state is S.wrAdvice = { day, step: 'plan'|'check', variant: 'best'|'alt', edits: { heen?: cars, terug?: cars } }; the changes by hand
+// The state is S.wrAdvice = { day, step: 'requests'|'plan'|'check', variant: 'best'|'alt', edits: { heen?: cars, terug?: cars } }; the changes by hand
 // are pure functions in weekrooster-plan.js. Planning a day without requests by hand is the editor (ui-weekrooster-edit.js).
 import { t } from './i18n.js';
 import { S } from './state.js';
@@ -15,29 +17,38 @@ import { wireWhatsAppButton } from './ui-deviation.js';
 import { buildConclusieMessage } from './message-texts.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
+import { myFamilyId } from './coordinator.js';
 import { evaluateCars } from './weekrooster-impact.js';
 import { acceptDay, adviceForDay, planOf, planStats } from './weekrooster-data.js';
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
-import { actionCardHtml } from './ui-weekrooster-rooster.js';
+import { openDayEditor } from './ui-weekrooster-edit.js';
 
 const dayLabel = dayName;
 const parent = id => esc(fam(id).parentName || '?');
 const DIRS = ['heen', 'terug'];
+const STEPS = ['requests', 'plan', 'check'];
 
 // The state of the flow with its defaults filled in.
 function flowState() {
   const f = S.wrAdvice;
   if (!f) return null;
-  if (f.step !== 'check') f.step = 'plan';
+  if (!STEPS.includes(f.step)) f.step = 'requests';
   if (f.variant !== 'alt') f.variant = 'best';
   if (!f.edits) f.edits = {};
   return f;
 }
-const fresh = day => ({ day, step: 'plan', variant: 'best', edits: {} });
+const fresh = day => ({ day, step: 'requests', variant: 'best', edits: {} });
+const rawGirl = id => fam(id).girlName || fam(id).parentName || id;
+const rawParent = id => fam(id).parentName || '?';
+// "Eva", "Eva en Lotte", "Eva, Lotte en Sara"
+const niceList = names => (names.length < 2 ? names.join('') : names.slice(0, -1).join(', ') + ' ' + t('weekrooster.flow.and') + ' ' + names[names.length - 1]);
+const pad2 = n => String(n).padStart(2, '0');
+const isoOf = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+const isTomorrow = iso => !!iso && iso === isoOf(new Date(Date.now() + 864e5));
 
 // ---------- the pieces ----------
-// The three named steps: green = done, amber = the one you are on and the ones to come.
+// The three named steps: green = done, amber = the one you are on and the ones to come. 4 = all done.
 function stepsHtml(current) {
   const names = ['weekrooster.flow.step1', 'weekrooster.flow.step2', 'weekrooster.flow.step3'];
   return `<ol class="flowSteps">${names.map((k, i) => {
@@ -46,91 +57,154 @@ function stepsHtml(current) {
   }).join('')}</ol>`;
 }
 
-const minutes = n => t('weekrooster.flow.wait', { p1: n });
-function statsHtml(stats) {
-  const m = stats.moved.length, n = stats.familiesChanged.length;
-  const items = [
-    stats.extraWait ? minutes(stats.extraWait) : t('weekrooster.flow.wait0'),
-    m === 0 ? t('weekrooster.flow.moved0') : m === 1 ? t('weekrooster.flow.moved1') : t('weekrooster.flow.movedN', { p1: m }),
-    n === 0 ? t('weekrooster.flow.notice0') : n === 1 ? t('weekrooster.flow.notice1') : t('weekrooster.flow.noticeN', { p1: n }),
-  ];
-  return `<div class="chips flowStats">${items.map(s => `<span class="chip">${esc(s)}</span>`).join('')}</div>`;
+// The top of a step: close (step 1) or back (steps 2 and 3), the day and the title.
+function headHtml(step, day) {
+  const iso = weekKeyDayIso(S.currentWeekKey, day), name = dayLabel(day).toLowerCase();
+  const when = (isTomorrow(iso) ? t('weekrooster.flow.tomorrow') + ' · ' : '') + `${name} ${isoDayLabel(iso, '')}`;
+  const forDay = isTomorrow(iso) ? t('weekrooster.flow.tomorrowLower') : name;
+  const title = step === 'plan' ? t('weekrooster.flow.titlePlan', { p1: forDay }) : step === 'check' ? t('weekrooster.flow.titleCheck') : t('weekrooster.flow.titleRequests', { p1: forDay });
+  const close = step === 'requests';
+  return `<div class="flowHead"><button type="button" class="roundBtn" id="wrNav" aria-label="${esc(t(close ? 'weekrooster.flow.close' : 'weekrooster.flow.prev'))}">${phIcon(close ? 'x' : 'arrow-left')}</button>
+    <div class="flowHead__text"><div class="flowHead__ctx">${esc(when)}</div><h1 class="flowHead__title" id="flowTitle">${esc(title)}</h1></div></div>`;
 }
 
-// A girl who asked or who changes car: her time, the car she gets and the car she had. Tap = another car.
-function girlRowHtml(dir, d, plan, id) {
-  const car = plan.dirs[dir].cars.find(c => c.girlIds.includes(id)), old = d.cars.find(c => (c.girlIds || []).includes(id));
-  const tm = timeAfter(d.ctx, id), was = d.ctx.timeOf(id) || '';
-  const sub = tm
-    ? `<b>${esc(tm)}</b>${was && was !== tm ? ` <span class="wasTime">${esc(t('weekrooster.flow.girlWas', { p1: was }))}</span>` : ''}`
-    : esc(t('weekrooster.flow.girlHome'));
-  let right = '';
-  if (tm) {
-    const diff = !old ? t('weekrooster.flow.girlNew') : car && old.driverFamilyId !== car.driverFamilyId ? t('weekrooster.flow.girlWas', { p1: fam(old.driverFamilyId).parentName || '?' }) : '';
-    right = `<span class="planRow__car">${car ? driverNameHtml(car.driverFamilyId) : ''}${diff ? `<span class="diffLabel">${esc(diff)}</span>` : ''}</span>${phIcon('caret-right')}`;
-  }
-  const inner = `<span class="planRow__who"><span class="planRow__name">${girlName(id)}</span><span class="planRow__sub">${sub}</span></span>${right}`;
-  return tm ? `<button type="button" class="planRow" data-wrgirl="${dir}|${esc(id)}">${inner}</button>` : `<div class="planRow planRow--static">${inner}</div>`;
+const tile = (value, label, ok) => `<div class="statTile${ok ? ' statTile--ok' : ''}"><b>${esc(value)}</b><span>${esc(label)}</span></div>`;
+const movedLabel = n => t(n === 1 ? 'weekrooster.flow.tileMoved1' : 'weekrooster.flow.tileMovedN');
+const noticeLabel = n => t(n === 1 ? 'weekrooster.flow.tileNotice1' : 'weekrooster.flow.tileNoticeN');
+const waitTile = stats => tile(t('weekrooster.flow.tileMin', { p1: stats.extraWait }), t('weekrooster.flow.tileWait'), !stats.extraWait);
+
+// ---------- step 1: the requests ----------
+function requestRowHtml(adv, r) {
+  const lines = DIRS.map(dir => {
+    const d = adv.directions[dir], q = d && d.ctx.requests.find(x => x.familyId === r.familyId);
+    if (!q) return '';
+    const was = d.ctx.timeOf(r.familyId) || '', heen = dir === 'heen';
+    if (!q.time) return `<div class="reqItem__line">${esc(t(heen ? 'weekrooster.flow.reqNoHeen' : 'weekrooster.flow.reqNoTerug'))}${was ? ` <s>${esc(was)}</s>` : ''}</div>`;
+    return `<div class="reqItem__line">${esc(t(heen ? 'weekrooster.flow.reqHeen' : 'weekrooster.flow.reqTerug'))} <span class="reqItem__t">${esc(q.time)}</span>${was && was !== q.time ? ` <s>${esc(was)}</s>` : ''}</div>`;
+  }).join('');
+  const by = r.familyId === myFamilyId() ? t('weekrooster.flow.reqByMe') : t('weekrooster.flow.reqBy', { p1: rawGirl(r.familyId) });
+  return `<div class="reqItem"><b>${girlName(r.familyId)}</b>${lines}<div class="reqItem__by">${esc(by)}</div></div>`;
 }
 
-const sameKids = (a, b) => JSON.stringify([...(a.girlIds || [])].sort()) === JSON.stringify([...(b.girlIds || [])].sort());
-function carCardHtml(dir, c, old) {
-  const cfg = locationsCfg(), max = seats(fam(c.driverFamilyId)), was = old ? old.girlIds || [] : [];
-  const chips = sortGirlIds(c.girlIds).map(id => `<span class="chip${old && !was.includes(id) ? ' chip--add' : ''}">${old && !was.includes(id) ? '+ ' : ''}${girlName(id)}</span>`).join('')
-    + sortGirlIds(was.filter(id => !c.girlIds.includes(id))).map(id => `<span class="chip chip--gone">${girlName(id)}</span>`).join('');
-  const timeChanged = old && (old.departureTime || '') !== (c.departureTime || '');
-  return `<div class="carCard carCard--changed">
-    <div class="carCard__head"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span>
-      <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${old ? '' : `<span class="tag tag--warn">${esc(t('weekrooster.advice.new'))}</span>`}
-        <div class="carCard__route">${esc(routeLabel(c, dir, cfg, S.wrAdvice.day))}</div></div>
-      <span class="tag">${c.girlIds.length}/${max}</span></div>
-    ${timeChanged ? `<div class="diffLabel">${esc(t('weekrooster.flow.girlWas', { p1: old.departureTime || '--:--' }))}</div>` : ''}
-    <div class="chips">${chips || ''}</div></div>`;
+function heroHtml(adv, plan, stats) {
+  const n = adv.requests.length, unplaced = stats.problems.some(p => p.key === 'unplaced');
+  const fits = !plan.fallback && !plan.blocked && !unplaced;
+  const m = stats.moved.length;
+  return `<div class="adviceHero">
+    <span class="tag tag--ink">${esc(t(fits ? 'weekrooster.flow.heroTag' : 'weekrooster.flow.heroTagNoFit'))}</span>
+    <h2 class="adviceHero__title">${esc(fits ? t(n === 1 ? 'weekrooster.flow.heroFits1' : 'weekrooster.flow.heroFitsN', { p1: n }) : t('weekrooster.flow.heroNoFit'))}</h2>
+    ${fits ? `<div class="statTiles">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}</div>` : ''}
+    <p class="adviceHero__text">${esc(t(fits ? 'weekrooster.flow.heroBody' : 'weekrooster.flow.notFit'))}</p></div>`;
 }
-const quietRowHtml = c => `<div class="planRow planRow--quiet"><span class="planRow__time">${esc(c.departureTime || '--:--')}</span><span class="planRow__who">${driverNameHtml(c.driverFamilyId)}</span><span class="planRow__sub">${sortGirlIds(c.girlIds).map(id => girlName(id)).join(', ')}</span></div>`;
-const goneCardHtml = c => `<div class="carCard carCard--gone"><div class="carCard__head"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span>
-  <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span></div><span class="tag">${esc(t('weekrooster.advice.gone'))}</span></div></div>`;
 
-const arrivalText = (dir, cars) => arrivalPlaces(cars, locationsCfg()).map(arrivalLabel).join(' / ');
-
-function directionHtml(dir, adv, plan, stats) {
-  const d = adv.directions[dir], p = plan.dirs[dir], now = d.cars.filter(c => (c.girlIds || []).length);
-  const asking = d.ctx.requests.map(r => r.familyId), moved = stats.perDir[dir].moved;
-  const ids = sortGirlIds([...new Set([...asking, ...moved])]);
-  const changed = [], quiet = [];
-  p.cars.forEach(c => {
-    const old = now.find(o => o.driverFamilyId === c.driverFamilyId);
-    const same = old && sameKids(old, c) && (old.departureTime || '') === (c.departureTime || '');
-    (same ? quiet : changed).push({ c, old });
-  });
-  const gone = now.filter(o => !p.cars.some(c => c.driverFamilyId === o.driverFamilyId && c.girlIds.length)).map(goneCardHtml);
-  const title = t(dir === 'heen' ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, p.cars) });
-  return `<section class="wrStack wrStack--tight" data-wrdir="${dir}">
-    <div class="sectionHead"><div class="sectionHead__title">${esc(t(dir === 'heen' ? 'weekrooster.flow.girlsHeen' : 'weekrooster.flow.girlsTerug'))}</div></div>
-    ${ids.map(id => girlRowHtml(dir, d, plan, id)).join('')}
-    <div class="sectionHead"><div class="sectionHead__title">${esc(title)}</div></div>
-    ${changed.map(x => carCardHtml(dir, x.c, x.old)).join('')}${gone.join('')}
-    ${quiet.length ? `<div class="sectionHead__note">${esc(t('weekrooster.flow.unchanged'))}</div>${quiet.map(x => quietRowHtml(x.c)).join('')}` : ''}
-  </section>`;
+function requestsStep(adv, f, plan, stats) {
+  const n = adv.requests.length;
+  return {
+    body: `<div class="flowStack">
+      <div class="sectionHead"><div class="sectionHead__title">${esc(t(n === 1 ? 'weekrooster.flow.reqTitle1' : 'weekrooster.flow.reqTitleN', { p1: n }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.youDecide'))}</div></div>
+      <div class="reqPanel">${adv.requests.map(r => requestRowHtml(adv, r)).join('')}</div>
+      ${heroHtml(adv, plan, stats)}
+      <div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.nothingChanges'))}</span></div></div>`,
+    foot: `<button type="button" class="btn" id="wrToPlan">${esc(t('weekrooster.advice.look'))}${phIcon('arrow-right')}</button>
+      <button type="button" class="linkbtn" id="wrSelf" data-day="${esc(f.day)}">${esc(t('weekrooster.edit.self'))}</button>`,
+  };
 }
 
 // ---------- step 2: the plan ----------
-function planHtml(adv, f, plan, stats) {
+const sameKids = (a, b) => JSON.stringify([...(a.girlIds || [])].sort()) === JSON.stringify([...(b.girlIds || [])].sort());
+const arrivalText = (dir, cars) => arrivalPlaces(cars, locationsCfg()).map(arrivalLabel).join(' / ');
+
+// The title of the situation: "Eva en Lotte komen om 17:30" when everybody who asked on this shift asks the same time.
+function sceneTitle(dir, ctx) {
+  const heen = dir === 'heen', riding = ctx.requests.filter(r => r.rides && r.time), times = [...new Set(riding.map(r => r.time))];
+  if (riding.length && riding.length === ctx.requests.length && times.length === 1) {
+    const names = niceList(sortGirlIds(riding.map(r => r.familyId)).map(rawGirl)), one = riding.length === 1;
+    return t(`weekrooster.flow.scene${heen ? 'Heen' : 'Terug'}${one ? '1' : 'N'}`, { p1: names, p2: times[0] });
+  }
+  return t(heen ? 'weekrooster.flow.sceneHeenMixed' : 'weekrooster.flow.sceneTerugMixed');
+}
+
+// One girl: what she was (car and time), what she becomes (tap = another car), and in a few words how that is for her.
+function girlRowHtml(dir, d, plan, ev, id, asked) {
+  const car = plan.dirs[dir].cars.find(c => c.girlIds.includes(id)), old = d.cars.find(c => (c.girlIds || []).includes(id));
+  const tm = timeAfter(d.ctx, id), was = d.ctx.timeOf(id) || '', w = ev.waitOf[id], heen = dir === 'heen';
+  let cap = '', warn = false;
+  if (!tm) cap = t('weekrooster.flow.capHome');
+  else if (w < 0) { cap = t('weekrooster.flow.pickLate'); warn = true; }
+  else if (w > 0) { cap = t(heen ? 'weekrooster.flow.capEarly' : 'weekrooster.flow.capLate', { p1: w }); warn = true; }
+  else cap = t(asked ? 'weekrooster.flow.capAsked' : heen ? 'weekrooster.flow.capSameHeen' : 'weekrooster.flow.capSameTerug');
+  const wasHtml = old ? `${esc(rawParent(old.driverFamilyId))}${was ? `<i>${esc(was)}</i>` : ''}` : esc(t('weekrooster.flow.wasNone'));
+  const changed = !old || !car || old.driverFamilyId !== car.driverFamilyId || was !== tm;
+  const now = tm && car
+    ? `<button type="button" class="wwSel${changed ? '' : ' wwSel--same'}" data-wrgirl="${dir}|${esc(id)}" aria-label="${esc(t('weekrooster.flow.pickAria', { p1: rawGirl(id) }))}"><span>${esc(rawParent(car.driverFamilyId))}<i>${esc(tm)}</i></span>${phIcon('caret-down')}</button>`
+    : `<div class="wwSel wwSel--off"><span>${esc(t('weekrooster.flow.capHome'))}</span></div>`;
+  return `<div class="wwRow"><div class="wwRow__top"><b>${girlName(id)}</b><span class="wwRow__cap${warn ? ' wwRow__cap--warn' : tm ? '' : ' wwRow__cap--off'}">${esc(cap)}</span></div>
+    <div class="ww"><div class="wwWas">${wasHtml}</div><span class="wwArrow">${phIcon('caret-right')}</span>${now}</div></div>`;
+}
+
+// A car of the shift. `old` = the same driver's car now (null: a new car); plain = nothing changes in it.
+function carCardHtml(dir, ctx, c, old, plain) {
+  const cfg = locationsCfg(), max = seats(fam(c.driverFamilyId)), was = old ? old.girlIds || [] : [];
+  const route = esc(routeLabel(c, dir, cfg, S.wrAdvice.day));
+  const timeChanged = old && (old.departureTime || '') !== (c.departureTime || '');
+  const time = `<div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span>${timeChanged ? `<span class="carCard__was">${esc(t('weekrooster.flow.girlWas', { p1: old.departureTime || '--:--' }))}</span>` : ''}</div>`;
+  const head = (sub, tag) => `<div class="carCard__head">${time}<div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${old || plain ? '' : `<span class="tag tag--warn">${esc(t('weekrooster.advice.new'))}</span>`}<div class="carCard__route">${sub}</div></div>${tag}</div>`;
+  const tag = `<span class="tag">${c.girlIds.length}/${max}</span>`;
+  if (plain) return `<div class="carCard carCard--plain">${head(`${sortGirlIds(c.girlIds).map(rawGirl).map(esc).join(', ')} · ${route}`, tag)}</div>`;
+  const chipTime = id => { const tm = timeAfter(ctx, id); return tm ? ` <span class="chipTime">${esc(tm)}</span>` : ''; };
+  const chips = sortGirlIds(c.girlIds).map(id => { const add = old && !was.includes(id); return `<span class="chip${add ? ' chip--add' : ''}">${add ? '+ ' : ''}${girlName(id)}${chipTime(id)}</span>`; }).join('')
+    + sortGirlIds(was.filter(id => !c.girlIds.includes(id))).map(id => `<span class="chip chip--gone">${girlName(id)}</span>`).join('');
+  return `<div class="carCard carCard--changed">${head(route, tag)}<div class="chips">${chips}</div></div>`;
+}
+const goneCardHtml = c => `<div class="carCard carCard--gone"><div class="carCard__head"><div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span></div>
+  <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span></div><span class="tag">${esc(t('weekrooster.advice.gone'))}</span></div></div>`;
+
+function sceneHtml(dir, adv, plan, stats) {
+  const d = adv.directions[dir], p = plan.dirs[dir], ev = stats.perDir[dir], now = d.cars.filter(c => (c.girlIds || []).length);
+  const asking = d.ctx.requests.map(r => r.familyId);
+  const ids = sortGirlIds([...new Set([...asking, ...ev.moved])]);
+  const changed = [], plain = [];
+  p.cars.forEach(c => {
+    const old = now.find(o => o.driverFamilyId === c.driverFamilyId);
+    const same = old && sameKids(old, c) && (old.departureTime || '') === (c.departureTime || '');
+    (same ? plain : changed).push({ c, old });
+  });
+  const gone = now.filter(o => !p.cars.some(c => c.driverFamilyId === o.driverFamilyId && c.girlIds.length));
+  const heen = dir === 'heen';
+  const names = ev.familiesChanged.map(rawParent).map(esc);
+  return `<section class="scene" data-wrdir="${dir}">
+    <div class="scene__head"><b>${esc(sceneTitle(dir, d.ctx))}</b><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span></div>
+    <div class="ww ww--cols" aria-hidden="true"><span>${esc(t('weekrooster.flow.colWas'))}</span><span></span><span class="ww__now">${esc(t('weekrooster.flow.colNow'))}</span></div>
+    ${ids.map(id => girlRowHtml(dir, d, plan, ev, id, asking.includes(id))).join('')}
+    <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, p.cars) }))}</div>
+      ${changed.map(x => carCardHtml(dir, d.ctx, x.c, x.old, false)).join('')}${gone.map(goneCardHtml).join('')}${plain.map(x => carCardHtml(dir, d.ctx, x.c, null, true)).join('')}</div>
+    <div class="scene__note">${phIcon('info')}<span>${names.length ? t('weekrooster.flow.notice', { p1: names.join(', ') }) : esc(t('weekrooster.flow.notice0'))}</span></div></section>`;
+}
+
+function planStep(adv, f, plan, stats) {
   const hasAlt = !plan.fallback && Object.values(adv.directions).some(d => d.keep && d.keep.alt);
-  const seg = hasAlt ? `<div class="segmented" role="group" aria-label="${esc(t('weekrooster.flow.segAria'))}">
-      <button type="button" data-wrvariant="best" class="${f.variant === 'best' ? 'active' : ''}" aria-pressed="${f.variant === 'best'}">${esc(t('weekrooster.flow.segAdvice'))}</button>
-      <button type="button" data-wrvariant="alt" class="${f.variant === 'alt' ? 'active' : ''}" aria-pressed="${f.variant === 'alt'}">${esc(t('weekrooster.flow.segAlt'))}</button></div>` : '';
+  // The subtitle is what the choice costs, worked out per variant (never a fixed claim).
+  const sub = v => { const s = planStats(adv, planOf(adv, v, {})); return `${t('weekrooster.flow.tileMin', { p1: s.extraWait })} ${t('weekrooster.flow.tileWait')}`; };
+  const opt = (v, key) => `<button type="button" class="tog__opt${f.variant === v ? ' on' : ''}" data-wrvariant="${v}" aria-pressed="${f.variant === v}"><b>${esc(t(key))}</b><span>${esc(sub(v))}</span></button>`;
+  const seg = hasAlt ? `<div class="tog" role="group" aria-label="${esc(t('weekrooster.flow.segAria'))}">${opt('best', 'weekrooster.flow.segAdvice')}${opt('alt', 'weekrooster.flow.segAlt')}</div>` : '';
+  const n = stats.familiesChanged.length, m = stats.moved.length;
+  const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${waitTile(stats)}${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}</div>`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
-  return `${seg}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : statsHtml(stats)}
-    ${Object.keys(plan.dirs).map(dir => directionHtml(dir, adv, plan, stats)).join('')}
-    ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
-    ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(id => girlName(id)).join(', ') }))}</div>` : ''}
-    <button type="button" class="linkbtn" id="wrAdjust">${phIcon('pencil')}${esc(t('weekrooster.flow.adjust'))}</button>
-    <div class="actionBar"><button type="button" class="btn" id="wrToCheck"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.toCheck'))}</button></div>`;
+  return {
+    body: `<div class="flowStack">${seg}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
+      ${Object.keys(plan.dirs).map(dir => sceneHtml(dir, adv, plan, stats)).join('')}
+      ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
+      ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(rawGirl).join(', ') }))}</div>` : ''}
+      <button type="button" class="lnkRow" id="wrAdjust"><span>${esc(t('weekrooster.flow.adjust'))}</span>${phIcon('caret-right')}</button></div>`,
+    foot: `<button type="button" class="btn" id="wrToCheck"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.toCheck'))}${phIcon('arrow-right')}</button>
+      <p class="flowScreen__note">${esc(t('weekrooster.flow.notYet'))}</p>`,
+  };
 }
 
 // ---------- step 3: check ----------
-function checkHtml(adv, f, plan, stats) {
+const quietRowHtml = c => `<div class="planRow planRow--quiet"><span class="planRow__time">${esc(c.departureTime || '--:--')}</span><span class="planRow__who">${driverNameHtml(c.driverFamilyId)}</span><span class="planRow__sub">${sortGirlIds(c.girlIds).map(id => girlName(id)).join(', ')}</span></div>`;
+
+function checkStep(adv, f, plan, stats) {
   const day = f.day, n = adv.requests.length;
   const bad = key => stats.problems.some(p => p.key === key);
   const chip = (ok, text) => `<span class="chip ${ok ? 'chip--add' : 'chip--req'}">${phIcon(ok ? 'check' : 'warning')} ${esc(text)}</span>`;
@@ -147,17 +221,23 @@ function checkHtml(adv, f, plan, stats) {
     ...(bad('unplaced') ? [chip(false, t('weekrooster.flow.chipUnplaced'))] : []),
     ...(bad('late') ? [chip(false, t('weekrooster.flow.chipLate'))] : []),
   ].join('');
-  const notice = stats.familiesChanged.length ? `<p class="noteLine">${esc(t('weekrooster.flow.notice', { p1: stats.familiesChanged.map(id => fam(id).parentName || '?').join(', ') }))}</p>` : '';
+  const notice = stats.familiesChanged.length ? `<div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.noticeSee', { p1: stats.familiesChanged.map(rawParent).join(', ') }))}</span></div>` : '';
   const lines = Object.entries(plan.dirs).map(([dir, p]) => `<div class="planSum__dir">${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${
     p.cars.filter(c => c.girlIds.length).map(quietRowHtml).join('')}`).join('');
-  return `<div class="chips">${chips}</div>${notice}
-    <div class="planSum"><div class="sectionHead__title">${esc(t('weekrooster.flow.summary', { p1: dayLabel(day).toLowerCase() }))}</div>${lines}</div>
-    <div class="applyBox"><button type="button" class="btn" id="wrAccept"${plan.blocked ? ' disabled' : ''}>${phIcon('check')}${esc(t('weekrooster.flow.apply', { p1: dayLabel(day).toLowerCase() }))}</button>
-      <p class="applyBox__sub">${esc(t('weekrooster.flow.applySub'))}</p>
-      <button type="button" class="linkbtn" id="wrBackToPlan">${phIcon('arrow-left')}${esc(t('weekrooster.flow.backToPlan'))}</button></div>`;
+  return {
+    body: `<div class="flowStack"><div class="chips">${chips}</div>${notice}
+      <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.flow.summary', { p1: dayLabel(day).toLowerCase() }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.afterApply'))}</div></div>
+      <div class="planSum">${lines}</div></div>`,
+    foot: `<button type="button" class="btn flowApply" id="wrAccept"${plan.blocked ? ' disabled' : ''}><span class="flowApply__title">${esc(t('weekrooster.flow.apply', { p1: dayLabel(day).toLowerCase() }))}</span><span class="flowApply__text">${esc(t('weekrooster.flow.applySub'))}</span></button>
+      <button type="button" class="linkbtn" id="wrBackToPlan">${esc(t('weekrooster.flow.backToPlan'))}</button>`,
+  };
 }
 
 // ---------- the view ----------
+const screenHtml = (head, steps, body, foot) => `<div class="flowScreen__panel" id="wrAdvice">${head}<div class="flowScreen__steps">${steps}</div>
+  <div class="flowScreen__body">${body}</div>${foot ? `<div class="flowScreen__foot">${foot}</div>` : ''}</div>`;
+
+// The whole screen of the flow (its own layer on top of the app, see renderFlowScreen). Empty when the flow is closed.
 export function scheduleAdviceHtml() {
   if (!weekroosterActive()) return '';
   if (S.wrDone) return doneHtml(S.wrDone);
@@ -165,14 +245,8 @@ export function scheduleAdviceHtml() {
   const adv = adviceForDay(f.day);
   if (!Object.keys(adv.directions).length) { S.wrAdvice = null; return ''; }   // nothing (left) to advise: somebody decided, or the request ran out
   const plan = planOf(adv, f.variant, f.edits), stats = planStats(adv, plan);
-  const iso = weekKeyDayIso(S.currentWeekKey, f.day), when = `${dayLabel(f.day).toLowerCase()} ${isoDayLabel(iso, '')}`;
-  const body = f.step === 'check' ? checkHtml(adv, f, plan, stats) : planHtml(adv, f, plan, stats);
-  return `<div class="wrStack" id="wrAdvice">
-    <button type="button" class="linkbtn" id="wrAdviceBack">${phIcon('arrow-left')}${esc(t('weekrooster.advice.back'))}</button>
-    ${stepsHtml(f.step === 'check' ? 3 : 2)}
-    <div class="sectionHead"><div class="sectionHead__title">${esc(t(f.step === 'check' ? 'weekrooster.flow.checkTitle' : 'weekrooster.advice.headline', { p1: when }))}</div></div>
-    ${actionCardHtml(f.day)}
-    ${body}</div>`;
+  const step = f.step === 'check' ? checkStep(adv, f, plan, stats) : f.step === 'plan' ? planStep(adv, f, plan, stats) : requestsStep(adv, f, plan, stats);
+  return screenHtml(headHtml(f.step, f.day), stepsHtml(STEPS.indexOf(f.step) + 1), step.body, step.foot);
 }
 
 // What happened per girl who asked, in words, for the screen after Doorvoeren: [{ name, lines: [text] }]. Made before saving, from the plan.
@@ -193,15 +267,36 @@ const plural = (n, one, many) => (n === 1 ? t(one) : t(many, { p1: n }));
 function doneHtml(done) {
   const day = dayLabel(done.day).toLowerCase(), rows = done.rows || [];
   const changes = rows.reduce((n, r) => n + r.lines.length, 0);
-  return `<div class="wrStack flowDone" id="wrApplied">${stepsHtml(4)}
+  const body = `<div class="flowStack flowDone" id="wrApplied">
     <div class="flowDone__badge">${phIcon('check')}</div>
-    <h2 class="flowDone__title">${esc(t('weekrooster.flow.doneTitle', { p1: day.charAt(0).toUpperCase() + day.slice(1) }))}</h2>
+    <h1 class="flowDone__title" id="flowTitle">${esc(t('weekrooster.flow.doneTitle', { p1: day.charAt(0).toUpperCase() + day.slice(1) }))}</h1>
     <p class="flowDone__sub">${esc(t('weekrooster.flow.doneSummary', { p1: plural(changes, 'weekrooster.flow.doneCount1', 'weekrooster.flow.doneCountN'), p2: plural(done.n, 'weekrooster.flow.doneReq1', 'weekrooster.flow.doneReqN') }))}</p>
-    ${rows.length ? `<div class="flowDone__list">${rows.map(r => `<div class="flowDone__row"><span class="flowDone__tick">${phIcon('check')}</span><span class="flowDone__what"><b>${esc(r.name)}</b>${r.lines.map(l => `<span>${esc(l)}</span>`).join('')}</span></div>`).join('')}</div>` : ''}
-    <button type="button" class="btn" id="conclusieBtn">${phIcon('whatsapp-logo-fill')}${esc(t('weekrooster.flow.doneShare'))}</button>
+    ${rows.length ? `<div class="flowDone__list">${rows.map(r => `<div class="flowDone__row"><span class="flowDone__tick">${phIcon('check')}</span><span class="flowDone__what"><b>${esc(r.name)}</b>${r.lines.map(l => `<span>${esc(l)}</span>`).join('')}</span></div>`).join('')}</div>` : ''}</div>`;
+  const foot = `<button type="button" class="btn" id="conclusieBtn">${phIcon('whatsapp-logo-fill')}${esc(t('weekrooster.flow.doneShare'))}</button>
     <button type="button" class="btn secondary" id="wrDoneClose">${esc(t('weekrooster.advice.closeDone'))}</button>
-    ${done.undo ? `<button type="button" class="btn secondary flowUndo" id="wrUndoAll"><span class="flowUndo__title">${phIcon('arrow-counter-clockwise')}${esc(t('weekrooster.flow.undoAll'))}</span><span class="flowUndo__text">${esc(done.n === 1 ? t('weekrooster.flow.undoTextOne', { p1: day }) : t('weekrooster.flow.undoTextMany', { p1: day, p2: done.n }))}</span></button>` : ''}
-  </div>`;
+    ${done.undo ? `<button type="button" class="btn secondary flowUndo" id="wrUndoAll"><span class="flowUndo__title">${phIcon('arrow-counter-clockwise')}${esc(t('weekrooster.flow.undoAll'))}</span><span class="flowUndo__text">${esc(done.n === 1 ? t('weekrooster.flow.undoTextOne', { p1: day }) : t('weekrooster.flow.undoTextMany', { p1: day, p2: done.n }))}</span></button>` : ''}`;
+  return screenHtml('', stepsHtml(4), body, foot);
+}
+
+// The flow is its own layer on top of the app (no tab bar, no Rooster behind it): one screen per step, closing with the X or the back arrow.
+// Called after every render of Rooster; the layer appears, changes or goes away with S.wrAdvice / S.wrDone.
+export function renderFlowScreen() {
+  const html = S.wrAdvice || S.wrDone ? scheduleAdviceHtml() : '';
+  let el = document.getElementById('flowScreen');
+  if (!html) { if (el && el.remove) el.remove(); if (document.body.classList) document.body.classList.remove('flowOpen'); return; }
+  if (!el || !el.parentNode) {
+    el = document.createElement('div'); el.id = 'flowScreen'; el.className = 'flowScreen';
+    if (el.setAttribute) { el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'flowTitle'); }
+    el.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('sheetOverlay')) closeFlow(); });
+    document.body.appendChild(el);
+  }
+  const key = S.wrDone ? 'done' : (S.wrAdvice.day + '|' + S.wrAdvice.step);
+  const body = el.querySelector && el.querySelector('.flowScreen__body'), keep = body && el.dataset && el.dataset.step === key ? body.scrollTop : 0;
+  el.innerHTML = html;
+  if (el.dataset) el.dataset.step = key;
+  const nb = el.querySelector && el.querySelector('.flowScreen__body'); if (nb) nb.scrollTop = keep;
+  if (document.body.classList) document.body.classList.add('flowOpen');
+  wireAdvice(el);
 }
 
 // ---------- the sheets ----------
@@ -308,12 +403,24 @@ async function undoAll(done) {
 
 // ---------- wiring ----------
 const rerender = () => { renderSchedule(); renderMyWeek(); };
-export function wireAdvice(box) {
+function closeFlow() { S.wrAdvice = null; S.wrDone = null; renderSchedule(); }
+// X on step 1 closes the flow; the back arrow on steps 2 and 3 goes one step back.
+function navBack() {
+  const f = flowState(); if (!f) return closeFlow();
+  if (f.step === 'check') f.step = 'plan'; else if (f.step === 'plan') f.step = 'requests'; else return closeFlow();
+  renderSchedule();
+}
+// The small card in Rooster ("Regel dit") opens the flow on step 1.
+export function wireAdviceEntry(box) {
   box.querySelectorAll('[data-wradvice]').forEach(b => b.onclick = () => { hapticTap(); S.wrAdvice = fresh(b.dataset.wradvice); S.wrDone = null; renderSchedule(); });
+}
+export function wireAdvice(box) {
   box.querySelectorAll('[data-wrvariant]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); f.variant = b.dataset.wrvariant; f.edits = {}; renderSchedule(); });
   box.querySelectorAll('[data-wrgirl]').forEach(b => b.onclick = () => { hapticTap(); const [dir, id] = b.dataset.wrgirl.split('|'); openGirlSheet(dir, id); });
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
-  on('wrAdviceBack', () => { hapticTap(); S.wrAdvice = null; renderSchedule(); });
+  on('wrNav', () => { hapticTap(); navBack(); });
+  on('wrToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });
+  on('wrSelf', () => { hapticTap(); const day = flowState().day; S.wrAdvice = null; openDayEditor(day); });
   on('wrAdjust', () => { hapticTap(); openAdjustSheet(); });
   on('wrToCheck', () => { hapticTap(); flowState().step = 'check'; renderSchedule(); });
   on('wrBackToPlan', () => { hapticTap(); flowState().step = 'plan'; renderSchedule(); });

@@ -86,7 +86,7 @@ async function settleDay(day) {
 export function wireEdit(box) {
   box.querySelectorAll('[data-wredit]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wredit); });
   box.querySelectorAll('[data-wroverride]').forEach(b => b.onclick = () => { hapticTap(); openDayEditor(b.dataset.wroverride); });
-  const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day }; S.wrDone = null; renderSchedule(); };
+  const adv = document.getElementById('wrEditAdvice'); if (adv) adv.onclick = () => { hapticTap(); const day = S.wrEdit.day; S.wrEdit = null; S.wrAdvice = { day, step: 'plan' }; S.wrDone = null; renderSchedule(); };
   const back = document.getElementById('wrEditBack'); if (back) back.onclick = () => { hapticTap(); S.wrEdit = null; renderSchedule(); };
   // Klaar = the day coordinator is done: the open requests of the day are settled. Not for "Toch zelf wijzigen" (a parent who does not decide).
   const done = document.getElementById('wrEditDone');

@@ -166,13 +166,13 @@ export default [
   {
     id: 'dagcoordinator-aanvragen',
     title: 'Ik ben dagcoördinator: hoe behandel ik aanvragen?',
-    keywords: 'dagcoordinator dagcoördinator aanvragen actie nodig advies overnemen zelf indelen ongedaan dagbericht recente wijzigingen akkoord zuinigst minste gedoe toch zelf wijzigen',
+    keywords: 'dagcoordinator dagcoördinator aanvragen actie nodig regel dit advies alternatief doorvoeren zelf indelen ongedaan dagbericht recente wijzigingen akkoord zuinigst minste gedoe toch zelf wijzigen',
     body: [
       'Ouders geven een andere tijd of week door als aanvraag. Over de aanvragen voor jouw dag beslis jij. Is er voor een dag geen dagcoördinator ingesteld, dan beslist de coördinator.',
-      'Je ziet wat er wacht in Mijn week (een kaart Actie nodig voor die dag) en in Rooster (een stip bij de dag en een getal bij het tabblad Rooster). In Rooster, bij Deze week, staat boven de dag een gele kaart Actie nodig met de aanvragen en één regel advies, bijvoorbeeld hoeveel auto\'s het scheelt.',
-      'Kies Advies bekijken (in Mijn week: Bekijk) voor een voorstel voor de indeling van de auto\'s, met twee varianten: Zuinigst en Minste gedoe. Onder de kaarten staat een korte uitleg, door de app berekend.',
-      'Met Overnemen worden de wijzigingen doorgevoerd, de aanvragen krijgen de status akkoord en het Dagbericht staat klaar. Via Ongedaan in de melding draai je het terug.',
-      'Liever zelf indelen? Kies Zelf indelen, op de regel Dagcoördinator of in de gele kaart naast Advies bekijken. Het formulier met de auto\'s opent dan in Rooster, met de aanvragen bovenaan.',
+      'Je ziet wat er wacht in Mijn week (een kaart Actie nodig voor die dag) en in Rooster (een stip bij de dag en een getal bij het tabblad Rooster). In Rooster, bij Deze week, staat boven de dag een kaart met het aantal aanvragen en de knop Regel dit.',
+      'Regel dit (in Mijn week: Bekijk) opent een eigen scherm in drie stappen. Stap 1, Aanvragen: wat ouders vragen en wat het advies is. Stap 2, Indeling: het voorstel van de app, wat het kost aan wachttijd en wie er van auto wisselt; wissel met de knoppen Advies en Alternatief, of pas auto\'s aan. Stap 3, Controleren: wat er verandert en wie het merkt. Tot de laatste stap verandert er niets.',
+      'Met Doorvoeren op stap 3 worden de wijzigingen doorgevoerd en krijgen de aanvragen de status akkoord. Daarna kun je het Dagbericht delen in de WhatsApp-groep, het scherm sluiten of alles terugdraaien.',
+      'Liever zelf indelen? Kies Zelf indelen onder aan stap 1, of op de regel Dagcoördinator. Het formulier met de auto\'s opent dan in Rooster.',
       'Onder Recente wijzigingen, standaard dicht, staat wat al is afgehandeld: akkoord, direct doorgevoerd of door een ouder zelf gewijzigd.',
       'Een ouder die toch zelf wil wijzigen, kiest Toch zelf wijzigen onder de dag en krijgt eerst een waarschuwing met jouw naam. Zo\'n wijziging staat daarna als Zelf gewijzigd bij jouw Recente wijzigingen. Er gaat geen melding uit.',
     ],
@@ -207,7 +207,7 @@ export default [
     body: [
       'Het Rooster laat per dag alle auto\'s zien: wie rijdt en welke meiden erin zitten. Het Rooster is blauw, zodat je ziet waar je bent. Onder elke dag in de dagbalk staat hoeveel ritten er rijden. Bij elke rit staat waar de auto ophaalt en heen gaat. Boven Heen en Terug staat waar iedereen aankomt (Aankomst bij) of vertrekt (Vertrek bij). Gaat een deel van de auto\'s naar een andere plek, bijvoorbeeld ATC Wijdewormer, dan staan die auto\'s in een eigen blok.',
       'Het Rooster opent op Deze week (met eventuele wijzigingen). Kies bovenaan Vast rooster voor hoe het elke week is.',
-      'Mag jij de dag indelen (coördinator of dagcoördinator)? Dan staat rechts op de regel Dagcoördinator de knop Zelf indelen. Daarmee verplaats je meisjes en wissel je chauffeurs voor die dag. Staat er een gele kaart Actie nodig met aanvragen? Dan staat de knop Zelf indelen daar naast Advies bekijken.',
+      'Mag jij de dag indelen (coördinator of dagcoördinator)? Dan staat rechts op de regel Dagcoördinator de knop Zelf indelen. Daarmee verplaats je meisjes en wissel je chauffeurs voor die dag. Wachten er aanvragen? Dan begin je met Regel dit in de kaart boven de dag; Zelf indelen staat onder aan stap 1.',
       'Bij elk meisje in een auto staat haar eigen tijd: heen wanneer ze er moet zijn, terug wanneer ze klaar is. De meisjes staan op tijd (de vroegste eerst) en bij dezelfde tijd op alfabet. Is de vertrektijd van een auto gewijzigd, dan staat onder de tijd klein "was" met de oude tijd. Komt de auto bij Heen later aan dan een meisje er moet zijn, of is ze bij Terug pas klaar nadat de auto vertrekt, dan staat er een gele waarschuwing.',
       'Onder de auto\'s staat één regel: Rijdt niet mee en Back-up, elk met het aantal. Tik erop om de namen te zien. Tik op de naam van een back-up om die chauffeur te vragen via WhatsApp of Bellen.',
       'Is er een periode met andere tijden (vakantie, proefwerkweek) en heeft de coördinator het tijdelijke rooster gemaakt? Dan staat er een derde knop met de naam van de periode. Daar zie je per dag de doorgegeven tijden en de auto\'s. Op die dagen laat Deze week het tijdelijke rooster zien in plaats van het vaste rooster.',

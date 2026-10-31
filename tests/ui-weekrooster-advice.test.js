@@ -1,5 +1,5 @@
 // Run with: node ui-weekrooster-advice.test.js
-// Afwijkend weekrooster: the flow of the day coordinator (Indeling → Controleren → Doorvoeren → Alles terugdraaien), with the changes by hand.
+// Afwijkend weekrooster: the flow of the day coordinator as its own full screen (Aanvragen → Indeling → Controleren → Doorvoeren → Alles terugdraaien), with the changes by hand.
 // The scenario: Thursday has two cars (Jan: Eline + Anouk, Piet: Jahaimy + Evi); Lois asks for 09:00 heen. Without cars on the day: the fallback.
 import assert from 'node:assert/strict';
 let passed = 0, failed = 0;
@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import { t } from '../i18n.js';
 import { adviceForDay, syncWeekRequests } from '../weekrooster-data.js';
 import { sampleGroups } from './test-support.js';
-import { scheduleAdviceHtml, wireAdvice } from '../ui-weekrooster-advice.js';
+import { scheduleAdviceHtml, wireAdvice, wireAdviceEntry, renderFlowScreen } from '../ui-weekrooster-advice.js';
 import { renderSchedule } from '../ui-schedule.js';
 
 const dom = installFakeDom();
@@ -42,8 +42,12 @@ const fakeEls = (html, sel) => {
   return out;
 };
 const boxOf = html => ({ querySelectorAll: sel => fakeEls(html, sel) });
-let lastSheet = null;
-dom.doc.createElement = () => { const cache = {}; const el = { id: '', className: '', innerHTML: '', addEventListener() {}, remove() {}, querySelectorAll(sel) { return (cache[sel] = cache[sel] || fakeEls(el.innerHTML, sel)); } }; lastSheet = el; return el; };
+let lastSheet = null, lastFlow = null;   // the sheet on top of the flow, and the flow screen itself (the screen is redrawn while a sheet is open)
+dom.doc.createElement = () => {
+  const cache = {}, prev = lastSheet; let id = '';
+  const el = { get id() { return id; }, set id(v) { id = v; if (v === 'flowScreen') { lastFlow = el; lastSheet = prev; } }, className: '', innerHTML: '', addEventListener() {}, remove() {}, querySelectorAll(sel) { return (cache[sel] = cache[sel] || fakeEls(el.innerHTML, sel)); } };
+  lastSheet = el; return el;
+};
 
 
 const view = () => withFakeNow(NOW, () => scheduleAdviceHtml());
@@ -54,32 +58,54 @@ const pickItem = idx => lastSheet.querySelectorAll('[data-sheetidx]')[idx].oncli
 const adj = (kind, key) => lastSheet.querySelectorAll('[data-adj]').find(e => e.dataset.adj === kind && (!key || e.dataset.key === key));
 
 console.log('=== the view: Indeling ===');
-await testAsync('closed: nothing; open: the three steps, the request card, advice/alternative, the numbers, the girls and the cars; no Zelf indelen', async () => {
+await testAsync('closed: nothing; step 1 Aanvragen: the request, the advice in short, one primary button and Zelf indelen', async () => {
   await setup(); assert.equal(view(), '');
   S.wrAdvice = { day: 'Do' };
   const html = view(), s = text(html);
+  assert.equal(S.wrAdvice.step, 'requests');
   assert.equal((html.match(/flowSteps__step flowSteps__step--/g) || []).length, 3);
-  assert.match(html, /flowSteps__step--done[^>]*>.*?Aanvragen/); assert.match(html, /flowSteps__step--current" aria-current="step">.*?Indeling/); assert.match(html, /flowSteps__step--todo[^>]*>.*?Controleren/);
-  assert.match(s, /Advies · donderdag 1 okt/); assert.match(html, /alertCard alertCard--stack"/); assert.match(s, /Actie nodig voor donderdag/);
-  assert.match(s, /Advies: past in de bestaande auto’s, 30 min extra wachten/);
-  assert.match(html, /data-wrvariant="best" class="active"/); assert.match(html, /data-wrvariant="alt"/);
-  assert.match(s, /30 min extra wachten/); assert.match(s, /Niemand in een andere auto/); assert.match(s, /1 chauffeur merkt het/);
-  assert.match(s, /Speelsters heen Lois 09:00 was 08:30 Jan Jansen was niet ingedeeld/);
-  assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /Eline \+ Lois/); assert.match(s, /3\/3/);
-  assert.match(s, /Ongewijzigd 09:15 Piet Pieters Evi, Jahaimy/);
-  assert.match(html, /id="wrAdjust"/); assert.match(s, /Auto’s aanpassen: tijd, chauffeur, plek/); assert.match(html, /id="wrToCheck"/);
-  assert.doesNotMatch(html, /wrSelf|data-wredit|id="wrAccept"|data-wrtake|data-wrlook/);
-  assert.doesNotMatch(s, /Reden:|Zuinigst|Minste gedoe|Zelf indelen/);
+  assert.match(html, /flowSteps__step--current" aria-current="step">.*?Aanvragen/); assert.match(html, /flowSteps__step--todo[^>]*>.*?Indeling/); assert.match(html, /flowSteps__step--todo[^>]*>.*?Controleren/);
+  assert.match(s, /Morgen · donderdag 1 okt/); assert.match(s, /Wijzigingen voor morgen/);
+  assert.match(s, /1 aanvraag van een ouder/); assert.match(s, /Lois Heen: aanwezig om 09:00 08:30 Aangevraagd door ouder van Lois/);
+  assert.match(s, /Advies beschikbaar/); assert.match(s, /30 min extra wachten/); assert.match(s, /0 speelsters in andere auto/);
+  assert.match(s, /Er verandert niets voordat je op de laatste stap bevestigt/);
+  assert.match(html, /id="wrNav"[^>]*aria-label="Sluiten"/); assert.match(html, /id="wrToPlan"/); assert.match(s, /Advies bekijken en aanpassen/);
+  assert.match(html, /id="wrSelf"/); assert.match(s, /Zelf indelen/);
+  assert.doesNotMatch(html, /id="wrToCheck"|id="wrAccept"|data-wrgirl|data-wrvariant/);
   assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
+});
+await testAsync('step 2 Indeling: advice/alternative with what each costs, the numbers, the scene with was → wordt and the cars', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = view(), s = text(html);
+  assert.match(html, /flowSteps__step--done[^>]*>.*?Aanvragen/); assert.match(html, /flowSteps__step--current" aria-current="step">.*?Indeling/); assert.match(html, /flowSteps__step--todo[^>]*>.*?Controleren/);
+  assert.match(s, /Voorstel voor morgen/); assert.match(html, /id="wrNav"[^>]*aria-label="Terug"/);
+  assert.match(html, /data-wrvariant="best"[^>]*aria-pressed="true"/); assert.match(html, /data-wrvariant="alt"[^>]*aria-pressed="false"/);
+  assert.match(s, /Advies 30 min extra wachten Alternatief 135 min extra wachten/);   // what each choice costs, worked out per variant
+  assert.match(s, /30 min extra wachten 0 speelsters in andere auto 1 chauffeur merkt het/);
+  assert.match(s, /Lois komt om 09:00/); assert.match(s, /Lois 30 min eerder dan gevraagd Niet ingedeeld Jan Jansen 09:00/);
+  assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /3\/3/); assert.match(s, /\+ Lois 09:00/);
+  assert.match(s, /09:15 Piet Pieters Evi, Jahaimy/); assert.match(s, /Merken het: Jan Jansen/);
+  assert.match(html, /id="wrAdjust"/); assert.match(s, /Auto’s aanpassen: tijd, chauffeur, plek/); assert.match(html, /id="wrToCheck"/); assert.match(s, /Nog niets doorgevoerd/);
+  assert.doesNotMatch(html, /id="wrToPlan"|id="wrSelf"|id="wrAccept"/);
+  assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
+});
+await testAsync('step 1: "Advies bekijken" goes to step 2, "Zelf indelen" closes the flow and opens the day editor, X closes the flow', async () => {
+  await setup(); S.wrAdvice = { day: 'Do' };
+  press('wrToPlan'); assert.equal(S.wrAdvice.step, 'plan');
+  S.wrAdvice = { day: 'Do' }; press('wrSelf'); assert.equal(S.wrAdvice, null);
+  S.wrAdvice = { day: 'Do' }; press('wrNav'); assert.equal(S.wrAdvice, null);
+  S.wrAdvice = { day: 'Do', step: 'plan' }; press('wrNav'); assert.equal(S.wrAdvice.step, 'requests');
+  S.wrAdvice = { day: 'Do', step: 'check' }; press('wrNav'); assert.equal(S.wrAdvice.step, 'plan');
 });
 await testAsync('the girl rows: only girls who asked or who change car; old values in the state do not matter', async () => {
   await setup(); S.wrAdvice = { day: 'Do', direction: 'nonsense', variant: 'nonsense', step: 'nonsense', edits: null };
+  view(); assert.equal(S.wrAdvice.variant, 'best'); assert.equal(S.wrAdvice.step, 'requests');
+  S.wrAdvice.step = 'plan';
   const html = view(); assert.match(html, /data-wrgirl="heen\|f5"/);
-  assert.equal(S.wrAdvice.variant, 'best'); assert.equal(S.wrAdvice.step, 'plan');
   assert.doesNotMatch(html, /data-wrgirl="[a-z]+\|f3"/);
 });
 await testAsync('a day without cars does not fit: the note, the normal advice and no switch between advice and alternative', async () => {
-  await setup({}, { groups: sampleGroups() }); S.wrAdvice = { day: 'Do' };
+  await setup({}, { groups: sampleGroups() }); S.wrAdvice = { day: 'Do', step: 'plan' };
   const html = view(), s = text(html);
   assert.match(s, /Dit past niet in de bestaande auto’s/); assert.doesNotMatch(html, /data-wrvariant/); assert.match(html, /id="wrToCheck"/);
   assert.match(s, /Jan Jansen Nieuw/);
@@ -89,24 +115,31 @@ await testAsync('nothing to advise (no open request): the view closes itself; no
   S.wrAdvice = { day: 'Do' }; assert.equal(view(), ''); assert.equal(S.wrAdvice, null);
   await setup({}, { links: {} }); S.wrAdvice = { day: 'Do' }; assert.equal(view(), '');
 });
-await testAsync('the Rooster shows the flow in place of the day when it is open, and one button on the card when it is closed', async () => {
-  await setup(); S.wrAdvice = { day: 'Do' };
-  withFakeNow(NOW, () => renderSchedule()); assert.match(dom.html('tab-schedule'), /id="wrAdvice"/);
-  S.wrAdvice = null; withFakeNow(NOW, () => renderSchedule()); const h = dom.html('tab-schedule');
-  assert.match(h, /data-wradvice="Do"/); assert.doesNotMatch(h, /data-wredit="Do"/); assert.match(text(h), /Advies bekijken en aanpassen/);
+await testAsync('the Rooster: one entry card opens the flow as its own screen on top; closing removes it again', async () => {
+  await setup(); S.wrAdvice = null;
+  withFakeNow(NOW, () => renderSchedule()); const h = dom.html('tab-schedule');
+  assert.match(h, /id="wrAlert"/); assert.match(h, /data-wradvice="Do"/); assert.doesNotMatch(h, /data-wredit="Do"/); assert.doesNotMatch(h, /id="wrAdvice"/); assert.match(text(h), /Regel dit/);
+  const btn = { dataset: { wradvice: 'Do' }, onclick: null };
+  wireAdviceEntry({ querySelectorAll: sel => (sel === '[data-wradvice]' ? [btn] : []) });
+  withFakeNow(NOW, () => btn.onclick());
+  assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'requests');
+  assert.match(lastFlow.innerHTML, /id="wrAdvice"/); assert.equal(lastFlow.id, 'flowScreen'); assert.equal(lastFlow.className, 'flowScreen');
+  assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAdvice"/);   // not in the Rooster itself
+  S.wrAdvice = null; let removed = false; const el = dom.doc.getElementById('flowScreen'); el.remove = () => { removed = true; };
+  withFakeNow(NOW, () => renderFlowScreen()); assert.ok(removed);
 });
 
 console.log('=== the changes by hand ===');
 await testAsync('Alternatief: the second best division, and the changes by hand start over', async () => {
-  await setup(); S.wrAdvice = { day: 'Do', edits: { heen: [] } };
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan', edits: { heen: [] } };
   wired(view()).querySelectorAll('[data-wrvariant]').find(b => b.dataset.wrvariant === 'alt').onclick();
   assert.equal(S.wrAdvice.variant, 'alt'); assert.deepEqual(S.wrAdvice.edits, {});
-  const html = view(); assert.match(html, /data-wrvariant="alt" class="active"/);
+  const html = view(); assert.match(html, /data-wrvariant="alt"[^>]*aria-pressed="true"/);
   const adv = withFakeNow(NOW, () => adviceForDay('Do')), k = adv.directions.heen.keep;
   assert.ok(k.alt.waitMinutes > k.best.waitMinutes);
 });
 await testAsync('a girl to another car: the sheet lists the cars (seats, waiting), the choice moves her and the numbers follow', async () => {
-  await setup(); S.wrAdvice = { day: 'Do' };
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   wired(view()).querySelectorAll('[data-wrgirl]')[0].onclick();
   const sheet = text(lastSheet.innerHTML); assert.match(sheet, /Welke auto voor Lois/); assert.match(sheet, /Jan Jansen · vertrek 07:30/); assert.match(sheet, /zit hier nu/);
   assert.match(sheet, /Piet Pieters · vertrek 08:00/); assert.match(sheet, /2 plekken vrij/);
@@ -114,10 +147,10 @@ await testAsync('a girl to another car: the sheet lists the cars (seats, waiting
   const heen = S.wrAdvice.edits.heen;
   assert.deepEqual(heen.find(c => c.driverFamilyId === 'f2').girlIds.slice().sort(), ['f2', 'f4', 'f5']);
   assert.equal(heen.find(c => c.driverFamilyId === 'f2').departureTime, '08:00'); assert.deepEqual(heen.find(c => c.driverFamilyId === 'f1').girlIds, ['f1', 'f3']);
-  const s = text(view()); assert.match(s, /Lois 09:00 was 08:30 Piet Pieters was niet ingedeeld/); assert.match(s, /08:00 Piet Pieters/);
+  const s = text(view()); assert.match(s, /Lois Zoals gevraagd Niet ingedeeld Piet Pieters 09:00/); assert.match(s, /08:00 was 09:15 Piet Pieters/); assert.match(s, /\+ Lois 09:00/);
 });
 await testAsync('a full car stays closed: choosing it changes nothing', async () => {
-  await setup(); S.wrAdvice = { day: 'Do' };   // Jan's car is full after the advice: Eline, Anouk and Lois
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };   // Jan's car is full after the advice: Eline, Anouk and Lois
   wired(view()).querySelectorAll('[data-wrgirl]')[0].onclick();
   assert.match(text(lastSheet.innerHTML), /zit hier nu/);
   pickItem(0); assert.deepEqual(S.wrAdvice.edits, {});
@@ -129,7 +162,7 @@ await testAsync('a full car stays closed: choosing it changes nothing', async ()
   assert.match(text(lastSheet.innerHTML), /vol/); pickItem(0); assert.equal(JSON.stringify(S.wrAdvice.edits), before);
 });
 await testAsync('Auto\'s aanpassen: time by hand (it stays) and back to calculated, another driver, place, arrival', async () => {
-  await setup(); S.wrAdvice = { day: 'Do' };
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   press('wrAdjust');
   assert.match(text(lastSheet.innerHTML), /Auto’s aanpassen/); assert.match(text(lastSheet.innerHTML), /Berekend 07:30/);
   let e = adj('depmode', 'heen|f1'); e.value = 'manual'; e.onchange();
@@ -149,7 +182,7 @@ await testAsync('Auto\'s aanpassen: time by hand (it stays) and back to calculat
   assert.match(text(view()), /Lois/);
 });
 await testAsync('a car for another driver can be added and then used', async () => {
-  await setup(); S.wrAdvice = { day: 'Do' };
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   press('wrAdjust'); const e = adj('addcar'); assert.ok(e); e.dataset.dir = 'heen'; e.value = 'f6'; e.onchange();
   assert.deepEqual(S.wrAdvice.edits.heen.map(c => c.driverFamilyId), ['f1', 'f2', 'f6']);
   wired(view()).querySelectorAll('[data-wrgirl]')[0].onclick(); assert.match(text(lastSheet.innerHTML), /Tom Visser/);
@@ -157,13 +190,13 @@ await testAsync('a car for another driver can be added and then used', async () 
 
 console.log('=== Controleren and Doorvoeren ===');
 await testAsync('Controleren: the chips, who notices it, the summary and ONE button with its subtitle; back to the plan', async () => {
-  await setup(); S.wrAdvice = { day: 'Do' };
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   press('wrToCheck'); assert.equal(S.wrAdvice.step, 'check');
   const html = view(), s = text(html);
   assert.match(html, /flowSteps__step--done[^>]*>.*?Indeling/); assert.match(html, /flowSteps__step--current" aria-current="step">.*?Controleren/);
-  assert.match(s, /Controleren · donderdag 1 okt/); assert.match(s, /1 van 1 aanvragen/); assert.match(s, /Geen chauffeur gewisseld/); assert.match(s, /Geen auto te vol/);
+  assert.match(s, /Klaar om door te voeren\?/); assert.match(s, /1 van 1 aanvragen/); assert.match(s, /Geen chauffeur gewisseld/); assert.match(s, /Geen auto te vol/);
   assert.match(s, /Merken het: Jan Jansen/); assert.match(s, /Zo rijden ze donderdag/);
-  assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/); assert.match(s, /Terug/);
+  assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/);
   assert.equal((html.match(/id="wrAccept"/g) || []).length, 1); assert.match(s, /Doorvoeren voor donderdag/); assert.match(s, /Direct daarna kun je alles ongedaan maken/);
   assert.doesNotMatch(html, /id="wrToCheck"|id="wrAdjust"/); assert.match(html, /id="wrBackToPlan"/); assert.match(s, /Terug naar indeling/);
   press('wrBackToPlan'); assert.equal(S.wrAdvice.step, 'plan');
@@ -177,7 +210,7 @@ await testAsync('Controleren warns about a car that is too full, someone who com
   assert.match(text(view()), /Iemand komt te laat/);
 });
 await testAsync('Doorvoeren saves what was changed by hand, shows "Alles terugdraaien" and the Dagbericht; the toast has no second undo', async () => {
-  const fake = await setup(); S.wrAdvice = { day: 'Do' };
+  const fake = await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   wired(view()).querySelectorAll('[data-wrgirl]')[0].onclick(); pickItem(1);   // Lois into Piet's car
   S.wrAdvice.step = 'check';
   await withFakeNowAsync(NOW, async () => {
@@ -197,7 +230,7 @@ await testAsync('Doorvoeren saves what was changed by hand, shows "Alles terugdr
   });
 });
 await testAsync('Alles terugdraaien asks first; "Nee" changes nothing, "Ja" puts everything back and opens the flow again', async () => {
-  const fake = await setup(); S.wrAdvice = { day: 'Do' };
+  const fake = await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
   await withFakeNowAsync(NOW, async () => {
     wired(view()); await dom.doc.getElementById('wrAccept').onclick();
     wired(view()); dom.doc.getElementById('wrUndoAll').onclick();
@@ -206,7 +239,7 @@ await testAsync('Alles terugdraaien asks first; "Nee" changes nothing, "Ja" puts
     assert.equal(fake.get('weekRequests/2026-W40_Do_f5').status, 'accepted'); assert.ok(S.wrDone);
     dom.doc.getElementById('wrUndoAll').onclick(); await dom.doc.getElementById('wrUndoYes').onclick(); await tick(); await tick();
     assert.equal(fake.get('weekRequests/2026-W40_Do_f5').status, 'pending'); assert.equal(fake.get('deviations/Do_heen').times, undefined);
-    assert.equal(S.wrDone, null); assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'plan');
+    assert.equal(S.wrDone, null); assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'requests');
   });
 });
 await testAsync('a failing save changes nothing and keeps the flow open', async () => {
@@ -227,6 +260,7 @@ test('the texts of the flow say what the design says', () => {
   assert.equal(t('weekrooster.flow.undoTextMany', { p1: 'woensdag', p2: 3 }), 'Het rooster van woensdag gaat terug naar de oorspronkelijke situatie. De 3 aanvragen staan dan weer open.');
   assert.equal(t('weekrooster.flow.carsHeen', { p1: "AFC '34" }), "Auto’s heen · aankomst bij AFC '34"); assert.equal(t('weekrooster.flow.carsTerug', { p1: "AFC '34" }), "Auto’s terug · vertrek bij AFC '34");
   assert.equal(t('weekrooster.flow.noticeN', { p1: 2 }), '2 chauffeurs merken het');
+  assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 2, p2: 'donderdag' }), '2 aanvragen voor donderdag');
 });
 test('ui-weekrooster-advice.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-advice.js'));
 

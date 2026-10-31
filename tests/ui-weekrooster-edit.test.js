@@ -82,7 +82,8 @@ await testAsync('from Zelf indelen there is a way back to the Advies (next to Kl
   await setup({ dayCoordinators: { Do: 'f2' } }, req); S.wrEdit = { day: 'Do', override: false };
   let html = rooster(); assert.match(text(html.slice(html.indexOf('<div class="actionBar"'))), /^ *Advies bekijken en aanpassen Klaar/);
   wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditAdvice').onclick());
-  assert.equal(S.wrEdit, null); assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'plan'); html = rooster(); assert.match(html, /id="wrAdvice"/); assert.match(html, /id="wrAdjust"/); assert.doesNotMatch(html, /wrSelf/);   // the flow has its own way to change the cars
+  assert.equal(S.wrEdit, null); assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'plan'); html = rooster(); assert.doesNotMatch(html, /id="wrAdvice"/);   // the flow is its own screen, not part of the Rooster
+  const flow = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.match(flow, /id="wrAdjust"/); assert.doesNotMatch(flow, /wrSelf/);   // it opens at the plan, which has its own way to change the cars
   S.wrAdvice = null;
   await setup({ dayCoordinators: { Do: 'f3' } }, req); S.wrEdit = { day: 'Do', override: true };   // a parent after the warning: no advice of his own
   assert.doesNotMatch(rooster(), /wrEditAdvice/); assert.match(rooster(), /id="wrEditDone"/);
@@ -179,9 +180,9 @@ await testAsync('the day coordinator gets "Zelf indelen" under his day and goes 
   openDayEditor('Do'); assert.deepEqual(S.wrEdit, { day: 'Do', override: false }); assert.equal(dom.doc.body.children.length, before, 'no sheet');
   assert.doesNotMatch(text(scheduleEditHtml()), /rechtstreeks aan/);
 });
-await testAsync('the Advies flow has no "Zelf indelen" any more: the cars are changed in the flow itself', async () => {
+await testAsync('the plan step of the Advies flow has no "Zelf indelen": the cars are changed in the step itself', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
-  S.wrAdvice = { day: 'Do' };
+  S.wrAdvice = { day: 'Do', step: 'plan' };
   const html = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.doesNotMatch(html, /wrSelf|data-wredit/); assert.match(html, /id="wrAdjust"/); assert.match(html, /id="wrToCheck"/);
   S.wrAdvice = null;
 });
