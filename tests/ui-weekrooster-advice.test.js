@@ -195,15 +195,14 @@ await testAsync('Alternatief shows the cars with the riders who move: where they
 await testAsync('Auto\'s aanpassen: time by hand (it stays) and back to calculated, another driver, place, arrival', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   press('wrAdjust');
-  assert.match(text(lastSheet.innerHTML), /Auto’s aanpassen/); assert.match(text(lastSheet.innerHTML), /Berekend 07:30/);
+  assert.match(text(lastSheet.innerHTML), /Auto’s aanpassen/); assert.match(lastSheet.innerHTML, /data-adj="deptime" data-key="heen\|f1" value="07:30"/); assert.match(text(lastSheet.innerHTML), /Automatisch berekend/);   // one time field, filled with the calculated time: no extra tap
+  assert.doesNotMatch(lastSheet.innerHTML, /data-adj="depmode"/);
   assert.match(lastSheet.innerHTML, /class="adjDir scene--heen"/); assert.match(lastSheet.innerHTML, /adjDir__head"><span class="scene__badge">/);   // the same tint and badge as the steps
-  assert.match(lastSheet.innerHTML, /class="adjCar__fields"><div class="adjCar__pair">/); assert.doesNotMatch(lastSheet.innerHTML, /devFormTop/);   // roomy fields, not the 110px column
-  let e = adj('depmode', 'heen|f1'); e.value = 'manual'; e.onchange();
-  assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').depManual, true);
-  e = adj('deptime', 'heen|f1'); e.value = '07:10'; e.onchange();
-  assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').departureTime, '07:10');
-  
-  e = adj('depmode', 'heen|f1'); e.value = 'calc'; e.onchange();
+  assert.match(lastSheet.innerHTML, /class="adjCar__fields"><div class="adjCar__time">/); assert.doesNotMatch(lastSheet.innerHTML, /devFormTop/);   // roomy fields, not the 110px column
+  let e = adj('deptime', 'heen|f1'); e.value = '07:10'; e.onchange();
+  assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').departureTime, '07:10'); assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').depManual, true);
+  assert.match(text(lastSheet.innerHTML), /Terug naar berekend \(07:30\)/);
+  e = adj('depreset', 'heen|f1'); e.onclick();
   assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').departureTime, '07:30'); assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').depManual, undefined);
   e = adj('driver', 'heen|f1'); e.value = 'f6'; e.onchange();
   assert.deepEqual(S.wrAdvice.edits.heen.map(c => c.driverFamilyId), ['f6', 'f2']);

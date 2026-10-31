@@ -577,7 +577,9 @@ button.planRow{cursor:pointer}
 .adjDir__head{display:flex;gap:var(--space-3);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
 .adjCar{display:flex;flex-direction:column;gap:var(--space-5);padding:var(--space-5) 0;border-top:1px solid var(--line)}
 .adjCar__fields{display:flex;flex-direction:column;gap:var(--space-5)}
-.adjCar__pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:var(--space-5)}
+.adjCar__time{display:flex;flex-direction:column;gap:var(--space-2)}
+.adjCar__hint{margin:0;font:var(--type-caption);color:var(--text-muted)}
+.adjCar__reset{align-self:flex-start}
 .adjCar .devInput{min-width:0;text-overflow:ellipsis}
 .adjCar__title{font:var(--type-card-title)}
 .diffLabel{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}

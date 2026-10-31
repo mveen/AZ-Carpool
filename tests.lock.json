@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "7447e1e04d0e9ff2f3d32eac16694f1debd137d6488a299acab8141659223aab",
-    "test": "47d9ef6cb74c20b71a144abeab431fe164d6d802a2773d1ece6bf3bf3ac291bf"
+    "module": "897e29c573c43b3d0c5bbc7dbdc57759e7bda983ed3f40ad1201e4739c2c126a",
+    "test": "d6df8aa0ff7ddf7ed6ea393826d616b08a01f1643f6ff2a4e6be24392e299f64"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -69,7 +69,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "36d51e458911fab5480323d0ec9702d54a7f3140cae310c254b541cdf15e4453"
+    "test": "def1b04e05555a0d68d9b9c21ad70b11e9f2db0af80fcfe4b0f1436c1bb2b034"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -164,8 +164,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "2ca8ff6219f835d2273b39a0c2e6afb18818c54a1d1676d17b7b5b0df6b6085e",
-    "test": "36d51e458911fab5480323d0ec9702d54a7f3140cae310c254b541cdf15e4453"
+    "module": "408cf196a0df3ce3734594620341caacd64cdd203af8d0bc11cc51d9459eeeab",
+    "test": "def1b04e05555a0d68d9b9c21ad70b11e9f2db0af80fcfe4b0f1436c1bb2b034"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
@@ -256,8 +256,8 @@
     "test": "d6c53384681f7a8209a2ebcbbbf1bee63da5233bc972f6acf9deab68dc09fafb"
   },
   "ui-weekrooster-advice.js": {
-    "module": "e3bcc2cdc854d9e5e210c7ecf722272ecd27262f6fdd07bbd3e8e02fe2a4f5a1",
-    "test": "f3f5d447d0c477d461221636299278d39e9b6b2f67761616833ab2d43093a989"
+    "module": "50b8232cf03716218ea966f891eadd1439b8baa00448a295788d25eef08e1f95",
+    "test": "09b03008f941aaf4b8379f9760f1c7c63f23986825024e01d35ec5436286ed5b"
   },
   "ui-weekrooster-edit.js": {
     "module": "6c2284787906bde8815cfb15596997519fdd3d6b3d2a2a748bb03bc13f04fded",

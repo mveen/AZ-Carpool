@@ -380,9 +380,9 @@ function openAdjustSheet() {
         const destBtn = (k, name) => `<button type="button" class="devDest${dest.key === k ? ' on' : ''}" data-adj="dest" data-key="${esc(key)}" data-dest="${k}" aria-pressed="${dest.key === k}"><span class="devDestName">${esc(name)}</span></button>`;
         return `<div class="adjCar" data-adjcar="${esc(key)}">
           <div class="adjCar__title">${driverNameHtml(c.driverFamilyId)}</div>
-          <div class="adjCar__fields"><div class="adjCar__pair">
-            <label class="devField"><span>${esc(t('deviation.vertrek'))}</span><select class="devInput" data-adj="depmode" data-key="${esc(key)}"><option value="calc"${c.depManual ? '' : ' selected'}>${esc(t('weekrooster.flow.depCalc', { p1: calc || '--:--' }))}</option><option value="manual"${c.depManual ? ' selected' : ''}>${esc(t('weekrooster.flow.depManual'))}</option></select></label>
-            ${c.depManual ? `<label class="devField"><span>${esc(t('deviation.vertrektijd'))}</span><input type="time" class="devInput timeBig" data-adj="deptime" data-key="${esc(key)}" value="${esc(c.departureTime || '')}"></label>` : ''}</div>
+          <div class="adjCar__fields"><div class="adjCar__time">
+            <label class="devField"><span>${esc(t('deviation.vertrektijd'))}</span><input type="time" class="devInput timeBig" data-adj="deptime" data-key="${esc(key)}" value="${esc(c.departureTime || calc || '')}"></label>
+            ${c.depManual ? `<button type="button" class="linkbtn adjCar__reset" data-adj="depreset" data-key="${esc(key)}">${esc(t('weekrooster.flow.depReset', { p1: calc || '--:--' }))}</button>` : `<p class="adjCar__hint">${esc(t('weekrooster.flow.depAuto'))}</p>`}</div>
             <label class="devField"><span>${esc(t('deviation.chauffeur'))}</span><select class="devInput" data-adj="driver" data-key="${esc(key)}"><option value="${esc(c.driverFamilyId)}" selected>${parent(c.driverFamilyId)}</option>${others.map(([id, fm]) => `<option value="${esc(id)}">${esc(fm.parentName || '?')}</option>`).join('')}</select></label>
           </div>
           <label class="devField"><span>${esc(t('deviation.ophalen'))}</span><select class="devInput" data-adj="place" data-key="${esc(key)}">${place}</select></label>
@@ -398,12 +398,12 @@ function openAdjustSheet() {
     const parts = el => el.dataset.key.split('|');
     ov.querySelectorAll('[data-adj]').forEach(el => {
       const kind = el.dataset.adj;
+      if (kind === 'depreset') { el.onclick = () => { const [dir, id] = parts(el); apply(dir, (ctx, cars) => withDeparture(ctx, cars, id, '')); }; return; }
       if (kind === 'dest') { el.onclick = () => { const [dir, id] = parts(el); apply(dir, (ctx, cars) => withDestination(cars, id, el.dataset.dest)); }; return; }
       el.onchange = () => {
         if (kind === 'addcar') { if (el.value) apply(el.dataset.dir, (ctx, cars) => withNewCar(cars, el.value)); return; }
         const [dir, id] = parts(el);
-        if (kind === 'depmode') apply(dir, (ctx, cars) => withDeparture(ctx, cars, id, el.value === 'manual' ? ((cars.find(c => c.driverFamilyId === id) || {}).departureTime || '12:00') : ''));
-        else if (kind === 'deptime') apply(dir, (ctx, cars) => withDeparture(ctx, cars, id, el.value));
+        if (kind === 'deptime') apply(dir, (ctx, cars) => withDeparture(ctx, cars, id, el.value));
         else if (kind === 'driver') apply(dir, (ctx, cars) => withDriver(cars, id, el.value));
         else if (kind === 'place') {
           if (el.value === '__free') { S.adjFree = el.dataset.key; draw(); return; }

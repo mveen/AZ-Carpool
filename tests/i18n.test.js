@@ -451,3 +451,6 @@ test('the connection error asks to check the internet and has a retry label, wit
 test('the scene status texts say how many cars change, in singular and plural', () => {
   assert.equal(t('weekrooster.flow.sceneChanges1'), '1 auto wijzigt'); assert.equal(t('weekrooster.flow.sceneChangesN', { p1: 3 }), '3 auto’s wijzigen');
 });
+test('the time field of Auto’s aanpassen explains the automatic time and offers a way back', () => {
+  assert.match(t('weekrooster.flow.depAuto'), /Automatisch berekend/); assert.equal(t('weekrooster.flow.depReset', { p1: '07:30' }), 'Terug naar berekend (07:30)');
+});
