@@ -458,3 +458,7 @@ test('the sum behind extra wachten has texts for title, columns, per-direction l
   assert.equal(t('weekrooster.flow.calcTitle'), 'Zo is het berekend'); assert.equal(t('weekrooster.flow.calcDir', { p1: 165, p2: 150, p3: 15 }), 'Extra = 165 − 150, nooit onder 0: 15 min');
   assert.equal(t('weekrooster.flow.calcFinal', { p1: 15 }), 'Extra wachten: 15 min'); assert.match(t('weekrooster.flow.calcClose'), /Tik ergens/);
 });
+test('the driver notice says "Impact voor", not "merken het"', () => {
+  assert.equal(t('weekrooster.flow.notice0'), 'Geen impact voor chauffeurs'); assert.equal(t('weekrooster.flow.notice', { p1: 'Jan' }), 'Impact voor: Jan');
+  assert.equal(t('weekrooster.flow.tileNoticeN'), 'chauffeurs met impact');
+});

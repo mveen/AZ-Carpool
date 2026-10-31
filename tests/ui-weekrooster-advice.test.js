@@ -82,11 +82,11 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.match(s, /Voorstel voor morgen/); assert.match(html, /id="wrNav"[^>]*aria-label="Terug"/);
   assert.match(html, /data-wrvariant="best"[^>]*aria-pressed="true"/); assert.match(html, /data-wrvariant="alt"[^>]*aria-pressed="false"/);
   assert.match(s, /Advies 30 min extra wachten Alternatief 135 min extra wachten/);   // what each choice costs, worked out per variant
-  assert.match(s, /0 speelsters in andere auto 1 chauffeur merkt het 30 min extra wachten/);   // the wait tile is the last of the three
+  assert.match(s, /0 speelsters in andere auto 1 chauffeur met impact 30 min extra wachten/);   // the wait tile is the last of the three
   assert.match(s, /Lois moet er om 09:00 zijn/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
   assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 auto vertrekt Jan Jansen/); assert.match(s, /3\/3/);
   assert.match(s, /Lois vroeg 09:00\. Lois wacht 30 min haar tijd 09:00 · was niet ingedeeld Anouk, Eline · ongewijzigd/);   // the car's why, the rider with her time and wait, the ones who do not change
-  assert.match(s, /09:15 auto vertrekt Piet Pieters Evi, Jahaimy/); assert.match(s, /Merken het: Jan Jansen/);
+  assert.match(s, /09:15 auto vertrekt Piet Pieters Evi, Jahaimy/); assert.match(s, /Impact voor: Jan Jansen/);
   assert.doesNotMatch(s, /\bWas\b.*\bWordt\b|eerder dan gevraagd|later dan gevraagd/);   // no Was/Wordt table and no "gevraagd" without the sum behind it
   assert.match(html, /id="wrAdjust"/); assert.match(s, /Auto’s aanpassen: tijd, chauffeur, plek/); assert.match(html, /id="wrToCheck"/); assert.match(s, /Nog niets doorgevoerd/);
   assert.doesNotMatch(html, /id="wrToPlan"|id="wrSelf"|id="wrAccept"/);
@@ -235,7 +235,7 @@ await testAsync('Controleren: the chips, who notices it, the summary and ONE but
   const html = view(), s = text(html);
   assert.match(html, /flowSteps__step--done[^>]*>.*?Indeling/); assert.match(html, /flowSteps__step--current" aria-current="step">.*?Controleren/);
   assert.match(s, /Klaar om door te voeren\?/); assert.match(s, /1 van 1 aanvragen/); assert.match(s, /Geen chauffeur gewisseld/); assert.match(s, /Geen auto te vol/);
-  assert.match(s, /Merken het: Jan Jansen/); assert.match(s, /Zo rijden ze donderdag/);
+  assert.match(s, /Impact voor: Jan Jansen/); assert.match(s, /Zo rijden ze donderdag/);
   assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/);
   assert.equal((html.match(/id="wrAccept"/g) || []).length, 1); assert.match(s, /Doorvoeren voor donderdag/); assert.match(s, /Direct daarna kun je alles ongedaan maken/);
   assert.doesNotMatch(html, /id="wrToCheck"|id="wrAdjust"/); assert.match(html, /id="wrBackToPlan"/); assert.match(s, /Terug naar indeling/);
@@ -299,7 +299,7 @@ test('the texts of the flow say what the design says', () => {
   assert.equal(t('weekrooster.flow.apply', { p1: 'woensdag' }), 'Doorvoeren voor woensdag'); assert.equal(t('weekrooster.flow.applySub'), 'Direct daarna kun je alles ongedaan maken');
   assert.equal(t('weekrooster.flow.undoTextMany', { p1: 'woensdag', p2: 3 }), 'Het rooster van woensdag gaat terug naar de oorspronkelijke situatie. De 3 aanvragen staan dan weer open.');
   assert.equal(t('weekrooster.flow.carsHeen', { p1: "AFC '34" }), "Auto’s heen · aankomst bij AFC '34"); assert.equal(t('weekrooster.flow.carsTerug', { p1: "AFC '34" }), "Auto’s terug · vertrek bij AFC '34");
-  assert.equal(t('weekrooster.flow.noticeN', { p1: 2 }), '2 chauffeurs merken het');
+  assert.equal(t('weekrooster.flow.noticeN', { p1: 2 }), '2 chauffeurs met impact');
   assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 2, p2: 'donderdag' }), '2 aanvragen voor donderdag');
 });
 test('ui-weekrooster-advice.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-advice.js'));
