@@ -60,12 +60,12 @@
     "test": "c9551febfeff5876777a021975fcef7eed52c160f793a881250af1eeb525a709"
   },
   "help-nl.js": {
-    "module": "246206d993fda61d13fe8d33fa018d78c77abde14971be07cdd49fb96b6f8b4e",
-    "test": "abee7b7a7d85779a7dbfa08cdd3dc76f072176808d832942f06c7934403da817"
+    "module": "3849bf5e4d8236529d42385dab2a8ed489f96c8d06ca2e2f98eec15d9181cfaa",
+    "test": "b943ecbad790c1d2e0c900ca2614c424ddcffda3e20fcdab16b4bb5d3de38d30"
   },
   "help.js": {
     "module": "8027f859ef17efe3ca4214298654b7027d15af284baa19f1f7fcd00da6f4d7fa",
-    "test": "abee7b7a7d85779a7dbfa08cdd3dc76f072176808d832942f06c7934403da817"
+    "test": "b943ecbad790c1d2e0c900ca2614c424ddcffda3e20fcdab16b4bb5d3de38d30"
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
