@@ -594,7 +594,7 @@ button.planRow{cursor:pointer}
 .flowScreen__steps{flex:none;padding:var(--space-3) var(--page-gutter) 0}
 .flowScreen__steps .flowSteps{margin:0}
 .flowScreen__body{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:var(--space-5) var(--page-gutter) var(--space-7)}
-.flowScreen__foot{flex:none;display:flex;flex-direction:column;align-items:center;gap:var(--space-3);background:var(--surface-card);border-top:1px solid var(--line);padding:var(--space-5) var(--page-gutter) calc(var(--space-6) + var(--sab))}
+.flowScreen__foot{flex:none;display:flex;flex-direction:column;align-items:center;gap:var(--space-2);background:var(--surface-card);border-top:1px solid var(--line);padding:var(--space-4) var(--page-gutter) calc(var(--space-4) + var(--sab))}
 .flowScreen__foot .btn{width:100%}
 .flowScreen__note{margin:0;font:var(--type-caption);color:var(--text-muted);text-align:center}
 .flowOpen .toast{bottom:calc(var(--space-9) * 6 + var(--sab))}
@@ -682,9 +682,9 @@ button.planRow{cursor:pointer}
 .chipTime{font-family:var(--font-mono);font-weight:600;color:var(--text-muted);font-size:12px}
 .chip--add .chipTime{color:inherit;opacity:.8}
 .carCard--plain .carCard__time{color:var(--text-muted)}
-.btn.flowApply{display:flex;flex-direction:column;align-items:center;gap:var(--space-2);height:auto;min-height:0;padding:var(--space-5) var(--space-6)}
-.flowApply__title{font:var(--type-button)}
-.flowApply__text{font:var(--type-caption);font-weight:500;opacity:.8}
+.flowScreen__row{display:flex;align-items:center;gap:var(--space-3);width:100%}
+.flowScreen__row .btn{flex:1;min-width:0}
+.flowScreen__row .roundBtn{flex:none}
 
 /* ---------- Form controls (inputs, selects): one look everywhere ---------- */
 label{display:block;margin:var(--space-3) 0 var(--space-1);font:var(--type-caption);font-weight:600;color:var(--text-muted)}

@@ -296,8 +296,9 @@ function checkStep(adv, f, plan, stats) {
     body: `<div class="flowStack"><div class="chips">${chips}</div>${notice}
       <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.flow.summary', { p1: dayLabel(day).toLowerCase() }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.afterApply'))}</div></div>
       <div class="planSum">${lines}</div></div>`,
-    foot: `<button type="button" class="btn flowApply" id="wrAccept"${plan.blocked ? ' disabled' : ''}><span class="flowApply__title">${esc(t('weekrooster.flow.apply', { p1: dayLabel(day).toLowerCase() }))}</span><span class="flowApply__text">${esc(t('weekrooster.flow.applySub'))}</span></button>
-      <button type="button" class="linkbtn" id="wrBackToPlan">${esc(t('weekrooster.flow.backToPlan'))}</button>`,
+    foot: `<div class="flowScreen__row"><button type="button" class="roundBtn" id="wrBackToPlan" aria-label="${esc(t('weekrooster.flow.backToPlan'))}">${phIcon('arrow-left')}</button>
+      <button type="button" class="btn" id="wrAccept"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.apply', { p1: dayLabel(day).toLowerCase() }))}</button></div>
+      <p class="flowScreen__note">${esc(t('weekrooster.flow.applySub'))}</p>`,
   };
 }
 

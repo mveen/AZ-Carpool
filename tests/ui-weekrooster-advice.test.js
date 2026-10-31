@@ -307,7 +307,7 @@ await testAsync('Controleren: the chips, who notices it, the summary and ONE but
   assert.match(s, /Impact voor: Jan Jansen/); assert.match(s, /Zo rijden ze donderdag/);
   assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/);
   assert.equal((html.match(/id="wrAccept"/g) || []).length, 1); assert.match(s, /Doorvoeren voor donderdag/); assert.match(s, /Direct daarna kun je alles ongedaan maken/);
-  assert.doesNotMatch(html, /id="wrToCheck"|data-wradjust/); assert.match(html, /id="wrBackToPlan"/); assert.match(s, /Terug naar indeling/);
+  assert.doesNotMatch(html, /id="wrToCheck"|data-wradjust/); assert.match(html, /id="wrBackToPlan"/); assert.match(html, /id="wrBackToPlan" aria-label="Terug naar indeling"/); assert.match(html, /class="flowScreen__row"/);
   press('wrBackToPlan'); assert.equal(S.wrAdvice.step, 'plan');
 });
 await testAsync('Controleren warns about a car that is too full, someone who comes too late, and a girl without a car', async () => {
