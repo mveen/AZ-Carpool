@@ -1352,7 +1352,7 @@ export default {
   "weekrooster.entry.go": "Verzoeken verwerken",
   "weekrooster.take.coord": "Dagcoördinator:",
   "weekrooster.take.call": "Contact met {p1}",
-  "weekrooster.take.go": "Overnemen",
+  "weekrooster.take.go": "Verwerken",
   "weekrooster.take.warnTitle": "Let op: dit is de taak van {p1}",
   "weekrooster.take.warnText": "Neem alleen over als dat is afgesproken. {p1} ziet je wijzigingen terug onder Recente wijzigingen.",
   "weekrooster.take.yes": "Ja, ik neem over",
