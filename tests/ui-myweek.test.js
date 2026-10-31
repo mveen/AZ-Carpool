@@ -355,6 +355,11 @@ test('design v2: no "je dochter" any more; the alert names the daughter', () => 
   assert.match(text(render({})), /Jahaimy heeft nog geen rit/); assert.doesNotMatch(text(render({})), /[Jj]e dochter/);
 });
 
+test('day pill of today shows the day abbreviation, never the word "vandaag" (does not fit on a phone)', () => {
+  const html = renderDayAt(MON, {}), i = html.indexOf('dayPill--today'), pill = html.slice(i, html.indexOf('</button>', i));
+  assert.ok(i > 0, 'there is a today pill'); assert.match(pill, /dayPill__ab">[a-z]{2}</); assert.doesNotMatch(pill, /vandaag/i);
+});
+
 test('Afwijkend weekrooster: Mijn week shows the day coordinator\'s action card only for the days this person decides', () => {
   const req = { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
   useFakeDb(sampleDbSeed());

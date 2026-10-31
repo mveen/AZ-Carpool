@@ -330,6 +330,9 @@ test('the day coordinator article tells what he sees (action card, Recente wijzi
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
   assert.match(s, /Actie nodig/); assert.match(s, /Recente wijzigingen/); assert.match(s, /stip/); assert.match(s, /getal/);
 });
+test('the day coordinator article says the card in Mijn week is folded until the day before', () => {
+  assert.match(JSON.stringify(findArticle('dagcoordinator-aanvragen')), /ingeklapt tot de dag voor de carpooldag/);
+});
 
 test('the day coordinator article explains the flow: Regel dit, the three steps, Advies/Alternatief, Doorvoeren, terugdraaien, Dagbericht', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
