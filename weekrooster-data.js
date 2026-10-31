@@ -154,7 +154,7 @@ export function currentMarks(familyId) {
 }
 
 // A family hands in the week form (one document per changed day, in one batch). days: { Do: { rides, heen, terug } } for every day of the form.
-// - New times wait for the day coordinator ('pending'); "rijdt niet mee" is applied at once on the current week ('direct'): the whole day as a request
+// - New times wait for the day coordinator ('pending', also those of the day coordinator's own daughter); "rijdt niet mee" is applied at once on the current week ('direct'): the whole day as a request
 //   plus a mark per shift, one emptied time (or the unticked day) only as the mark of that shift (the database only takes 'direct' for a whole day off).
 // - A day put back to the fixed rooster withdraws the request that was open for it (and puts a "rijdt niet mee" back).
 // Returns { ok, written, skipped } (ok false = nothing was saved).
@@ -167,25 +167,15 @@ export async function submitWeekRequests(which, days) {
   S.wrBusy = true;
   try {
     const built = buildRequests({
-      weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs, directTimes: which === 'this',   // next week has no cars yet: there it stays a request
+      weekKey, familyId, days, standard: standardTimes(familyId, which), existing: S.weekRequests, nowMs,
       shiftOff: which === 'this',
       isPast: day => isDayPast(weekKey, day),
-      deciderOf: deciderFamilyOf,
     });
     // This week the marks per shift follow the form: only the shifts whose mark really changes are written.
     const wanted = which === 'this' ? desiredMarks({ days, standard: standardTimes(familyId, which), isPast: day => isDayPast(weekKey, day) }) : {};
     const markChanges = {};
     Object.entries(wanted).forEach(([day, m]) => ['heen', 'terug'].forEach(dir => { if (m[dir] !== ovGirlsFor(day, undefined, dir).includes(familyId)) (markChanges[day] = markChanges[day] || []).push(dir); }));
-    // The own day of a day coordinator is direct: the cars change at once (same change as Overnemen). Without a sound arrangement it stays a request.
     const devDocs = {};
-    built.writes.forEach(w => {
-      if (w.doc.status !== 'direct' || w.doc.rides === false) return;
-      // A day whose marks change in the same save stays a request: the cars of this day are changed by the marks, not planned twice.
-      if (markChanges[w.doc.day]) { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; return; }
-      const plan = directPlan(w.doc.day, { ...w.doc, id: w.id });
-      if (plan) Object.assign(devDocs, plan);
-      else { w.doc.status = 'pending'; delete w.doc.decidedAt; delete w.doc.decidedBy; }
-    });
     const batch = db.batch();
     built.writes.forEach(w => batch.set('weekRequests/' + w.id, w.doc));
     // Days back on the fixed rooster: withdraw what was open (pending, direct or accepted), undo an earlier "rijdt niet mee" and take the
@@ -317,20 +307,6 @@ export function planStats(advice, plan) {
     e.moved.forEach(id => { if (!out.moved.includes(id)) out.moved.push(id); });
     e.familiesChanged.forEach(id => { if (!out.familiesChanged.includes(id)) out.familiesChanged.push(id); });
     e.problems.forEach(pr => out.problems.push({ dir, ...pr }));
-  });
-  return out;
-}
-
-// A day coordinator changing the own daughter on a day he decides himself: the same one-off change as "Overnemen", for this one request.
-// Returns the deviation documents to write ({ key: doc }), or null when that is not possible (no sound arrangement) or nothing changes:
-// the caller then keeps it a normal request.
-export function directPlan(day, request) {
-  const advice = adviceForDay(day, [request]), dirs = Object.keys(advice.directions);
-  if (!dirs.length || dirs.some(d => advice.directions[d].variants.zuinig.noSolution)) return null;
-  const out = {};
-  dirs.forEach(dir => {
-    const prev = currentDeviationDoc(day, dir), v = advice.directions[dir].variants.zuinig;
-    out[deviationKey(day, dir)] = { day, direction: dir, weekKey: S.currentWeekKey, expiresAt: deviationExpiryMs(), cars: cleanCars(v.cars), ...keepOv(prev, v.cars), times: { ...((prev && prev.times) || {}), ...v.times } };
   });
   return out;
 }

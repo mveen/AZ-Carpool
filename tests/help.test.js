@@ -262,7 +262,7 @@ test('the Afwijkend weekrooster is always on: no Beheer switch article any more,
   const a = findArticle('afwijkend-weekrooster'), b = findArticle('dagcoordinator-aanvragen');
   assert.ok(a && !a.coordinatorOnly && a.tab === 'deviation'); assert.ok(b && !b.coordinatorOnly && b.tab === 'schedule');
   const s = allText(a);
-  assert.match(s, /Rijdt niet mee geldt direct/); assert.match(s, /het vaste rooster geldt tot de dagcoördinator akkoord geeft/i); assert.match(s, /Er hoeft geen reden bij/);
+  assert.match(s, /Rijdt niet mee geldt direct/); assert.match(s, /het vaste rooster geldt tot de dagcoördinator akkoord geeft/i); assert.match(s, /Er hoeft geen reden bij/); assert.doesNotMatch(s, /dan gelden je tijden voor deze week direct/, 'a day coordinator\'s own times are a request too');
   assert.doesNotMatch(allText(a) + allText(b), /schakelaar|database-regels|Test en Aan/i, 'nothing about a switch');
   assert.ok(ids('afwijkend weekrooster').includes('afwijkend-weekrooster')); assert.ok(ids('aanvragen dagcoordinator').includes('dagcoordinator-aanvragen'));
 });

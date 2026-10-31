@@ -127,7 +127,7 @@ export default [
       '1. Ga naar Wijzigen en kies Deze week of Volgende week.',
       '2. Per dag staan de vaste tijden ingevuld: bij Heen de aankomsttijd, bij Terug klaar om op te halen. Pas een tijd aan, of zet een rit uit als je dochter niet meerijdt. Dagen die voorbij zijn kun je niet meer wijzigen.',
       '3. Tik op Doorgeven. Er hoeft geen reden bij.',
-      'Rijdt niet mee geldt direct. Nieuwe tijden zijn een aanvraag: het vaste rooster geldt tot de dagcoördinator akkoord geeft. Ben je zelf dagcoördinator van die dag, dan gelden je tijden voor deze week direct. Voor volgende week blijft het een aanvraag.',
+      'Rijdt niet mee geldt direct. Nieuwe tijden zijn een aanvraag: het vaste rooster geldt tot de dagcoördinator akkoord geeft. Ook als je zelf dagcoördinator van die dag bent: je nieuwe tijden worden samen met alle andere wijzigingen ingedeeld.',
       'Na het doorgeven zie je per dag wat je hebt doorgegeven en op wie het wacht. Met Tijden aanpassen verander je het nog. Met Aanvraag intrekken, twee keer tikken, trek je het in.',
       'In Mijn week staat bij de dag een gestippeld geel blok Aanvraag in behandeling met wat je hebt gevraagd, wie erover beslist en Intrekken. De knop Tijden wijzigen bovenaan Mijn week opent het formulier. Aanvragen voor volgende week staan samen in één blok onder de dagen. Dat blok is standaard dicht: tik op de regel met het aantal aanvragen om de dagen te zien. Met Wijzigen erboven ga je meteen naar Volgende week.',
       'De eigen tijd van je dochter (aanwezig om of klaar om) staat in Mijn week meteen op wat je hebt gevraagd. De auto, dus de vertrektijd en in welke auto ze zit, verandert pas als de dagcoördinator akkoord geeft.',

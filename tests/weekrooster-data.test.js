@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime, ovGirlsFor } from '../rides.js';
-import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, directPlan, releaseNotRidingRequest, currentMarks, planOf, planStats } from '../weekrooster-data.js';
+import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, pendingOfDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, releaseNotRidingRequest, currentMarks, planOf, planStats } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -332,39 +332,39 @@ await testAsync('an accepted request put back to the fixed rooster is withdrawn 
   assert.equal(d.status, 'withdrawn'); assert.ok(!('decidedBy' in d) && !('decidedAt' in d));
   assert.ok(!fake.get('deviations/Do_heen').times || !('f3' in fake.get('deviations/Do_heen').times));
 });
-await testAsync('a day coordinator who puts his own direct change back: request withdrawn, time off the cars', async () => {
+await testAsync('a day coordinator who puts his own requested change back: request withdrawn, the cars never changed', async () => {
   const fake = await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
   await withFakeNowAsync(NOW, async () => {
     await submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' } });
-    assert.equal(rideTime('f3', 'Do', 'heen'), '07:10');
     const std = standardTimes('f3', 'this').Do;
+    assert.notEqual(rideTime('f3', 'Do', 'heen'), '07:10', 'a request changes nothing until it is accepted');
     assert.notEqual(std.heen, '07:10', 'the fixed rooster ignores the one-off time');
     assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' } })).ok, false, 'the same again: nothing is written');
     assert.equal((await submitWeekRequests('this', { Do: { rides: true, heen: std.heen, terug: std.terug } })).ok, true);
     assert.equal(rideTime('f3', 'Do', 'heen'), std.heen);
   });
   assert.equal(fake.get('weekRequests/2026-W40_Do_f3').status, 'withdrawn');
-  assert.ok(!fake.get('deviations/Do_heen').times || !('f3' in fake.get('deviations/Do_heen').times));
+  assert.equal(fake.get('deviations/Do_heen'), undefined, 'no one-off change was ever written');
 });
-console.log('=== the own day of a day coordinator is direct ===');
-await testAsync('a day coordinator changing his own daughter on his own day: direct, the cars change at once; on another day: a request', async () => {
+console.log('=== the own day of a day coordinator is a request too ===');
+await testAsync('a day coordinator changing his own daughter: a request on every day, the cars do not change; "rijdt niet mee" stays direct', async () => {
   const fake = await asDay({}, { dayCoordinators: { Do: 'f3', Vr: 'f4' }, links: { p1: { familyId: 'f3' } } });
-  const r = await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' }, Vr: { rides: true, heen: '07:10', terug: '15:00' } }));
+  const r = await withFakeNowAsync(NOW, () => submitWeekRequests('this', { Do: { rides: true, heen: '07:10', terug: '15:00' }, Vr: { rides: true, heen: '07:10', terug: '15:00' }, Wo: { rides: false } }));
   assert.equal(r.ok, true);
   const own = fake.get('weekRequests/2026-W40_Do_f3'), other = fake.get('weekRequests/2026-W40_Vr_f3');
-  assert.equal(own.status, 'direct'); assert.equal(own.decidedBy, 'f3'); assert.equal(other.status, 'pending'); assert.ok(!('decidedBy' in other));
-  const dev = fake.get('deviations/Do_heen'); assert.ok(dev && dev.cars.some(c => (c.girlIds || []).includes('f3'))); assert.equal(dev.times.f3, '07:10');
-  assert.equal(fake.get('deviations/Vr_heen'), undefined, 'the other day waits for its coordinator');
-  await withFakeNowAsync(NOW, async () => { assert.equal(rideTime('f3', 'Do', 'heen'), '07:10'); });
+  assert.equal(own.status, 'pending'); assert.equal(other.status, 'pending');
+  assert.ok(!('decidedBy' in own) && !('decidedBy' in other));
+  assert.equal(fake.get('weekRequests/2026-W40_Wo_f3').status, 'direct');
+  assert.equal(fake.get('deviations/Do_heen'), undefined, 'the cars wait for the day coordinator');
+  await withFakeNowAsync(NOW, async () => {
+    assert.notEqual(rideTime('f3', 'Do', 'heen'), '07:10');
+    assert.deepEqual(pendingOfDay('Do').map(x => x.familyId), ['f3'], 'her own request is in the one advice of the day');
+  });
 });
-await testAsync('next week the own day of a day coordinator stays a request (its cars do not exist yet)', async () => {
+await testAsync('next week the own day of a day coordinator is a request as well', async () => {
   const fake = await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
   await withFakeNowAsync(NOW, () => submitWeekRequests('next', { Do: { rides: true, heen: '07:10', terug: '15:00' } }));
   assert.equal(fake.get('weekRequests/2026-W41_Do_f3').status, 'pending'); assert.equal(fake.get('deviations/Do_heen'), undefined);
-});
-await testAsync('directPlan: nothing to plan gives null, so the request stays a request', async () => {
-  await asDay({}, { dayCoordinators: { Do: 'f3' }, links: { p1: { familyId: 'f3' } } });
-  await withFakeNowAsync(NOW, async () => { assert.equal(directPlan('Do', { id: 'x', weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: rideTime('f3', 'Do', 'heen'), terug: rideTime('f3', 'Do', 'terug'), status: 'pending' }), null); });
 });
 console.log('=== the advice with the cars as they are: plan, numbers, saving ===');
 const gcar = (dir, n, driver, girls, dep) => ({ ['Do_' + dir + '_' + n]: { day: 'Do', direction: dir, girlIds: girls, driverFamilyId: driver, reserveFamilyIds: [], departureTime: dep } });
