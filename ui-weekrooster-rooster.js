@@ -8,6 +8,7 @@ import { S } from './state.js';
 import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
+import { essenceHtml } from './ui-weekrooster-essence.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { renderSchedule } from './ui-schedule.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
@@ -83,9 +84,11 @@ export function entryCardHtml(day, n, attr, extra = '') {
   if (!n) return '';
   const hasDirect = recentChanges(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).some(r => r.state === 'direct');   // "Rijdt niet mee" is only mentioned when one was really processed
   const line = (adviceLineOf(day) || t('weekrooster.alert.body')) + (hasDirect ? ' ' + t('weekrooster.alert.bodyDirect') : '');
-  return `<div class="entryCard"${extra}><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>
+  const advice = adviceForDay(day), plan = planOf(advice, 'best');
+  const rows = Object.keys(advice.directions).length && !plan.blocked && !plan.fallback ? essenceHtml(advice, plan, 'entryCard__more') : '';   // the core of the advice: who rides with whom, what leaves at another time
+  return `<div class="entryCard${rows ? ' entryCard--stack' : ''}"${extra}><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>
     <div class="entryCard__text"><b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b><span>${esc(line)}</span></div>
-    <button type="button" class="btn small" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button></div>`;
+    <button type="button" class="btn small" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button>${rows}</div>`;
 }
 
 // Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).
@@ -94,7 +97,8 @@ export function entryCardHtml(day, n, attr, extra = '') {
 export function adviceLineOf(day) {
   const advice = adviceForDay(day), plan = planOf(advice, 'best');
   if (!Object.keys(advice.directions).length || plan.blocked || plan.fallback) return null;
-  const wait = planStats(advice, plan).extraWait;
+  const st = planStats(advice, plan), wait = st.extraWait, n = st.moved.length;
+  if (n) return t(n === 1 ? 'weekrooster.action.adviceMoved1' : 'weekrooster.action.adviceMovedN', { p1: t(wait ? 'weekrooster.action.waitSome' : 'weekrooster.action.waitNone', { p1: wait }), p2: n });   // somebody in another car: say so, the details are below
   return wait ? t('weekrooster.action.adviceFitsWait', { p1: wait }) : t('weekrooster.action.adviceFits');
 }
 

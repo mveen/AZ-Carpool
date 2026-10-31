@@ -1068,3 +1068,11 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .sheetHead{display:flex;align-items:flex-start;gap:var(--space-4)}
 .sheetHead>div{min-width:0}
 .sheetItem--menu>svg:last-child{margin-left:auto;flex:none;color:var(--text-muted)}
+.entryCard--stack{flex-wrap:wrap}
+.entryCard__more{flex:1 0 100%;min-width:0}
+.essRows{display:grid;gap:var(--space-3);min-width:0}
+.essRow{display:grid;grid-template-columns:5.2rem minmax(0,1fr);gap:var(--space-4);align-items:start;border-radius:var(--radius-control);padding:var(--space-4);font:var(--type-small);color:var(--text-1);text-align:left}
+.essRow__k{display:flex;gap:var(--space-2);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase}
+.essRow__k svg{width:16px;height:16px;fill:currentColor}
+.essRow--heen{background:var(--heen-badge)}.essRow--heen .essRow__k{color:var(--heen-ink)}
+.essRow--terug{background:var(--terug-badge)}.essRow--terug .essRow__k{color:var(--terug-ink)}

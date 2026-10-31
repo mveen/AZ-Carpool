@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "3476fea8cdda2bf4c3861eba1b3c89570cc347ee757ddfe07c3d336d77240468",
-    "test": "abf4d487faf08b9008f8b8b03495d128622abb3c091be0ae8279a9eba02915d1"
+    "module": "26b2fa85dfc1c2b1dd53540bcf52179c18cc973e211c148e3ef8e50d139f3a7e",
+    "test": "dbb8a177ba441c2c8f6f544865b67cbbdaf72edb75bfe277316bb121d69e3da9"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -69,7 +69,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "7b699923e33f4055bc9344e594297ef4ab6eaf62c9ad2ea72738599dfcd3412f"
+    "test": "15cb7ddb890fc0ce5d0c602bf5d62380fd33255b98219a160100c5f8429bedbd"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -164,8 +164,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "14b85db61e946cf1fe000b6d4a39df86b74c5c08fe286a98057264c77a3e3e97",
-    "test": "7b699923e33f4055bc9344e594297ef4ab6eaf62c9ad2ea72738599dfcd3412f"
+    "module": "27d01f7684760de379a13bf396f699db0b29b025e8053245077f652a3d7767b6",
+    "test": "15cb7ddb890fc0ce5d0c602bf5d62380fd33255b98219a160100c5f8429bedbd"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
@@ -256,20 +256,24 @@
     "test": "d6c53384681f7a8209a2ebcbbbf1bee63da5233bc972f6acf9deab68dc09fafb"
   },
   "ui-weekrooster-advice.js": {
-    "module": "5baed7aca35ed0a1d623a06a4784e3928dd6af306327471f1cc5e3c3b1c98cd6",
-    "test": "656827603703a9ed754b003d29cbcb61a9d1e006838d22dd416a8d864e6983e3"
+    "module": "8e1682cab6f6303177da4f286ba8b074a922731e745346e0d8f52681b16aa16f",
+    "test": "7ac705354eb0becc239d74e9b36eb32f54040b2f5cb4dff879b9df80098eb9c7"
   },
   "ui-weekrooster-edit.js": {
     "module": "6c2284787906bde8815cfb15596997519fdd3d6b3d2a2a748bb03bc13f04fded",
     "test": "3528c36529775d235fc1cf7dfc462b8a7decc94e66ea5b4ba6b319d81313dff5"
+  },
+  "ui-weekrooster-essence.js": {
+    "module": "8c34f922976e488a747eee44b2dab276f61d81e85ed87da674ccc25621f42589",
+    "test": "7dbb6ccb4374ba4efce3f98a894274a4606b043a9d4d03fd65b471be9c88f197"
   },
   "ui-weekrooster-form.js": {
     "module": "69a14231d2989faa04928fa4a1d9e53fa5a7f6d4fc186fbbe2c8320bb21fc099",
     "test": "99bbf0bfbc15ea3a81212e8010b88d1f3672a98cb9b861f71e6bfdd581991dfe"
   },
   "ui-weekrooster-rooster.js": {
-    "module": "06c9b6c44b3599f4d8ebede0bfba16a54314c005c7c110c37a0cd94736fcc05a",
-    "test": "80853622227df088dad859264dc7ebe5bcec6da64fabd5b5f0d906756f74c7ca"
+    "module": "36ec326867f53b8a1df39ac2241b1dd9e86ec54e5c53a1220ccd700869c86ea9",
+    "test": "a96bc6b5e27a8c811d0c0fed0381acdcf2f365a68c6fca1bc1ccd903fa5814eb"
   },
   "weekrooster-data.js": {
     "module": "206a5ce23740fd5116ca26ca0e8cdf15be5fba8f1a2fe7ff26064ae1d3792520",

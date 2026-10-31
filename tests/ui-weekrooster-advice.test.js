@@ -83,6 +83,8 @@ await testAsync('step 2 Indeling: advice/alternative with what each costs, the n
   assert.match(html, /data-wrvariant="best"[^>]*aria-pressed="true"/); assert.match(html, /data-wrvariant="alt"[^>]*aria-pressed="false"/);
   assert.match(s, /Advies 30 min extra wachten Alternatief 135 min extra wachten/);   // what each choice costs, worked out per variant
   assert.match(s, /0 speelsters in andere auto 1 chauffeur met impact 30 min extra wachten/);   // the wait tile is the last of the three
+  assert.match(s, /Alternatief 135 min extra wachten Heen Lois rijdt mee met Jan Jansen \(07:30\) 0 speelsters/);   // the core of the advice sits between the choice and the numbers
+  assert.match(html, /class="essRows"><div class="essRow essRow--heen"/);
   assert.match(s, /Lois moet er om 09:00 zijn/); assert.match(s, /Komt door \(minuten\): Lois \+30/);
   assert.match(s, /Auto’s heen · aankomst bij AFC '34/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /3\/3/); assert.doesNotMatch(s, /auto vertrekt|Aanvraag/);   // no "auto vertrekt", no "Aanvraag" caption
   assert.match(s, /Lois vroeg 09:00\. Wijzigingen \+1 Lois 09:00 wacht 30 min Bezetting 3\/3 Anouk Eline \+ Lois/);   // the car's why, then the blocks: who is new (time, wait), who sits in it

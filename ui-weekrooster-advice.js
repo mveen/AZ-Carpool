@@ -21,6 +21,7 @@ import { evaluateCars } from './weekrooster-impact.js';
 import { acceptDay, adviceForDay, planOf, planStats, withManual } from './weekrooster-data.js';
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace, withoutGirl } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
+import { essenceHtml } from './ui-weekrooster-essence.js';
 
 const dayLabel = dayName;
 const adviceOf = f => withManual(adviceForDay(f.day), f.edits);   // the advice with the girls taken out / added by hand worked in
@@ -250,7 +251,7 @@ function planStep(adv, f, plan, stats) {
   const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}${waitTile(stats)}</div>${waitSumHtml(adv, plan, stats)}`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
-    body: `<div class="flowStack">${seg}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
+    body: `<div class="flowStack">${seg}${plan.fallback ? '' : essenceHtml(adv, plan)}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
       ${Object.keys(plan.dirs).map(dir => sceneHtml(dir, adv, plan, stats, f.editDir)).join('')}
       ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
       ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(rawGirl).join(', ') }))}</div>` : ''}</div>`,

@@ -4,7 +4,7 @@
 // worker installs a fresh copy of every ASSET, and bootstrap() in app.js reloads the open app. Not in the cache yet: network.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v179';
+const CACHE_NAME = 'az-carpool-v180';
 const ASSETS = [
   './',
   './index.html',
@@ -55,6 +55,7 @@ const ASSETS = [
   './weekrooster.js',
   './weekrooster-data.js',
   './ui-weekrooster-form.js',
+  './ui-weekrooster-essence.js',
   './ui-weekrooster-rooster.js',
   './ui-weekrooster-advice.js',
   './ui-weekrooster-edit.js',

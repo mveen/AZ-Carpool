@@ -44,12 +44,12 @@ await testAsync('actionCardHtml: the same card with or without its buttons and i
     assert.doesNotMatch(plain, /data-wraction|data-wrtake|data-wrlook|<button/); assert.match(text(plain), /Actie nodig voor donderdag.*Advies: /);
     assert.doesNotMatch(actionCardHtml('Do', { advice: false }), /Advies: /);
     assert.equal(actionCardHtml('Vr'), '');
-    assert.match(myWeekActionCardsHtml(), /class="entryCard" data-wraction="Do"/);   // Mijn week has the entry card of Rooster, not this list
+    assert.match(myWeekActionCardsHtml(), /class="entryCard( entryCard--stack)?" data-wraction="Do"/);   // Mijn week has the entry card of Rooster, not this list
   });
 });
 await testAsync('the advice line: the cars as they are; when it does not fit there is no line and nothing to take over in one tap', async () => {
   await asDecider({ groups: CARS });
-  withFakeNow(NOW, () => { assert.match(adviceLineOf('Do'), /^Advies: past in de bestaande auto’s/); assert.equal(adviceLineOf('Vr'), null); });
+  withFakeNow(NOW, () => { assert.match(adviceLineOf('Do'), /^Advies: 2 speelsters in een andere auto, 45 min extra wachten\.$/); assert.equal(adviceLineOf('Vr'), null); });
   await asDecider();   // no cars on Thursday
   withFakeNow(NOW, () => {
     assert.equal(adviceLineOf('Do'), null);
@@ -93,8 +93,8 @@ await testAsync('the line of the day coordinator says "Jij bent dagcoördinator 
 });
 await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Regel dit")', async () => {
   await asDecider({ groups: CARS }); const html = mijnWeek(), s = text(html), room = rooster();
-  assert.match(html, /<div class="entryCard" data-wraction="Do">/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Regel dit/); assert.match(html, /data-wrlook="Do"/);
-  assert.match(s, /Advies: past in de bestaande auto’s/, 'one line of advice'); assert.match(s, /Rijdt niet mee. is al verwerkt/);
+  assert.match(html, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Regel dit/); assert.match(html, /data-wrlook="Do"/);
+  assert.match(s, /Advies: 2 speelsters in een andere auto, 45 min extra wachten/, 'one line of advice'); assert.match(s, /Rijdt niet mee. is al verwerkt/);
   assert.doesNotMatch(html, /alertCard|fold--alert|data-wrtake/); assert.doesNotMatch(s, /Actie nodig|Overnemen/); assert.doesNotMatch(noStyle(html), /style="/);
   const inner = h => text(h.slice(h.indexOf('class="entryCard"'))).split('Regel dit')[0].replace(/^[^>]*>/, '');
   assert.equal(inner(html).replace(/\s+/g, ' '), inner(room).replace(/\s+/g, ' '));   // the same words as in Rooster
@@ -166,7 +166,7 @@ await testAsync('Mijn week: the entry card is there every day until it is arrang
   await asDecider({ groups: CARS });
   for (const iso of ['2026-09-28T10:00:00+02:00', '2026-09-30T10:00:00+02:00', '2026-10-01T10:00:00+02:00']) {
     let h; withFakeNow(iso, () => { renderMyWeek(); h = dom.html('tab-myweek'); });
-    assert.match(h, /<div class="entryCard" data-wraction="Do">/, iso); assert.doesNotMatch(h, /fold--alert/, iso);
+    assert.match(h, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/, iso); assert.doesNotMatch(h, /fold--alert/, iso);
   }
 });
 test('ui-weekrooster-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-rooster.js'));
