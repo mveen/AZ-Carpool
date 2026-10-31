@@ -10,6 +10,7 @@ import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { activateTab } from './app.js';
+import { dateForWeekday } from './dates.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
@@ -100,7 +101,7 @@ export function adviceLineOf(day) {
 // The amber card "Actie nodig voor {dag}": what waits (and what came in directly) and the advice in one line.
 // Mijn week shows it with buttons. The Advies and Zelf indelen views show the same card on top, without buttons, so the requests stay
 // in sight while the day is planned. Empty when nothing waits.
-export function actionCardHtml(day, { buttons = false, advice = true, dots = false } = {}) {
+export function actionCardHtml(day, { buttons = false, advice = true, dots = false, title = true } = {}) {
   const now = Date.now();
   const pending = pendingForDay(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
   if (!pending.length) return '';
@@ -109,14 +110,27 @@ export function actionCardHtml(day, { buttons = false, advice = true, dots = fal
   const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
     .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
   const line = buttons || advice ? adviceLineOf(day) : null;
-  return `<div class="alertCard alertCard--stack"${buttons ? ` data-wraction="${day}"` : ''}><div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>${rows}
+  return `<div class="alertCard alertCard--stack"${buttons ? ` data-wraction="${day}"` : ''}>${title ? `<div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>` : ''}${rows}
     ${line && advice ? `<div class="alertCard__text">${esc(line)}</div>` : ''}
     ${buttons ? `<div class="formActions"><button type="button" class="btn small secondary" data-wrlook="${day}">${esc(t('weekrooster.action.look'))}</button>${line ? `<button type="button" class="btn small" data-wrtake="${day}">${phIcon('check')}${esc(t('weekrooster.advice.accept'))}</button>` : ''}</div>` : ''}</div>`;
 }
 
+// Only on the calendar day before the carpool day does the card show open: that is the moment the day coordinator really has to arrange it.
+// Before that (and on the day itself) it is one folded line, so it does not dominate Mijn week. The person can still open it (the fold remembers that).
+export function isDayBefore(day, now = new Date()) {
+  const prev = new Date(dateForWeekday(day)); prev.setDate(prev.getDate() - 1);
+  return prev.toDateString() === now.toDateString();
+}
+
 export function myWeekActionCardsHtml() {
   if (!weekroosterActive()) return '';
-  return myDeciderDays().map(day => actionCardHtml(day, { buttons: true })).join('');
+  return myDeciderDays().map(day => {
+    if (isDayBefore(day)) return actionCardHtml(day, { buttons: true });
+    const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
+    if (!n) return '';
+    const body = actionCardHtml(day, { buttons: true, title: false });
+    return foldHtml('wraction|' + day, `${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))} <b>${n}</b>`, body, 'fold--alert', 'wrAction' + day);
+  }).join('');
 }
 
 export function wireMyWeekActions(box) {

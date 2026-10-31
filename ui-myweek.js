@@ -253,7 +253,7 @@ export function renderMyWeek(){
   const list = [...entries.values()].sort((a,b)=>a.date-b.date);
   const shown = list.find(e=>e.key===S.myWeekDay) || list.find(e=>e.isToday) || list[0];
   const pillsHtml = list.length? `<div class="dayPills dayPills--${list.length}" role="group" aria-label="${esc(t('deviation.kies_een_dag'))}">${list.map(e=>`<button type="button" class="dayPill${e===shown?' on':''}${e.isToday?' dayPill--today':''}" data-mwday="${esc(e.key)}" aria-pressed="${e===shown}" aria-label="${esc(e.label+' '+dateText(e.date))}">
-      <span class="dayPill__ab">${esc(e.isToday? t('myweek.vandaag').toLowerCase() : e.abbr)}</span><span class="dayPill__n">${e.date.getDate()}</span>${attention.has(e.key)? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
+      <span class="dayPill__ab">${esc(e.abbr)}</span><span class="dayPill__n">${e.date.getDate()}</span>${attention.has(e.key)? `<span class="dayPill__dot" aria-hidden="true"></span>` : ''}
     </button>`).join('')}</div>` : '';
   const panelHtml = shown ? `<div class="dayHead">${esc(shown.label)} <small>${dateText(shown.date)}</small></div>${shown.request}${shown.rows}${shown.tiles}` : '';
   const noRidesHtml = !list.length ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
