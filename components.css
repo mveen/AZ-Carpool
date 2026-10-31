@@ -568,11 +568,17 @@ button.planRow{cursor:pointer}
 .planRow--quiet .planRow__who{flex:none;flex-direction:row}
 .planRow__time{font:var(--type-time-md);flex:none}
 .planSum{display:flex;flex-direction:column;gap:var(--space-2)}
-.planSum__dir{font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted);margin-top:var(--space-3)}
+.planSum__group{display:flex;flex-direction:column;gap:var(--space-2);border:1px solid;border-radius:var(--radius-card);padding:var(--space-4)}
+.planSum__dir{display:flex;gap:var(--space-3);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
 .applyBox{display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
 .applyBox .btn{width:100%}
 .applyBox__sub{margin:0;font:var(--type-caption);color:var(--text-muted);text-align:center}
-.adjCar{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-4) 0;border-top:1px solid var(--line)}
+.adjDir{display:flex;flex-direction:column;gap:var(--space-3);border:1px solid;border-radius:var(--radius-card);padding:var(--space-5);margin-top:var(--space-4)}
+.adjDir__head{display:flex;gap:var(--space-3);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
+.adjCar{display:flex;flex-direction:column;gap:var(--space-5);padding:var(--space-5) 0;border-top:1px solid var(--line)}
+.adjCar__fields{display:flex;flex-direction:column;gap:var(--space-5)}
+.adjCar__pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:var(--space-5)}
+.adjCar .devInput{min-width:0;text-overflow:ellipsis}
 .adjCar__title{font:var(--type-card-title)}
 .diffLabel{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
 .noteCard{display:flex;align-items:flex-start;gap:var(--space-3);margin:var(--space-3) 0 0;padding:var(--space-3) var(--space-5);border-radius:var(--radius-panel);background:var(--warn-soft);color:var(--warn-ink);font:var(--type-small)}

@@ -99,6 +99,11 @@ await testAsync('step 2: heen and terug each get their own tinted scene with a s
   assert.match(s, /Heen Lois moet er om 09:00 zijn/);
   assert.match(html, /chip chip--warn">1 auto wijzigt|chip chip--warn">\d+ auto’s wijzigen/);   // a changing scene says how many cars change
 });
+await testAsync('step 3 Controleren: the summary groups use the same heen/terug tint and badge as step 2', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
+  const html = view();
+  assert.match(html, /class="planSum__group scene--heen"/); assert.match(html, /planSum__dir"><span class="scene__badge">/);
+});
 await testAsync('step 1: "Advies bekijken" goes to step 2, "Zelf indelen" closes the flow and opens the day editor, X closes the flow', async () => {
   await setup(); S.wrAdvice = { day: 'Do' };
   press('wrToPlan'); assert.equal(S.wrAdvice.step, 'plan');
@@ -191,6 +196,8 @@ await testAsync('Auto\'s aanpassen: time by hand (it stays) and back to calculat
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   press('wrAdjust');
   assert.match(text(lastSheet.innerHTML), /Auto’s aanpassen/); assert.match(text(lastSheet.innerHTML), /Berekend 07:30/);
+  assert.match(lastSheet.innerHTML, /class="adjDir scene--heen"/); assert.match(lastSheet.innerHTML, /adjDir__head"><span class="scene__badge">/);   // the same tint and badge as the steps
+  assert.match(lastSheet.innerHTML, /class="adjCar__fields"><div class="adjCar__pair">/); assert.doesNotMatch(lastSheet.innerHTML, /devFormTop/);   // roomy fields, not the 110px column
   let e = adj('depmode', 'heen|f1'); e.value = 'manual'; e.onchange();
   assert.equal(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').depManual, true);
   e = adj('deptime', 'heen|f1'); e.value = '07:10'; e.onchange();

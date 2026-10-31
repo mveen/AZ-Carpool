@@ -247,8 +247,8 @@ function checkStep(adv, f, plan, stats) {
     ...(bad('late') ? [chip(false, t('weekrooster.flow.chipLate'))] : []),
   ].join('');
   const notice = stats.familiesChanged.length ? `<div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.noticeSee', { p1: stats.familiesChanged.map(rawParent).join(', ') }))}</span></div>` : '';
-  const lines = Object.entries(plan.dirs).map(([dir, p]) => `<div class="planSum__dir">${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${
-    p.cars.filter(c => c.girlIds.length).map(quietRowHtml).join('')}`).join('');
+  const lines = Object.entries(plan.dirs).map(([dir, p]) => `<div class="planSum__group scene--${dir}"><div class="planSum__dir"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${
+    p.cars.filter(c => c.girlIds.length).map(quietRowHtml).join('')}</div>`).join('');
   return {
     body: `<div class="flowStack"><div class="chips">${chips}</div>${notice}
       <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.flow.summary', { p1: dayLabel(day).toLowerCase() }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.afterApply'))}</div></div>
@@ -379,10 +379,10 @@ function openAdjustSheet() {
         const dest = destinationFor(c, cfg);
         const destBtn = (k, name) => `<button type="button" class="devDest${dest.key === k ? ' on' : ''}" data-adj="dest" data-key="${esc(key)}" data-dest="${k}" aria-pressed="${dest.key === k}"><span class="devDestName">${esc(name)}</span></button>`;
         return `<div class="adjCar" data-adjcar="${esc(key)}">
-          <div class="adjCar__title">${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))} · ${driverNameHtml(c.driverFamilyId)}</div>
-          <div class="devFormTop">
+          <div class="adjCar__title">${driverNameHtml(c.driverFamilyId)}</div>
+          <div class="adjCar__fields"><div class="adjCar__pair">
             <label class="devField"><span>${esc(t('deviation.vertrek'))}</span><select class="devInput" data-adj="depmode" data-key="${esc(key)}"><option value="calc"${c.depManual ? '' : ' selected'}>${esc(t('weekrooster.flow.depCalc', { p1: calc || '--:--' }))}</option><option value="manual"${c.depManual ? ' selected' : ''}>${esc(t('weekrooster.flow.depManual'))}</option></select></label>
-            ${c.depManual ? `<label class="devField"><span>${esc(t('deviation.vertrektijd'))}</span><input type="time" class="devInput timeBig" data-adj="deptime" data-key="${esc(key)}" value="${esc(c.departureTime || '')}"></label>` : ''}
+            ${c.depManual ? `<label class="devField"><span>${esc(t('deviation.vertrektijd'))}</span><input type="time" class="devInput timeBig" data-adj="deptime" data-key="${esc(key)}" value="${esc(c.departureTime || '')}"></label>` : ''}</div>
             <label class="devField"><span>${esc(t('deviation.chauffeur'))}</span><select class="devInput" data-adj="driver" data-key="${esc(key)}"><option value="${esc(c.driverFamilyId)}" selected>${parent(c.driverFamilyId)}</option>${others.map(([id, fm]) => `<option value="${esc(id)}">${esc(fm.parentName || '?')}</option>`).join('')}</select></label>
           </div>
           <label class="devField"><span>${esc(t('deviation.ophalen'))}</span><select class="devInput" data-adj="place" data-key="${esc(key)}">${place}</select></label>
@@ -390,7 +390,7 @@ function openAdjustSheet() {
           <div class="devField"><span>${esc(t('deviation.aankomst'))}</span><div class="devDestRow">${destBtn('AFC', cfg.destination.name)}${destBtn('ATC', ATC_NAME)}</div></div></div>`;
       }).join('');
       const add = others.length ? `<label class="devField"><span>${esc(t('weekrooster.flow.addCar'))} · ${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</span><select class="devInput" data-adj="addcar" data-dir="${dir}"><option value="">${esc(t('weekrooster.flow.addCarTitle'))}</option>${others.map(([id, fm]) => `<option value="${esc(id)}">${esc(fm.parentName || '?')}</option>`).join('')}</select></label>` : '';
-      return carsHtml + add;
+      return `<section class="adjDir scene--${dir}" data-adjdir="${dir}"><div class="adjDir__head"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${carsHtml}${add}</section>`;
     }).join('');
     const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.adjustTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.adjustSub', { p1: dayLabel(f.day).toLowerCase() }))}</p>${html}
       <div class="sheet__actions"><button type="button" class="btn" id="wrAdjustDone">${esc(t('weekrooster.flow.adjustDone'))}</button></div>`);
