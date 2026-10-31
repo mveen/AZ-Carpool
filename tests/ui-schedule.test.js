@@ -205,9 +205,9 @@ test('a coordinator without a phone number still shows the name (the sheet says 
   const html = banner(() => sampleParentState({ dayCoordinators: { Do: 'f3' }, families: fams }));
   assert.match(text(html), /^Dagcoördinator morgen: Kees de Vries/); assert.doesNotMatch(html, /wa\.me/);
 });
-test('the day coordinator herself is told so, without a button to herself', () => {
+test('the day coordinator herself gets no line "Jij bent dagcoördinator" any more', () => {
   const html = banner(() => sampleParentState({ dayCoordinators: { Do: 'f2' } }));
-  assert.match(text(html), /^Jij bent dagcoördinator morgen/); assert.doesNotMatch(html, /dayCoordWa/);
+  assert.equal(html, '');
 });
 test('a Flex driver in the "Deze week" driver line is shown by name, without a pill', () => {
   const fams = sampleParentState().families; fams.f9 = { parentName: 'Lotte Flex', girlName: 'Lotte', familyType: 'flex', capacity: 3, parentPhone1: '0677777777', schedule: {}, availability: {} };

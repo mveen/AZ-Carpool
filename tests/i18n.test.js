@@ -387,6 +387,9 @@ test('the "Jij" text exists and the old "Jij rijdt" badge texts are gone (no chi
   assert.match(src, /"ride.jij": "Jij"/); assert.doesNotMatch(src, /"schedule.jij_rijdt"|"myweek.jij_rijdt_tag"/);
 });
 
+test('the labels of the rides in Mijn week exist (Jij rijdt, rijdt mee met)', () => {
+  assert.equal(t('myweek.jij_rijdt_lab'), 'Jij rijdt'); assert.equal(t('myweek.jij_rijdt_mee', { name: 'Eline' }), 'Jij rijdt, Eline rijdt mee'); assert.equal(t('myweek.daughter_rijdt_mee_met', { name: 'Eline' }), 'Eline rijdt mee met');
+});
 test('the unused Gewijzigd label text is gone and the single-ride text exists', () => {
   const src = readSrcFile(new URL('../texts-nl.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /"myweek.gewijzigd"/); assert.match(src, /"schedule.een_rit": "1 rit"/);

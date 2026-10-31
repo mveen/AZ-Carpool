@@ -41,7 +41,7 @@ export function dayCoordinatorHtml(){
   if(!dc) return '';
   const when = target.when;
   const me = myLinkedFamilyId();
-  if(me && me===dc.familyId) return `<div class="coordLine coordLine--you" id="dayCoordBar">${phIcon('star')} <span>${t('dayCoord.you', { when })}</span></div>`;
+  if(me && me===dc.familyId) return '';   // no line "Jij bent dagcoördinator …" any more (2026-10-31)
   const name = esc(dc.name||'?');
   // The name opens the contact sheet (WhatsApp / Bellen); the WhatsApp message there starts with the question about the change.
   const who = dc.familyId ? contactButtonHtml(dc.familyId, name, t('dayCoord.waText', { when })) : `<strong>${name}</strong>`;

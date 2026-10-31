@@ -86,8 +86,8 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 });
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
-  assert.match(s, /Maandag 28 sep 07:30 Heen Chauffeur Jan Jansen Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 Terug Chauffeur Jij AFC (&#39;|')34 → Busstation Passagiers Eline 17:00, Jahaimy 17:30, Saar 17:30 Jahaimy klaar om 17:30/);
+  assert.match(s, /Maandag 28 sep 07:30 Heen Jahaimy rijdt mee met Jan Jansen Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 08:30/);
+  assert.match(s, /17:30 Terug Jij rijdt, Jahaimy rijdt mee Jij AFC (&#39;|')34 → Busstation Passagiers Eline 17:00, Jahaimy 17:30, Saar 17:30 Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
@@ -222,7 +222,7 @@ await testAsync('pressing the heen switch stores the mark on the heen ride only'
 });
 test('the ride shows where it starts and ends, as plain text without a map button', () => {
   const html = renderAt(MON, {});
-  assert.match(text(html), /07:30 Heen Chauffeur Jan Jansen Busstation → AFC (&#39;|')34/);
+  assert.match(text(html), /07:30 Heen Jahaimy rijdt mee met Jan Jansen Busstation → AFC (&#39;|')34/);
   assert.doesNotMatch(html, /geoBtn|Kaart/);
 });
 function withUserAgent(ua, fn) { const had = Object.getOwnPropertyDescriptor(globalThis, 'navigator'); Object.defineProperty(globalThis, 'navigator', { value: { userAgent: ua }, configurable: true }); try { return fn(); } finally { if (had) Object.defineProperty(globalThis, 'navigator', had); else delete globalThis.navigator; } }
@@ -311,8 +311,8 @@ const period40 = () => ({
 });
 test('a day shows the handed-in times and the car of the temporary rooster', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
-  assert.match(s, /Dinsdag 29 sep 08:00 Heen Chauffeur Kees de Vries Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 09:00/);
-  assert.match(s, /12:00 Terug Chauffeur Kees de Vries AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
+  assert.match(s, /Dinsdag 29 sep 08:00 Heen Jahaimy rijdt mee met Kees de Vries Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 09:00/);
+  assert.match(s, /12:00 Terug Jahaimy rijdt mee met Kees de Vries AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
 });
 test('a day she does not ride is gone, and is not reported as "niet ingepland"', () => {
   const s = text(renderAt(MON, { ...period40(), deviations: {} }));
@@ -337,7 +337,7 @@ test('the driver button ends in a (neutral) phone icon, not in ">"', () => {
 test('a one-off change from Wijzigen goes before the temporary rooster', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 Terug was 12:00 Chauffeur Jan Jansen AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
+  assert.match(s, /12:30 Terug was 12:00 Jahaimy rijdt mee met Jan Jansen AFC (&#39;|')34 → Busstation Jahaimy klaar om 12:00/);
 });
 
 test('passengers in a car are listed A-Z, whatever order they were added in', () => {
@@ -478,13 +478,13 @@ test('every ride is its own white card: time and direction, "Chauffeur", route, 
   const h = renderDayAt(MON, {});
   assert.equal((h.match(/class="rideRow[ "]/g) || []).length, 2); assert.doesNotMatch(h, /class="rideCard/);
   assert.match(h, /rideRow__head">\s*<div class="rideRow__time"><div class="rideRow__dep">07:30<\/div><div class="rideRow__sub">Heen<\/div>/);
-  assert.match(h, /rideRow__lab">Chauffeur/); assert.match(h, /rideRow__route">[^]*?Busstation → AFC/); assert.match(h, /class="rideRow__kid"/);
+  assert.match(h, /rideRow__lab">Jahaimy rijdt mee met/); assert.match(h, /rideRow__route">[^]*?Busstation → AFC/); assert.match(h, /class="rideRow__kid"/);
   assert.doesNotMatch(h, /class="rideRow__driver|driverOnce|vertrek/, 'the name is plain text, the contact is the round phone button');
 });
 test('the card you drive has the green edge, the quiet green "Jij" (no badge) and a labelled passenger list; another driver\'s card does not', () => {
   const h = renderDayAt(MON, {});
   const [heen, terug] = h.split(/(?=<div class="rideRow[ "])/).filter(x => x.startsWith('<div class="rideRow'));
-  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /rideRow__who rideRow__who--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt/); assert.match(terug, /Passagiers<\/span>Eline 17:00, Jahaimy 17:30, Saar 17:30/);
+  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /rideRow__who rideRow__who--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt<|chip--drive/); assert.match(terug, /rideRow__lab">Jij rijdt, Jahaimy rijdt mee</); assert.match(terug, /Passagiers<\/span>Eline 17:00, Jahaimy 17:30, Saar 17:30/);
   assert.match(terug, /class="roundBtn" data-drivercar/, 'Tijd en plek: a round icon button, top right'); assert.match(heen, /class="roundBtn" data-contact="f3"|class="roundBtn" data-contact="f/, 'someone else drives: the round phone button');
 });
 test('a ride she does not take part in says so (no car, no time) and the switch is off; the other ride of that day stays as it is', () => {
@@ -506,10 +506,11 @@ await testAsync('a day somebody else decides, with a request of another family: 
   assert.doesNotMatch(h, /data-fold="wrtake|data-wrtakeover|Dagcoördinator: Kees de Vries|wrroost/);
   useFakeDb(sampleDbSeed());
 });
-test('the line "Jouw rijbeurt" names the passengers with their own time, earliest first', () => {
+test('the shift you drive while your daughter rides in another car is its own card: label "Jij rijdt", "Jij", route and the passengers with their own time, earliest first', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f3'], departureTime: '12:30' }, { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /Jouw rijbeurt om 12:30 · Eline 17:30, Anouk Jahaimy klaar om/);
+  assert.match(s, /12:30 Terug Jij rijdt Jij AFC (&#39;|')34 → Busstation Passagiers Eline 17:30, Anouk/); assert.doesNotMatch(s, /Jouw rijbeurt om/);
+  assert.equal((renderAt(MON, { ...period40(), deviations: dev }).match(/rideRow--mine/g) || []).length >= 1, true);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

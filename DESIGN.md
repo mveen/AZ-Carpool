@@ -156,3 +156,9 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - No yellow "Gewijzigd" label in Mijn week or Rooster: a changed departure says `was 07:30` under the time, and Mijn week keeps its amber line "Vertrektijd gewijzigd…".
 - In Mijn week the passengers of a car you drive carry their own time ("Anouk 08:15, Jahaimy 08:30"), earliest first.
 - Standaardrooster and the temporary rooster keep their Heen/Terug titles.
+
+## Mijn week: every ride its own card, labelled by whose it is (2026-10-31)
+
+- The label above the name (`.rideRow__lab`) says whose ride it is: "Jahaimy rijdt mee met" + the driver, "Jij rijdt, Jahaimy rijdt mee" when you drive her, "Chauffeur" when there is no ride yet.
+- A shift you drive while your daughter rides in another car is its own card (`.rideRow--mine`, green top edge, "Jij", route, Passagiers with their own time), in time order next to her card. The old line "Jouw rijbeurt om ..." and the amber "Vertrektijd gewijzigd" line are gone; a changed time says `was 07:30` under the time.
+- No line "Jij bent dagcoördinator ..." in Mijn week (others still see "Dagcoördinator morgen: naam").
