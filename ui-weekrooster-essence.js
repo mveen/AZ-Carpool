@@ -35,3 +35,23 @@ export function essenceHtml(advice, plan, cls = '') {
   if (!rows.length) return '';
   return `<div class="essRows${cls ? ' ' + cls : ''}">${rows.map(r => `<div class="essRow essRow--${r.dir}"><span class="essRow__k">${phIcon(r.dir === 'heen' ? 'sun' : 'moon')}<b>${esc(t(r.dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</b></span><span class="essRow__t">${r.html}</span></div>`).join('')}</div>`;
 }
+
+// The requests of the day as they are asked, not as advised: per direction (heen, terug) the girls in alphabetical order, each with the asked time
+// and the time it was ("aanwezig om 07:15 was 07:00", "klaar om 16:00 was 17:00"). No icons: the tint says heen or terug.
+export function requestRowsHtml(adv) {
+  const rows = ['heen', 'terug'].map(dir => {
+    const d = adv.directions[dir];
+    if (!d) return '';
+    const kids = adv.requests.map(r => ({ id: r.familyId, q: d.ctx.requests.find(x => x.familyId === r.familyId) })).filter(k => k.q)
+      .sort((a, b) => girl(a.id).localeCompare(girl(b.id), 'nl'));
+    if (!kids.length) return '';
+    const lines = kids.map(({ id, q }) => {
+      const was = d.ctx.timeOf(id) || '';
+      const what = q.time ? t(dir === 'heen' ? 'weekrooster.req.heen' : 'weekrooster.req.terug') : t('weekrooster.req.off');
+      const time = q.time ? `${esc(q.time)}${was && was !== q.time ? `<s>${esc(was)}</s>` : ''}` : (was ? `<s>${esc(was)}</s>` : '');
+      return `<div class="essKid"><span class="essKid__what"><b>${esc(girl(id))}</b> ${esc(what)}</span>${time ? `<span class="essKid__time">${time}</span>` : ''}</div>`;
+    }).join('');
+    return `<div class="essRow essRow--${dir}"><span class="essRow__k"><b>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</b></span><span class="essRow__t">${lines}</span></div>`;
+  }).join('');
+  return rows ? `<div class="essRows essRows--req">${rows}</div>` : '';
+}

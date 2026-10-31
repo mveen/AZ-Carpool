@@ -9,7 +9,7 @@ import { esc, foldHtml, hapticTap, phIcon } from './ui-common.js';
 import { dateForWeekday } from './dates.js';
 import { myFamilyId } from './coordinator.js';
 import { girlName } from './rides.js';
-import { essenceHtml } from './ui-weekrooster-essence.js';
+import { requestRowsHtml } from './ui-weekrooster-essence.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { renderSchedule } from './ui-schedule.js';
 import { actionCounts, openRequestsOf, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
@@ -68,7 +68,7 @@ export function scheduleDayExtrasHtml(day) {
     const n = counts()[day] || 0;
     // The requests that wait are not listed here: "Regel dit" opens the flow, whose first step shows them. This card only says how many and
     // what the advice would be (the cars as they are, least waiting), in one line.
-    return coordLineHtml(day, !n) + entryCardHtml(day, n, 'data-wradvice', ' id="wrAlert"') + logHtml(day);
+    return coordLineHtml(day, !n) + entryCardHtml(day, n, 'data-wradvice', ' id="wrAlert"', true, true) + logHtml(day);
   }
   // A parent: the own open request of this day as a note, and the open requests of the other families.
   const own = openRequestsOf(S.weekRequests, wk(), myFamilyId(), Date.now(), d => dayEndMs(wk(), d)).filter(r => r.day === day && r.status === 'pending');
@@ -79,17 +79,15 @@ export function scheduleDayExtrasHtml(day) {
   return coordLineHtml(day) + notes + others;
 }
 
-// The card that announces what waits for the day coordinator: how many requests, the advice in one line and "Regel dit" (opens the flow).
-// One design for Rooster (above the day) and Mijn week. `attr` is the data attribute of the button, `extra` more attributes of the card.
-export function entryCardHtml(day, n, attr, extra = '', title = true) {
+// The card that announces what waits for the day coordinator: how many requests, the requests as they are asked (per heen and terug, per girl) and
+// "Verzoeken verwerken" (opens the flow). `attr` is the data attribute of the button, `extra` more attributes of the card.
+// Mijn week: amber with a warning icon. Rooster (`plain`): the normal white card, nothing to signal there.
+export function entryCardHtml(day, n, attr, extra = '', title = true, plain = false) {
   if (!n) return '';
-  const hasDirect = recentChanges(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).some(r => r.state === 'direct');   // "Rijdt niet mee" is only mentioned when one was really processed
-  const line = (adviceLineOf(day) || t('weekrooster.alert.body')) + (hasDirect ? ' ' + t('weekrooster.alert.bodyDirect') : '');
-  const advice = adviceForDay(day), plan = planOf(advice, 'best');
-  const rows = Object.keys(advice.directions).length && !plan.blocked && !plan.fallback ? essenceHtml(advice, plan, 'entryCard__more') : '';   // the core of the advice: who rides with whom, what leaves at another time
-  return `<div class="entryCard${rows ? ' entryCard--stack' : ''}"${extra}><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>
-    <div class="entryCard__text">${title ? `<b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b>` : ''}<span>${esc(line)}</span></div>
-    <button type="button" class="btn small" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button>${rows}</div>`;
+  const rows = requestRowsHtml(adviceForDay(day));
+  const head = title ? `<div class="entryCard__head">${plain ? '' : `<span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>`}<b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b></div>` : '';
+  return `<div class="entryCard entryCard--stack${plain ? ' entryCard--plain' : ''}"${extra}>${head}${rows}
+    <button type="button" class="btn entryCard__go" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button></div>`;
 }
 
 // Mijn week, for the days this person decides: what waits, with "Bekijk" (opens Rooster on that day).
@@ -103,19 +101,12 @@ export function adviceLineOf(day) {
   return wait ? t('weekrooster.action.adviceFitsWait', { p1: wait }) : t('weekrooster.action.adviceFits');
 }
 
-// The amber card "Actie nodig voor {dag}": what waits (and what came in directly) and the advice in one line.
-// The Zelf indelen view shows it on top, so the requests stay in sight while the day is planned. Empty when nothing waits.
-export function actionCardHtml(day, { advice = true, dots = false } = {}) {
-  const now = Date.now();
-  const pending = pendingForDay(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day));
-  if (!pending.length) return '';
-  const direct = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state === 'direct');
-  const row = (r, tag) => `<div class="alertCard__row"><span${dots ? ' class="reqDot"' : ''}>${esc(requestLine(r))}</span>${tag}</div>`;
-  const rows = pending.map(r => row(r, `<span class="tag tag--warn">${esc(t('weekrooster.tag.request'))}</span>`))
-    .concat(direct.map(r => row(r, `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`))).join('');
-  const line = advice ? adviceLineOf(day) : null;
-  return `<div class="alertCard alertCard--stack"><div class="alertCard__text"><b>${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))}</b></div>${rows}
-    ${line ? `<div class="alertCard__text">${esc(line)}</div>` : ''}</div>`;
+// The requests of the day in the normal white card, without a button: the Zelf indelen view shows it on top, so the requests stay in sight
+// while the day is planned. Empty when nothing waits.
+export function actionCardHtml(day) {
+  const n = pendingForDay(requestsForDeciding(), wk(), day, Date.now(), dayEndMs(wk(), day)).length;
+  if (!n) return '';
+  return `<div class="entryCard entryCard--stack entryCard--plain"><div class="entryCard__head"><b>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}</b></div>${requestRowsHtml(adviceForDay(day))}</div>`;
 }
 
 // Only on the calendar day before the carpool day does the card show open: that is the moment the day coordinator really has to arrange it.
@@ -132,7 +123,7 @@ export function myWeekActionCardsHtml() {
     if (!n) return '';
     const extra = ` data-wraction="${day}"`;
     if (isDayBefore(day)) return entryCardHtml(day, n, 'data-wrlook', extra);
-    return foldHtml('wraction|' + day, `${esc(t('weekrooster.action.title', { p1: lower(dayName(day)) }))} <b>${n}</b>`, entryCardHtml(day, n, 'data-wrlook', extra, false), 'fold--alert', 'wrAction' + day);
+    return foldHtml('wraction|' + day, `<span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>${esc(t(n === 1 ? 'weekrooster.entry.titleOne' : 'weekrooster.entry.titleMany', { p1: n, p2: lower(dayName(day)) }))}`, entryCardHtml(day, n, 'data-wrlook', extra, false), 'fold--alert', 'wrAction' + day);
   }).join('');
 }
 

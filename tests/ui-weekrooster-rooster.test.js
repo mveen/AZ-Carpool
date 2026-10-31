@@ -41,8 +41,8 @@ await testAsync('actionCardHtml: the same card with or without its buttons and i
   await asDecider({ groups: CARS });
   withFakeNow(NOW, () => {
     const plain = actionCardHtml('Do');
-    assert.doesNotMatch(plain, /data-wraction|data-wrtake|data-wrlook|<button/); assert.match(text(plain), /Actie nodig voor donderdag.*Advies: /);
-    assert.doesNotMatch(actionCardHtml('Do', { advice: false }), /Advies: /);
+    assert.doesNotMatch(plain, /data-wraction|data-wrtake|data-wrlook|<button/); assert.match(text(plain), /1 aanvraag voor donderdag Heen Anouk aanwezig om 11:00 .* Terug Anouk klaar om 18:00/);
+    assert.doesNotMatch(plain, /Advies|Actie nodig|alertCard|entryCard__icon|style=/);
     assert.equal(actionCardHtml('Vr'), '');
     assert.match(myWeekActionCardsHtml(), /class="entryCard( entryCard--stack)?" data-wraction="Do"/);   // Mijn week has the entry card of Rooster, not this list
   });
@@ -60,13 +60,13 @@ await testAsync('the advice line: the cars as they are; when it does not fit the
 console.log('=== the day coordinator ===');
 await testAsync('Rooster on his day: the entry card, the day coordinator line, the log (newest first) with tags and times', async () => {
   await asDecider(); const html = rooster(), s = text(html);
-  assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Regel dit/); assert.match(s, /Het vaste rooster geldt tot jij akkoord geeft/);
+  assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Verzoeken verwerken/); assert.doesNotMatch(s, /Advies|Het vaste rooster geldt/);   // Rooster only lists the requests
   assert.match(s, /(Dagcoördinator donderdag:|Jij bent dagcoördinator donderdag)/);
   assert.match(html, /<details class="fold fold--quiet"[^>]*id="wrLog"/); assert.match(s, /Recente wijzigingen 1/);   // folded history: only what is settled
   assert.match(s, /Evi: Rijdt niet mee Direct wo 08:30/);
-  assert.match(html, /class="entryCard" id="wrAlert"/); assert.doesNotMatch(html, /alertCard__row|devAlert/);   // the requests themselves are listed in step 1 of the flow, not in the Rooster
+  assert.match(html, /class="entryCard entryCard--stack entryCard--plain" id="wrAlert"/); assert.doesNotMatch(html.slice(html.indexOf('id="wrAlert"')).split('data-wradvice')[0], /entryCard__icon/);   // the normal white card, no warning icon assert.doesNotMatch(html, /alertCard__row|devAlert/);   // the requests themselves are listed in step 1 of the flow, not in the Rooster
   assert.doesNotMatch(html, /logItem__dot"[^>]*><\/span>\s*<span class="logItem__main">Anouk/, 'and is not listed a second time below');
-  assert.match(s, /'Rijdt niet mee' is al verwerkt\./);   // only because a Rijdt niet mee was really processed
+  assert.match(html, /essRows essRows--req/); assert.match(s, /Heen Anouk aanwezig om 11:00/); assert.doesNotMatch(s, /al verwerkt/);
   assert.doesNotMatch(noStyle(html), /style="/);
 });
 await testAsync('a day he does not decide has no action block and no log; the dot sits on his day only', async () => {
@@ -91,15 +91,15 @@ await testAsync('the line of the day coordinator says "Jij bent dagcoördinator 
   assert.match(s, /Jij bent dagcoördinator donderdag/); assert.doesNotMatch(s, /Dagcoördinator donderdag:/);
   assert.match(html, /sectionHead__note">Aankomst bij AFC/);   // the direction title says what the time means; her own time sits on her chip
 });
-await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Regel dit")', async () => {
+await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Verzoeken verwerken")', async () => {
   await asDecider({ groups: CARS }); const html = mijnWeek(), s = text(html), room = rooster();
-  assert.match(html, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Regel dit/); assert.match(html, /data-wrlook="Do"/);
-  assert.match(s, /Advies: 2 speelsters in een andere auto, 420 min extra wachten/, 'one line of advice'); assert.match(s, /Rijdt niet mee. is al verwerkt/);
+  assert.match(html, /<div class="entryCard( entryCard--stack)?" data-wraction="Do">/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /Verzoeken verwerken/); assert.match(html, /data-wrlook="Do"/);
+  assert.doesNotMatch(s, /Advies/, 'the requests as they are asked, no advice'); assert.match(html, /entryCard__icon/, 'Mijn week keeps the amber card with its icon');
   assert.doesNotMatch(html, /alertCard|fold--alert|data-wrtake/); assert.doesNotMatch(s, /Actie nodig|Overnemen/); assert.doesNotMatch(noStyle(html), /style="/);
-  const inner = h => text(h.slice(h.indexOf('class="entryCard"'))).split('Regel dit')[0].replace(/^[^>]*>/, '');
+  const inner = h => text(h.slice(h.indexOf('class="entryCard '))).split('Verzoeken verwerken')[0].replace(/^[^>]*>/, '');
   assert.equal(inner(html).replace(/\s+/g, ' '), inner(room).replace(/\s+/g, ' '));   // the same words as in Rooster
 });
-await testAsync('"Advies bekijken en aanpassen" on Mijn week opens the same flow as "Regel dit": step 1, on that day, over the tab you are on', async () => {
+await testAsync('"Advies bekijken en aanpassen" on Mijn week opens the same flow as "Verzoeken verwerken": step 1, on that day, over the tab you are on', async () => {
   await asDecider({ scheduleDay: 'Ma', roosterMode: 'standard' });
   const btn = { dataset: { wrlook: 'Do' }, onclick: null };
   wireMyWeekActions({ querySelectorAll: sel => (sel === '[data-wrlook]' ? [btn] : []) });
@@ -148,9 +148,9 @@ await testAsync('nobody linked, or a Flex family: none of it exists', async () =
   }
 });
 
-await testAsync('the entry card has the button "Regel dit" for the day coordinator', async () => {
+await testAsync('the entry card has the button "Verzoeken verwerken" for the day coordinator', async () => {
   await asDecider(); const html = rooster();
-  assert.match(html, /class="entryCard"[^>]*id="wrAlert"|id="wrAlert"[^>]*class="entryCard/); assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Regel dit/);
+  assert.match(html, /class="entryCard [^"]*"[^>]*id="wrAlert"/); assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Verzoeken verwerken/);
   assert.doesNotMatch(html, /devAlert/);
   assert.doesNotMatch(html, /data-wredit="Do"/); assert.doesNotMatch(text(html), /Zelf indelen/);   // with requests waiting there is ONE way in: the flow
 });
@@ -158,9 +158,14 @@ await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the l
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };
   const s = text(rooster()); assert.match(s, /Zelf gewijzigd/); assert.match(s, /heen zelf aangepast/);
 });
-test('actionCardHtml: the amber dot in front of each request only with dots on', () => {
-  const html = actionCardHtml('Do', { dots: true }), plain = actionCardHtml('Do');
-  if (html) { assert.match(html, /class="reqDot"/); assert.doesNotMatch(plain, /reqDot/); }
+await testAsync('the requests are listed per direction, per girl in alphabetical order, with the asked time and the time it was', async () => {
+  useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '10:00', terug: '16:00' }) });
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', groups: CARS }); syncWeekRequests(); await tick();
+  withFakeNow(NOW, () => {
+    const s = text(actionCardHtml('Do'));
+    assert.match(s, /2 aanvragen voor donderdag Heen Anouk aanwezig om 11:00 .*Lois aanwezig om 10:00 .* Terug Anouk klaar om 18:00 .*Lois klaar om 16:00/);
+    assert.ok(s.indexOf('Anouk') < s.indexOf('Lois'), 'alphabetical');
+  });
 });
 await testAsync('Mijn week: the entry card is open only on the day before the carpool day, otherwise one folded line with the number', async () => {
   await asDecider({ groups: CARS });
@@ -170,8 +175,8 @@ await testAsync('Mijn week: the entry card is open only on the day before the ca
   for (const iso of ['2026-09-28T10:00:00+02:00', '2026-09-29T10:00:00+02:00', '2026-10-01T10:00:00+02:00']) {   // Mon, Tue, and the carpool day itself
     const h = at(iso);
     assert.match(h, /<details class="fold fold--alert"[^>]*data-fold="wraction\|Do"/, iso); assert.doesNotMatch(h, /<details[^>]*data-fold="wraction\|Do"[^>]* open/, iso);
-    assert.match(text(h), /Actie nodig voor donderdag 1/, iso); assert.match(h, /data-wrlook="Do"/, 'the button stays inside the fold');
-    assert.doesNotMatch(text(h), /1 aanvraag voor donderdag/, 'the fold has the title, the card inside does not repeat it');
+    assert.match(text(h), /1 aanvraag voor donderdag/, iso); assert.match(h, /data-wrlook="Do"/, 'the button stays inside the fold');
+    assert.equal((text(h).match(/1 aanvraag voor donderdag/g) || []).length, 1, 'the fold has the title, the card inside does not repeat it');
   }
   S.folds = { 'wraction|Do': true }; assert.match(at('2026-09-28T10:00:00+02:00'), /data-fold="wraction\|Do" open/); S.folds = {};
 });

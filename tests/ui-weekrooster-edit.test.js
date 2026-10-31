@@ -38,7 +38,7 @@ await testAsync('Zelf indelen is one screen: the request card on top (no buttons
   await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
   S.wrEdit = { day: 'Do', override: false };
   const html = rooster(), s = text(html);
-  assert.match(html, /id="wrEdit"/); assert.match(s, /Actie nodig voor donderdag/); assert.match(s, /Aanvraag/); assert.doesNotMatch(s, /Advies: /);
+  assert.match(html, /id="wrEdit"/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /aanwezig om 07:00/); assert.doesNotMatch(s, /Advies: /);
   assert.doesNotMatch(html, /data-wrtake|data-wrlook|dayPills|data-rmode|coordLine/);
   assert.match(html, /id="wrEditDone"/); assert.match(html, /id="wrEditDone">Klaar</);
   wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditDone').onclick());
@@ -106,11 +106,11 @@ await testAsync('the Dagbericht is one folded bar (title + Deel in de groep) tha
 });
 const reqF3 = { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
 const oneCar = [{ driverFamilyId: 'f1', departureTime: '07:00', girlIds: ['f1', 'f3'] }];   // a manual change: the asker is in a car
-await testAsync('a child with a request gets an amber dot in the cars and in the request card, with a short legend; no dot without a request', async () => {
+await testAsync('a child with a request gets an amber dot in the cars, with a short legend; no dot without a request', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }, reqF3); S.wrEdit = { day: 'Do', override: false };
   S.deviations.Do_heen = { day: 'Do', direction: 'heen', weekKey: S.currentWeekKey, cars: oneCar };
   let html = rooster();
-  assert.match(html, /class="chip[^"]*chip--req/); assert.match(html, /class="reqDot"/); assert.match(text(html), /Heeft een aanvraag voor deze dag/);
+  assert.match(html, /class="chip[^"]*chip--req/); assert.match(text(html), /Heeft een aanvraag voor deze dag/);
   assert.equal((html.match(/chip--req/g) || []).length, 1);   // only the asker, not the driver
   await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };
   html = rooster(); assert.doesNotMatch(html, /chip--req|reqDot/);

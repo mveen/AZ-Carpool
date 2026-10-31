@@ -12,7 +12,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, useFakeDb, withFakeNow, NOW, sampleDbSeed, sampleParentState, sampleGroups, assertNoUnusedImports } from './test-support.js';
 import { adviceForDay, planOf, syncWeekRequests, withManual } from '../weekrooster-data.js';
-import { essenceHtml, essenceOf } from '../ui-weekrooster-essence.js';
+import { essenceHtml, essenceOf, requestRowsHtml } from '../ui-weekrooster-essence.js';
 
 installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -30,6 +30,15 @@ await testAsync('the advice in a few words: who rides with whom, in the tints of
     assert.match(html, /^<div class="essRows entryCard__more">/); assert.match(html, /essRow essRow--heen/); assert.doesNotMatch(html, /essRow--terug/);   // only heen changes on this day
     assert.match(s, /^Heen Lois rijdt mee met Jan Jansen \(07:30\)$/); assert.match(html, /<b>Lois<\/b>/);
     assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
+  });
+});
+await testAsync('the requests as they are asked: per direction, a girl per line, "aanwezig om" / "klaar om", the old time struck through, no icons', async () => {
+  await setup();
+  withFakeNow(NOW, () => {
+    const html = requestRowsHtml(adviceForDay('Do')), s = text(html);
+    assert.match(html, /^<div class="essRows essRows--req">/); assert.match(html, /essRow essRow--heen/); assert.doesNotMatch(html, /essRow--terug/);   // Lois only asks another time for heen
+    assert.match(s, /^Heen Lois aanwezig om 09:00 08:30$/); assert.match(html, /<s>08:30<\/s>/); assert.match(html, /<b>Lois<\/b>/);
+    assert.doesNotMatch(html, /<svg|style=|rijdt mee/);   // the tint says heen or terug; "rijdt mee" is not what is asked
   });
 });
 await testAsync('a car that leaves at another time, several girls who come, and a car that stops driving', async () => {

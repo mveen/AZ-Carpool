@@ -436,7 +436,7 @@ test('the agenda update text names Proton and points to Mijn week', () => {
   assert.match(t('agenda.bijwerken'), /Google of Proton/); assert.match(t('agenda.bijwerken'), /Mijn week/);
 });
 test('the Advies flow: the entry card and the three step titles are in the text file, and the fixed claims about advice/alternative are gone', () => {
-  assert.equal(t('weekrooster.entry.go'), 'Regel dit'); assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 3, p2: 'donderdag' }), '3 aanvragen voor donderdag');
+  assert.equal(t('weekrooster.entry.go'), 'Verzoeken verwerken'); assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 3, p2: 'donderdag' }), '3 aanvragen voor donderdag');
   assert.equal(t('weekrooster.flow.titleRequests', { p1: 'morgen' }), 'Wijzigingen voor morgen'); assert.equal(t('weekrooster.flow.titlePlan', { p1: 'donderdag' }), 'Voorstel voor donderdag'); assert.equal(t('weekrooster.flow.titleCheck'), 'Klaar om door te voeren?');
   assert.equal(t('weekrooster.flow.notYet'), 'Nog niets doorgevoerd. Je bevestigt op de volgende stap.');
   assert.equal(t('weekrooster.flow.segAdviceSub'), 'weekrooster.flow.segAdviceSub');   // the subtitle of Advies/Alternatief is worked out per variant now

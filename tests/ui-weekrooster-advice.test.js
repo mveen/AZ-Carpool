@@ -161,7 +161,7 @@ await testAsync('nothing to advise (no open request): the view closes itself; no
 await testAsync('the Rooster: one entry card opens the flow as its own screen on top; closing removes it again', async () => {
   await setup(); S.wrAdvice = null;
   withFakeNow(NOW, () => renderSchedule()); const h = dom.html('tab-schedule');
-  assert.match(h, /id="wrAlert"/); assert.match(h, /data-wradvice="Do"/); assert.doesNotMatch(h, /data-wredit="Do"/); assert.doesNotMatch(h, /id="wrAdvice"/); assert.match(text(h), /Regel dit/);
+  assert.match(h, /id="wrAlert"/); assert.match(h, /data-wradvice="Do"/); assert.doesNotMatch(h, /data-wredit="Do"/); assert.doesNotMatch(h, /id="wrAdvice"/); assert.match(text(h), /Verzoeken verwerken/);
   const btn = { dataset: { wradvice: 'Do' }, onclick: null };
   wireAdviceEntry({ querySelectorAll: sel => (sel === '[data-wradvice]' ? [btn] : []) });
   withFakeNow(NOW, () => btn.onclick());
