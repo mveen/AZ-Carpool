@@ -6,7 +6,7 @@ import { S } from './state.js';
 import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast } from './ui-common.js';
 import { APP_VERSION } from './constants.js';
 import { weekRangeLabel } from './dates.js';
-import { fam } from './rides.js';
+import { fam, isFlex } from './rides.js';
 import { canSwitchViewFor, isRealCoordinator, myFamilyId, recomputeCanEdit } from './coordinator.js';
 import { startImpersonate, stopImpersonate } from './ui-profile.js';
 import { openHelp } from './ui-help.js';
@@ -83,9 +83,9 @@ export function updateHeader(tab){
 // The list behind the switch button: every parent (name first, daughter below), plus "Terug naar mezelf" while a test view runs.
 export function switchParentRows(){
   return Object.keys(S.families || {})
-    .map(id => ({ id, parent: (S.families[id].parentName || '').trim(), girl: (S.families[id].girlName || '').trim() }))
+    .map(id => ({ id, parent: (S.families[id].parentName || '').trim(), girl: (S.families[id].girlName || '').trim(), flex: isFlex(S.families[id]) }))
     .filter(r => r.parent || r.girl)
-    .sort((a, b) => (a.parent || a.girl).localeCompare(b.parent || b.girl, 'nl'));
+    .sort((a, b) => (a.flex - b.flex) || (a.parent || a.girl).localeCompare(b.parent || b.girl, 'nl'));   // Flex families last: rarely needed
 }
 
 export function openSwitchParent(){
@@ -94,14 +94,14 @@ export function openSwitchParent(){
   const cur = S.impersonateFamilyId || '';
   const rows = switchParentRows();
   const self = cur ? `<button type="button" class="sheetItem sheetItem--self" data-switch-self="1">${phIcon('arrow-left')}<span class="sheetItem__label">${esc(t('shell.switch_self'))}<br><span class="sub">${esc(t('shell.switch_self_sub'))}</span></span></button>` : '';
-  const item = r => `<button type="button" class="sheetItem${r.id === cur ? ' sheetItem--current' : ''}" data-switch-id="${esc(r.id)}" data-q="${esc((r.parent + ' ' + r.girl).toLowerCase())}"${r.id === cur ? ' aria-current="true"' : ''}>${phIcon('user')}<span class="sheetItem__label">${esc(r.parent || r.girl)}${r.parent && r.girl ? `<br><span class="sub">${esc(t('shell.parent_of', { name: r.girl }))}</span>` : ''}</span>${r.id === cur ? `<span class="tag tag--ok">${esc(t('shell.switch_current'))}</span>` : ''}</button>`;
+  const item = r => `<button type="button" class="sheetItem${r.id === cur ? ' sheetItem--current' : ''}" data-switch-id="${esc(r.id)}" data-q="${esc((r.parent + ' ' + r.girl).toLowerCase())}" data-flex="${r.flex ? '1' : ''}"${r.id === cur ? ' aria-current="true"' : ''}>${phIcon('user')}<span class="sheetItem__label">${esc(r.parent || r.girl)}${r.parent && r.girl ? `<br><span class="sub">${esc(t('shell.parent_of', { name: r.girl }))}</span>` : ''}</span>${r.id === cur ? `<span class="tag tag--ok">${esc(t('shell.switch_current'))}</span>` : ''}</button>`;
   const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
   ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
     <div class="sheet__handle"></div>
     <h3 id="sheetTitle">${esc(t('shell.switch_title'))}</h3><p class="sheet__sub">${esc(t('shell.switch_sub'))}</p>
     ${self}
     <input type="search" id="switchSearch" class="switchSearch" placeholder="${esc(t('shell.switch_search'))}" aria-label="${esc(t('shell.switch_search_label'))}" autocomplete="off">
-    <div id="switchList">${rows.map(item).join('')}</div>
+    <div id="switchList">${rows.map((r, i) => (r.flex && !(i > 0 && rows[i - 1].flex) ? `<p class="sheet__label" id="switchFlexLabel">${esc(t('shell.switch_flex'))}</p>` : '') + item(r)).join('')}</div>
     <p class="sheet__sub" id="switchNone" hidden>${esc(t('shell.switch_none'))}</p>
   </div>`;
   document.body.appendChild(ov);
@@ -115,6 +115,7 @@ export function openSwitchParent(){
   if(search) search.oninput = () => {
     const q = String(search.value || '').trim().toLowerCase(); let shown = 0;
     ov.querySelectorAll('[data-switch-id]').forEach(b => { const ok = !q || String(b.dataset.q || '').includes(q); b.hidden = !ok; if(ok) shown++; });
+    const fl = ov.querySelector('#switchFlexLabel'); if(fl) fl.hidden = !Array.from(ov.querySelectorAll('[data-switch-id]')).some(b => b.dataset.flex && !b.hidden);
     const none = ov.querySelector('#switchNone'); if(none) none.hidden = shown > 0;
   };
 }

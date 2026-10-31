@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { adjustMainPadding, esc, hapticTap, installCardHtml, phIcon, showToast, twoStepConfirm, updateStatusLine, wireInstallCard } from './ui-common.js';
 import { fam } from './rides.js';
-import { cleanCode, isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
+import { cleanCode, isRealCoordinator, isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { logError } from './error-log.js';
 import { clearAutoReset, resetSession, shouldAutoReset } from './session-reset.js';
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
@@ -34,7 +34,7 @@ function currentTab(){ const on=document.querySelector('nav button.active'); ret
 // Starts (or switches) the test view as another parent. The user stays on the tab they were on; only Beheer is
 // not shown to a parent, so from Beheer the view moves to Mijn week.
 export function startImpersonate(familyId){
-  if(!familyId) return;
+  if(!familyId || !isRealCoordinator()) return;   // never for a parent: only the real coordinator may start a test view
   const tab=currentTab();
   S.impersonateFamilyId=familyId;
   recomputeCanEdit();

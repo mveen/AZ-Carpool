@@ -526,6 +526,7 @@ export default {
   "shell.switch_self": "Terug naar mezelf",
   "shell.switch_self_sub": "Stop de testweergave",
   "shell.switch_current": "Nu actief",
+  "shell.switch_flex": "Flexrijders",
   "shell.switch_none": "Geen ouder gevonden.",
   "shell.theme": "Thema",
   "shell.theme_light": "Licht",

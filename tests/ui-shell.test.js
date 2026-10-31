@@ -8,6 +8,7 @@ function test(name, fn) {
 }
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, useFakeDb } from './test-support.js';
 import { S } from '../state.js';
+import { startImpersonate } from '../ui-profile.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
 import { contextLine, initials, updateHeader, openSwitchParent, switchParentRows, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
@@ -308,6 +309,43 @@ test('tapping a parent starts the test view; tapping the active one changes noth
   assert.equal(S.impersonateFamilyId, 'f3');
   m = mount(); openSwitchParent(); m.self().onclick();
   assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true);
+});
+
+test('Flex families come last in the list under their own label, the rest stays sorted', () => {
+  sampleCoordinatorState(); S.families.f1.familyType = 'flex';
+  const rows = switchParentRows();
+  assert.equal(rows[rows.length - 1].id, 'f1'); assert.deepEqual(rows.map(r => r.flex), rows.map(r => r.flex).slice().sort((a, b) => a - b));
+  const { ov } = installSheet(); openSwitchParent();
+  const at = k => ov.html.indexOf(k);
+  assert.ok(at('Flexrijders') > at('data-switch-id="f2"') && at('Flexrijders') > at('data-switch-id="f3"') && at('Flexrijders') < at('data-switch-id="f1"'));
+  assert.equal((ov.html.match(/Flexrijders/g) || []).length, 1);
+  sampleCoordinatorState(); const again = installSheet(); openSwitchParent(); assert.doesNotMatch(again.ov.html, /Flexrijders/, 'no label without Flex families');
+});
+
+console.log('\n=== the switch is never offered to a parent ===');
+const NON_COORDINATORS = {
+  'a linked parent': () => sampleParentState(),
+  'a parent of another family than the coordinator family': () => sampleParentState({ links: { me1: { familyId: 'f2' } }, me: 'me1' }),
+  'a linked parent while the coordinator family is another one': () => sampleParentState({ coordinatorConfig: { uid: 'someoneElse', familyId: 'f1' }, links: { parent: { familyId: 'f2' } }, me: 'parent' }),
+  'a visitor without a family': () => resetState({ me: 'x', appReady: true, coordinatorConfig: { uid: 'coord', familyId: 'f1' }, links: {}, families: sampleCoordinatorState().families }),
+  'nobody signed in': () => resetState({ me: null, coordinatorConfig: { uid: 'coord' }, families: sampleCoordinatorState().families }),
+  'before the coordinator settings have loaded': () => resetState({ me: 'coord', coordinatorConfig: null, links: {}, families: sampleCoordinatorState().families }),
+};
+for (const [who, setup] of Object.entries(NON_COORDINATORS)) {
+  test(`${who}: no button, no list, no test view`, () => {
+    setup(); dom.el('switchParentBtn').hidden = false;   // even if the button was visible before
+    updateHeader('myweek'); assert.equal(dom.el('switchParentBtn').hidden, true, 'button hidden');
+    const { ov } = installSheet(); openSwitchParent(); assert.equal(ov.mounted, false, 'list does not open');
+    S.impersonateFamilyId = null; startImpersonate('f2'); assert.equal(S.impersonateFamilyId, null, 'startImpersonate refuses');
+  });
+}
+test('the button is hidden in the page itself until the app unhides it', () => {
+  const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+  assert.match(html, /id="switchParentBtn"[^>]*\shidden[\s>]/);
+});
+test('a coordinator whose family is the coordinator family (second phone) is a coordinator, so the button shows', () => {
+  sampleParentState({ coordinatorConfig: { uid: 'other', familyId: 'f2' }, links: { parent: { familyId: 'f2' } }, me: 'parent' });
+  updateHeader('myweek'); assert.equal(dom.el('switchParentBtn').hidden, false);
 });
 
 import { assertNoUnusedImports } from './test-support.js';
