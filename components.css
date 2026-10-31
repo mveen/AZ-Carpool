@@ -345,7 +345,11 @@ a.btn{text-decoration:none}
 .sheetOverlay,.helpOverlay{position:fixed;inset:0;background:var(--scrim);z-index:60;display:flex;align-items:flex-end;justify-content:center}
 .sheet,.helpPanel{background:var(--surface-card);color:var(--text-1);width:100%;max-width:var(--content-max);border-radius:var(--radius-sheet) var(--radius-sheet) 0 0;
   padding:var(--space-4) var(--page-gutter) calc(var(--space-7) + var(--sab));box-shadow:var(--shadow-float)}
-.sheet__handle{width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto var(--space-5)}
+/* The handle is a big touch zone (full width, tall) that closes the sheet when dragged down; the visible bar is its ::before. */
+.sheet__handle{margin:calc(var(--space-4) * -1) calc(var(--page-gutter) * -1) 0;padding:var(--space-4) 0 var(--space-5);touch-action:none;cursor:grab}
+.sheet__handle::before{content:"";display:block;width:40px;height:5px;border-radius:3px;background:var(--line);margin:0 auto}
+.sheet--dragging{transition:none}
+.sheet--snap{transition:transform .2s ease}
 .sheet h3{margin:0 0 var(--space-1);font:var(--type-section)}
 .sheet__sub{margin:0;font:var(--type-caption);color:var(--text-muted)}
 .sheet__label{margin:var(--space-6) 0 var(--space-3);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}

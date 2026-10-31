@@ -16,7 +16,7 @@ import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState }
 import { S } from '../state.js';
 import {
   foldHtml, phIcon, openSheet, closeSheet, hapticTap, esc, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
-  isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape,
+  isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape, sheetDragStart, sheetDragMove, sheetDragEnd,
 } from '../ui-common.js';
 
 const dom = installFakeDom();
@@ -184,6 +184,28 @@ test('a toast stays 3.8 seconds (design v2), also with an action', () => {
   globalThis.setTimeout = (fn, ms) => { seen.push(ms); return 0; };
   try { showToast('Opgeslagen'); showToast('Weg', { action: { label: 'Ongedaan', run() {} } }); } finally { globalThis.setTimeout = real; }
   assert.deepEqual(seen, [3800, 3800]);
+});
+
+console.log('\n=== dragging the handle closes a sheet ===');
+const fakeSheet = () => { const cl = new Set(), st = {}; let gone = false; const ov = { remove() { gone = true; } };
+  const panel = { classList: { add: c => cl.add(c), remove: c => cl.delete(c) }, style: st, closest: sel => (/overlay/i.test(sel) ? ov : null) };
+  const handle = { closest: sel => (sel === '.sheet__handle' ? handle : panel), setPointerCapture() {} };
+  return { cl, st, handle, isGone: () => gone }; };
+test('a drag of more than 80 px down on the handle closes the sheet; a short one springs back; elsewhere nothing happens', () => {
+  const realNow = Date.now; let clock = 0; Date.now = () => (clock += 1000);   // slow drags: no flick
+  try {
+  const a = fakeSheet(); assert.equal(sheetDragStart({ target: a.handle, clientY: 100, pointerId: 1 }), true);
+  sheetDragMove({ clientY: 140 }); assert.equal(a.st.transform, 'translateY(40px)'); sheetDragEnd();
+  assert.equal(a.isGone(), false); assert.equal(a.st.transform, ''); assert.ok(a.cl.has('sheet--snap'));
+  const b = fakeSheet(); sheetDragStart({ target: b.handle, clientY: 100 }); sheetDragMove({ clientY: 230 }); sheetDragEnd();
+  assert.equal(b.isGone(), true, 'closed');
+  const c = fakeSheet(); sheetDragStart({ target: c.handle, clientY: 100 }); sheetDragMove({ clientY: 60 }); assert.equal(c.st.transform, 'translateY(0px)', 'never above its place'); sheetDragEnd(); assert.equal(c.isGone(), false);
+  assert.equal(sheetDragStart({ target: { closest: () => null }, clientY: 1 }), false); assert.equal(sheetDragMove({ clientY: 5 }), false); assert.equal(sheetDragEnd(), false);
+  } finally { Date.now = realNow; }
+});
+test('a quick flick of 30 px closes the sheet too', () => {
+  const realNow = Date.now; let clock = 0; Date.now = () => (clock += 10);
+  try { const a = fakeSheet(); sheetDragStart({ target: a.handle, clientY: 100 }); sheetDragMove({ clientY: 130 }); sheetDragEnd(); assert.equal(a.isGone(), true); } finally { Date.now = realNow; }
 });
 
 console.log('\n=== Escape closes sheets and help ===');
