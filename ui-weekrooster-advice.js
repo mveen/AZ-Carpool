@@ -10,7 +10,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { closeSheet, esc, hapticTap, locationsCfg, phIcon, showToast } from './ui-common.js';
-import { driverNameHtml, fam, girlName, seats, sortGirlIds } from './rides.js';
+import { driverNameHtml, fam, girlName, isFlex, seats, sortGirlIds } from './rides.js';
 import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { ATC_NAME, FREE_TEXT_MAX, arrivalLabel, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
 import { wireWhatsAppButton } from './ui-deviation.js';
@@ -18,11 +18,12 @@ import { buildConclusieMessage } from './message-texts.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { evaluateCars } from './weekrooster-impact.js';
-import { acceptDay, adviceForDay, planOf, planStats } from './weekrooster-data.js';
-import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace } from './weekrooster-plan.js';
+import { acceptDay, adviceForDay, planOf, planStats, withManual } from './weekrooster-data.js';
+import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace, withoutGirl } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
 
 const dayLabel = dayName;
+const adviceOf = f => withManual(adviceForDay(f.day), f.edits);   // the advice with the girls taken out / added by hand worked in
 const parent = id => esc(fam(id).parentName || '?');
 const DIRS = ['heen', 'terug'];
 const STEPS = ['requests', 'plan', 'check'];
@@ -211,7 +212,8 @@ const waitSumHtml = (adv, plan, stats) => {
 
 function sceneHtml(dir, adv, plan, stats, editDir) {
   const d = adv.directions[dir], p = plan.dirs[dir], ev = stats.perDir[dir], now = d.cars.filter(c => (c.girlIds || []).length);
-  const askedBy = new Map(d.ctx.requests.map(r => [r.familyId, r]));
+  const askedBy = new Map(d.ctx.requests.filter(r => !r.manual).map(r => [r.familyId, r]));
+  const off = d.ctx.requests.filter(r => r.manual && !r.rides).map(r => r.familyId);
   const changed = [], plain = [];
   p.cars.forEach(c => {
     const old = now.find(o => o.driverFamilyId === c.driverFamilyId);
@@ -220,7 +222,7 @@ function sceneHtml(dir, adv, plan, stats, editDir) {
   });
   const gone = now.filter(o => !p.cars.some(c => c.driverFamilyId === o.driverFamilyId && c.girlIds.length));
   const riding = new Set(p.cars.flatMap(c => c.girlIds));
-  const notRiding = sortGirlIds([...new Set([...askedBy.keys(), ...ev.moved])].filter(id => !riding.has(id)));
+  const notRiding = sortGirlIds([...new Set([...askedBy.keys(), ...off, ...ev.moved])].filter(id => !riding.has(id)));
   const heen = dir === 'heen';
   const names = ev.familiesChanged.map(rawParent).map(esc);
   const quiet = changed.every(x => !x.diff) && !gone.length && !notRiding.length;
@@ -298,7 +300,7 @@ export function scheduleAdviceHtml() {
   if (!weekroosterActive()) return '';
   if (S.wrDone) return doneHtml(S.wrDone);
   const f = flowState(); if (!f) return '';
-  const adv = adviceForDay(f.day);
+  const adv = adviceOf(f);
   if (!Object.keys(adv.directions).length) { S.wrAdvice = null; return ''; }   // nothing (left) to advise: somebody decided, or the request ran out
   const plan = planOf(adv, f.variant, f.edits), stats = planStats(adv, plan);
   const step = f.step === 'check' ? checkStep(adv, f, plan, stats) : f.step === 'plan' ? planStep(adv, f, plan, stats) : requestsStep(adv, f, plan, stats);
@@ -366,11 +368,16 @@ function overlay(inner) {
 }
 const redraw = () => renderSchedule();
 const currentCars = (adv, f, dir) => planOf(adv, f.variant, f.edits).dirs[dir].cars;
-const setCars = (f, dir, cars) => { f.edits = { ...f.edits, [dir]: cars }; };
+// The cars of one direction by hand; the lists of girls taken out / added follow (a girl in a car is not "out"; an added girl who left again is not "added").
+function setCars(f, dir, cars) {
+  const inCar = id => cars.some(c => c.girlIds.includes(id));
+  const off = ((f.edits.off || {})[dir] || []).filter(id => !inCar(id)), add = Object.fromEntries(Object.entries((f.edits.add || {})[dir] || {}).filter(([id]) => inCar(id)));
+  f.edits = { ...f.edits, [dir]: cars, off: { ...f.edits.off, [dir]: off }, add: { ...f.edits.add, [dir]: add } };
+}
 
 // A girl to another car: the cars of this shift, with the time, the free seats and what it means for her.
 function openGirlSheet(dir, id) {
-  const f = flowState(), adv = adviceForDay(f.day), d = adv.directions[dir], cars = currentCars(adv, f, dir);
+  const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
   const here = cars.find(c => c.girlIds.includes(id)), ev0 = evaluateCars(d.ctx, cars), tm = timeAfter(d.ctx, id);
   const items = cars.map(c => {
     const free = seats(fam(c.driverFamilyId)) - c.girlIds.length + (c.girlIds.includes(id) ? 1 : 0);
@@ -391,13 +398,32 @@ function openGirlSheet(dir, id) {
       onClick: () => { if (c === here || free <= 0) return; setCars(f, dir, withGirlIn(d.ctx, cars, id, c.driverFamilyId)); redraw(); } };
   });
   const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.pickTitle', { p1: girlName(id) }))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.pickSubTime', { p1: tm || '--:--' }))}</p>
-    ${items.map((it, i) => `<button type="button" class="sheetItem${it.muted ? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${phIcon(it.icon)}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${[it.sub, ...it.more].filter(Boolean).join('</span><span class="sheetItem__more">')}</span></span></button>`).join('')}`);
+    ${items.map((it, i) => `<button type="button" class="sheetItem${it.muted ? ' sheetItem--muted' : ''}" data-sheetidx="${i}">${phIcon(it.icon)}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${[it.sub, ...it.more].filter(Boolean).join('</span><span class="sheetItem__more">')}</span></span></button>`).join('')}
+    ${here ? `<button type="button" class="sheetItem sheetItem--remove" data-sheetremove="1">${phIcon('x')}<span class="sheetItem__label">${esc(t('weekrooster.flow.removeItem'))}</span></button>` : ''}`);
   ov.querySelectorAll('[data-sheetidx]').forEach(b => b.onclick = () => { const it = items[+b.dataset.sheetidx]; closeSheet(); it.onClick(); });
+  ov.querySelectorAll('[data-sheetremove]').forEach(b => b.onclick = () => { closeSheet(); askRemove(dir, id); });
+}
+// Out of the car: asks first. She then rides no car in this direction (a car left without girls goes too).
+function askRemove(dir, id) {
+  const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
+  const here = cars.find(c => c.girlIds.includes(id)); if (!here) return;
+  const last = here.girlIds.length === 1;
+  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.removeTitle', { p1: rawGirl(id) }))}</h3>
+    <p class="sheet__sub">${esc(t('weekrooster.flow.removeText', { p1: rawGirl(id), p2: t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort').toLowerCase() }))}${last ? ' ' + esc(t('weekrooster.flow.removeLast', { p1: rawParent(here.driverFamilyId) })) : ''}</p>
+    <div class="sheet__actions"><button type="button" class="btn secondary" id="wrRemoveNo">${esc(t('weekrooster.flow.removeNo'))}</button><button type="button" class="btn" id="wrRemoveYes">${esc(t('weekrooster.flow.removeYes'))}</button></div>`);
+  document.getElementById('wrRemoveNo').onclick = () => { hapticTap(); closeSheet(); };
+  document.getElementById('wrRemoveYes').onclick = () => {
+    hapticTap(); closeSheet();
+    const wasRiding = !!timeAfter(adviceForDay(f.day).directions[dir].ctx, id);   // only a girl who rode before is stored as "does not ride"
+    setCars(f, dir, withoutGirl(d.ctx, cars, id));
+    if (wasRiding) f.edits = { ...f.edits, off: { ...f.edits.off, [dir]: [...new Set([...((f.edits.off || {})[dir] || []), id])] } };
+    redraw();
+  };
 }
 // The sum behind "extra wachten": per direction, per person the waiting now (old times, the cars as they are) against the proposal.
 // Any tap closes it (no button needed).
 function openWaitSheet() {
-  const f = flowState(), adv = adviceForDay(f.day), plan = planOf(adv, f.variant, f.edits);
+  const f = flowState(), adv = adviceOf(f), plan = planOf(adv, f.variant, f.edits);
   let extra = 0;
   const groups = Object.keys(plan.dirs).map(dir => {
     const d = adv.directions[dir], ev = evaluateCars(d.ctx, plan.dirs[dir].cars);
@@ -414,30 +440,57 @@ function openWaitSheet() {
     <p class="waitCalc__final"><b>${esc(t('weekrooster.flow.calcFinal', { p1: extra }))}</b></p><p class="sheet__sub">${esc(t('weekrooster.flow.calcClose'))}</p>`);
   ov.addEventListener('click', closeSheet);   // every tap closes
 }
-// Add a passenger to this car: the girls of the other cars (and those not placed), with her time here and what it costs in waiting.
-function openAddSheet(dir, driverId) {
-  const f = flowState(), adv = adviceForDay(f.day), d = adv.directions[dir], cars = currentCars(adv, f, dir);
+// Add a passenger to this car: the girls of the other cars and who is not placed. "Ook speelsters zonder rit" (one more tap) lists the ones with no ride this way
+// (flex players, a girl who is not on the standard rooster); for them the time is asked first.
+function openAddSheet(dir, driverId, more) {
+  const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
   const target = cars.find(c => c.driverFamilyId === driverId); if (!target) return;
   const ev0 = evaluateCars(d.ctx, cars), riding = new Set(cars.flatMap(c => c.girlIds));
-  const askedBy = new Map(d.ctx.requests.map(r => [r.familyId, r]));
-  const loose = [...new Set([...askedBy.keys(), ...ev0.moved])].filter(id => !riding.has(id));
+  const askedBy = new Map(d.ctx.requests.filter(r => !r.manual).map(r => [r.familyId, r]));
+  const out = d.ctx.requests.filter(r => r.manual && !r.rides).map(r => r.familyId);
+  const loose = [...new Set([...askedBy.keys(), ...out, ...ev0.moved])].filter(id => !riding.has(id));
   const ids = sortGirlIds([...cars.filter(c => c !== target).flatMap(c => c.girlIds), ...loose]);
-  const items = ids.map(id => {
+  const rest = sortGirlIds(Object.keys(S.families).filter(id => !riding.has(id) && !loose.includes(id) && (fam(id).girlName || fam(id).parentName)));
+  const items = (more ? rest : ids).map(id => {
+    if (more) return { id, label: esc(rawGirl(id) + (isFlex(fam(id)) ? ' · ' + t('flex.chip') : '')), sub: esc(t('weekrooster.flow.addNoRide')) };
     const from = cars.find(c => c.girlIds.includes(id)), next = withGirlIn(d.ctx, [...cars], id, driverId), ev = evaluateCars(d.ctx, next), w = ev.waitOf[id];
     const nextCar = next.find(x => x.driverFamilyId === driverId), nextDep = (nextCar && nextCar.departureTime) || target.departureTime || '--:--';
     const bits = [from ? t('weekrooster.flow.addNow', { p1: fam(from.driverFamilyId).parentName || '?', p2: timeAfter(d.ctx, id) || '--:--' }) : t('weekrooster.flow.addNone'), w < 0 ? t('weekrooster.flow.pickLate') : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : ''];
     if (nextDep !== (target.departureTime || '--:--')) bits.push(t('weekrooster.flow.pickDepChange', { p1: nextDep, p2: rawGirl(id) }));
     return { id, label: esc(rawGirl(id)), sub: esc(bits.filter(Boolean).join(' · ')) };
   });
-  const body = items.length ? items.map((it, i) => `<button type="button" class="sheetItem" data-sheetidx="${i}">${phIcon('arrows-left-right')}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${it.sub}</span></span></button>`).join('') : `<p class="sheet__sub">${esc(t('weekrooster.flow.addEmpty'))}</p>`;
-  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.addTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.addSub', { p1: fam(driverId).parentName || '?' }))}</p>${body}`);
-  ov.querySelectorAll('[data-sheetidx]').forEach(b => b.onclick = () => { const it = items[+b.dataset.sheetidx]; closeSheet(); setCars(f, dir, withGirlIn(d.ctx, cars, it.id, driverId)); redraw(); });
+  const list = items.length ? items.map((it, i) => `<button type="button" class="sheetItem" data-sheetidx="${i}">${phIcon('arrows-left-right')}<span class="sheetItem__label">${it.label}<span class="sheetItem__more">${it.sub}</span></span></button>`).join('') : `<p class="sheet__sub">${esc(t('weekrooster.flow.addEmpty'))}</p>`;
+  const foot = more ? '' : `<button type="button" class="btn secondary sheet__more" data-sheetmore="1">${esc(t('weekrooster.flow.addMore'))}</button>`;
+  const ov = overlay(`<h3 id="sheetTitle">${esc(t(more ? 'weekrooster.flow.addMoreTitle' : 'weekrooster.flow.addTitle'))}</h3><p class="sheet__sub">${esc(t('weekrooster.flow.addSub', { p1: fam(driverId).parentName || '?' }))}</p>${list}${foot}`);
+  ov.querySelectorAll('[data-sheetmore]').forEach(b => b.onclick = () => { closeSheet(); openAddSheet(dir, driverId, true); });
+  ov.querySelectorAll('[data-sheetidx]').forEach(b => b.onclick = () => {
+    const it = items[+b.dataset.sheetidx]; closeSheet();
+    if (!more) { setCars(f, dir, withGirlIn(d.ctx, cars, it.id, driverId)); redraw(); return; }
+    askTime(dir, driverId, it.id);
+  });
+}
+// A girl without a ride this way: her time first (heen: when she must be there; terug: when she is ready), then she joins the car.
+function askTime(dir, driverId, id) {
+  const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
+  const target = cars.find(c => c.driverFamilyId === driverId); if (!target) return;
+  const guess = (target.girlIds.map(g => timeAfter(d.ctx, g)).filter(Boolean).sort()[0]) || '';
+  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.timeTitle', { p1: rawGirl(id) }))}</h3>
+    <label class="devField"><span>${esc(t(dir === 'heen' ? 'weekrooster.flow.timeHeen' : 'weekrooster.flow.timeTerug'))}</span><input type="time" class="devInput timeBig" id="wrAddTime" value="${esc(guess)}"></label>
+    <div class="sheet__actions"><button type="button" class="btn secondary" id="wrTimeNo">${esc(t('weekrooster.flow.removeNo'))}</button><button type="button" class="btn" id="wrTimeYes">${esc(t('weekrooster.flow.timeAdd'))}</button></div>`);
+  document.getElementById('wrTimeNo').onclick = () => { hapticTap(); closeSheet(); };
+  document.getElementById('wrTimeYes').onclick = () => {
+    const tm = (document.getElementById('wrAddTime') || {}).value || ''; if (!tm) return;
+    hapticTap(); closeSheet();
+    f.edits = { ...f.edits, add: { ...f.edits.add, [dir]: { ...((f.edits.add || {})[dir] || {}), [id]: tm } } };
+    const next = withManual(adviceForDay(f.day), f.edits).directions[dir].ctx;
+    setCars(f, dir, withGirlIn(next, cars, id, driverId)); redraw();
+  };
 }
 
 // The fields inside the car cards (Aanpassen): every change is worked into the plan at once and the screen is drawn again.
 function wireEdit(box) {
   const f = flowState(); if (!f) return;
-  const adv = adviceForDay(f.day);
+  const adv = adviceOf(f);
   const apply = (dir, fn) => { const cars = currentCars(adv, f, dir); setCars(f, dir, fn(adv.directions[dir].ctx, cars)); redraw(); };
   const parts = el => el.dataset.key.split('|');
   box.querySelectorAll('[data-adj]').forEach(el => {

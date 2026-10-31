@@ -246,6 +246,34 @@ await testAsync('+ Passagier: a sheet with the girls of the other cars; the choi
   pickItem(lastSheet.innerHTML.split('data-sheetidx').slice(1).findIndex(x => /Lois/.test(x)));
   assert.deepEqual(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f2').girlIds.slice().sort(), ['f2', 'f4', 'f5']);
 });
+await testAsync('a passenger out of the car: the sheet has "Uit deze auto halen", it asks first, "Nee" changes nothing, "Ja" takes her out and the numbers follow', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
+  girlBtn(wired(view()), 'f5').onclick();
+  assert.match(text(lastSheet.innerHTML), /Uit deze auto halen/); assert.match(lastSheet.innerHTML, /data-sheetremove="1"/);
+  lastSheet.querySelectorAll('[data-sheetremove]')[0].onclick();
+  assert.match(text(lastSheet.innerHTML), /Lois uit de auto halen\?/); assert.match(text(lastSheet.innerHTML), /Lois rijdt dan niet mee \(heen\) en zit in geen enkele auto\./);
+  dom.doc.getElementById('wrRemoveNo').onclick(); assert.deepEqual(S.wrAdvice.edits, {});   // nothing changed without the yes
+  girlBtn(wired(view()), 'f5').onclick(); lastSheet.querySelectorAll('[data-sheetremove]')[0].onclick(); dom.doc.getElementById('wrRemoveYes').onclick();
+  assert.deepEqual(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f1').girlIds, ['f1', 'f3']); assert.deepEqual(S.wrAdvice.edits.off.heen, ['f5']);
+  const s = text(view()); assert.match(s, /Lois Rijdt niet mee/); assert.match(s, /Anouk, Eline/);
+  S.wrAdvice.step = 'check'; assert.doesNotMatch(text(view()), /Iemand heeft geen auto/);   // on purpose: not a problem
+});
+await testAsync('+ Passagier: "Ook speelsters zonder rit tonen" lists flex players and others with no ride; her time is asked, then she joins', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan', editDir: 'heen' };
+  S.families.f7 = { ...S.families.f5, parentName: 'Fleur Flex', girlName: 'Fenna', familyType: 'flex', schedule: {} };
+  wired(view()).querySelectorAll('[data-wradd]').find(b => b.dataset.wradd === 'heen|f2').onclick();
+  assert.doesNotMatch(text(lastSheet.innerHTML), /Fenna/); assert.match(text(lastSheet.innerHTML), /Ook speelsters zonder rit tonen/);   // hidden by default
+  lastSheet.querySelectorAll('[data-sheetmore]')[0].onclick();
+  const list = text(lastSheet.innerHTML); assert.match(list, /Speelsters zonder rit/); assert.match(list, /Fenna · flex Geen rit in deze richting/); assert.match(list, /Saar Geen rit/);
+  const idx = lastSheet.innerHTML.split('data-sheetidx').slice(1).findIndex(x => /Fenna/.test(x)); assert.ok(idx >= 0);
+  pickItem(idx);
+  assert.match(text(lastSheet.innerHTML), /Hoe laat rijdt Fenna mee\?/); assert.match(text(lastSheet.innerHTML), /Moet er zijn om/);
+  dom.doc.getElementById('wrAddTime').value = '10:00'; dom.doc.getElementById('wrTimeYes').onclick();
+  assert.ok(S.wrAdvice.edits.heen.find(c => c.driverFamilyId === 'f2').girlIds.includes('f7')); assert.deepEqual(S.wrAdvice.edits.add.heen, { f7: '10:00' });
+  const s = text(view()); assert.match(s, /Fenna 10:00/); assert.doesNotMatch(s, /Fenna vroeg/);
+  girlBtn(wired(view()), 'f7').onclick(); lastSheet.querySelectorAll('[data-sheetremove]')[0].onclick(); dom.doc.getElementById('wrRemoveYes').onclick();
+  assert.deepEqual(S.wrAdvice.edits.add.heen, {}); assert.deepEqual(S.wrAdvice.edits.off.heen, []);   // she never rode: nothing is stored about her
+});
 await testAsync('the word "scène" and "meisje" are not in the texts of the flow', async () => {
   const fs = await import('node:fs'); const src = fs.readFileSync(new URL('../texts-nl.js', import.meta.url), 'utf8');
   const lines = src.split('\n').filter(l => l.includes('weekrooster.flow.'));

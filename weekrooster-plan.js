@@ -78,5 +78,12 @@ export function unplacedIn(ctx, cars) {
   return all.filter(id => timeAfter(ctx, id) && !placed.has(id));
 }
 
+// A girl out of her car (she does not ride this shift): the car's departure is calculated again; a car left without girls disappears.
+export function withoutGirl(ctx, cars, girlId) {
+  return cars
+    .map(c => (c.girlIds.includes(girlId) ? refresh(ctx, { ...c, girlIds: c.girlIds.filter(x => x !== girlId) }) : c))
+    .filter(c => c.girlIds.length);
+}
+
 // A car list without the cars that have nobody in them (they are not stored).
 export const withoutEmptyCars = cars => cars.filter(c => c.girlIds.length);

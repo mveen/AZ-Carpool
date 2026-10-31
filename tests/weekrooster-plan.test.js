@@ -7,7 +7,7 @@ function test(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { assertNoUnusedImports } from './test-support.js';
-import { timeAfter, departureFor, withGirlIn, withDeparture, withDriver, withPlace, withDestination, withNewCar, unplacedIn, withoutEmptyCars } from '../weekrooster-plan.js';
+import { timeAfter, departureFor, withGirlIn, withDeparture, withDriver, withPlace, withDestination, withNewCar, withoutGirl, unplacedIn, withoutEmptyCars } from '../weekrooster-plan.js';
 
 const times = { a: '08:00', b: '09:00', c: '10:00', d: '08:30' };
 const ctx = (direction = 'heen', requests = []) => ({
@@ -73,6 +73,12 @@ test('unplacedIn: girls who ride after the requests and sit in no car', () => {
   const c = ctx('heen', [{ familyId: 'x', rides: true, time: '09:00' }, { familyId: 'b', rides: false, time: '' }]);
   assert.deepEqual(unplacedIn(c, [{ driverFamilyId: 'p', girlIds: ['a'] }, { driverFamilyId: 'q', girlIds: ['c'] }]), ['x']);
   assert.deepEqual(unplacedIn(c, [{ driverFamilyId: 'p', girlIds: ['a', 'x'] }, { driverFamilyId: 'q', girlIds: ['c'] }]), []);
+});
+test('withoutGirl: out of her car, the departure is calculated again; a car left empty disappears; the input is not changed', () => {
+  const c = ctx('heen'), input = cars(), out = withoutGirl(c, input, 'a');
+  assert.deepEqual(out.find(x => x.driverFamilyId === 'p').girlIds, ['b']); assert.equal(out.find(x => x.driverFamilyId === 'p').departureTime, '08:00');   // b rides 09:00, minus 60
+  assert.deepEqual(withoutGirl(c, input, 'c').map(x => x.driverFamilyId), ['p']);
+  assert.deepEqual(input, cars()); assert.deepEqual(withoutGirl(c, input, 'zz'), input);
 });
 test('weekrooster-plan.js imports nothing it does not use', () => assertNoUnusedImports('weekrooster-plan.js'));
 

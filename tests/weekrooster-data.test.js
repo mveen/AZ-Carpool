@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime, ovGirlsFor } from '../rides.js';
-import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, pendingOfDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, releaseNotRidingRequest, currentMarks, planOf, planStats } from '../weekrooster-data.js';
+import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, pendingOfDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, releaseNotRidingRequest, currentMarks, planOf, planStats, withManual } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -406,6 +406,23 @@ await testAsync('acceptDay "best" without edits saves the advice; the older "zui
   await withFakeNowAsync(NOW, async () => {
     assert.equal((await acceptDay('Do', 'best')).ok, true);
     assert.deepEqual(fake.get('deviations/Do_heen').cars.find(c => c.driverFamilyId === 'f1').girlIds.slice().sort(), ['f1', 'f3', 'f5']);
+  });
+});
+await testAsync('planOf + withManual: a girl taken out of a car rides no way (times ""), an added girl keeps her time; the numbers follow', async () => {
+  await asDay(lois, withCars);
+  await withFakeNowAsync(NOW, async () => {
+  const a = adviceForDay('Do'), heen = a.directions.heen.keep.best.cars;
+  const noLois = heen.map(c => ({ ...c, girlIds: c.girlIds.filter(id => id !== 'f5') })).filter(c => c.girlIds.length);
+  const p = planOf(a, 'best', { heen: noLois, off: { heen: ['f5'] } });
+  assert.equal(p.dirs.heen.times.f5, '');
+  const m = withManual(a, { off: { heen: ['f5'] } });
+  assert.deepEqual(m.directions.heen.ctx.requests.find(r => r.familyId === 'f5'), { familyId: 'f5', rides: false, time: '', manual: true });
+  assert.equal(planStats(m, p).problems.some(x => x.key === 'unplaced'), false);   // she was taken out on purpose: not "without a car"
+  assert.equal(planStats(a, planOf(a, 'best', { heen: noLois })).problems.some(x => x.key === 'unplaced'), true);
+  const add = { heen: [...noLois, { driverFamilyId: 'f6', girlIds: ['f7'], departureTime: '' }] };
+  assert.equal(planOf(a, 'best', { ...add, add: { heen: { f7: '10:00' } } }).dirs.heen.times.f7, '10:00');
+  assert.equal(planOf(a, 'best', { heen: noLois, add: { heen: { f7: '10:00' } } }).dirs.heen.times.f7, undefined);   // not in a car: no time stored
+  assert.equal(withManual(a, {}).directions.heen, a.directions.heen);
   });
 });
 console.log(`\n${passed} passed, ${failed} failed`);

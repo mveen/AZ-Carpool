@@ -1053,3 +1053,9 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .carEdit__hint{margin:0;font:var(--type-caption);color:var(--text-muted)}
 .carEdit__reset{align-self:flex-start}
 .carEdit .devInput{min-width:0;text-overflow:ellipsis}
+.scene__head .scene__headText{flex:1}
+.scene__head button.btn.small{margin-left:auto}
+.carEdit .devInput{margin:0;width:100%;min-height:var(--hit-min)}
+.carEdit input.timeBig{width:100%!important}
+.sheet__more{width:100%;margin-top:var(--space-5)}
+.sheetItem--remove{color:var(--accent)}

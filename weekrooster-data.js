@@ -292,9 +292,25 @@ export function planOf(advice, variant, edits) {
     }
     const ed = edits && edits[dir];
     if (base.noSolution && !ed) blocked = true;
-    dirs[dir] = { cars: ed || base.cars || [], times: base.times || {}, edited: !!ed, fallback: !!base.fallback, noSolution: !!base.noSolution && !ed };
+    const cars = ed || base.cars || [], inCar = id => cars.some(c => (c.girlIds || []).includes(id));
+    // By hand: a girl taken out of her car does not ride this way ('' = no ride), a girl added who had no ride gets the time that was chosen.
+    const times = { ...(base.times || {}) };
+    ((edits && edits.off && edits.off[dir]) || []).forEach(id => { if (!inCar(id)) times[id] = ''; });
+    Object.entries((edits && edits.add && edits.add[dir]) || {}).forEach(([id, tm]) => { if (inCar(id)) times[id] = tm; });
+    dirs[dir] = { cars, times, edited: !!ed, fallback: !!base.fallback, noSolution: !!base.noSolution && !ed };
   });
   return { dirs, blocked, fallback };
+}
+
+// The advice with the manual changes worked into what each girl rides: edits.off[dir] = girls taken out of a car (no ride), edits.add[dir] = { girlId: 'HH:MM' }
+// for girls without a ride who were added. They count as (marked) requests, so the numbers of the screen follow. Nothing is saved.
+export function withManual(advice, edits) {
+  const off = (edits && edits.off) || {}, add = (edits && edits.add) || {}, directions = {};
+  Object.entries(advice.directions).forEach(([dir, d]) => {
+    const extra = [...(off[dir] || []).map(id => ({ familyId: id, rides: false, time: '', manual: true })), ...Object.entries(add[dir] || {}).map(([id, time]) => ({ familyId: id, rides: true, time, manual: true }))];
+    directions[dir] = extra.length ? { ...d, ctx: { ...d.ctx, requests: [...(d.ctx.requests || []).filter(r => !extra.some(x => x.familyId === r.familyId)), ...extra] } } : d;
+  });
+  return { ...advice, directions };
 }
 
 // The numbers of a plan: what the requests add in waiting, who rides in another car, which drivers notice it, and what is wrong with it.
