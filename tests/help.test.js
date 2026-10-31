@@ -374,5 +374,12 @@ test('the privacy article says a phone that was not used for 30 days is disconne
   assert.match(all, /30 dagen niet is gebruikt, wordt automatisch losgekoppeld/); assert.match(all, /opnieuw je toegangscode/);
 });
 
+test('the coordinator help explains the switch-parent icon and that the tab stays the same', () => {
+  const a = articles.find(x => x.id === 'beheer-gezinnen');
+  assert.ok(a && a.coordinatorOnly);
+  const body = a.body.join(' ');
+  assert.match(body, /twee personen links van je avatar/); assert.match(body, /Terug naar mezelf/); assert.match(body, /op het tabblad waar je was/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

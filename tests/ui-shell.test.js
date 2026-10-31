@@ -10,7 +10,7 @@ import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState, 
 import { S } from '../state.js';
 import fs from 'node:fs';
 import { APP_VERSION } from '../constants.js';
-import { initials, updateHeader, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
+import { initials, updateHeader, openSwitchParent, switchParentRows, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -50,6 +50,7 @@ function installSheet() {
   const mk = id => (els[id] = { id, onclick: null, focus() {}, addEventListener() {}, classList: { add() {}, remove() {} }, setAttribute() {} });
   const ov = { html: '', mounted: false, removed: false, addEventListener() {}, remove() { ov.removed = true; },
     set innerHTML(v) { ov.html = v; }, get innerHTML() { return ov.html; },
+    querySelectorAll: () => [],
     querySelector: sel => els[sel.slice(1)] || mk(sel.slice(1)) };
   dom.doc.createElement = () => ov; dom.doc.body.appendChild = () => { ov.mounted = true; };
   dom.doc.getElementById = id => (id === 'sheetOverlay' ? (ov.mounted && !ov.removed ? ov : null) : realGetById(id));
@@ -260,6 +261,53 @@ test('initShell measures right away and listens for resize, orientation change, 
   window.addEventListener = ev => { win.push(ev); }; dom.doc.addEventListener = ev => { docEv.push(ev); };
   try { initShell(() => {}, () => {}); } finally { window.addEventListener = origW; dom.doc.addEventListener = origD; }
   assert.deepEqual(win.sort(), ['orientationchange', 'pageshow', 'resize']); assert.ok(docEv.includes('visibilitychange'));
+});
+
+console.log('\n=== wissel van ouder (coordinator) ===');
+test('the switch button shows for the real coordinator only, and stays while a test view runs', () => {
+  sampleParentState(); updateHeader('myweek'); assert.equal(dom.el('switchParentBtn').hidden, true);
+  sampleCoordinatorState(); updateHeader('myweek'); assert.equal(dom.el('switchParentBtn').hidden, false);
+  assert.match(dom.el('switchParentIcon').innerHTML, /<svg[\s\S]*roundBtn__badge[\s\S]*<svg/, 'two people with the swap badge');
+  sampleCoordinatorState({ impersonateFamilyId: 'f2', canEdit: false }); updateHeader('myweek');
+  assert.equal(dom.el('switchParentBtn').hidden, false, 'still there in the test view (Beheer is hidden then)');
+  sampleCoordinatorState({ viewAsParent: true, links: { coord: { familyId: 'f1' } }, canEdit: false }); updateHeader('myweek');
+  assert.equal(dom.el('switchParentBtn').hidden, false, 'also in the Ouder view of the coordinator');
+});
+test('the list is sorted on the parent, with the daughter below', () => {
+  sampleCoordinatorState();
+  const rows = switchParentRows();
+  assert.ok(rows.length >= 2); assert.deepEqual(rows.map(r => r.parent), rows.map(r => r.parent).slice().sort((a, b) => a.localeCompare(b, 'nl')));
+  const { ov } = installSheet(); openSwitchParent(); const s = text(ov.html);
+  assert.match(s, /Testweergave als ouder/); assert.match(s, /Jan Jansen Ouder van Eline/);
+  assert.ok(ov.html.indexOf('Jan Jansen') < ov.html.indexOf('Ouder van Eline'), 'parent first, daughter second');
+});
+test('no "Terug naar mezelf" without a test view; with one it is on top and the active parent is marked', () => {
+  sampleCoordinatorState(); let { ov } = installSheet(); openSwitchParent();
+  assert.doesNotMatch(ov.html, /data-switch-self/); assert.doesNotMatch(ov.html, /aria-current/);
+  sampleCoordinatorState({ impersonateFamilyId: 'f2', canEdit: false }); ({ ov } = installSheet()); openSwitchParent();
+  assert.ok(ov.html.indexOf('data-switch-self') > -1 && ov.html.indexOf('data-switch-self') < ov.html.indexOf('data-switch-id'));
+  assert.equal((ov.html.match(/aria-current="true"/g) || []).length, 1); assert.match(ov.html, /data-switch-id="f2"[^>]*aria-current="true"/);
+});
+test('a parent cannot open the list', () => {
+  sampleParentState(); const { ov } = installSheet(); openSwitchParent(); assert.equal(ov.mounted, false);
+});
+test('tapping a parent starts the test view; tapping the active one changes nothing; Terug naar mezelf stops it', () => {
+  sampleCoordinatorState();
+  const mount = () => {
+    const { ov } = installSheet(); const btns = [];
+    ov.querySelectorAll = sel => { if(btns.length === 0) for(const m of ov.html.matchAll(/data-switch-(id|self)="([^"]*)"/g)) btns.push({ kind: m[1], dataset: m[1] === 'id' ? { switchId: m[2] } : {}, onclick: null }); return sel === '[data-switch-id]' ? btns.filter(b => b.kind === 'id') : []; };
+    ov.querySelector = sel => (sel === '[data-switch-self]' ? (ov.html.includes('data-switch-self') ? (btns.self || (btns.self = { onclick: null })) : null) : { oninput: null });
+    return { ov, btns, self: () => btns.self };
+  };
+  let m = mount(); openSwitchParent();
+  m.btns.find(b => b.dataset.switchId === 'f2').onclick();
+  assert.equal(S.impersonateFamilyId, 'f2'); assert.equal(S.canEdit, false);
+  m = mount(); openSwitchParent(); m.btns.find(b => b.dataset.switchId === 'f3').onclick();
+  assert.equal(S.impersonateFamilyId, 'f3', 'switching goes straight to the next parent');
+  m = mount(); openSwitchParent(); m.btns.find(b => b.dataset.switchId === 'f3').onclick();
+  assert.equal(S.impersonateFamilyId, 'f3');
+  m = mount(); openSwitchParent(); m.self().onclick();
+  assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true);
 });
 
 import { assertNoUnusedImports } from './test-support.js';

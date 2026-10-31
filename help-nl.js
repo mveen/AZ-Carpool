@@ -371,6 +371,7 @@ export default [
       'Beheer heeft vier onderdelen bovenaan: Gezinnen, Planning, Berichten en Koppelingen. Tik op een onderdeel om erheen te springen. Staat er bovenaan "Om te checken", dan mist er iets bij een gezin (code, telefoonnummer) of is een kalender mislukt. Tik erop om er direct heen te gaan.',
       'Onder Gezinnen, bij Gezinnen beheren, voeg je gezinnen toe en pas je gegevens aan namens een ouder. Telefoonnummers en de uitnodigingscode staan onder Wijzig. Meerdere mensen kunnen dezelfde code gebruiken.',
       'Het oog-icoon toont de app zoals die ouder hem ziet. Met Stoppen ga je terug naar jouw eigen weergave.',
+      'Sneller wisselen kan met het icoon van twee personen links van je avatar. Je kiest een ouder uit de lijst en blijft op het tabblad waar je was. Het icoon blijft ook tijdens de testweergave staan, dus je kunt direct naar een volgende ouder gaan. Met Terug naar mezelf (of Stoppen bovenaan) ga je terug naar je eigen weergave, ook dan op hetzelfde tabblad.',
       'Bij Type gezin kies je Vast of Flex.',
       'Onder Koppelingen, bij Back-up gezinnen, maak je een bestand (CSV, te openen in Excel) van alle gezinnen, met tijden, beschikbaarheid, coördinator, autocapaciteit en telefoonnummers. Met Terugzetten uit bestand zet je een eerder gemaakt bestand terug: de gezinnen in het bestand worden overschreven, gezinnen die er niet in staan blijven staan. Het bestand wordt eerst gecontroleerd; bij een fout wordt er niets gewijzigd.',
       'Geef de code en de link alleen door aan de ouder zelf, niet in een openbare groep.',

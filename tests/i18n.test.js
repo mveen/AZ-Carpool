@@ -355,6 +355,11 @@ test('child time titles: Heen = Aanwezig om, Terug = Klaar om', () => {
   assert.equal(t('deviation.aanwezig_om', { time: '07:30' }), 'Aanwezig om 07:30');
   assert.equal(t('deviation.klaar_om', { time: '16:45' }), 'Klaar om 16:45');
 });
+test('the switch-parent button and sheet have their texts', () => {
+  assert.equal(t('shell.switch_title'), 'Testweergave als ouder'); assert.equal(t('shell.switch_self'), 'Terug naar mezelf');
+  assert.match(t('shell.switch_sub'), /blijft op dit tabblad/); assert.equal(t('shell.switch_open'), 'Testweergave als andere ouder');
+  assert.doesNotMatch(t('shell.switch_sub') + t('shell.switch_none'), /,\s+met\b/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
