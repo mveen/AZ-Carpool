@@ -151,7 +151,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 ## Rooster "Deze week" built like Mijn week (2026-10-31)
 
 - One list per day under a day head (`.dayHead`, with the date and the number of rides), in time order. No Heen/Terug titles and no "Aankomst bij…" block titles: each car is a `.rideRow` like in Mijn week, with the route (`.rideRow__route`) on every car, so an ATC arrival shows in the route of that car.
-- The direction is a tint and a mark: `.scene--heen` / `.scene--terug` on the card (the gradient of the Advies flow) and `.dirMark` (`--heen` sun, `--terug` moon) under the time. The mark also leads the fold "Rijdt niet mee · Back-up" and the "Niet ingedeeld" box of its direction. The mark has an aria-label and title with the word.
+- The direction is a tint and a mark: `.scene--heen` / `.scene--terug` on the card (the gradient of the Advies flow) only. No sun/moon marks (removed 2026-10-31). Under the day there is no "Zelf indelen" link for planners; "Toch zelf wijzigen" stays for other parents.
 - Green top edge and green time only on a car YOU drive (`.rideRow--mine`, also on a tinted card). "Jij" in green text in the Chauffeur place, no badge.
 - No yellow "Gewijzigd" label in Mijn week or Rooster: a changed departure says `was 07:30` under the time, and Mijn week keeps its amber line "Vertrektijd gewijzigd…".
 - In Mijn week the passengers of a car you drive carry their own time ("Anouk 08:15, Jahaimy 08:30"), earliest first.

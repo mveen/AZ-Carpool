@@ -365,7 +365,7 @@ test('the Help explains the child time and the trash in Wijzigen', () => {
 test('Rooster help explains the time per girl, "was", the warning and the one fold for Rijdt niet mee and Back-up', () => {
   const r = allText(findArticle('rooster'));
   assert.ok(r.includes('eigen tijd') && r.includes('"was"') && r.includes('gele waarschuwing'));
-  assert.ok(r.includes('op tijd (de vroegste eerst)')); assert.ok(r.includes('link Zelf indelen') && r.includes('onder de dag')); assert.ok(r.includes('Rijdt niet mee en Back-up') && r.includes('Tik erop om de namen te zien'));
+  assert.ok(r.includes('op tijd (de vroegste eerst)')); assert.ok(!r.includes('link Zelf indelen') && !r.includes('een zon')); assert.ok(r.includes('Rijdt niet mee en Back-up') && r.includes('Tik erop om de namen te zien'));
 });
 
 test('the Rooster article says the Rooster opens on Deze week', () => {
@@ -381,7 +381,7 @@ test('the help explains the redesign: day pills and the card you drive in Mijn w
   const body = id => articles.find(x => x.id === id).body.join(' ');
   assert.match(body('mijn-week'), /kies je een dag/); assert.match(body('mijn-week'), /groene rand/); assert.match(body('mijn-week'), /ingeklapt onder de dag/);
   const r = articles.find(x => /Wat staat er in het Rooster/.test(x.title)).body.join(' ');
-  assert.match(r, /blauw/); assert.match(r, /zon op een blauwgrijze kaart/); assert.match(r, /ATC Wijdewormer/);
+  assert.match(r, /blauw/); assert.match(r, /blauwgrijze kaart is een heenrit/); assert.match(r, /ATC Wijdewormer/);
 });
 
 test('the coordinator help explains the switch-parent icon and that the tab stays the same', () => {
@@ -403,7 +403,7 @@ test('help describes "Jij" in green, not a Jij rijdt label', () => {
 
 test('help describes the Rooster list with sun and moon, and no yellow Gewijzigd pill in Mijn week', () => {
   const all = JSON.stringify(articles);
-  assert.doesNotMatch(all, /gele pil|meiden erin|in een eigen blok/); assert.match(all, /Een zon op een blauwgrijze kaart is een heenrit/);
+  assert.doesNotMatch(all, /gele pil|meiden erin|in een eigen blok/); assert.match(all, /Een blauwgrijze kaart is een heenrit/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

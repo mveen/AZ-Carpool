@@ -194,8 +194,7 @@ function restFoldHtml(day,direction,notRiding,cars,askTime){
   const lab = txt => both? `<p class="foldLabel">${txt}</p>` : '';
   const out = notRiding.length? `${lab(t('schedule.fold.out'))}<div class="chips">${sortGirlIds(notRiding).map(id=>`<span class="chip chip--muted">${girlName(id)}</span>`).join('')}</div>` : '';
   const back = reserveIds.length? `${lab(t('schedule.fold.backup'))}<div class="chips">${reserveIds.map(id=>contactButtonHtml(id, esc(fam(id).parentName||'?'), reserveAskText(day,direction,askTime), 'chip chip--btn')).join('')}</div>` : '';
-  const lead = S.roosterMode==='week'? dirMarkHtml(direction)+' ' : '';
-  return foldHtml(`rooster|${day}|${direction}`, lead + parts.join('<span class="sep">·</span>'), out+back, 'fold--quiet');
+  return foldHtml(`rooster|${day}|${direction}`, parts.join('<span class="sep">·</span>'), out+back, 'fold--quiet');
 }
 
 // The passengers of one car as chips: your own daughter in red, a Flex player dashed.
@@ -234,7 +233,7 @@ function unplacedBoxHtml(day,direction){
   const action = mode==='week'
     ? `<button type="button" class="btn small" data-gowijzig="${day}">${t('myweek.regelen')}</button>`
     : (S.canEdit? `<button type="button" class="btn small secondary" data-gosugg="${direction}">${t('schedule.voorstellen')}</button>` : '');
-  return `<div class="dashBox" role="alert">${mode==='week'? dirMarkHtml(direction)+' ' : ''}<b>${t('schedule.niet_ingedeeld_box')}</b> ${l.map(([id])=>girlName(id)).join(', ')}${action? `<div class="dashBox__actions">${action}</div>` : ''}</div>`;
+  return `<div class="dashBox" role="alert"><b>${t('schedule.niet_ingedeeld_box')}</b> ${l.map(([id])=>girlName(id)).join(', ')}${action? `<div class="dashBox__actions">${action}</div>` : ''}</div>`;
 }
 
 // The section title of one direction ("Heen" / "Terug") with what the time at the sports park means: "Aankomst bij AFC '34" (heen) /
@@ -244,13 +243,6 @@ function directionHeadHtml(day,direction,devTagHtml,places){
   const where = (places && places.length? places : arrivalPlaces([],cfg)).map(arrivalLabel).join(' · ');
   const note = t(direction==='heen'? 'schedule.aankomst_bij' : 'schedule.vertrek_bij', { p1: where });
   return `<div class="sectionHead sectionHead--dir"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}<span class="sectionHead__note">${esc(note)}</span> ${devTagHtml||''}</div></div>`;
-}
-
-// The direction mark of Heen (sun, mist) and Terug (moon, plum): the same colours as the Advies flow. It replaces the words Heen/Terug in Rooster "Deze week".
-function dirMarkHtml(direction){
-  const heen = direction==='heen';
-  const label = t(heen? 'dir.heenShort' : 'dir.terugShort');
-  return `<span class="dirMark dirMark--${heen? 'heen' : 'terug'}" role="img" aria-label="${esc(label)}" title="${esc(label)}">${phIcon(heen? 'sun' : 'moon')}</span>`;
 }
 
 // One car of "Deze week", built like a ride of Mijn week: time (and "was"), who drives (the round button next to it: your own car = Tijd en plek,
@@ -265,7 +257,7 @@ function weekCarHtml(c,day,direction,base,myId){
   const seatsHtml = driver? `<span class="seats" aria-label="${c.girlIds.length}/${seats(driver)} ${t('schedule.plekken')}">${phIcon('users')}<b>${c.girlIds.length}/${seats(driver)}</b></span>` : '';
   return `<div class="rideRow scene--${direction==='heen'? 'heen' : 'terug'}${own? ' rideRow--mine' : ''}">
       <div class="rideRow__head">
-        <div class="rideRow__time"><div class="rideRow__dep">${esc(c.departureTime||'--:--')}</div>${dirMarkHtml(direction)}${change? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(change.from)}</div>` : ''}</div>
+        <div class="rideRow__time"><div class="rideRow__dep">${esc(c.departureTime||'--:--')}</div>${change? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(change.from)}</div>` : ''}</div>
         <div class="rideRow__mid"><div class="rideRow__lab">${esc(t('ride.chauffeur'))}</div><div class="rideRow__who">${who}</div></div>
         <div class="rideRow__act rideRow__act--seats">${seatsHtml}${act}</div>
       </div>
@@ -286,7 +278,7 @@ export function renderDirectionWeek(day,direction){
   const askCar = cars.find(c=>myId && c.driverFamilyId===myId) || cars.find(c=>myId && (c.girlIds||[]).includes(myId)) || cars[0];
   const notRiding = ovGirlsFor(day,undefined,direction);
   return `<div>
-    ${cars.map(c=>weekCarHtml(c,day,direction,base,myId)).join('') || `<p class="muted">${dirMarkHtml(direction)} ${t('schedule.geen_ritten')}</p>`}${unplacedBoxHtml(day,direction)}
+    ${cars.map(c=>weekCarHtml(c,day,direction,base,myId)).join('') || `<p class="muted">${t('schedule.geen_ritten')}</p>`}${unplacedBoxHtml(day,direction)}
     ${restFoldHtml(day,direction,notRiding,cars,askCar&&askCar.departureTime)}
   </div>`;
 }

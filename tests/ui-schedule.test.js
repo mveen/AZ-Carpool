@@ -52,7 +52,7 @@ test('Rooster "Deze week" has no Heen/Terug titles: one list per day under a day
   assert.doesNotMatch(html, /sectionHead__note|sectionHead--dir/);
   assert.match(html, /<h3 class="dayHead">Maandag <small>[^<]* · \d+ ritten?<\/small><\/h3>/);
   assert.match(html, /scene--heen/); assert.match(html, /scene--terug/);
-  assert.match(html, /class="dirMark dirMark--heen" role="img" aria-label="Heen"/); assert.match(html, /class="dirMark dirMark--terug" role="img" aria-label="Terug"/);
+  assert.doesNotMatch(html, /dirMark/, 'no sun/moon marks: the tint carries the direction');
   const s = text(html); assert.doesNotMatch(s.replace(/Back-up|Rijdt niet mee/g, ''), /\bHeen\b|\bTerug\b|Aankomst bij|Vertrek bij/, 'the words are gone, the marks carry the direction');
   assert.match(html, /rideRow__route">[^]*?<span>Busstation → AFC/, 'the route is on every car');
 });

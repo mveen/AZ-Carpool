@@ -83,14 +83,14 @@ await testAsync('two requests are counted together; with none waiting there is n
   assert.match(text(rooster()), /2 aanvragen voor donderdag/); assert.equal(weekroosterActionCount(), 2);
   await asDecider(); S.dayRequests = { '2026-W40_Do_f4': S.dayRequests['2026-W40_Do_f4'] };
   const html = rooster(); assert.doesNotMatch(html, /id="wrAlert"/); assert.match(html, /id="wrLog"/); assert.equal(weekroosterActionCount(), 0);
-  assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wredit="Do"/, 'no card: the link Zelf indelen is at the bottom of the day');
+  assert.doesNotMatch(html, /coordLine/); assert.doesNotMatch(html, /data-wredit="Do"/, 'no link Zelf indelen at the bottom of the day');
 });
 await testAsync('there is no line about the day coordinator above the day, and the cars show the direction as a mark (no Heen/Terug titles)', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '07:30', terug: '16:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week' }); syncWeekRequests(); await tick();
   const html = rooster(), s = text(html);
   assert.doesNotMatch(s, /Jij bent dagcoördinator|Dagcoördinator donderdag:/);
-  assert.doesNotMatch(html, /sectionHead__note/); assert.match(html, /dirMark dirMark--heen/);   // the direction is the sun/moon mark and the tint; her own time sits on her chip
+  assert.doesNotMatch(html, /sectionHead__note/); assert.doesNotMatch(html, /dirMark/);   // the direction is the tint only; her own time sits on her chip
 });
 await testAsync('Mijn week: the same entry card as Rooster (icon, "2 aanvragen voor donderdag", the advice line, "Verzoeken verwerken")', async () => {
   await asDecider({ groups: CARS }); const html = mijnWeek(), s = text(html), room = rooster();
@@ -167,7 +167,7 @@ await testAsync('the entry card has the button "Verzoeken verwerken" for the day
   await asDecider(); const html = rooster();
   assert.match(html, /class="entryCard [^"]*"[^>]*id="wrAlert"/); assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Verzoeken verwerken/);
   assert.doesNotMatch(html, /devAlert/);
-  assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wredit="Do"/);   // the flow is the way in; Zelf indelen is only the small link at the bottom
+  assert.doesNotMatch(html, /coordLine/); assert.doesNotMatch(html, /data-wredit="Do"/);   // the flow is the way in; there is no link at the bottom
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

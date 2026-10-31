@@ -1110,11 +1110,6 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .essKid__time{flex:none;font:var(--type-time-sm);white-space:nowrap}
 .essKid__time s{font:var(--type-caption);color:var(--text-muted);margin-left:var(--space-2)}
 
-/* Rooster "Deze week": the direction as a mark (sun = heen, moon = terug) and a tint, in the colours of the Advies flow; replaces the words Heen/Terug */
-.dirMark{display:inline-grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;background:var(--scene-badge);color:var(--scene-ink);vertical-align:middle}
-.dirMark--heen{--scene-badge:var(--heen-badge);--scene-ink:var(--heen-ink)}
-.dirMark--terug{--scene-badge:var(--terug-badge);--scene-ink:var(--terug-ink)}
-.dirMark svg{width:14px;height:14px;fill:currentColor}
-.rideRow__time .dirMark{display:grid;margin-top:var(--space-2)}
+/* Rooster "Deze week": the direction is the tint only (.scene--heen / .scene--terug), no mark */
 .rideRow__act--seats{display:flex;align-items:center;gap:var(--space-3)}
 .rideRow--mine.scene--heen,.rideRow--mine.scene--terug{border-top-color:var(--ok)}
