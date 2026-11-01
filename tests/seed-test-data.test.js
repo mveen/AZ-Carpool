@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
-import { transformBackup, findLeaks, codesCsv, assertTestProject, seed, randomCode, TEST_PHONE, TEST_PROJECT, LIVE_PROJECT } from '../scripts/seed-test-data.mjs';
+import { planningFromCopy, seedPlanning, PLAN_COLLECTIONS, FAMILY_PLAN_FIELDS, transformBackup, findLeaks, codesCsv, assertTestProject, seed, randomCode, TEST_PHONE, TEST_PROJECT, LIVE_PROJECT } from '../scripts/seed-test-data.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -141,6 +141,49 @@ await test('seed fails loudly when the database does not hold what was written',
   const store = new Map();
   const fs = { async *walk() { for (const p of store.keys()) yield { path: p, missing: false }; }, async deleteDocument() {}, async setDocument(p, d) { if (!p.startsWith('groups/')) store.set(p, d); } };
   await assert.rejects(seed({ fs, docs: res.docs }), /does not hold exactly/);
+});
+
+console.log('=== --planning: only the planning, test users stay ===');
+const plan = planningFromCopy(res);
+await test('replaces shifts, one-off changes, periods and every kept settings document; nothing about users', () => {
+  const paths = plan.replace.map(d => d.path).sort();
+  assert.deepEqual(paths, ['deviations/Di_heen', 'groups/Ma_heen_1', 'periodBackups/b1', 'periods/2026-10-12', 'settings/dayCoordinators', 'settings/priority']);
+  for (const p of paths) assert.ok(!/^(invites|links|sessions|config|families)\//.test(p), p);
+  assert.deepEqual(plan.leaks, []);
+});
+await test('per family only availability, schedule and timeChanges; phone numbers and names are not in the update', () => {
+  const eline = plan.families.find(f => f.path === 'families/eline');
+  assert.deepEqual(Object.keys(eline.fields).sort(), [...FAMILY_PLAN_FIELDS].filter(k => k !== 'timeChanges').sort());
+  assert.deepEqual(eline.fields.availability, { Di_heen: 'beschikbaar' });
+  assert.deepEqual(plan.families.find(f => f.path === 'families/anouk').fields, {});
+});
+const fakeFs = (store, families) => ({
+  async *walk() { for (const p of [...store.keys()]) yield { path: p, missing: false }; },
+  async deleteDocument(p) { store.delete(p); },
+  async setDocument(p, d) { store.set(p, d); },
+  async commit(ws) { const w = ws[0]; if (!families.has(w.update)) return false; Object.assign(store.get(w.update), w.fields); return true; },
+});
+await test('seedPlanning replaces old planning, merges family fields and leaves users, codes, links and notifications untouched', async () => {
+  const store = new Map([
+    ['groups/old', {}], ['deviations/old', {}], ['settings/prefs', { keep: 1 }],
+    ['families/eline', { parentPhone1: TEST_PHONE, availability: { old: 1 }, girlName: 'Eline' }],
+    ['invites/9999999999', { familyId: 'eline' }], ['links/u1', { familyId: 'eline' }], ['sessions/u1', {}], ['config/coordinator', { familyId: 'eline' }], ['families/eline/notifications/n', {}],
+  ]);
+  const r = await seedPlanning({ fs: fakeFs(store, new Set(['families/eline'])), plan });
+  assert.equal(r.deleted, 2); assert.deepEqual(r.updated, ['eline']); assert.deepEqual(r.missing, []);
+  assert.ok(!store.has('groups/old') && store.has('groups/Ma_heen_1') && store.has('settings/priority') && store.has('settings/prefs'));
+  assert.deepEqual(store.get('families/eline'), { parentPhone1: TEST_PHONE, availability: { Di_heen: 'beschikbaar' }, girlName: 'Eline', schedule: { Ma_heen: { a: 1 } } });
+  for (const p of ['invites/9999999999', 'links/u1', 'sessions/u1', 'config/coordinator', 'families/eline/notifications/n']) assert.ok(store.has(p), p);
+});
+await test('a family that is not in the test database is reported, not created', async () => {
+  const store = new Map();
+  const r = await seedPlanning({ fs: fakeFs(store, new Set()), plan });
+  assert.deepEqual(r.missing, ['eline']); assert.ok(!store.has('families/eline'));
+});
+await test('--planning exists in the command, writes only to the test project, and the README explains it', () => {
+  const src = readFileSync(repo + 'scripts/seed-test-data.mjs', 'utf8');
+  assert.match(src, /--planning/); assert.deepEqual(PLAN_COLLECTIONS.includes('families'), false);
+  assert.match(readFileSync(repo + 'README.md', 'utf8'), /seed:test -- --planning/);
 });
 
 console.log('=== the command ===');
