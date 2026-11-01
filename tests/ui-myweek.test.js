@@ -512,14 +512,14 @@ test('the shift you drive while your daughter rides in another car is its own ca
   assert.match(s, /12:30 Terug Jij rijdt AFC (&#39;|')34 → Busstation Passagiers Eline 17:30, Anouk/); assert.doesNotMatch(s, /Jouw rijbeurt om/);
   assert.equal((renderAt(MON, { ...period40(), deviations: dev }).match(/rideRow--mine/g) || []).length >= 1, true);
 });
-test('v204: the car you drive has a green header (no wheel, no "Jij") and a small green glow; a ride of only your daughter stays plain', () => {
+test('v204: the car you drive has a green header (no wheel, no "Jij") and a green glow inside the card from the top; a ride of only your daughter stays plain', () => {
   const h = renderDayAt(MON, {});
   assert.match(h, /rideRow rideRow--mine rideRow--glow/); assert.match(h, /rideRow__lab rideRow__lab--me"/);
   assert.doesNotMatch(h, /rideRow__who--me|steering-wheel/);
   const plain = [...h.matchAll(/<div class="rideRow( [^"]*)?" data-rideday/g)].map(m => m[1] || '').filter(c => !/mine/.test(c));
   assert.ok(plain.length > 0); plain.forEach(c => assert.doesNotMatch(c, /glow/));
   const css = fs.readFileSync(new URL('../components.css', import.meta.url), 'utf8'), tok = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
-  assert.match(css, /\.rideRow__lab--me\{color:var\(--ok-ink\)\}/); assert.match(css, /\.rideRow--glow\{box-shadow:var\(--glow-ok\)\}/); assert.equal((tok.match(/--glow-ok:/g) || []).length, 2);
+  assert.match(css, /\.rideRow__lab--me\{color:var\(--ok-ink\)\}/); assert.match(css, /\.rideRow--glow\{background:linear-gradient\(180deg,var\(--ok-glow\) 0%,var\(--surface-card\) calc\(var\(--space-6\) \+ var\(--hit-min\) \+ var\(--space-3\)\)\)\}/); assert.equal((tok.match(/--ok-glow:/g) || []).length, 2);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

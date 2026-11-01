@@ -423,8 +423,8 @@ button.chip{cursor:pointer;font-family:inherit}
 .rideRow__dep{font:var(--type-time-md);letter-spacing:var(--track-time)}
 .rideRow--mine .rideRow__dep{color:var(--ok-ink)}
 .rideRow__lab.rideRow__lab--me{color:var(--ok-ink)}
-/* Mijn week: a small green glow around the car you drive */
-.rideRow--glow{box-shadow:var(--glow-ok)}
+/* Mijn week: the car you drive has a green tint inside the card: strongest at the top, evenly left to right, fading to the card colour at the height of the time block */
+.rideRow--glow{background:linear-gradient(180deg,var(--ok-glow) 0%,var(--surface-card) calc(var(--space-6) + var(--hit-min) + var(--space-3)))}
 .rideRow__sub{font:var(--type-caption);color:var(--text-muted)}
 .rideRow__mid{flex:1;min-width:0}
 .rideRow__act{flex:none}
