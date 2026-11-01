@@ -343,5 +343,11 @@ test('Afwijkend weekrooster: every redraw keeps the request listeners in step wi
   S.links = {}; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0);
 });
 
+test('v221: init installs the Firestore self-repair before the global error log', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /import \{ installFirestoreHeal \} from '\.\/session-reset\.js'/);
+  assert.ok(src.indexOf('installFirestoreHeal(window') > 0 && src.indexOf('installFirestoreHeal(window') < src.indexOf('installGlobalErrorLogging(window)'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

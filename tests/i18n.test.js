@@ -516,3 +516,4 @@ test('the driver notice says "Impact voor", not "merken het"', () => {
   assert.equal(t('weekrooster.flow.tileNoticeN'), 'chauffeurs met impact');
 });
 test('v217: the device ID line exists', () => { assert.equal(t('beheer.fouten_mijn_id', { p1: 'x1' }), 'ID van dit apparaat: x1'); });
+test('v221: the self-repair message exists', () => { assert.match(t('heal.sluit_tabs'), /Sluit andere tabbladen/); });

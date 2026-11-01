@@ -390,6 +390,7 @@ export default {
   "profile.dit_telefoonnummer_hoort_niet_bij": "Dit telefoonnummer hoort niet bij deze code. Gebruik het nummer dat de coördinator van je heeft.",
   "profile.probleem_met_inloggen_opnieuw_beginnen": "Lukt het inloggen niet? Opnieuw beginnen",
   "profile.even_opnieuw_verbinden": "Even opnieuw verbinden…",
+  "heal.sluit_tabs": "De opgeslagen gegevens in deze browser zijn in de war. Sluit andere tabbladen van AZ Carpool en ververs de pagina.",
   "profile.sessie_probleem": "Je verbinding met de app is niet in orde. Tik hieronder op ‘Opnieuw beginnen’ en probeer het nog een keer.",
   "profile.geen_verbinding_probeer_opnieuw": "Geen verbinding. Controleer je internet en probeer het opnieuw.",
   "profile.mijn_gezin": "Mijn gezin",

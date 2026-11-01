@@ -147,6 +147,7 @@ test('APP_VERSION is at least v213 (Ruilen: Tijdvak toevoegen folds the form, co
 test('APP_VERSION is at least v214 (a back-up notification has the button Bied mijn rit aan)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 214); });
 test('APP_VERSION is at least v215 (the back-up card stays on Mijn week while a ride can be offered)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 215); });
 test('APP_VERSION is at least v216 (notification cards can be ignored or closed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 216); });
+test('APP_VERSION is at least v221 (Firestore self-repair)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 221); });
 test('APP_VERSION is at least v220 (listener log says whether the SDK sign-in is the page sign-in)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 220); });
 test('APP_VERSION is at least v219 (refused listeners restart)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 219); });
 test('APP_VERSION is at least v218 (listener refusals are logged)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 218); });
