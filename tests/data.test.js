@@ -1157,6 +1157,7 @@ await testAsync('v218: listenFailed logs where=listen with the path and error co
   const { listenFailed } = await import('../data.js');
   assert.doesNotThrow(() => listenFailed('settings/dayCoordinators', { code: 'permission-denied', message: 'x' }));
   assert.doesNotThrow(() => listenFailed('families', null));
+  assert.equal(db.authUid(), null, 'a fake database without a sign-in reports none');
 });
 await testAsync('v218: a refused listener restarts the live listeners (3 times at most, never two at once)', async () => {
   const { restartListenersSoon, listenerRetry, LISTENER_RETRY_DELAYS_MS } = await import('../data.js');

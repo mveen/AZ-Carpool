@@ -75,6 +75,7 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
       return { set:(p,d,o)=>b.set(r(p),d,o), update:(p,d)=>b.update(r(p),d), delete:(p)=>b.delete(r(p)), commit:()=>b.commit() }; },
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
+    authUid: ()=> (auth && auth.currentUser && auth.currentUser.uid) || null,
     // Forgets this browser's anonymous account (a new one is made at the next start). Older index.html files don't pass signOut.
     signOut: ()=> sdk.signOut? sdk.signOut(auth) : Promise.resolve(),
     calendarApiKey,
@@ -89,6 +90,7 @@ export const db = {
   batch: ()=>dbImpl.batch(),
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
+  authUid: ()=> (dbImpl && dbImpl.authUid)? dbImpl.authUid() : null,
   signOut: ()=>dbImpl.signOut(),
   get calendarApiKey(){ return dbImpl.calendarApiKey; },
   setListenerSink: (a)=>dbImpl.setListenerSink(a)
@@ -573,7 +575,11 @@ export function syncListeners(){
 // A live listener that is refused (or breaks) is written to the error log with the document or collection it was about, so the coordinator can see
 // WHICH reading failed (Beheer > Koppelingen > Gemelde problemen). Only the path and the error code go in, never data.
 export function listenFailed(path, err){
-  try{ logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:err && err.message }); }catch(e){ /* never break the app */ }
+  try{
+    // Which sign-in the SDK itself holds right now, compared with the one this page believes it has (never the ID itself).
+    const a = db.authUid(); const auth = !a? 'auth none' : (a===S.me? 'auth same' : 'auth DIFFERENT');
+    logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:(err && err.message)+' | '+auth });
+  }catch(e){ /* never break the app */ }
   if(err && err.code==='permission-denied') restartListenersSoon();
 }
 // A refused listener is cancelled by Firestore for good, and then the screen keeps its defaults (Ruilen off, no day coordinators) although the data is
