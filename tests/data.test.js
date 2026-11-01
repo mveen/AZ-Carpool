@@ -1158,5 +1158,20 @@ await testAsync('v218: listenFailed logs where=listen with the path and error co
   assert.doesNotThrow(() => listenFailed('settings/dayCoordinators', { code: 'permission-denied', message: 'x' }));
   assert.doesNotThrow(() => listenFailed('families', null));
 });
+await testAsync('v218: a refused listener restarts the live listeners (3 times at most, never two at once)', async () => {
+  const { restartListenersSoon, listenerRetry, LISTENER_RETRY_DELAYS_MS } = await import('../data.js');
+  listenerRetry.n = 0; listenerRetry.timer = null;
+  const fired = []; const fakeTimer = (fn, ms) => { fired.push({ fn, ms }); return 1; };
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({});
+  assert.equal(restartListenersSoon(fakeTimer), true);
+  assert.equal(restartListenersSoon(fakeTimer), false, 'a second refusal while one restart is waiting does nothing');
+  assert.equal(fired.length, 1); assert.equal(fired[0].ms, LISTENER_RETRY_DELAYS_MS[0]);
+  fired[0].fn(); await tick();
+  assert.equal(listenerRetry.timer, null); assert.ok(S.dataUnsubs.length > 0, 'the listeners run again');
+  assert.equal(restartListenersSoon(fakeTimer), true); fired[1].fn();
+  assert.equal(restartListenersSoon(fakeTimer), true); fired[2].fn();
+  assert.equal(restartListenersSoon(fakeTimer), false, 'after 3 restarts it stops');
+  stopDataListeners(); listenerRetry.n = 0;
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

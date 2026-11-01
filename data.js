@@ -574,6 +574,21 @@ export function syncListeners(){
 // WHICH reading failed (Beheer > Koppelingen > Gemelde problemen). Only the path and the error code go in, never data.
 export function listenFailed(path, err){
   try{ logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:err && err.message }); }catch(e){ /* never break the app */ }
+  if(err && err.code==='permission-denied') restartListenersSoon();
+}
+// A refused listener is cancelled by Firestore for good, and then the screen keeps its defaults (Ruilen off, no day coordinators) although the data is
+// fine. Refusals right after a (new) sign-in or link can be a matter of timing, so the whole set is started again, at most 3 times per page load
+// (after 1.5 s, 4 s and 10 s). A real refusal is logged each time and then left alone.
+export const LISTENER_RETRY_DELAYS_MS = [1500, 4000, 10000];
+export const listenerRetry = { n: 0, timer: null };
+export function restartListenersSoon(setTimer = setTimeout){
+  if(listenerRetry.timer || listenerRetry.n >= LISTENER_RETRY_DELAYS_MS.length) return false;
+  const delay = LISTENER_RETRY_DELAYS_MS[listenerRetry.n++];
+  listenerRetry.timer = setTimer(()=>{
+    listenerRetry.timer = null;
+    try{ if(S.dataUnsubs.length) stopDataListeners(); syncListeners(); }catch(e){ /* the next refusal tries again */ }
+  }, delay);
+  return true;
 }
 
 export function startDataListeners(){
