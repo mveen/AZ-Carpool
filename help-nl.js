@@ -399,7 +399,7 @@ export default [
     title: 'Een vervanger zoeken of een rit overnemen (Ruilen)',
     keywords: 'ritbeurs vervanger ritten ruilen aanbieden overnemen ruilen rit kan niet rijden inspringen back-up melding markt zoekt een vervanger',
     body: [
-      'Kun je een rit niet rijden? Ga naar Mijn week, tik bij die rit op de drie puntjes en kies Vervanger zoeken. Regel het vóór 18:00 de dag ervoor. Je kunt er een kort bericht bij zetten.',
+      'Kun je een rit niet rijden? Ga naar Mijn week, tik bij die rit op de drie puntjes en kies Vervanger zoeken. Regel het vóór 18:00 de dag ervoor. Je kunt er een kort bericht bij zetten. Heeft een back-up zich gemeld voor jouw rit? Dan staat er bovenaan Mijn week een kaart met Bied mijn rit aan. Daar staat het bericht al voor je ingevuld.',
       'Eerst horen de back-ups het die zich voor dat tijdstip hebben gemeld. Alle andere gezinnen zien de rit in het tabblad Ruilen, bij Zoekt een vervanger. Het getal op het tabblad Ruilen laat zien hoeveel ritten open staan.',
       'Wil je een rit overnemen? Tik op Ik neem deze rit over en bevestig. Wie als eerste bevestigt, rijdt de rit. Ben je te laat, dan zie je dat meteen. Passen er te weinig kinderen in jouw auto, of rijd je al rond die tijd, dan krijg je een waarschuwing. Je mag de rit dan toch overnemen.',
       'Overgenomen is van jou, ook als je later toch niet kunt. Dan bied je hem zelf opnieuw aan. De aanbieder kan zijn aanbod intrekken zolang niemand de rit heeft.',

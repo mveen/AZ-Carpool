@@ -421,6 +421,11 @@ test('v212: singular "1 rit", the shorter intro texts and the Bekijk button exis
   assert.equal(t('ritbeurs.intro'), 'Neem een rit over als het schikt. Je eigen rit aanbieden doe je in Mijn week bij de rit.'); assert.equal(t('ritbeurs.notif.bekijk'), 'Bekijk');
   assert.match(t('ritbeurs.moment.intro'), /^Heb je tijd en kun je een rit kunnen overnemen\? Meld een tijdvak\./);
 });
+test('v222: the offer form is "Rit aanbieden"; the back-up variant has its own words', () => {
+  assert.equal(t('ritbeurs.form.title'), 'Rit aanbieden'); assert.equal(t('ritbeurs.form.bevestig'), 'Rit aanbieden');
+  assert.equal(t('ritbeurs.formBackup.bevestig'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.formBackup.bericht'), 'Ik maak graag gebruik van jouw beschikbaarheid');
+  assert.equal(t('ritbeurs.formBackup.sub', { who: 'Ouder van Evi' }), 'Ouder van Evi kan inspringen. Wie je rit overneemt, rijdt hem in jouw plaats.');
+});
 test('v214: the offer buttons on a notification say what they do', () => { assert.equal(t('ritbeurs.notif.biedAan'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.notif.biedAanRit', { when: 'donderdag heen 16:15' }), 'Bied aan: donderdag heen 16:15'); });
 test('v216: Negeren and Sluiten exist', () => { assert.equal(t('ritbeurs.notif.negeer'), 'Negeren'); assert.equal(t('ritbeurs.notif.sluit'), 'Sluiten'); });
 console.log(`\n${passed} passed, ${failed} failed`);

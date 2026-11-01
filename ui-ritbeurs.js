@@ -158,8 +158,9 @@ export function momentPreview(d){
   return n ? t(n === 1 ? 'ritbeurs.moment.raaktEen' : 'ritbeurs.moment.raakt', { n }) : t('ritbeurs.moment.raaktGeen');
 }
 
+const familyNameOf = id => (S.families[id] && (S.families[id].parentName || S.families[id].girlName)) || '';
 function notificationLine(n){
-  return notificationText(n, { nameOf: id => (S.families[id] && (S.families[id].parentName || S.families[id].girlName)) || '', currentWeekKey: S.currentWeekKey });
+  return notificationText(n, { nameOf: familyNameOf, currentWeekKey: S.currentWeekKey });
 }
 // Test phase (coordinator only): in Testweergave as a family, the made-up notifications of that family are part of the inbox too, marked "test"
 // (never counted in the badge), so a tapped test push lands on the notification it was about. Held back by quiet hours like a real one.
@@ -185,7 +186,8 @@ export function offerableRidesFor(n, nowMs = Date.now()){
 const notifDone = (n, nowMs) => ridesInSlotOf(n, nowMs).length > 0 && !offerableRidesFor(n, nowMs).length;
 function notifCardHtml({ n, txt }, go, nowMs = Date.now()){
   const rides = offerableRidesFor(n, nowMs);
-  const offerBtns = rides.map(r => `<button type="button" class="btn entryCard__go" data-rboffernow="${esc(r.day)}|${esc(r.direction)}">${rides.length === 1 ? t('ritbeurs.notif.biedAan') : t('ritbeurs.notif.biedAanRit', { when: `${dayLabel(r.day).toLowerCase()} ${dirShort(r.direction).toLowerCase()} ${r.time}` })}</button>`).join('');
+  const who = familyNameOf(n.fromFamilyId);   // the back-up: the offer form names them (and prefills the message)
+  const offerBtns = rides.map(r => `<button type="button" class="btn entryCard__go" data-rboffernow="${esc(r.day)}|${esc(r.direction)}" data-rbwho="${esc(who)}">${rides.length === 1 ? t('ritbeurs.notif.biedAan') : t('ritbeurs.notif.biedAanRit', { when: `${dayLabel(r.day).toLowerCase()} ${dirShort(r.direction).toLowerCase()} ${r.time}` })}</button>`).join('');
   go = go && !rides.length;
   return `<div class="entryCard entryCard--stack rbNotifCard${n.read === true ? '' : ' unread'}" role="status">
     <div class="entryCard__head"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b></div>
@@ -201,10 +203,11 @@ export function wireMyWeekNotifications(box, goToRuilen, rerender){
   box.querySelectorAll('[data-rboffernow]').forEach(b => b.onclick = () => offerNow(b, rerender));
   box.querySelectorAll('[data-rbnotifdismiss]').forEach(b => b.onclick = () => { hapticTap(); dismissNotification(b.dataset.rbnotifdismiss); renderDeviationTab(); if(rerender) rerender(); });
 }
-// "Bied mijn rit aan" on a notification card: the offer form of Mijn week (ui-driver-car.js), then both screens are redrawn.
+// "Bied mijn rit aan" on a notification card: the same offer form as in Mijn week (ui-driver-car.js) in its back-up variant (the back-up is named,
+// the message is prefilled, the button reads "Bied mijn rit aan"), then both screens are redrawn.
 function offerNow(b, rerender){
   hapticTap(); const [day, direction] = b.dataset.rboffernow.split('|');
-  openOfferSheet(day, direction, () => { renderDeviationTab(); if(rerender) rerender(); });
+  openOfferSheet(day, direction, () => { renderDeviationTab(); if(rerender) rerender(); }, { backup: true, who: b.dataset.rbwho || '' });
 }
 
 // The latest few notifications; nothing at all when there are none. They count as read when the tab has been open for a moment.

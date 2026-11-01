@@ -76,14 +76,17 @@ export function openRideMenu(day, direction, rerender) {
   };
 }
 
-// Vervanger zoeken for the OWN ride: the ride on top (so it is clear whose ride it is), a message, what happens next, one button.
-export function openOfferSheet(day, direction, rerender) {
+// Offer the OWN ride (menu item "Vervanger zoeken"): the ride on top (so it is clear whose ride it is), a message, what happens next, one button.
+// opts.backup = the form was opened from a "back-up for your ride" notification: the back-up (opts.who) is named, the message is prefilled
+// and the button says "Bied mijn rit aan". Same data, same createOffer.
+export function openOfferSheet(day, direction, rerender, opts = {}) {
   const mine = myCarOf(day, direction);
   if (!mine) return;
   const { car } = mine, cfg = locationsCfg();
+  const bk = !!opts.backup, who = opts.who || t('ritbeurs.formBackup.onbekend');
   const names = car.girlIds.map(id => girlName(id)).join(', ');
   openShell(`<h3 id="sheetTitle">${esc(t('ritbeurs.form.title'))}</h3>
-    <p class="sheet__sub">${esc(t('ritbeurs.form.eigen'))}</p>
+    <p class="sheet__sub">${esc(bk ? t('ritbeurs.formBackup.sub', { who }) : t('ritbeurs.form.eigen'))}</p>
     <div class="sheetRide"><div class="rideRow rideRow--mine rideRow--glow"><div class="rideRow__head">
       <div class="rideRow__time"><div class="rideRow__dep">${esc(car.departureTime || computeRideDeparture(day, direction, car.girlIds) || '--:--')}</div><div class="rideRow__sub">${esc(t(direction === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div></div>
       <div class="rideRow__mid"><div class="rideRow__lab rideRow__lab--me">${esc(t('myweek.jij_rijdt_lab'))}</div></div></div>
@@ -91,9 +94,11 @@ export function openOfferSheet(day, direction, rerender) {
       ${names ? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${esc(names)}</div>` : ''}</div></div>
     <div class="rbForm"><label for="rmMessage">${esc(t('ritbeurs.form.bericht'))}</label>
       <input type="text" id="rmMessage" maxlength="${RITBEURS_MESSAGE_MAX}" autocomplete="off" autocapitalize="sentences" placeholder="${esc(t('ritbeurs.form.placeholder'))}">
-      <p class="noteLine">${esc(t('ritbeurs.form.stappen'))}</p></div>
-    <div class="sheet__actions"><button type="button" class="btn secondary" id="rmCancel">${esc(t('common.annuleren'))}</button><button type="button" class="btn" id="rmGo">${esc(t('ritbeurs.form.bevestig'))}</button></div>`);
-  keepCapital(document.getElementById('rmMessage'));
+      <p class="noteLine">${esc(bk ? t('ritbeurs.formBackup.stappen', { who }) : t('ritbeurs.form.stappen'))}</p></div>
+    <div class="sheet__actions"><button type="button" class="btn secondary" id="rmCancel">${esc(t('common.annuleren'))}</button><button type="button" class="btn" id="rmGo">${esc(t(bk ? 'ritbeurs.formBackup.bevestig' : 'ritbeurs.form.bevestig'))}</button></div>`);
+  const msg = document.getElementById('rmMessage');
+  msg.value = bk ? t('ritbeurs.formBackup.bericht') : '';   // the back-up variant is prefilled (still editable); the plain form starts empty
+  keepCapital(msg);
   document.getElementById('rmCancel').onclick = () => { hapticTap(); closeSheet(); };
   document.getElementById('rmGo').onclick = async () => {
     hapticTap();

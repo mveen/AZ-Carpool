@@ -257,6 +257,11 @@ test('the Ritbeurs has a parent article and a coordinator article that explains 
   assert.match(a.title + b.title, /Ruilen/); assert.doesNotMatch([a, b].map(x => x.title + x.body.join(' ')).join(' '), /Ritbeurs/, 'the screen name is Ruilen everywhere');
 });
 
+test('v222: the Ruilen help explains the back-up card with Bied mijn rit aan and the prefilled message', () => {
+  const a = articles.find(x => x.id === 'ritbeurs').body.join(' ');
+  assert.match(a, /back-up zich gemeld[\s\S]*Bied mijn rit aan[\s\S]*al voor je ingevuld/);
+});
+
 test('the Afwijkend weekrooster is always on: no Beheer switch article any more, but a parent article and a day coordinator article', () => {
   assert.ok(!articles.find(x => x.id === 'beheer-weekrooster'), 'the switch is gone, so is its article');
   const a = findArticle('afwijkend-weekrooster'), b = findArticle('dagcoordinator-aanvragen');

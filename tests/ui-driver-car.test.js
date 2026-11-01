@@ -12,7 +12,7 @@ import { S } from '../state.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { driverCarButtonHtml, wireDriverCar, openDriverCarSheet, openRideMenu } from '../ui-driver-car.js';
+import { driverCarButtonHtml, wireDriverCar, openDriverCarSheet, openRideMenu, openOfferSheet } from '../ui-driver-car.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -137,7 +137,7 @@ await testAsync('Vervanger zoeken: the form shows my own ride, one tap offers it
   const fake = await setup([MINE], { ritbeurs: { on: true } });
   openMenu(); byId('rmOffer').onclick();
   const f = text(sheet().innerHTML);
-  assert.match(f, /Dit is jouw rit/); assert.match(f, /Jij rijdt/); assert.match(f, /Eline, Jahaimy/); assert.match(f, /Bericht erbij/); assert.match(f, /Bied|Vervanger zoeken/);
+  assert.match(f, /Dit is jouw rit/); assert.match(f, /Jij rijdt/); assert.match(f, /Eline, Jahaimy/); assert.match(f, /Bericht erbij/); assert.match(f, /Rit aanbieden/);
   assert.doesNotMatch(myweek(), /Vervanger gezocht/);
   assert.match(sheet().innerHTML, /id="rmMessage"[^>]*autocapitalize="sentences"/);
   const inp = byId('rmMessage'); inp.value = 'ik heb een afspraak'; inp.selectionStart = 3; inp.setSelectionRange = () => {}; inp.oninput(); assert.equal(inp.value, 'Ik heb een afspraak', 'typing a lower-case first letter makes it a capital');
@@ -148,6 +148,29 @@ await testAsync('Vervanger zoeken: the form shows my own ride, one tap offers it
   assert.match(text(myweek()), /Vervanger gezocht/);
   assert.match(text(openMenu().innerHTML), /Vervanger intrekken/);
   assert.match(text(sheet().innerHTML), /Je hebt deze rit aangeboden/); assert.ok(fake);
+});
+await testAsync('v222: the plain offer form is titled "Rit aanbieden" (not "Vervanger zoeken") and has an empty message', async () => {
+  await setup([MINE], { ritbeurs: { on: true } });
+  openMenu(); byId('rmOffer').onclick();
+  const f = text(sheet().innerHTML);
+  assert.match(f, /^Rit aanbieden Dit is jouw rit/); assert.match(f, /Rit aanbieden$/, 'the button says what it does');
+  assert.doesNotMatch(f, /Vervanger zoeken/); assert.equal(byId('rmMessage').value || '', '', 'the plain form has no prefilled message');
+});
+await testAsync('v222: opened from a back-up notification the form names the back-up, prefills the message and has its own button; it still offers the ride', async () => {
+  await setup([MINE], { ritbeurs: { on: true } });
+  withFakeNow(NOW, () => openOfferSheet('Do', 'terug', null, { backup: true, who: 'Ouder van Evi' }));
+  const f = text(sheet().innerHTML);
+  assert.match(f, /Ouder van Evi kan inspringen\. Wie je rit overneemt, rijdt hem in jouw plaats/); assert.match(f, /Eerst horen back-ups zoals Ouder van Evi het/);
+  assert.match(f, /Eline, Jahaimy/, 'the ride is still on top'); assert.match(f, /Bied mijn rit aan$/); assert.doesNotMatch(f, /Vervanger zoeken/);
+  assert.equal(byId('rmMessage').value, 'Ik maak graag gebruik van jouw beschikbaarheid', 'prefilled');
+  await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });
+  const offers = Object.values(S.offers).filter(o => o.status === 'open');
+  assert.equal(offers.length, 1); assert.equal(offers[0].message, 'Ik maak graag gebruik van jouw beschikbaarheid'); assert.equal(offers[0].day, 'Do'); assert.equal(offers[0].direction, 'terug');
+});
+await testAsync('v222: without a known name the back-up variant says "Een back-up"', async () => {
+  await setup([MINE], { ritbeurs: { on: true } });
+  withFakeNow(NOW, () => openOfferSheet('Do', 'terug', null, { backup: true }));
+  assert.match(text(sheet().innerHTML), /Een back-up kan inspringen/);
 });
 await testAsync('Vervanger intrekken asks once inside the sheet (no red bar), Annuleren goes back, Intrekken withdraws and the tag is gone', async () => {
   await setup([MINE], { ritbeurs: { on: true } });
