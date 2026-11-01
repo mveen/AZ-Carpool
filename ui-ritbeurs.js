@@ -83,7 +83,7 @@ function offerCardHtml(o, nowMs){
       <div class="rowflex"><button type="button" class="btn" data-rbtake="${esc(o.id)}">${t('ritbeurs.confirm.ja')}</button>
       <button type="button" class="btn secondary" data-rbconfirmno="1">${t('ritbeurs.confirm.nee')}</button></div></div>`;
   }
-  const status = mine ? `<span class="tag tag--ok">${t('ritbeurs.open.eigen')}</span>` : `<span class="tag tag--ruil">${t('ritbeurs.tag.open')}</span>`;
+  const status = `<span class="tag tag--ruil">${t('ritbeurs.tag.open')}</span>`;
   return `<div class="card rbOffer${hasWarn ? ' rbHasWarn' : ''}" data-rboffer="${esc(o.id)}">
     <div class="rbHeadline">${status}<span class="rbWhen">${esc(dayLabel(o.day))} · ${esc(dirShort(o.direction).toLowerCase())}${esc(urgentText)}</span></div>
     <div class="rbRideLine"><span class="rbTime">${esc(o.time)}</span><span class="rbRoute">${esc(route)}</span></div>
@@ -136,7 +136,7 @@ function momentsHtml(nowMs){
 export function momentPreview(d){
   const me = myLinkedFamilyId();
   const n = allRides().filter(r => r.familyId !== me && momentCovers({ date: d.date, from: d.from, to: d.to }, r.date, r.time)).length;
-  return n ? t('ritbeurs.moment.raakt', { n }) : t('ritbeurs.moment.raaktGeen');
+  return n ? t(n === 1 ? 'ritbeurs.moment.raaktEen' : 'ritbeurs.moment.raakt', { n }) : t('ritbeurs.moment.raaktGeen');
 }
 
 function notificationLine(n){
@@ -150,11 +150,24 @@ export function testNotificationsForView(nowMs = Date.now()){
   Object.entries(S.push.tests || {}).forEach(([id, n]) => { if(n && n.toFamilyId === S.impersonateFamilyId && !(n.deliverAt > nowMs) && !(n.expiresAt <= nowMs)) out[id] = n; });
   return out;
 }
-// The latest few notifications; nothing at all (no card) when there are none. They count as read when the tab has been open for a moment.
+// A notification in the look of the day-coordinator card (amber edge, warning icon, bold title, text). `go` adds a button (used in Mijn week).
+function notifCardHtml({ n, txt }, go){
+  return `<div class="entryCard entryCard--stack rbNotifCard${n.read === true ? '' : ' unread'}" role="status">
+    <div class="entryCard__head"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b></div>
+    <p class="entryCard__text">${esc(txt.body)}</p>${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}</div>`;
+}
+// Mijn week: the unread notifications (at most three) on top. They disappear when the Ruilen tab has been open for a moment.
+export function myWeekNotificationsHtml(nowMs = Date.now()){
+  if(!ritbeursAvailable()) return '';
+  return sortedNotifications(visibleNotifications(nowMs)).filter(n => n.read !== true).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt).slice(0, 3).map(x => notifCardHtml(x, true)).join('');
+}
+export function wireMyWeekNotifications(box, goToRuilen){ box.querySelectorAll('[data-rbnotifgo]').forEach(b => b.onclick = () => { hapticTap(); goToRuilen(); }); }
+
+// The latest few notifications; nothing at all when there are none. They count as read when the tab has been open for a moment.
 function notificationsHtml(nowMs){
   const tests = sortedNotifications(testNotificationsForView(nowMs)).map(n => ({ ...n, isTest: true, read: true }));
   const list = [...sortedNotifications(visibleNotifications(nowMs)), ...tests].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt);
-  return list.slice(0, NOTIFICATIONS_SHOWN).map(({ n, txt }) => `<div class="rbNotif${n.read === true ? '' : ' unread'}"><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b><span>${esc(txt.body)}</span></div>`).join('');
+  return list.slice(0, NOTIFICATIONS_SHOWN).map(x => notifCardHtml(x, false)).join('');
 }
 
 export function ritbeursViewHtml(nowMs = Date.now()){
@@ -163,10 +176,10 @@ export function ritbeursViewHtml(nowMs = Date.now()){
   const mineFirst = [...open.filter(o => o.offeredBy !== me), ...open.filter(o => o.offeredBy === me)];
   const head = key => `<div class="sectionHead"><span class="sectionHead__title">${t(key)}</span></div>`;
   const notifs = notificationsHtml(nowMs);
-  return `<div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
+  return `${notifs ? `<div id="rbNotifCard">${notifs}</div>` : ''}
+    <div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
     ${head('ritbeurs.open.title')}${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
-    ${head('ritbeurs.moment.title')}<div class="card" id="rbMomentCard"><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>
-    ${notifs ? `${head('ritbeurs.notif.title')}<div class="card" id="rbNotifCard">${notifs}</div>` : ''}`;
+    ${head('ritbeurs.moment.title')}<div class="card" id="rbMomentCard"><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>`;
 }
 
 // ---------- actions (also used by the tests) ----------

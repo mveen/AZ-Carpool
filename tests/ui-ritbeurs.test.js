@@ -50,7 +50,7 @@ test('on: the tab is Ruilen, with no segment: Zoekt een vervanger, Ik kan inspri
   withFakeNow(NOW, () => renderDeviationTab());
   const html = dom.html('tab-deviation'), s = text(html);
   assert.doesNotMatch(html, /class="segmented"|data-rbview|id="wrForm"/);
-  assert.match(s, /Rijdt iemand een rit niet\? Neem hem over als het past\. Je eigen rit aanbieden doe je in Mijn week, bij de rit\./);
+  assert.match(s, /Neem een rit over als het schikt\. Je eigen rit aanbieden doe je in Mijn week bij de rit\./);
   const at = ['Zoekt een vervanger', 'Ik kan inspringen'].map(x => s.indexOf(x));
   assert.ok(at.every(i => i >= 0) && at[1] > at[0], 'the two sections, in this order: ' + at.join(','));
   assert.equal((html.match(/class="sectionHead"/g) || []).length, 2);
@@ -147,7 +147,7 @@ test('own moments are listed with a trash icon; the days are the same buttons as
 });
 test('the preview says how many rides of other families the moment touches', () => {
   asF3({});
-  assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '15:00', to: '18:30' })), /raakt 1 ritten/);
+  assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '15:00', to: '18:30' })), /raakt 1 rit\./);
   assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '06:00', to: '07:00' })), /raakt nu geen ritten/);
 });
 await testAsync('saveMomentDraft stores the moment and resets the draft', async () => {
@@ -216,7 +216,8 @@ test('notifications: no card at all when there are none; otherwise the latest fi
   asF3({}); assert.doesNotMatch(view(), /rbNotifCard|Meldingen/);
   const notifications = {}; for(let i = 0; i < 7; i++) notifications['n' + i] = { kind: 'taken', fromFamilyId: 'f2', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: i + 1, deliverAt: 1, expiresAt: 9e12, read: false };
   asF3({ notifications }); const html = view();
-  assert.match(html, /id="rbNotifCard"/); assert.equal((html.match(/class="rbNotif/g) || []).length, 5);
+  assert.match(html, /id="rbNotifCard"/); assert.equal((html.match(/class="entryCard entryCard--stack rbNotifCard/g) || []).length, 5);
+  assert.ok(html.indexOf('id="rbNotifCard"') < html.indexOf('class="infoLine"'), 'the notifications are on top, above the intro');
   assert.doesNotMatch(html, /rbReadAll|Alles gelezen|rbqFrom|rbqTo|Stille uren/);
 });
 test('setRbView switches between the two views and closes open forms', () => {

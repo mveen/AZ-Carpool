@@ -416,6 +416,11 @@ test('v211: the Ruilen tab has a new intro and the removed texts are gone', () =
   for(const k of ['ritbeurs.eigen.title', 'ritbeurs.eigen.leeg', 'ritbeurs.eigen.deadline', 'ritbeurs.check.zitplaatsen', 'ritbeurs.check.geen_conflict', 'ritbeurs.moment.alleenVrij', 'ritbeurs.moment.vrij', 'ritbeurs.notif.gelezen', 'ritbeurs.quiet.title', 'ritbeurs.quiet.uitleg']) assert.equal(hasKey(k), false, k);
   assert.equal(t('nav.vervanger'), 'Ruilen'); assert.equal(t('ritbeurs.eigen.aanbieden'), 'Vervanger zoeken');
 });
+test('v212: singular "1 rit", the shorter intro texts and the Bekijk button exist', () => {
+  assert.equal(t('ritbeurs.moment.raaktEen'), 'Dit tijdvak raakt 1 rit.'); assert.equal(t('ritbeurs.moment.raakt', { n: 2 }), 'Dit tijdvak raakt 2 ritten.');
+  assert.equal(t('ritbeurs.intro'), 'Neem een rit over als het schikt. Je eigen rit aanbieden doe je in Mijn week bij de rit.'); assert.equal(t('ritbeurs.notif.bekijk'), 'Bekijk');
+  assert.match(t('ritbeurs.moment.intro'), /^Heb je tijd en kun je een rit kunnen overnemen\? Meld een tijdvak\./);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

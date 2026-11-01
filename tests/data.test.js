@@ -1142,5 +1142,8 @@ await testAsync('writeDeviation stores the cars of a shift with the week, the ex
 test('v211: leaving the data listeners no longer keeps a rbOffering field (offering lives in Mijn week)', () => {
   assert.ok(!Object.prototype.hasOwnProperty.call(S, 'rbOffering'));
 });
+await testAsync('v212: the notifications listener also redraws Mijn week (the notification card sits there)', async () => {
+  assert.match((await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8'), /S\.notifications\[d\.id\]=d\.data\(\)\);\s*renderDeviationTab\(\); renderMyWeek\(\);/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

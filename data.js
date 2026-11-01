@@ -498,7 +498,7 @@ export function syncListeners(){
     if(nf){
       S.notificationsUnsub = db.collection("families/"+nf+"/notifications").onSnapshot(snap=>{
         S.notifications={}; snap.docs.forEach(d=>S.notifications[d.id]=d.data());
-        renderDeviationTab();
+        renderDeviationTab(); renderMyWeek();
       }, err=>{});
     }
   }

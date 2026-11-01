@@ -23,6 +23,7 @@ import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { timeChangeOf } from './driver-car.js';
 import { hasOpenOffer } from './ritbeurs.js';
+import { myWeekNotificationsHtml, wireMyWeekNotifications } from './ui-ritbeurs.js';
 import { ritbeursOn } from './ritbeurs-data.js';
 import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, openAskedTimeOf, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
@@ -277,11 +278,11 @@ export function renderMyWeek(){
   const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
 
   box.innerHTML = `
-    ${pillsHtml}${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${myWeekNextWeekHtml()}
+    ${myWeekNotificationsHtml()}${pillsHtml}${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${myWeekNextWeekHtml()}
     ${dayCoordinatorHtml()}
   `;
   box.querySelectorAll('[data-mwday]').forEach(b=>b.onclick=()=>{ S.myWeekDay = b.dataset.mwday; hapticTap(); renderMyWeek(); });
-  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireTakeOver(box); wireDriverCar(box, renderMyWeek);
+  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireMyWeekNotifications(box, () => { renderDeviationTab(); activateTab('deviation'); }); wireTakeOver(box); wireDriverCar(box, renderMyWeek);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';

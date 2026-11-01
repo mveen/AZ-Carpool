@@ -142,6 +142,7 @@ test('APP_VERSION is at least v208 (Mijn week: menu "Deze rit" with Vervanger zo
 test('APP_VERSION is at least v209 (Vervanger intrekken asks inside the sheet)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 209); });
 test('APP_VERSION is at least v210 (the Vervanger message starts with a capital)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 210); });
 test('APP_VERSION is at least v211 (Ruilen tab: no Jouw ritten, compact notifications, no quiet-hours UI)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 211); });
+test('APP_VERSION is at least v212 (notification cards on top of Ruilen and Mijn week)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 212); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
