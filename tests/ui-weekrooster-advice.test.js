@@ -381,7 +381,8 @@ await testAsync('Indeling shows the way back too when only the way there changes
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   const html = view(), s = text(html);
   assert.match(s, /Heen Lois moet er om 09:00 zijn/); assert.match(s, /Terug Geen wijzigingen nodig/);
-  assert.match(s, /Niemand vroeg een andere terugrit\. De auto’s blijven zoals ze zijn\./); assert.match(s, /Auto’s terug · vertrek bij/);
+  assert.doesNotMatch(s, /Niemand vroeg/);   // the title says enough, no second line
+   assert.match(s, /Auto’s terug · vertrek bij/);
   assert.match(s, /17:00 Jan Jansen Anouk, Eline/); assert.match(s, /18:00 Piet Pieters/); assert.match(s, /Geen impact voor chauffeurs/);
   assert.ok(s.indexOf('Heen Lois') < s.indexOf('Terug Geen wijzigingen nodig'), 'Heen first');
   assert.doesNotMatch(html, /data-wradjust="terug"/); assert.match(html, /data-wradjust="heen"/); assert.match(html, /scene scene--terug/);
@@ -391,7 +392,7 @@ await testAsync('Indeling: when only the way back changes, the way there is show
   await setup({ 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '08:30', terug: '18:30' }) }); S.wrAdvice = { day: 'Do', step: 'plan' };
   assert.deepEqual(Object.keys(withFakeNow(NOW, () => adviceForDay('Do')).directions), ['terug']);
   const s = text(view());
-  assert.match(s, /Heen Geen wijzigingen nodig/); assert.match(s, /Niemand vroeg een andere heenrit/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /Terug Lois is om 18:30 klaar/);
+  assert.match(s, /Heen Geen wijzigingen nodig/); assert.doesNotMatch(s, /Niemand vroeg/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /Terug Lois is om 18:30 klaar/);
   assert.ok(s.indexOf('Heen Geen wijzigingen nodig') < s.indexOf('Terug Lois'), 'Heen first');
 });
 await testAsync('Indeling: a direction without any car says "Geen ritten" and has no car list', async () => {

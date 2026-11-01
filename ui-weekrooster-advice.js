@@ -264,8 +264,7 @@ function quietSceneHtml(dir, cars) {
   const heen = dir === 'heen', none = !cars.length;
   return `<section class="scene scene--${heen ? 'heen' : 'terug'}" data-wrdir="${dir}">
     <div class="scene__head"><span class="scene__badge">${phIcon(heen ? 'sun' : 'moon')}</span><div class="scene__headText"><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span><b>${esc(t(none ? 'weekrooster.flow.sceneNone' : 'weekrooster.flow.sceneQuietTitle'))}</b></div></div>
-    ${none ? `<p class="scene__chg"><span class="chip chip--muted">${esc(t('weekrooster.flow.sceneNoneNote'))}</span></p>` : `${okLine(t(heen ? 'weekrooster.flow.sceneQuietHeen' : 'weekrooster.flow.sceneQuietTerug'))}
-    <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, cars) }))}</div>
+    ${none ? `<p class="scene__chg"><span class="chip chip--muted">${esc(t('weekrooster.flow.sceneNoneNote'))}</span></p>` : `<div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, cars) }))}</div>
       ${cars.map(c => carCardHtml(dir, null, null, c, null, true, new Map(), false, cars)).join('')}</div>
     <div class="scene__note">${phIcon('info')}<span>${esc(t('weekrooster.flow.notice0'))}</span></div>`}</section>`;
 }

@@ -1446,8 +1446,6 @@ export default {
   "weekrooster.flow.sceneChangesN": "{p1} auto’s wijzigen",
   "weekrooster.flow.sceneNoChange": "Past in de bestaande auto’s: hier verandert niets.",
   "weekrooster.flow.sceneQuietTitle": "Geen wijzigingen nodig",
-  "weekrooster.flow.sceneQuietHeen": "Niemand vroeg een andere heenrit. De auto’s blijven zoals ze zijn.",
-  "weekrooster.flow.sceneQuietTerug": "Niemand vroeg een andere terugrit. De auto’s blijven zoals ze zijn.",
   "weekrooster.flow.sceneNone": "Geen ritten",
   "weekrooster.flow.sceneNoneNote": "Er zijn op dit dagdeel geen auto’s gepland.",
   "weekrooster.flow.sceneHeenMixed": "Aanvragen heen",

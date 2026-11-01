@@ -375,7 +375,6 @@ test('the screen after Doorvoeren has its texts', () => {
 });
 test('the direction nobody asked to change has its texts, and the way back says "nog niet klaar" where the way there says "komt te laat"', () => {
   assert.equal(t('weekrooster.flow.sceneQuietTitle'), 'Geen wijzigingen nodig'); assert.equal(t('weekrooster.flow.sceneNone'), 'Geen ritten');
-  assert.equal(t('weekrooster.flow.sceneQuietTerug'), 'Niemand vroeg een andere terugrit. De auto’s blijven zoals ze zijn.'); assert.equal(t('weekrooster.flow.sceneQuietHeen'), 'Niemand vroeg een andere heenrit. De auto’s blijven zoals ze zijn.');
   assert.equal(t('weekrooster.flow.sceneNoneNote'), 'Er zijn op dit dagdeel geen auto’s gepland.');
   assert.equal(t('weekrooster.flow.riderLate'), 'komt te laat'); assert.equal(t('weekrooster.flow.riderLateTerug'), 'nog niet klaar');
   assert.equal(t('weekrooster.flow.pickLate'), 'komt te laat'); assert.equal(t('weekrooster.flow.pickLateTerug'), 'nog niet klaar');
