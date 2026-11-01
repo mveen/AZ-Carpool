@@ -135,6 +135,7 @@ export default {
   "beheer.attn_problemen": "{p1} problemen gemeld in de afgelopen 24 uur",
   "beheer.fouten_titel": "Gemelde problemen",
   "beheer.fouten_uitleg": "Technische meldingen uit de app van ouders, zonder namen, nummers of codes. Na 30 dagen verdwijnen ze vanzelf.",
+  "beheer.fouten_mijn_id": "ID van dit apparaat: {p1}",
   "beheer.fouten_leeg": "Geen problemen gemeld.",
   "beheer.fouten_meer": "En nog {p1} oudere meldingen.",
   "beheer.fouten_wis_alles": "Wis alles",

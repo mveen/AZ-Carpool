@@ -208,6 +208,7 @@ export function errorLogCardHtml(){
   return `<div class="card" id="errorLogCard">
       <h2>${t('beheer.fouten_titel')}</h2>
       <p class="muted">${t('beheer.fouten_uitleg')}</p>
+      ${S.me? `<p class="muted" id="myUid">${t('beheer.fouten_mijn_id',{p1:esc(S.me)})}</p>` : ''}
       ${list.length? rows+more : `<p class="muted">${t('beheer.fouten_leeg')}</p>`}
       ${list.length? `<div class="cardActions"><button type="button" class="btn small secondary" id="errorLogClear">${t('beheer.fouten_wis_alles')}</button></div>` : ''}
     </div>`;

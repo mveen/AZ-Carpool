@@ -147,6 +147,7 @@ test('APP_VERSION is at least v213 (Ruilen: Tijdvak toevoegen folds the form, co
 test('APP_VERSION is at least v214 (a back-up notification has the button Bied mijn rit aan)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 214); });
 test('APP_VERSION is at least v215 (the back-up card stays on Mijn week while a ride can be offered)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 215); });
 test('APP_VERSION is at least v216 (notification cards can be ignored or closed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 216); });
+test('APP_VERSION is at least v217 (device ID shown under Gemelde problemen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 217); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

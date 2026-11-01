@@ -515,3 +515,4 @@ test('the driver notice says "Impact voor", not "merken het"', () => {
   assert.equal(t('weekrooster.flow.notice0'), 'Geen impact voor chauffeurs'); assert.equal(t('weekrooster.flow.notice', { p1: 'Jan' }), 'Impact voor: Jan');
   assert.equal(t('weekrooster.flow.tileNoticeN'), 'chauffeurs met impact');
 });
+test('v217: the device ID line exists', () => { assert.equal(t('beheer.fouten_mijn_id', { p1: 'x1' }), 'ID van dit apparaat: x1'); });

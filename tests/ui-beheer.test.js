@@ -261,6 +261,12 @@ test('only the 20 newest are shown, with a line for the rest', () => {
   const html = errorLogCardHtml();
   assert.equal((html.match(/class="errRow"/g) || []).length, 20); assert.match(text(html), /En nog 5 oudere meldingen/); assert.match(html, /c24/); assert.doesNotMatch(html, /c0</);
 });
+test('v217: the card shows the ID of this device (to find it in Firebase Authentication), escaped; nothing without a session', () => {
+  useFakeDb({}); sampleCoordinatorState({ errorLog: {} }); S.me = 'abc123<b>';
+  const html = errorLogCardHtml();
+  assert.match(html, /ID van dit apparaat: abc123&lt;b&gt;/); assert.match(html, /id="myUid"/); assert.doesNotMatch(html, /abc123<b>/);
+  S.me = null; assert.doesNotMatch(errorLogCardHtml(), /myUid/);
+});
 test('entries without a time stamp are ignored', () => {
   useFakeDb({}); sampleCoordinatorState({ errorLog: { a: { where: 'x' }, b: logRow(5) } });
   assert.deepEqual(errorLogEntries().map(e => e.id), ['b']);
