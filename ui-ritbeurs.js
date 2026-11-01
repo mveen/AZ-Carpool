@@ -87,8 +87,7 @@ function offerCardHtml(o, nowMs){
   return `<div class="card rbOffer${hasWarn ? ' rbHasWarn' : ''}" data-rboffer="${esc(o.id)}">
     <div class="rbHeadline">${status}<span class="rbWhen">${esc(dayLabel(o.day))} · ${esc(dirShort(o.direction).toLowerCase())}${esc(urgentText)}</span></div>
     <div class="rbRideLine"><span class="rbTime">${esc(o.time)}</span><span class="rbRoute">${esc(route)}</span></div>
-    <div class="rbBy">${mine ? t('ritbeurs.open.eigen') : t('ritbeurs.open.door', { name: famName(o.offeredBy) })}</div>
-    ${o.message ? `<div class="rbNote">“${esc(o.message)}”</div>` : ''}
+    <div class="rbBy"><b>${mine ? t('ritbeurs.open.eigen') : famName(o.offeredBy)}</b>${o.message ? ` · <i>“${esc(o.message)}”</i>` : ''}</div>
     ${girls ? `<div class="chips rbPills">${girls}</div>` : ''}
     ${mine ? `<button type="button" class="btn secondary" data-rbwithdraw="${esc(o.id)}">${t('ritbeurs.trekIn')}</button>`
       : (S.rbConfirm === o.id ? '' : `<button type="button" class="btn" data-rbask="${esc(o.id)}">${t(hasWarn ? 'ritbeurs.toch' : 'ritbeurs.neemOver')}</button>`)}
@@ -114,7 +113,11 @@ function momentsHtml(nowMs){
     return `<div class="rbMoment">
       <span><b>${esc(dl)}</b> ${esc(m.from)}–${esc(m.to)}</span>
       <button type="button" class="btn small secondary iconBtn" data-rbmomentdel="${esc(m.id)}" aria-label="${esc(t('ritbeurs.moment.verwijder'))}">${phIcon('trash')}</button></div>`;
-  }).join('') : `<p class="muted">${t('ritbeurs.moment.leeg')}</p>`;
+  }).join('') : '';
+  // Closed: only the own moments (if any) and one button. The form opens with a tap (and stays open while a draft is being typed).
+  if(!S.rbMomentOpen && !S.rbMomentDraft){
+    return `${list}<button type="button" class="btn secondary rbAddMoment" id="rbmOpen">${phIcon('plus-circle')}${t('ritbeurs.moment.toevoegen')}</button>`;
+  }
   const d = momentDraft();
   // The same day buttons as in Mijn week: five equal columns over the full width.
   const days = DAYS.map(([k, label]) => {
@@ -125,12 +128,13 @@ function momentsHtml(nowMs){
   const preview = momentPreview(d);
   return `${list}
     <div class="rbForm"><h4>${t('ritbeurs.moment.nieuw')}</h4>
+      <p class="muted rbIntro">${t('ritbeurs.moment.intro')}</p>
       <div class="dayPills" role="group" aria-label="${esc(t('ritbeurs.moment.dag'))}">${days}</div>
       <div class="rbTimes">
         <label for="rbmFrom"><span>${t('ritbeurs.moment.van')}</span><select id="rbmFrom" class="rbSel">${timeOptions(d.from)}</select></label>
         <label for="rbmTo"><span>${t('ritbeurs.moment.tot')}</span><select id="rbmTo" class="rbSel">${timeOptions(d.to)}</select></label></div>
-      <p class="muted" id="rbmPreview">${esc(preview)}</p>
-      <button type="button" class="btn" id="rbmSave">${t('ritbeurs.moment.opslaan')}</button></div>`;
+      <div class="rbSaveRow"><span class="muted" id="rbmPreview">${esc(preview)}</span>
+        <button type="button" class="btn" id="rbmSave">${t('ritbeurs.moment.opslaan')}</button></div></div>`;
 }
 // How many rides (of other families) the draft moment touches.
 export function momentPreview(d){
@@ -179,7 +183,7 @@ export function ritbeursViewHtml(nowMs = Date.now()){
   return `${notifs ? `<div id="rbNotifCard">${notifs}</div>` : ''}
     <div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
     ${head('ritbeurs.open.title')}${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
-    ${head('ritbeurs.moment.title')}<div class="card" id="rbMomentCard"><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>`;
+    ${head('ritbeurs.moment.title')}<div class="card" id="rbMomentCard">${momentsHtml(nowMs)}</div>`;
 }
 
 // ---------- actions (also used by the tests) ----------
@@ -192,6 +196,7 @@ export async function saveMomentDraft(){
   const d = readMomentForm();
   S.rbMomentDraft = d;
   const ok = await addMoment(d);
+  if(ok) S.rbMomentOpen = false;
   renderDeviationTab();
   return ok;
 }
@@ -219,6 +224,7 @@ export function wireRitbeurs(){
   ['rbmFrom', 'rbmTo'].forEach(id => { const el = document.getElementById(id); if(el) el.onchange = () => { S.rbMomentDraft = readMomentForm(); if(el.blur) el.blur(); renderDeviationTab(); }; });
   // A list that is open must not be redrawn under the finger (see holdFormRedraw): a held redraw is done after the list is left.
   $$('.rbSel', el => { el.onblur = () => setTimeout(redrawAfterTyping, 700); });
+  const openForm = document.getElementById('rbmOpen'); if(openForm) openForm.onclick = () => { hapticTap(); S.rbMomentOpen = true; renderDeviationTab(); };
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });
   markSeenSoon();

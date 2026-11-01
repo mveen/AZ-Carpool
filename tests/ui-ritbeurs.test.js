@@ -77,9 +77,9 @@ console.log('=== open rides ===');
 test('the Ritbeurs view shows the open ride of another family: tag Open, when, time + route, by, note, chips, "Ik neem deze rit over"', () => {
   asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) } });
   const html = view(), s = text(html);
-  assert.match(s, /Zoekt een vervanger Open Donderdag · heen .*16:15 Busstation → AFC (&#39;|')34 Aangeboden door Piet Pieters “Tandarts”/);
+  assert.match(s, /Zoekt een vervanger Open Donderdag · heen .*16:15 Busstation → AFC (&#39;|')34 Piet Pieters · “Tandarts”/);
   assert.match(s, /Ik neem deze rit over/);
-  assert.match(html, /<div class="rbNote">“Tandarts”<\/div>/);
+  assert.match(html, /<i>“Tandarts”<\/i>/);
   assert.match(html, /data-rbask="o1"/);
   assert.doesNotMatch(html, /Intrekken/);
 });
@@ -134,7 +134,7 @@ test('the form defaults to the first day that is not over, 15:00-18:30, only if 
   assert.deepEqual(d, { date: '2026-09-30', from: '15:00', to: '18:30', onlyIfFree: true });
 });
 test('own moments are listed with a trash icon; the days are the same buttons as in Mijn week (selected = on, days that are over are disabled); Van/Tot sit side by side; no toggle', () => {
-  asF3({ moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 1 }, m2: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '09:00', onlyIfFree: true, createdAt: 1 } } });
+  asF3({ rbMomentOpen: true, moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 1 }, m2: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '09:00', onlyIfFree: true, createdAt: 1 } } });
   const html = view(), s = text(html);
   assert.match(s, /Donderdag 15:00–18:30/);
   assert.match(html, /data-rbmomentdel="m1"/); assert.doesNotMatch(html, /data-rbmomentdel="m2"/);
@@ -145,6 +145,19 @@ test('own moments are listed with a trash icon; the days are the same buttons as
   assert.match(html, /class="rbTimes">\s*<label for="rbmFrom"><span>Van<\/span>[\s\S]*<label for="rbmTo"><span>Tot<\/span>/);
   assert.doesNotMatch(html, /rbmFree|Alleen als ik niet al rijd|rbOpt/);
 });
+test('v213: closed, "Ik kan inspringen" is only the button (no form, no empty-text, no intro); a tap opens the form with the intro, the preview next to the save button', () => {
+  asF3({}); let html = view();
+  assert.match(html, /id="rbmOpen"[^>]*>[\s\S]*Tijdvak toevoegen/); assert.doesNotMatch(html, /id="rbmFrom"|id="rbmSave"|Je hebt geen tijdvak|Heb je tijd/);
+  S.rbMomentOpen = true; html = view();
+  assert.doesNotMatch(html, /id="rbmOpen"/); assert.match(html, /Heb je tijd en kun je een rit kunnen overnemen\?/);
+  assert.match(html, /class="rbSaveRow"><span class="muted" id="rbmPreview">[^<]*<\/span>\s*<button type="button" class="btn" id="rbmSave"/);
+  S.rbMomentOpen = false; S.rbMomentDraft = { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true };
+  assert.match(view(), /id="rbmFrom"/, 'a draft that is being typed keeps the form open');
+});
+test('v213: the offer card has one line with who offers it and the note (no separate "Aangeboden door" line)', () => {
+  asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) } });
+  const html = view(); assert.match(html, /class="rbBy"><b>[^<]+<\/b> · <i>“Tandarts”<\/i><\/div>/); assert.doesNotMatch(html, /Aangeboden door|rbNote/);
+});
 test('the preview says how many rides of other families the moment touches', () => {
   asF3({});
   assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '15:00', to: '18:30' })), /raakt 1 rit\./);
@@ -152,8 +165,8 @@ test('the preview says how many rides of other families the moment touches', () 
 });
 await testAsync('saveMomentDraft stores the moment and resets the draft', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'groups/Do_heen_1': groups().Do_heen_1, 'settings/ritbeurs': { on: true } });
-  asF3({ rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true } });
-  assert.equal(await withFakeNowAsync(NOW, () => saveMomentDraft()), true);
+  asF3({ rbMomentOpen: true, rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true } });
+  assert.equal(await withFakeNowAsync(NOW, () => saveMomentDraft()), true); assert.equal(S.rbMomentOpen, false, 'the form closes after saving');
   assert.equal([...fake.store.keys()].filter(k => k.startsWith('backupMoments/')).length, 1);
   assert.equal(S.rbMomentDraft, null);
 });
@@ -307,7 +320,7 @@ test('the intro is an info line and the sections are labels, not amber boxes', (
 });
 
 test('a time list of "Nieuw tijdvak" that is open is not redrawn under the finger; after it is left it is', () => {
-  asF3({ offers: { o1: offerBy('f2') } }); S.rbView = 'ritbeurs';
+  asF3({ rbMomentOpen: true, offers: { o1: offerBy('f2') } }); S.rbView = 'ritbeurs';
   withFakeNow(NOW, () => renderDeviationTab());
   dom.el('tab-deviation').innerHTML = 'MARK';
   document.activeElement = { classList: { contains: c => c === 'rbSel' } };

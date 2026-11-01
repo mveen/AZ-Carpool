@@ -101,6 +101,7 @@ export const S = {
   },
   rbView: 'wijzigen',      // Wijzigen tab: 'wijzigen' (the ride cards) or 'ritbeurs'
   rbConfirm: null,         // Ritbeurs: id of the offer whose "Neem over" confirmation is open (null = none)
+  rbMomentOpen: false,     // Ritbeurs: the form "Nieuw tijdvak" is open (Ruilen tab)
   rbMomentDraft: null,     // Ritbeurs: what is typed in the "Nieuw moment" form { date, from, to, place, onlyIfFree } (null = defaults)
   rbBusy: false,           // Ritbeurs: a background check (late offers, housekeeping) is running
   periodDraft: null,       // Beheer: the period form { editing: firstDay of the period being edited or '', value } while it is open (null = closed)

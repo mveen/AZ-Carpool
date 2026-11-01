@@ -93,7 +93,7 @@ test('there is no Afwijkend-weekrooster switch in the state any more', () => {
 test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch is read', () => {
   assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {}); assert.deepEqual(S.notifications, {});
   assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null);
-  assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbBusy, false);
+  assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbMomentOpen, false); assert.equal(S.rbBusy, false);
 });
 
 test('the push state starts empty: the switches are off until read, nothing is listened to, no family chosen, nothing pending; a parent\'s own phone is unknown', () => {

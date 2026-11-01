@@ -853,6 +853,11 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .rbNotifCard .entryCard__text{margin:0;font:var(--type-small);color:var(--text-2)}
 .rbNotifCard.unread .entryCard__head b::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:var(--space-3)}
 #rbNotifCard .entryCard:first-child{margin-top:0}
+.rbAddMoment{width:100%}
+.rbAddMoment svg{width:20px;height:20px;fill:currentColor;margin-right:var(--space-3);vertical-align:-4px}
+.rbIntro{margin:0 0 var(--space-4)}
+.rbSaveRow{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.rbSaveRow .btn{flex:none}
 .rbTimes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-3);margin-bottom:var(--space-3)}
 .rbTimes label{display:flex;flex-direction:column;gap:var(--space-2);font:var(--type-small);color:var(--text-2)}
 .rbTimes .rbSel{width:100%}

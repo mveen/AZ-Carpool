@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "086c551f501a70ee30b8757f2a59d5f611ed0ee2b9db66ba8febf97a0da061b9",
-    "test": "db117a47aaf748bf148a4d6d3b13ae1ccb6f72bc3506aea335c2b8e05ed30f68"
+    "module": "7508ec2bee0f199481d6349ef3ae1e9db3d54bb41380d8944e99727cd75e9471",
+    "test": "521617e1c34024edf5507b57f523a364bfd03b4917850d79cd71b27a1fffbfdd"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -156,15 +156,15 @@
     "test": "d8702a5788b549352b952e7f50e05735c4cc1c783981dc12a6b22b009e2098de"
   },
   "state.js": {
-    "module": "fe0750e90d9a347eb8d2c6362df9f4dfed80a9924af9a2f16effd0714cab6e1b",
-    "test": "ac2a013e79994e96cdd1fc05e0610f080a6ab6561b6464d804322e839466069a"
+    "module": "0e8ca8fd1d24cb123b26db0991572904300b778929458f3943220220d70bc313",
+    "test": "15cdfea0394df24778506a116bbfae415f86aea27c49af5ab778dbbed080dee8"
   },
   "swipe-tabs.js": {
     "module": "0cd7e7ab88193d845bd2b9a8948bd86d3bc9cc48c57d5df39fe6ef1d60dfe1bb",
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "3a349ff96c1953fe69f304d6caced286969cce8641e82a43244d1731f2fb3da3",
+    "module": "042401236bda40282a605215dc7131116f91614793eaa85b3c9b487e899277c9",
     "test": "d90428833f15ab519d399d27f167408c0fd1911b7e81742c2abc90df54740b72"
   },
   "ui-agenda.js": {
@@ -244,8 +244,8 @@
     "test": "64537463570fb438502adad7fc64b7802ec72f2848e2b553bd107c89fac6ea5b"
   },
   "ui-ritbeurs.js": {
-    "module": "0b1c75069a55525870d62f2b2565a0bb8d5a783416d9a8877590c8f7b8c9be0a",
-    "test": "e36d8ac39228acb4e63209490ed7e3b1e8480961002c3e7ac973d1a56ddf1778"
+    "module": "0d53e98a2e6c718552f0c7cdc49f6d4d1d6609b3dbc9beb513e3bf219a85c7b2",
+    "test": "27d06f6f5085a32e8433a197f4e3320b84e8a9497e0f68c2e40e14cbd957a3f6"
   },
   "ui-schedule.js": {
     "module": "a6e5bf5608f2a8543ab30c7abcf9f8aa791919301cd3c9e66d4aaba8cb917a0b",
