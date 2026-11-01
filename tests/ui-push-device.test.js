@@ -66,7 +66,7 @@ await test('loading and error: a short text, no switch', () => {
 await test('off, in a browser that can do push: what it is for, a switch that is off, the quiet hours of the family and the privacy line', () => withBrowser({}, () => {
   parent(); ready();
   const html = pushMeInnerHtml(), s = text(html);
-  assert.match(s, /Krijg een melding op deze telefoon als er bij Vervanger iets voor jouw gezin is/); assert.match(s, /een rit komt vrij waar jij back-up voor bent/);
+  assert.match(s, /Krijg een melding op deze telefoon als er bij Ruilen iets voor jouw gezin is/); assert.match(s, /een rit komt vrij waar jij back-up voor bent/);
   assert.match(html, /<input type="checkbox" role="switch" class="switch" id="pushMeOn">/); assert.doesNotMatch(html, /pushMeOn" checked/); assert.doesNotMatch(html, /disabled/);
   assert.match(s, /Stille uren: van 22:00 tot 06:00/); assert.match(s, /Dit geldt alleen voor deze telefoon/);
   assert.match(s, /push-adres van deze telefoon.*Google, Mozilla of Apple.*niet wat erin staat/); assert.doesNotMatch(html, /style=/);

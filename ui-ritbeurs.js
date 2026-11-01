@@ -1,10 +1,10 @@
-// ui-ritbeurs.js — the Vervanger tab (the Ritbeurs): own rides you cannot drive ("Jouw ritten"), rides that look for a replacement ("Zoekt een vervanger"),
-// "Ik kan inspringen" moments and the notifications inbox. The rules are in ritbeurs.js, everything that writes is in ritbeurs-data.js.
+// ui-ritbeurs.js — the Ruilen tab (the Ritbeurs): rides that look for a replacement ("Zoekt een vervanger"), "Ik kan inspringen" moments and the
+// notifications (only when there are any). Offering your own ride is done in Mijn week (ui-driver-car.js). The rules are in ritbeurs.js, everything that writes is in ritbeurs-data.js.
 // Everything here is hidden when the feature switch (settings/ritbeurs) is off; the Beheer card with that switch is at the bottom.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS, PH_PATHS } from './constants.js';
-import { weekKeyDayIso } from './dates.js';
+import { dayUp, weekKeyDayIso } from './dates.js';
 import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { effectiveCars, fam } from './rides.js';
 import { esc, hapticTap, locationsCfg, phIcon, twoStepConfirm } from './ui-common.js';
@@ -17,14 +17,16 @@ import { renderBeheer } from './ui-beheer.js';
 import { periodCardsHtml } from './ui-period.js';
 import { familiesWithPush, serverState } from './push.js';
 import {
-  RITBEURS_MESSAGE_MAX, activeMoments, keepCapital, deadlineMs, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
+  activeMoments, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
 import {
-  addMoment, allRides, createOffer, markNotificationsRead, pushLiveOn, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
+  addMoment, allRides, markNotificationsRead, pushLiveOn, removeMoment, ritbeursOn, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
 } from './ritbeurs-data.js';
 
 const dayLabel = k => (DAYS.find(([d]) => d === k) || [k, String(k || '')])[1];
 const famName = id => esc((S.families[id] && (S.families[id].parentName || S.families[id].girlName)) || t('ritbeurs.notif.onbekend'));
+const NOTIFICATIONS_SHOWN = 5;
+const SEEN_MS = 4000;   // the notifications count as read after the tab has been open this long
 const dirShort = d => t(d === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
 
 // Is the Ritbeurs usable for this user? The switch is on and the user has a linked family.
@@ -36,7 +38,7 @@ export function visibleNotifications(nowMs = Date.now()){
   Object.entries(S.notifications || {}).forEach(([id, n]) => { if(n && !(n.deliverAt > nowMs) && !(n.expiresAt < nowMs)) own[id] = n; });
   return own;
 }
-// The number on the Vervanger tab: open rides of other families + unread notifications. 0 when the switch is off.
+// The number on the Ruilen tab: open rides of other families + unread notifications. 0 when the switch is off.
 export function ritbeursBadgeCount(nowMs = Date.now()){
   if(!ritbeursAvailable()) return 0;
   const me = myLinkedFamilyId();
@@ -44,7 +46,7 @@ export function ritbeursBadgeCount(nowMs = Date.now()){
 }
 
 // ---------- the tab: name, icon and colour follow the feature ----------
-// While the Ritbeurs is on the tab is Vervanger (teal, two people with an arrow). Without it the tab is the old Wijzigen (day by day editor), and for a
+// While the Ritbeurs is on the tab is Ruilen (teal, two people with an arrow). Without it the tab is the old Wijzigen (day by day editor), and for a
 // family with a weekrooster it is hidden: Tijden wijzigen opens from Mijn week.
 export function syncVervangerNav(){
   const btn = document.querySelector && document.querySelector('nav button[data-tab="deviation"]'); if(!btn || !btn.querySelector) return;
@@ -55,7 +57,7 @@ export function syncVervangerNav(){
   if(label){ label.setAttribute('data-i18n', on ? 'nav.vervanger' : 'nav.deviation'); label.textContent = t(on ? 'nav.vervanger' : 'nav.deviation'); }
   btn.style.display = (!on && weekroosterActive() && !periodCardsHtml()) ? 'none' : '';   // a waiting period task keeps the tab
 }
-export function setRbView(view){ S.rbView = view === 'ritbeurs' ? 'ritbeurs' : 'wijzigen'; S.rbConfirm = null; S.rbOffering = null; renderDeviationTab(); }
+export function setRbView(view){ S.rbView = view === 'ritbeurs' ? 'ritbeurs' : 'wijzigen'; S.rbConfirm = null; renderDeviationTab(); }
 
 // ---------- the view ----------
 function offerCardHtml(o, nowMs){
@@ -71,13 +73,14 @@ function offerCardHtml(o, nowMs){
   const hasWarn = !!(w && (!w.seats.ok || w.conflict));
   let confirm = '';
   if(S.rbConfirm === o.id && !mine){
-    // Two lines: seats and conflicts, each with a check (all fine) or a warning (design v2).
-    const seatsLine = w && !w.seats.ok ? `⚠ ${t('ritbeurs.warn.zitplaatsen', { need: w.seats.need, have: w.seats.have })}` : `✓ ${t('ritbeurs.check.zitplaatsen', { need: w ? w.seats.need : (car ? (car.girlIds || []).length : 0), have: w ? w.seats.have : '' })}`;
-    const conflictLine = w && w.conflict ? `⚠ ${t('ritbeurs.warn.conflict', { day: dayLabel(w.conflict.day).toLowerCase(), dir: dirShort(w.conflict.direction).toLowerCase(), time: w.conflict.time })}` : `✓ ${t('ritbeurs.check.geen_conflict')}`;
+    // Only what is wrong is shown (not enough seats, another ride too close); when everything fits there is just the question and the button.
+    const problems = [];
+    if(w && !w.seats.ok) problems.push(`⚠ ${t('ritbeurs.warn.zitplaatsen', { need: w.seats.need, have: w.seats.have })}`);
+    if(w && w.conflict) problems.push(`⚠ ${t('ritbeurs.warn.conflict', { day: dayLabel(w.conflict.day).toLowerCase(), dir: dirShort(w.conflict.direction).toLowerCase(), time: w.conflict.time })}`);
     confirm = `<div class="rbConfirm" role="group" aria-label="${esc(t('ritbeurs.confirm.title'))}">
       <h4>${t('ritbeurs.confirm.title', { short: `${dayLabel(o.day).toLowerCase()} ${dirShort(o.direction).toLowerCase()} ${t('ritbeurs.om')} ${o.time}` })}</h4>
-      <p class="rbChecks">${esc(seatsLine)}<br>${esc(conflictLine)}</p>
-      <div class="rowflex" style="gap:8px;margin-top:8px"><button type="button" class="btn" data-rbtake="${esc(o.id)}">${t('ritbeurs.confirm.ja')}</button>
+      ${problems.length ? `<p class="rbChecks">${problems.map(esc).join('<br>')}</p>` : ''}
+      <div class="rowflex"><button type="button" class="btn" data-rbtake="${esc(o.id)}">${t('ritbeurs.confirm.ja')}</button>
       <button type="button" class="btn secondary" data-rbconfirmno="1">${t('ritbeurs.confirm.nee')}</button></div></div>`;
   }
   const status = mine ? `<span class="tag tag--ok">${t('ritbeurs.open.eigen')}</span>` : `<span class="tag tag--ruil">${t('ritbeurs.tag.open')}</span>`;
@@ -91,30 +94,6 @@ function offerCardHtml(o, nowMs){
       : (S.rbConfirm === o.id ? '' : `<button type="button" class="btn" data-rbask="${esc(o.id)}">${t(hasWarn ? 'ritbeurs.toch' : 'ritbeurs.neemOver')}</button>`)}
     ${confirm}
   </div>`;
-}
-
-// "Jouw rijbeurten": one card per ride you still have to drive, with Aanbieden (ink) or Intrekken (outline).
-function ownRidesHtml(nowMs){
-  const me = myLinkedFamilyId();
-  const rides = ridesOf(me).filter(r => rideStartMs(r.date, r.time) > nowMs);
-  if(!rides.length) return `<p class="muted">${t('ritbeurs.eigen.leeg')}</p>`;
-  return rides.map(r => {
-    const key = `${r.day}|${r.direction}`;
-    const offer = openOffers(S.offers, S.currentWeekKey, nowMs).find(o => o.offeredBy === me && o.day === r.day && o.direction === r.direction);
-    const form = S.rbOffering === key ? `<div class="rbForm">
-        <label for="rbMessage">${t('ritbeurs.form.bericht')}</label>
-        <input type="text" id="rbMessage" maxlength="${RITBEURS_MESSAGE_MAX}" autocomplete="off" autocapitalize="sentences" placeholder="${esc(t('ritbeurs.form.placeholder'))}">
-        <p class="muted">${t('ritbeurs.form.stappen')}</p>
-        <div class="rowflex" style="gap:8px"><button type="button" class="btn" data-rboffergo="${esc(key)}">${t('ritbeurs.form.bevestig')}</button>
-        <button type="button" class="btn secondary" data-rbofferno="1">${t('ritbeurs.confirm.nee')}</button></div></div>` : '';
-    const action = offer
-      ? `<button type="button" class="btn secondary pill small" data-rbwithdraw="${esc(offer.id)}">${t('ritbeurs.trekIn')}</button>`
-      : `<button type="button" class="btn pill small" data-rboffer-open="${esc(key)}">${t('ritbeurs.eigen.aanbieden')}</button>`;
-    const dl = new Date(deadlineMs(r.date)).toLocaleDateString('nl-NL', { weekday: 'long' });
-    const sub = offer ? `<span class="tag tag--ruil">${t('ritbeurs.eigen.aangeboden')}</span>` : '';
-    return `<div class="card rbRide"><div class="rbRide__row"><span class="rbRide__time">${esc(r.time)}</span>
-        <div class="rbRide__what"><div class="rbRide__when">${esc(dayLabel(r.day))} · ${esc(dirShort(r.direction).toLowerCase())}</div><div class="rbRide__sub">${sub || esc(t('ritbeurs.eigen.deadline', { day: dl }))}</div></div>${action}</div>${form}</div>`;
-  }).join('');
 }
 
 // The draft of the "Nieuw tijdvak" form (defaults: the first day of this week that has not ended, 15:00-18:30).
@@ -132,24 +111,24 @@ function momentsHtml(nowMs){
   const list = mine.length ? mine.map(m => {
     const d = DAYS.find(([k]) => weekKeyDayIso(S.currentWeekKey, k) === m.date);
     const dl = d ? d[1] : m.date;
-    return `<div class="rbMoment rowflex" style="justify-content:space-between;gap:8px;align-items:center">
-      <span><b>${esc(dl)}</b> ${esc(m.from)}–${esc(m.to)}${m.onlyIfFree ? ' · ' + t('ritbeurs.moment.vrij') : ''}</span>
+    return `<div class="rbMoment">
+      <span><b>${esc(dl)}</b> ${esc(m.from)}–${esc(m.to)}</span>
       <button type="button" class="btn small secondary iconBtn" data-rbmomentdel="${esc(m.id)}" aria-label="${esc(t('ritbeurs.moment.verwijder'))}">${phIcon('trash')}</button></div>`;
   }).join('') : `<p class="muted">${t('ritbeurs.moment.leeg')}</p>`;
   const d = momentDraft();
+  // The same day buttons as in Mijn week: five equal columns over the full width.
   const days = DAYS.map(([k, label]) => {
     const iso = weekKeyDayIso(S.currentWeekKey, k);
     const past = rideStartMs(iso, '23:59') <= nowMs;
-    return `<button type="button" class="rbOpt${d.date === iso ? ' active' : ''}" data-rbmday="${iso}" aria-pressed="${d.date === iso}"${past ? ' disabled' : ''}>${esc(label.slice(0, 2))}</button>`;
+    return `<button type="button" class="dayPill${d.date === iso ? ' on' : ''}" data-rbmday="${iso}" aria-pressed="${d.date === iso}" aria-label="${esc(label)}"${past ? ' disabled' : ''}><span class="dayPill__ab">${esc(dayUp(k).toLowerCase())}</span><span class="dayPill__n">${Number(String(iso).slice(8, 10))}</span></button>`;
   }).join('');
   const preview = momentPreview(d);
   return `${list}
     <div class="rbForm"><h4>${t('ritbeurs.moment.nieuw')}</h4>
-      <div class="rbOpts" role="group" aria-label="${esc(t('ritbeurs.moment.dag'))}">${days}</div>
-      <div class="rowflex" style="gap:10px;align-items:center;margin-top:8px">
-        <label for="rbmFrom">${t('ritbeurs.moment.van')}</label><select id="rbmFrom" class="rbSel">${timeOptions(d.from)}</select>
-        <label for="rbmTo">${t('ritbeurs.moment.tot')}</label><select id="rbmTo" class="rbSel">${timeOptions(d.to)}</select></div>
-      <label class="switchRow" for="rbmFree"><span>${t('ritbeurs.moment.alleenVrij')}</span><input type="checkbox" role="switch" class="switch" id="rbmFree"${d.onlyIfFree ? ' checked' : ''}></label>
+      <div class="dayPills" role="group" aria-label="${esc(t('ritbeurs.moment.dag'))}">${days}</div>
+      <div class="rbTimes">
+        <label for="rbmFrom"><span>${t('ritbeurs.moment.van')}</span><select id="rbmFrom" class="rbSel">${timeOptions(d.from)}</select></label>
+        <label for="rbmTo"><span>${t('ritbeurs.moment.tot')}</span><select id="rbmTo" class="rbSel">${timeOptions(d.to)}</select></label></div>
       <p class="muted" id="rbmPreview">${esc(preview)}</p>
       <button type="button" class="btn" id="rbmSave">${t('ritbeurs.moment.opslaan')}</button></div>`;
 }
@@ -171,17 +150,11 @@ export function testNotificationsForView(nowMs = Date.now()){
   Object.entries(S.push.tests || {}).forEach(([id, n]) => { if(n && n.toFamilyId === S.impersonateFamilyId && !(n.deliverAt > nowMs) && !(n.expiresAt <= nowMs)) out[id] = n; });
   return out;
 }
+// The latest few notifications; nothing at all (no card) when there are none. They count as read when the tab has been open for a moment.
 function notificationsHtml(nowMs){
   const tests = sortedNotifications(testNotificationsForView(nowMs)).map(n => ({ ...n, isTest: true, read: true }));
   const list = [...sortedNotifications(visibleNotifications(nowMs)), ...tests].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt);
-  const unread = unreadCount(visibleNotifications(nowMs));
-  const q = quietOf(myLinkedFamilyId());
-  const hours = sel => { const o = []; for(let h = 0; h < 24; h++){ const v = `${String(h).padStart(2, '0')}:00`; o.push(`<option value="${v}"${v === sel ? ' selected' : ''}>${v}</option>`); } return o.join(''); };
-  return `${list.length ? list.slice(0, 20).map(({ n, txt }) => `<div class="rbNotif${n.read === true ? '' : ' unread'}"><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b><span>${esc(txt.body)}</span></div>`).join('') : `<p class="muted">${t('ritbeurs.notif.leeg')}</p>`}
-    ${unread ? `<button type="button" class="btn small secondary" id="rbReadAll">${t('ritbeurs.notif.gelezen')}</button>` : ''}
-    <div class="rbQuiet"><b>${t('ritbeurs.quiet.title')}</b><p class="muted" style="margin:2px 0 8px">${t('ritbeurs.quiet.uitleg')}</p>
-      <div class="rowflex" style="gap:10px;align-items:center"><label for="rbqFrom">${t('ritbeurs.quiet.van')}</label><select id="rbqFrom" class="rbSel">${hours(q.from)}</select>
-      <label for="rbqTo">${t('ritbeurs.quiet.tot')}</label><select id="rbqTo" class="rbSel">${hours(q.to)}</select></div></div>`;
+  return list.slice(0, NOTIFICATIONS_SHOWN).map(({ n, txt }) => `<div class="rbNotif${n.read === true ? '' : ' unread'}"><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b><span>${esc(txt.body)}</span></div>`).join('');
 }
 
 export function ritbeursViewHtml(nowMs = Date.now()){
@@ -189,19 +162,18 @@ export function ritbeursViewHtml(nowMs = Date.now()){
   const open = openOffers(S.offers, S.currentWeekKey, nowMs);
   const mineFirst = [...open.filter(o => o.offeredBy !== me), ...open.filter(o => o.offeredBy === me)];
   const head = key => `<div class="sectionHead"><span class="sectionHead__title">${t(key)}</span></div>`;
+  const notifs = notificationsHtml(nowMs);
   return `<div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
-    ${head('ritbeurs.eigen.title')}${ownRidesHtml(nowMs)}
     ${head('ritbeurs.open.title')}${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
     ${head('ritbeurs.moment.title')}<div class="card" id="rbMomentCard"><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>
-    ${head('ritbeurs.notif.title')}<div class="card" id="rbNotifCard">${notificationsHtml(nowMs)}</div>`;
+    ${notifs ? `${head('ritbeurs.notif.title')}<div class="card" id="rbNotifCard">${notifs}</div>` : ''}`;
 }
 
 // ---------- actions (also used by the tests) ----------
 export function readMomentForm(){
   const v = id => { const el = document.getElementById(id); return el ? el.value : ''; };
-  const free = document.getElementById('rbmFree');
   const d = momentDraft();
-  return { ...d, from: v('rbmFrom') || d.from, to: v('rbmTo') || d.to, onlyIfFree: free ? !!free.checked : d.onlyIfFree };
+  return { ...d, from: v('rbmFrom') || d.from, to: v('rbmTo') || d.to, onlyIfFree: true };
 }
 export async function saveMomentDraft(){
   const d = readMomentForm();
@@ -210,15 +182,19 @@ export async function saveMomentDraft(){
   renderDeviationTab();
   return ok;
 }
-export async function offerRide(key){
-  const [day, direction] = String(key).split('|');
-  const el = document.getElementById('rbMessage');
-  const ok = await createOffer(day, direction, el ? el.value : '');
-  if(ok) S.rbOffering = null;
-  renderDeviationTab();
-  return ok;
-}
 export async function takeRide(id){ const ok = await takeOffer(id); renderDeviationTab(); return ok; }
+
+// Notifications count as read once the tab has been open for a moment (SEEN_MS), so the red dots can still be seen first. No button for it.
+let seenTimer = null;
+function markSeenSoon(){
+  clearTimeout(seenTimer);
+  if(!unreadCount(visibleNotifications())) return;
+  seenTimer = setTimeout(() => {
+    const tab = document.getElementById('tab-deviation');
+    if(tab && tab.style && tab.style.display === 'block') markNotificationsRead();
+  }, SEEN_MS);
+  if(seenTimer && seenTimer.unref) seenTimer.unref();
+}
 
 export function wireRitbeurs(){
   const $$ = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
@@ -226,20 +202,13 @@ export function wireRitbeurs(){
   $$('[data-rbconfirmno]', b => b.onclick = () => { S.rbConfirm = null; renderDeviationTab(); });
   $$('[data-rbtake]', b => b.onclick = () => { hapticTap(); takeRide(b.dataset.rbtake); });
   $$('[data-rbwithdraw]', b => b.onclick = () => twoStepConfirm(b, t('ritbeurs.trekIn') + '?', async () => { await withdrawOffer(b.dataset.rbwithdraw); renderDeviationTab(); }));
-  keepCapital(document.getElementById('rbMessage'));
-  $$('[data-rboffer-open]', b => b.onclick = () => { hapticTap(); S.rbOffering = b.dataset['rbofferOpen']; renderDeviationTab(); });
-  $$('[data-rbofferno]', b => b.onclick = () => { S.rbOffering = null; renderDeviationTab(); });
-  $$('[data-rboffergo]', b => b.onclick = () => { hapticTap(); offerRide(b.dataset.rboffergo); });
   $$('[data-rbmday]', b => b.onclick = () => { S.rbMomentDraft = { ...readMomentForm(), date: b.dataset.rbmday }; renderDeviationTab(); });
-  ['rbmFrom', 'rbmTo', 'rbmFree'].forEach(id => { const el = document.getElementById(id); if(el) el.onchange = () => { S.rbMomentDraft = readMomentForm(); if(el.blur) el.blur(); renderDeviationTab(); }; });
+  ['rbmFrom', 'rbmTo'].forEach(id => { const el = document.getElementById(id); if(el) el.onchange = () => { S.rbMomentDraft = readMomentForm(); if(el.blur) el.blur(); renderDeviationTab(); }; });
   // A list that is open must not be redrawn under the finger (see holdFormRedraw): a held redraw is done after the list is left.
   $$('.rbSel', el => { el.onblur = () => setTimeout(redrawAfterTyping, 700); });
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });
-  const all = document.getElementById('rbReadAll'); if(all) all.onclick = () => { hapticTap(); markNotificationsRead(); };
-  const qf = document.getElementById('rbqFrom'), qt = document.getElementById('rbqTo');
-  const saveQ = () => saveQuiet(qf.value, qt.value);
-  if(qf) qf.onchange = saveQ; if(qt) qt.onchange = saveQ;
+  markSeenSoon();
 }
 // ---------- Beheer: the feature switches (coordinator) ----------
 // The card has two switches: Ritten ruilen itself, and the push messages for the parents (default off). Testing the pushes always works,

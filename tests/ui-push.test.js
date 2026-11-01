@@ -252,7 +252,7 @@ await test('only the coordinator\'s test devices are listed, never the phones of
 });
 await test('the card says that testing always works, also when Push-meldingen are off at Ritten ruilen', () => {
   coordinator(); S.pushSettings = { mode: 'uit', live: false, liveSince: 0 };
-  assert.match(text(card()), /Testen kan altijd, ook als Push-meldingen bij Vervanger uit staan/);
+  assert.match(text(card()), /Testen kan altijd, ook als Push-meldingen bij Ruilen uit staan/);
   S.pushSettings = { mode: 'test', live: false, liveSince: 0 };
   assert.match(text(card()), /Test aan/); assert.match(card(), /id="pushTestOn" checked/);
 });

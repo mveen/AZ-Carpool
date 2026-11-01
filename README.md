@@ -58,7 +58,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `notif-text.js` | The words of a Ritten-ruilen notification (inbox, preview and push server share them) | `notif-text.test.js` |
 | `push-scenarios.js` | Push-meldingen testen: the five made-up situations, built with the same functions as the real notifications | `push-scenarios.test.js` |
 | `push-data.js` | Push-meldingen: the test switch, this browser's push subscription (as a test device, or as a parent's own phone), the scenarios, the listeners | `push-data.test.js` |
-| `ui-push.js` | The Beheer card "Push-meldingen testen" and opening the app from a tapped push (as the right family for a test push, on Vervanger for a real one) | `ui-push.test.js` |
+| `ui-push.js` | The Beheer card "Push-meldingen testen" and opening the app from a tapped push (as the right family for a test push, on Ruilen for a real one) | `ui-push.test.js` |
 | `ui-push-device.js` | Instellingen → Push-meldingen: a parent switches the real pushes on for this phone | `ui-push-device.test.js` |
 | `planning.js` | Planning engine (pure functions, no DOM/Firebase) | `planning.test.js` |
 | `schedule-changes.js` | Detects and merges changed arrival/pick-up times | `schedule-changes.test.js` |
@@ -75,9 +75,9 @@ All `*.test.js` files live in `tests/`; the site does not use that folder. Every
 
 The tests never touch the real Firebase. They run against `fake-db.js`, an in-memory Firestore that the app cannot tell apart from the real one.
 
-## Vervanger (ritten aanbieden en overnemen; vroeger "Ritten ruilen" / "Ritbeurs")
+## Ruilen (ritten overnemen; vroeger "Vervanger" / "Ritten ruilen" / "Ritbeurs")
 
-Als de coördinator het aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat) neemt de tab die vroeger *Wijzigen* heette de naam *Vervanger* over: eigen icoon (`users-swap`, twee personen met een dubbele pijl) en eigen tealkleur (`--ruil`). De tab heet intern nog `deviation` (id, `data-tab`), en `syncVervangerNav()` in `ui-ritbeurs.js` wisselt label, icoon en kleur. Secties: *Jouw ritten* (hoofdtaak: een eigen rit kwijt), *Zoekt een vervanger*, *Ik kan inspringen*, *Meldingen* (onderaan). Het segment *Wijzigen | Ritten ruilen* bestaat niet meer.
+Als de coördinator het aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat) neemt de tab die vroeger *Wijzigen* heette de naam *Ruilen* over: eigen icoon (`users-swap`, twee personen met een dubbele pijl) en eigen tealkleur (`--ruil`). De tab heet intern nog `deviation` (id, `data-tab`), en `syncVervangerNav()` in `ui-ritbeurs.js` wisselt label, icoon en kleur. Secties: *Zoekt een vervanger* (ritten van anderen overnemen), *Ik kan inspringen* (tijdvak melden: dagknoppen zoals Mijn week, Van/Tot naast elkaar), *Meldingen* (onderaan, alleen als er iets is; ze tellen als gelezen na enkele seconden in de tab, geen knop). Een eigen rit aanbieden doe je in Mijn week via het menu *Deze rit* (⋮) bij de rit. Stille uren zijn niet instelbaar (standaard 22:00–06:00) en "alleen als ik niet al rijd" staat altijd aan; de velden blijven in de data staan. Het segment *Wijzigen | Ritten ruilen* bestaat niet meer.
 
 **Tijden wijzigen** (het weekformulier) is een eigen volledig scherm, geopend vanuit Mijn week (`openWrFlow` in `ui-weekrooster-form.js`, `S.wrFlow`), zoals de Advies-flow: de hele week op één scherm, randen in plaats van gekleurde vlakken, wijzigingen als "was …", Doorgeven sluit met een toast met *Ongedaan* (zolang de aanvraag nog niet is behandeld) en sluiten met niet-doorgegeven wijzigingen vraagt eerst.
 

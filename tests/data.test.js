@@ -1139,5 +1139,8 @@ await testAsync('writeDeviation stores the cars of a shift with the week, the ex
   assert.equal(d.weekKey, '2026-W40'); assert.ok(d.expiresAt); assert.equal(d.selfKind, 'chauffeur');
 });
 
+test('v211: leaving the data listeners no longer keeps a rbOffering field (offering lives in Mijn week)', () => {
+  assert.ok(!Object.prototype.hasOwnProperty.call(S, 'rbOffering'));
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

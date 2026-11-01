@@ -160,6 +160,14 @@ await testAsync('first yes wins: when the offer is already taken in the database
   assert.equal(keys(fake, 'families/').filter(k => k.includes('/notifications/')).length, 0);
   assert.equal(S.rbConfirm, null);
 });
+await testAsync('in the Testweergave taking over, offering and reporting are stopped with the real reason (not "Te laat"), and nothing is written', async () => {
+  const fake = useFakeDb(seed({ 'offers/o1': openOffer }));
+  parent({ me: 'coord', links: { coord: { familyId: 'f1' } }, impersonateFamilyId: 'f3', offers: { o1: openOffer } });
+  assert.equal(await run(() => takeOffer('o1')), false); assert.match(toast(), /In de testweergave kun je niets/); assert.doesNotMatch(toast(), /Te laat/);
+  assert.equal(await run(() => createOffer('Do', 'heen', '')), false); assert.match(toast(), /testweergave/);
+  assert.equal(await run(() => addMoment({ date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true })), false);
+  assert.equal(fake.get('offers/o1').status, 'open'); assert.equal(fake.get('deviations/Do_heen'), undefined);
+});
 await testAsync('one cannot take the own ride, or a ride that is no longer open', async () => {
   const fake = useFakeDb(seed({ 'offers/o1': openOffer })); parent({ offers: { o1: openOffer } });
   assert.equal(await run(() => takeOffer('o1')), false); assert.match(toast(), /je eigen rit/);

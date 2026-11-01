@@ -60,7 +60,7 @@ await testAsync('the sheet shows the day, the calculated time, who rides along, 
 });
 await testAsync('a car that differs from automatic shows "Weer automatisch berekenen"; an offered ride gets a note', async () => {
   await setup([{ ...MINE, departureTime: '18:30' }], { offers: { o1: { status: 'open', weekKey: '2026-W40', day: 'Do', direction: 'terug', offeredBy: 'f2', date: '2026-10-01', time: '18:30' } } });
-  const html = open().innerHTML; assert.match(html, /id="drvReset"/); assert.match(text(html), /Je hebt deze rit aangeboden in Vervanger/);
+  const html = open().innerHTML; assert.match(html, /id="drvReset"/); assert.match(text(html), /Je hebt deze rit aangeboden in Ruilen/);
 });
 await testAsync('Opslaan saves the time and the place and says so, with Ongedaan', async () => {
   const fake = await setup(); open();
@@ -154,7 +154,7 @@ await testAsync('Vervanger intrekken asks once inside the sheet (no red bar), An
   openMenu(); byId('rmOffer').onclick();
   await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });
   openMenu(); byId('rmWithdraw').onclick();
-  const q = text(byId('rmRows').innerHTML); assert.match(q, /Vervanger intrekken\? De rit staat dan niet meer bij Vervanger/); assert.doesNotMatch(byId('rmRows').innerHTML, /confirming/); assert.match(byId('rmRows').innerHTML, /btn danger/);
+  const q = text(byId('rmRows').innerHTML); assert.match(q, /Vervanger intrekken\? De rit staat dan niet meer bij Ruilen/); assert.doesNotMatch(byId('rmRows').innerHTML, /confirming/); assert.match(byId('rmRows').innerHTML, /btn danger/);
   assert.equal(Object.values(S.offers).filter(o => o.status === 'open').length, 1, 'asking changes nothing');
   withFakeNow(NOW, () => byId('rmKeep').onclick()); assert.match(text(sheet().innerHTML), /Vervanger intrekken/); assert.match(text(sheet().innerHTML), /Tijd en plek/, 'back in the menu');
   byId('rmWithdraw').onclick();
