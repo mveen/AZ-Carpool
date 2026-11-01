@@ -336,7 +336,7 @@ test('v214: a back-up notification has the button "Bied mijn rit aan" for the ow
   asF2({ notifications: { a: { ...n, momentFrom: '07:00', momentTo: '08:00' } } });
   assert.doesNotMatch(view(), /data-rboffernow/);
   asF2({ notifications: { a: n }, offers: { o1: offerBy('f2') } });
-  assert.doesNotMatch(view(), /data-rboffernow/, 'already on offer: no button');
+  assert.doesNotMatch(view(), /data-rboffernow|rbNotifCard/, 'already on offer: nothing left to do, so no card either');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

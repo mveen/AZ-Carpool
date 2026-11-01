@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, sampleParentState, sampleFlexParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
+import { sampleGroups, installFakeDom, sampleParentState, sampleFlexParentState, sampleCoordinatorState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import { renderMyWeek, matchInfoHtml, goToWijzigen } from '../ui-myweek.js';
 import { submitWeekRequests, syncWeekRequests } from '../weekrooster-data.js';
@@ -544,6 +544,15 @@ test('v212: an unread Ruilen notification is a card on top of Mijn week (amber, 
   assert.doesNotMatch(html, /data-rboffernow/, 'no own ride in the back-up\'s slot: just Bekijk');
   assert.doesNotMatch(renderDayAt(MON, { me: 'p2', links: { p2: { familyId: 'f2' } }, ritbeurs: { on: true }, notifications: { a: { ...n, read: true } } }), /rbNotifCard/);
   assert.doesNotMatch(renderDayAt(MON, { me: 'p2', links: { p2: { familyId: 'f2' } }, ritbeurs: { on: false }, notifications: { a: n } }), /rbNotifCard/);
+});
+test('v214: a READ back-up notification stays on Mijn week while a ride in its slot can still be offered (with the button); once that ride is on offer the card is gone', () => {
+  const n = { kind: 'backupForRide', fromFamilyId: 'f3', momentFrom: '15:00', momentTo: '18:30', date: '2026-10-01', weekKey: '2026-W40', createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: true };
+  const groups = { ...sampleGroups(), Do_heen_1: { day: 'Do', direction: 'heen', girlIds: ['f1', 'f4'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '16:15' } };
+  const base = { groups, ritbeurs: { on: true }, notifications: { a: n } };
+  const html = renderDayAt(MON, base);
+  assert.match(html, /rbNotifCard/); assert.match(html, /data-rboffernow="Do\|heen">Bied mijn rit aan/);
+  const offer = { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15', offeredBy: 'f2', message: '', status: 'open', createdAt: 1 };
+  assert.doesNotMatch(renderDayAt(MON, { ...base, offers: { o1: offer } }), /rbNotifCard/);
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
