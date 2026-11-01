@@ -220,6 +220,7 @@ export async function removeMoment(id){
 export async function markNotificationsRead(){
   const me = myLinkedFamilyId();
   if(!db || !me) return false;
+  if(S.impersonateFamilyId) return true;   // a test view only looks: it never marks the real notifications of that family as read
   const unread = Object.entries(S.notifications || {}).filter(([, n]) => n && n.read !== true);
   if(!unread.length) return true;
   try{

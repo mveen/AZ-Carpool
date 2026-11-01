@@ -232,6 +232,13 @@ await testAsync('quiet hours default to 22:00-06:00, are saved on the own family
   assert.equal(fake.get('families/f2/notifications/a').read, true); assert.equal(fake.get('families/f2/notifications/b').read, true);
 });
 
+await testAsync('a test view (Testweergave) never marks the notifications of the family it looks at as read', async () => {
+  const fake = useFakeDb(seed({ 'families/f2/notifications/a': { kind: 'taken', read: false } }));
+  parent({ impersonateFamilyId: 'f2', notifications: { a: { kind: 'taken', read: false } } });
+  assert.equal(await markNotificationsRead(), true);
+  assert.equal(fake.get('families/f2/notifications/a').read, false);
+});
+
 console.log('=== the push queue (test phase) ===');
 const TEST_ON = { mode: 'test' };
 await testAsync('with the push switch on test every saved notification is also put in the queue, with the same due time and expiry', async () => {

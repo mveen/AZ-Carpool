@@ -15,6 +15,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot } from './test-support.js';
 import { S } from '../state.js';
 import { _resetErrorLogForTests } from '../error-log.js';
+import { syncListeners } from '../data.js';
 import {
   renderImpersonateBanner, startImpersonate, stopImpersonate, familyFormHtml, readFamilyForm, renderClaimCoordinator,
   renderGateOrApp, renderGate, submitGate, introWaHref, renderProfile, saveProfile, weekschemaWarningHtml, weekschemaWarningInnerHtml, isWeekschemaField,
@@ -372,6 +373,21 @@ test('starting the test view drops coordinator rights; stopping restores them', 
   withFakeNow(NOW, () => stopImpersonate());
   assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true); assert.equal(S.roosterMode, 'week');
   assert.equal(dom.el('navBeheer').style.display, '');
+});
+await testAsync('test view: the Ruilen inbox follows the family being viewed (never the notifications of the previous view) and returns on Stoppen', async () => {
+  const tick = () => new Promise(r => setImmediate(r));
+  useFakeDb({ ...sampleDbSeed(), 'settings/ritbeurs': { on: true }, 'families/f1/notifications/own1': { kind: 'taken' }, 'families/f2/notifications/two1': { kind: 'backupForRide' }, 'families/f3/notifications/three1': { kind: 'taken' } });
+  sampleCoordinatorState({ links: { coord: { familyId: 'f1' } }, notifications: {}, notificationsFor: null });
+  await withFakeNow(NOW, async () => {
+    syncListeners(); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f1'); assert.deepEqual(Object.keys(S.notifications), ['own1']);
+    startImpersonate('f2'); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f2'); assert.deepEqual(Object.keys(S.notifications), ['two1'], 'only the inbox of the family being viewed');
+    startImpersonate('f3'); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f3'); assert.deepEqual(Object.keys(S.notifications), ['three1'], 'switching again swaps the inbox again');
+    stopImpersonate(); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f1'); assert.deepEqual(Object.keys(S.notifications), ['own1'], 'Stoppen brings the own inbox back');
+  });
 });
 test('switching parents keeps the tab you are on; from Beheer it moves to Mijn week; stopping never changes the tab', () => {
   useFakeDb(sampleDbSeed());
