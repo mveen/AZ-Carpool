@@ -1183,5 +1183,15 @@ await testAsync('v224: db.onAuthChange passes the SDK sign-in changes on (user I
   assert.deepEqual(seen, ['u1', null, 'unsub']);
   assert.equal(typeof createFirestoreDb({ sdk: { collection(){}, doc(){}, signInAnonymously(){} }, firestoreDb: {}, auth: {}, calendarApiKey: '' }).onAuthChange(() => {}), 'function');
 });
+await testAsync('v225: storageProbe reports the sign-in database, the Firestore copy and localStorage by name only, and never throws', async () => {
+  const { storageProbe } = await import('../data.js');
+  const g = globalThis; const had = Object.getOwnPropertyDescriptor(g, 'indexedDB');
+  Object.defineProperty(g, 'indexedDB', { value: { databases: async () => [{ name: 'firebaseLocalStorageDb' }, { name: 'firestore/[DEFAULT]/x/main' }, {}] }, configurable: true });
+  try { assert.match(await storageProbe(), /^idbAuth:y idbFs:y ls:(ok|blocked)$/); }
+  finally { if (had) Object.defineProperty(g, 'indexedDB', had); else delete g.indexedDB; }
+  Object.defineProperty(g, 'indexedDB', { value: { databases: async () => { throw new Error('x'); } }, configurable: true });
+  try { assert.match(await storageProbe(), /^idb:err ls:/); }
+  finally { if (had) Object.defineProperty(g, 'indexedDB', had); else delete g.indexedDB; }
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

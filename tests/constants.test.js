@@ -153,6 +153,7 @@ test('APP_VERSION is at least v220 (listener log says whether the SDK sign-in is
 test('APP_VERSION is at least v219 (refused listeners restart)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 219); });
 test('APP_VERSION is at least v218 (listener refusals are logged)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 218); });
 test('APP_VERSION is at least v217 (device ID shown under Gemelde problemen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 217); });
+test('APP_VERSION is at least v225 (listener log names the browser storage)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 225); });
 test('APP_VERSION is at least v224 (sign-in changes are reported)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 224); });
 test('APP_VERSION is at least v223 (the Testweergave shows the inbox of the family being viewed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 223); });
 

@@ -577,11 +577,21 @@ export function syncListeners(){
 
 // A live listener that is refused (or breaks) is written to the error log with the document or collection it was about, so the coordinator can see
 // WHICH reading failed (Beheer > Koppelingen > Gemelde problemen). Only the path and the error code go in, never data.
+// What this browser still has of the app's own storage (names only): the sign-in database, Firestore's offline copy, and whether localStorage works.
+export async function storageProbe(){
+  const out = [];
+  try{ const names = (await indexedDB.databases()).map(d=>String((d && d.name) || '')); out.push('idbAuth:'+(names.some(n=>/firebaseLocalStorageDb/.test(n))?'y':'n')); out.push('idbFs:'+(names.some(n=>/^firestore\//.test(n))?'y':'n')); }
+  catch(e){ out.push('idb:err'); }
+  try{ localStorage.setItem('az-probe','1'); localStorage.removeItem('az-probe'); out.push('ls:ok'); }catch(e){ out.push('ls:blocked'); }
+  return out.join(' ');
+}
 export function listenFailed(path, err){
   try{
     // Which sign-in the SDK itself holds right now, compared with the one this page believes it has (never the ID itself).
     const a = db.authUid(); const auth = !a? 'auth none' : (a===S.me? 'auth same' : 'auth DIFFERENT');
-    logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:(err && err.message)+' | '+auth });
+    storageProbe().then(probe=>{
+      logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:(err && err.message)+' | '+auth+' | '+probe });
+    });
   }catch(e){ /* never break the app */ }
   if(err && err.code==='permission-denied') restartListenersSoon();
 }
