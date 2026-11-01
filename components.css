@@ -422,6 +422,9 @@ button.chip{cursor:pointer;font-family:inherit}
 .rideRow__time{width:64px;flex:none}
 .rideRow__dep{font:var(--type-time-md);letter-spacing:var(--track-time)}
 .rideRow--mine .rideRow__dep{color:var(--ok-ink)}
+.rideRow__lab.rideRow__lab--me{color:var(--ok-ink)}
+/* Mijn week: a small green glow around the car you drive */
+.rideRow--glow{box-shadow:var(--glow-ok)}
 .rideRow__sub{font:var(--type-caption);color:var(--text-muted)}
 .rideRow__mid{flex:1;min-width:0}
 .rideRow__act{flex:none}

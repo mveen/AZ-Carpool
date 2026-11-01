@@ -87,7 +87,7 @@ test('there is no hero card any more: the week starts with the rides to arrange 
 test('Monday (today): rides along with Jan (heen), drives herself (terug) with everyone in the car', () => {
   const s = text(renderAt(MON, {}));
   assert.match(s, /Maandag 28 sep 07:30 Heen Jahaimy rijdt mee met Jan Jansen Busstation → AFC (&#39;|')34 Jahaimy aanwezig om 08:30/);
-  assert.match(s, /17:30 Terug Jij rijdt, Jahaimy rijdt mee Jij AFC (&#39;|')34 → Busstation Passagiers Eline 17:00, Jahaimy 17:30, Saar 17:30 Jahaimy klaar om 17:30/);
+  assert.match(s, /17:30 Terug Jij rijdt, Jahaimy rijdt mee AFC (&#39;|')34 → Busstation Passagiers Eline 17:00, Jahaimy 17:30, Saar 17:30 Jahaimy klaar om 17:30/);
 });
 test('days that are over (Monday and Tuesday on a Wednesday) are not shown any more', () => {
   const s = text(render({})); assert.doesNotMatch(s, /Maandag|Dinsdag|Eerder deze week/);
@@ -484,7 +484,7 @@ test('every ride is its own white card: time and direction, "Chauffeur", route, 
 test('the card you drive has the green edge, the quiet green "Jij" (no badge) and a labelled passenger list; another driver\'s card does not', () => {
   const h = renderDayAt(MON, {});
   const [heen, terug] = h.split(/(?=<div class="rideRow[ "])/).filter(x => x.startsWith('<div class="rideRow'));
-  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine"/); assert.match(terug, /rideRow__who rideRow__who--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt<|chip--drive/); assert.match(terug, /rideRow__lab">Jij rijdt, Jahaimy rijdt mee</); assert.match(terug, /Passagiers<\/span>Eline 17:00, Jahaimy 17:30, Saar 17:30/);
+  assert.doesNotMatch(heen, /rideRow--mine|rideRow__who--me|Passagiers/); assert.match(terug, /^<div class="rideRow rideRow--mine rideRow--glow"/); assert.doesNotMatch(terug, /rideRow__who--me|steering/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt<|chip--drive/); assert.match(terug, /rideRow__lab rideRow__lab--me">Jij rijdt, Jahaimy rijdt mee</); assert.match(terug, /Passagiers<\/span>Eline 17:00, Jahaimy 17:30, Saar 17:30/);
   assert.match(terug, /class="roundBtn" data-drivercar/, 'Tijd en plek: a round icon button, top right'); assert.match(heen, /class="roundBtn" data-contact="f3"|class="roundBtn" data-contact="f/, 'someone else drives: the round phone button');
 });
 test('a ride she does not take part in says so (no car, no time) and the switch is off; the other ride of that day stays as it is', () => {
@@ -509,8 +509,17 @@ await testAsync('a day somebody else decides, with a request of another family: 
 test('the shift you drive while your daughter rides in another car is its own card: label "Jij rijdt", "Jij", route and the passengers with their own time, earliest first', () => {
   const dev = { Di_terug: { day: 'Di', direction: 'terug', weekKey: '2026-W40', expiresAt: 1791500000000, cars: [{ driverFamilyId: 'f2', girlIds: ['f1', 'f3'], departureTime: '12:30' }, { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30' }] } };
   const s = text(renderAt(MON, { ...period40(), deviations: dev }));
-  assert.match(s, /12:30 Terug Jij rijdt Jij AFC (&#39;|')34 → Busstation Passagiers Eline 17:30, Anouk/); assert.doesNotMatch(s, /Jouw rijbeurt om/);
+  assert.match(s, /12:30 Terug Jij rijdt AFC (&#39;|')34 → Busstation Passagiers Eline 17:30, Anouk/); assert.doesNotMatch(s, /Jouw rijbeurt om/);
   assert.equal((renderAt(MON, { ...period40(), deviations: dev }).match(/rideRow--mine/g) || []).length >= 1, true);
+});
+test('v204: the car you drive has a green header (no wheel, no "Jij") and a small green glow; a ride of only your daughter stays plain', () => {
+  const h = renderDayAt(MON, {});
+  assert.match(h, /rideRow rideRow--mine rideRow--glow/); assert.match(h, /rideRow__lab rideRow__lab--me"/);
+  assert.doesNotMatch(h, /rideRow__who--me|steering-wheel/);
+  const plain = [...h.matchAll(/<div class="rideRow( [^"]*)?" data-rideday/g)].map(m => m[1] || '').filter(c => !/mine/.test(c));
+  assert.ok(plain.length > 0); plain.forEach(c => assert.doesNotMatch(c, /glow/));
+  const css = fs.readFileSync(new URL('../components.css', import.meta.url), 'utf8'), tok = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
+  assert.match(css, /\.rideRow__lab--me\{color:var\(--ok-ink\)\}/); assert.match(css, /\.rideRow--glow\{box-shadow:var\(--glow-ok\)\}/); assert.equal((tok.match(/--glow-ok:/g) || []).length, 2);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

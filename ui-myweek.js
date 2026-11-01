@@ -116,7 +116,7 @@ export function renderMyWeek(){
       if(iDrive){
         // Full passenger list, including your own daughter — not just "everyone else".
         const names = timedNames(ownCar.girlIds, day, direction);
-        who = `<div class="rideRow__who rideRow__who--me">${phIcon('steering-wheel-fill')}${esc(t('ride.jij'))}</div>`;
+        who = '';   // "Jij rijdt" is the green header; no wheel + "Jij" line any more
         act = driverCarButtonHtml(day,direction);
         passengers = names? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${names}</div>` : '';
       } else {
@@ -138,10 +138,10 @@ export function renderMyWeek(){
       const ch = timeChangeOf(baseCars(day,direction), dg);
       const dNames = timedNames(dg.girlIds, day, direction);
       driveFirst = !!(dg.departureTime && dep && dg.departureTime < dep);
-      driveCard = `<div class="rideRow rideRow--mine" data-rideday="${day}" data-ridedir="${direction}">
+      driveCard = `<div class="rideRow rideRow--mine rideRow--glow" data-rideday="${day}" data-ridedir="${direction}">
       <div class="rideRow__head">
         <div class="rideRow__time"><div class="rideRow__dep">${esc(dg.departureTime||'--:--')}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ch ? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(ch.from)}</div>` : ''}</div>
-        <div class="rideRow__mid"><div class="rideRow__lab">${esc(t('myweek.jij_rijdt_lab'))}</div><div class="rideRow__who rideRow__who--me">${phIcon('steering-wheel-fill')}${esc(t('ride.jij'))}</div></div>
+        <div class="rideRow__mid"><div class="rideRow__lab rideRow__lab--me">${esc(t('myweek.jij_rijdt_lab'))}</div></div>
         <div class="rideRow__act">${driverCarButtonHtml(day,direction)}</div>
       </div>
       <div class="rideRow__route">${phIcon('map-pin')}<span>${esc(routeLabel(dg,direction,cfg,day))}</span></div>
@@ -156,10 +156,10 @@ export function renderMyWeek(){
     const sw = !dayPassed && !isFlex(myFam)
       ? `<span class="swWrap"><button type="button" class="switch${isOvMe?'':' on'}" role="switch" aria-checked="${!isOvMe}" aria-label="${esc(t('ov.switchLabel', { p1: dirName(direction), p2: DAYS.find(([k])=>k===day)[1] }))}" data-ovtoggle="${day}" data-ovdir="${direction}" data-ovon="${isOvMe?0:1}"><span class="switch__track"><span class="switch__knob">${phIcon(isOvMe?'x-bold':'car-profile-bold')}</span></span></button><span class="swCap">${esc(t(isOvMe?'myweek.switch_off':'myweek.switch_on'))}</span></span>` : '';
     const labTxt = !ownCar? t('ride.chauffeur') : iDrive? t('myweek.jij_rijdt_mee',{name:daughterName}) : t('myweek.daughter_rijdt_mee_met',{name:daughterName});
-    const card = `<div class="rideRow${isOvMe?' rideRow--off':''}${iDrive?' rideRow--mine':''}" data-rideday="${day}" data-ridedir="${direction}">
+    const card = `<div class="rideRow${isOvMe?' rideRow--off':''}${iDrive?' rideRow--mine rideRow--glow':''}" data-rideday="${day}" data-ridedir="${direction}">
       <div class="rideRow__head">
         <div class="rideRow__time"><div class="rideRow__dep">${isOvMe? '–' : esc(dep)}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ownTimeChange ? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(ownTimeChange.from)}</div>` : ''}</div>
-        <div class="rideRow__mid"><div class="rideRow__lab">${esc(labTxt)}</div>${who}</div>
+        <div class="rideRow__mid"><div class="rideRow__lab${iDrive?' rideRow__lab--me':''}">${esc(labTxt)}</div>${who}</div>
         ${act? `<div class="rideRow__act">${act}</div>` : ''}
       </div>
       <div class="rideRow__route">${phIcon('map-pin')}<span>${esc(route)}</span></div>

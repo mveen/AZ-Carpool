@@ -95,6 +95,7 @@
   --shadow-card:0 1px 0 #ecebe7,0 8px 24px rgba(20,22,26,.06);
   --shadow-float:0 10px 24px rgba(0,0,0,.25);
   --shadow-seg:0 1px 3px rgba(0,0,0,.12);
+  --glow-ok:0 0 12px rgba(31,164,99,.30);   /* small green glow: the car you drive */
   --hit-min:44px;           /* every tap target */
   --tabbar-h:72px;
   --app-h:100dvh;   /* visible app height; ui-shell.js overwrites it with the measured height (Brave on Android gets 100dvh wrong now and then) */
@@ -122,6 +123,7 @@
   --info-soft:#122036;
   --ruil:#3cc0bb; --ruil-soft:#0f2a29; --ruil-ink:#6fd8d3;
   --shadow-card:0 0 0 1px #24262a;
+  --glow-ok:0 0 12px rgba(98,214,157,.30);
   --heen-glow:#1c2833; --heen-edge:#364a5e; --heen-ink:#9bbbe0; --heen-badge:#202d3a;
   --terug-glow:#33202f; --terug-edge:#5e3d58; --terug-ink:#e0a0d2; --terug-badge:#3a2536;
   color-scheme:dark;

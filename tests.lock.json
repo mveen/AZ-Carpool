@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "96e9e8212be93a845406af47e80e3e7ff7ae36eed10a1b41d72781dad1b933b5",
-    "test": "ff3ef4206b75e66dd0a7fe6010146737145a87f57e0ce2b31f6d2a7962326dbd"
+    "module": "c7e7d541ec97d3ad290e216d98836639f3ddffc293a64d6634b39bcdc22322f9",
+    "test": "5b7aaa3d6832dae1c072a82f7b28177f38c41de1af768d3a0ab03c49345b0240"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -208,8 +208,8 @@
     "test": "d25a694c8688a6466c4efcccdec1ce2c437590b38e4909a094e4b47cfb802a14"
   },
   "ui-myweek.js": {
-    "module": "b9c1fb3cc527ab82ab3f5532c34e30af650b4f5fc4f63c03f2b8e1087116336d",
-    "test": "ef9d6bbeb80fd9858f2f7960588d9957431d3e6971c80ee15ffaa912abdacd59"
+    "module": "518fcf53a4c0c2c8f27a36f9f97665d5d1a2e115b2beb48e401637ba9cf2a605",
+    "test": "4d7e88ead757ec3c848769f0ad17ddac9e21ef383e8e1e88b1fb0109d735064f"
   },
   "ui-notice.js": {
     "module": "7d865a1452c65c3f140e18eceba721b8a37985a8ccb709de53877d070af42554",
