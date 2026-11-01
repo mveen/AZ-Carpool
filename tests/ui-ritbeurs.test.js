@@ -147,6 +147,12 @@ await testAsync('v227: a "Rit vrij" card has Overnemen and Afwijzen (no Bekijk, 
   assert.equal(S.offers[id].status, 'taken');
   assert.doesNotMatch(mywk(), /data-rbnotiftake|Rit vrij/); assert.doesNotMatch(view(), /data-rbnotiftake|Rit vrij/);
 });
+test('v229: no red "unread" dot on a notification card (it was confusing): no unread class, none in the stylesheet; the number on the tab still counts', () => {
+  resetDismissedNotifications();
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { rvk: vrij({ read: false }) } });
+  assert.doesNotMatch(mywk(), /unread/); assert.doesNotMatch(view(), /unread/);
+  assert.equal(ritbeursBadgeCount() >= 1, true);
+});
 test('v227: Afwijzen closes the card on this phone only; the offer stays open for the others', () => {
   resetDismissedNotifications();
   asF3({ offers: { o1: offerBy('f2') }, notifications: { rvj: vrij() } });   // own id: a dismissal is kept in the (fake) phone storage for the rest of this file

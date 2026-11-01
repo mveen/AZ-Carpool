@@ -204,7 +204,7 @@ function notifCardHtml({ n, txt }, go, nowMs = Date.now()){
   go = go && !rides.length && !take;
   const takeBtns = take ? `<button type="button" class="btn entryCard__go" data-rbnotiftake="${esc(take.id)}">${t(problems.length ? 'ritbeurs.toch' : 'ritbeurs.notif.neemOver')}</button>` : '';
   const dismissKey = n.kind === 'backupForRide' ? 'ritbeurs.notif.negeer' : take ? 'ritbeurs.notif.wijsAf' : 'ritbeurs.notif.sluit';
-  return `<div class="entryCard entryCard--stack rbNotifCard${n.read === true ? '' : ' unread'}" role="status">
+  return `<div class="entryCard entryCard--stack rbNotifCard" role="status">
     <div class="entryCard__head"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b></div>
     <p class="entryCard__text">${esc(txt.body)}</p>${problems.length ? `<p class="rbChecks">${problems.map(esc).join('<br>')}</p>` : ''}${n.isTest ? '' : `<div class="rbNotifActs">${offerBtns}${takeBtns}${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}<button type="button" class="btn secondary entryCard__go" data-rbnotifdismiss="${esc(n.id)}">${t(dismissKey)}</button></div>`}</div>`;
 }
