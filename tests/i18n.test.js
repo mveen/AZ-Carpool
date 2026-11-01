@@ -428,6 +428,7 @@ test('v222: the offer form is "Rit aanbieden"; the back-up variant has its own w
   assert.equal(t('ritbeurs.formBackup.sub', { who: 'Ouder van Evi' }), 'Ouder van Evi kan inspringen. Wie je rit overneemt, rijdt hem in jouw plaats.');
 });
 test('v214: the offer buttons on a notification say what they do', () => { assert.equal(t('ritbeurs.notif.biedAan'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.notif.biedAanRit', { when: 'donderdag heen 16:15' }), 'Bied aan: donderdag heen 16:15'); });
+test('v227: the Rit vrij card says Overnemen / Afwijzen and asks the question', () => { assert.equal(t('ritbeurs.notif.neemOver'), 'Overnemen'); assert.equal(t('ritbeurs.notif.wijsAf'), 'Afwijzen'); assert.equal(t('ritbeurs.notif.offerBackupBody', { who: 'Ouder van Anouk' }), 'Ouder van Anouk biedt een rit aan. Je hebt je voor dit tijdvak beschikbaar gemeld. Wil je hem overnemen?'); });
 test('v216: Negeren and Sluiten exist', () => { assert.equal(t('ritbeurs.notif.negeer'), 'Negeren'); assert.equal(t('ritbeurs.notif.sluit'), 'Sluiten'); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -20,6 +20,7 @@ import { updatePeriodBadge } from '../ui-period.js';
 import {
   ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, syncVervangerNav, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
   dismissNotification, resetDismissedNotifications, ritbeursCardHtml, wireRitbeursCard, takeRide, saveMomentDraft, testNotificationsForView,
+  myWeekNotificationsHtml, takeFromNotification, takeableOfferOf,
 } from '../ui-ritbeurs.js';
 
 const dom = installFakeDom();
@@ -125,6 +126,48 @@ await testAsync('a ride offered from Mijn week can be taken over in this tab', a
   assert.match(view(), new RegExp('data-rbask="' + id + '"'));
   assert.equal(await withFakeNowAsync(NOW, () => takeRide(id)), true);
   assert.equal(fake.get('deviations/Do_heen').cars[0].driverFamilyId, 'f3');
+});
+
+console.log('=== "Rit vrij": decide on the card ===');
+const vrij = (extra = {}) => ({ kind: 'offerBackup', toFamilyId: 'f3', sourceId: 'o1', fromFamilyId: 'f2', weekKey: WEEK_KEY, day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15', momentFrom: '', momentTo: '', createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false, ...extra });
+const mywk = () => withFakeNow(NOW, () => myWeekNotificationsHtml(Date.now()));
+await testAsync('v227: a "Rit vrij" card has Overnemen and Afwijzen (no Bekijk, no Sluiten), in Mijn week and in Ruilen; taking it over works at once and the card is gone', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'groups/Do_heen_1': groups().Do_heen_1, 'settings/ritbeurs': { on: true } });
+  asF2({}); await withFakeNowAsync(NOW, () => createOffer('Do', 'heen', 'Tandarts'));
+  const id = [...fake.store.keys()].find(k => k.startsWith('offers/')).slice(7);
+  asF3({ offers: { [id]: fake.get('offers/' + id) }, notifications: { a: vrij({ sourceId: id }) } });
+  for (const html of [mywk(), view()]) {
+    assert.match(text(html), /Rit vrij: donderdag 16:15/); assert.match(text(html), /Wil je hem overnemen\?/);
+    assert.match(html, new RegExp('data-rbnotiftake="' + id + '"')); assert.match(html, /data-rbnotifdismiss="a">Afwijzen</);
+    assert.doesNotMatch(html, />Bekijk<|>Sluiten<|Tik om over te nemen/);
+  }
+  assert.ok(takeableOfferOf({ ...vrij({ sourceId: id }), id: 'a' }, Date.now() - 1e9), 'the offer can be taken over by f3');
+  assert.equal(await withFakeNowAsync(NOW, () => takeFromNotification(id, null)), true);
+  assert.equal(fake.get('deviations/Do_heen').cars[0].driverFamilyId, 'f3', 'the ride is now f3\'s');
+  assert.equal(S.offers[id].status, 'taken');
+  assert.doesNotMatch(mywk(), /data-rbnotiftake|Rit vrij/); assert.doesNotMatch(view(), /data-rbnotiftake|Rit vrij/);
+});
+test('v227: Afwijzen closes the card on this phone only; the offer stays open for the others', () => {
+  resetDismissedNotifications();
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { rvj: vrij() } });   // own id: a dismissal is kept in the (fake) phone storage for the rest of this file
+  assert.match(mywk(), /data-rbnotiftake="o1"/); assert.match(mywk(), /data-rbnotifdismiss="rvj">Afwijzen</);
+  dismissNotification('rvj');
+  assert.doesNotMatch(mywk(), /Rit vrij/); assert.match(view(), /data-rbask="o1"/, 'still open in the list for everybody');
+  resetDismissedNotifications();
+});
+test('v227: nothing to decide any more (taken by somebody else, withdrawn, own offer, gone, already started): no card at all', () => {
+  resetDismissedNotifications();
+  for (const offers of [{ o1: offerBy('f2', { status: 'taken' }) }, { o1: offerBy('f2', { status: 'withdrawn' }) }, { o1: offerBy('f3') }, {}, { o1: offerBy('f2', { date: '2026-09-29' }) }]) {
+    asF3({ offers, notifications: { a: vrij() } });
+    assert.doesNotMatch(mywk(), /Rit vrij|data-rbnotiftake/); assert.doesNotMatch(view(), /Rit vrij|data-rbnotiftake/);
+  }
+});
+test('v227: a seat or time problem is shown on the card up front and the button reads "Toch overnemen" (a warning, never a block)', () => {
+  resetDismissedNotifications();
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { a: vrij() }, groups: { ...groups(), Do_heen_2: { day: 'Do', direction: 'heen', girlIds: ['f1'], driverFamilyId: 'f3', reserveFamilyIds: [], departureTime: '16:00' } } });
+  const html = mywk();
+  assert.match(html, /class="rbChecks"/); assert.match(text(html), /Let op: je rijdt al donderdag heen om 16:00/);
+  assert.match(html, /data-rbnotiftake="o1">Toch overnemen</); assert.doesNotMatch(html, />Overnemen</);
 });
 
 console.log('=== Ik kan inspringen ===');

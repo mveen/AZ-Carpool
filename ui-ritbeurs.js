@@ -75,6 +75,13 @@ export function syncVervangerNav(){
 export function setRbView(view){ S.rbView = view === 'ritbeurs' ? 'ritbeurs' : 'wijzigen'; S.rbConfirm = null; renderDeviationTab(); }
 
 // ---------- the view ----------
+// Only what is wrong when taking a ride over (not enough seats, another ride too close); empty when everything fits. A warning, never a block.
+function problemLines(w){
+  const out = [];
+  if(w && !w.seats.ok) out.push(`⚠ ${t('ritbeurs.warn.zitplaatsen', { need: w.seats.need, have: w.seats.have })}`);
+  if(w && w.conflict) out.push(`⚠ ${t('ritbeurs.warn.conflict', { day: dayLabel(w.conflict.day).toLowerCase(), dir: dirShort(w.conflict.direction).toLowerCase(), time: w.conflict.time })}`);
+  return out;
+}
 function offerCardHtml(o, nowMs){
   const me = myLinkedFamilyId();
   const me_ = myFamilyId();
@@ -89,9 +96,7 @@ function offerCardHtml(o, nowMs){
   let confirm = '';
   if(S.rbConfirm === o.id && !mine){
     // Only what is wrong is shown (not enough seats, another ride too close); when everything fits there is just the question and the button.
-    const problems = [];
-    if(w && !w.seats.ok) problems.push(`⚠ ${t('ritbeurs.warn.zitplaatsen', { need: w.seats.need, have: w.seats.have })}`);
-    if(w && w.conflict) problems.push(`⚠ ${t('ritbeurs.warn.conflict', { day: dayLabel(w.conflict.day).toLowerCase(), dir: dirShort(w.conflict.direction).toLowerCase(), time: w.conflict.time })}`);
+    const problems = problemLines(w);
     confirm = `<div class="rbConfirm" role="group" aria-label="${esc(t('ritbeurs.confirm.title'))}">
       <h4>${t('ritbeurs.confirm.title', { short: `${dayLabel(o.day).toLowerCase()} ${dirShort(o.direction).toLowerCase()} ${t('ritbeurs.om')} ${o.time}` })}</h4>
       ${problems.length ? `<p class="rbChecks">${problems.map(esc).join('<br>')}</p>` : ''}
@@ -183,15 +188,25 @@ export function offerableRidesFor(n, nowMs = Date.now()){
   return ridesInSlotOf(n, nowMs).filter(r => !hasOpenOffer(S.offers, S.currentWeekKey, r.day, r.direction, me));
 }
 // Done: the notification is about rides of mine that are all on offer already, so there is nothing left to do with it (hidden everywhere).
-const notifDone = (n, nowMs) => ridesInSlotOf(n, nowMs).length > 0 && !offerableRidesFor(n, nowMs).length;
+// "Rit vrij" (a back-up gets it when a ride is offered inside their moment): the offer it is about, while it can still be taken over by this family
+// (open, not their own, not started). Gone, taken or withdrawn: nothing left to decide, so the card is hidden everywhere.
+export function takeableOfferOf(n, nowMs = Date.now()){
+  const me = myLinkedFamilyId(), o = n && n.kind === 'offerBackup' && n.sourceId ? S.offers[n.sourceId] : null;
+  return o && me && o.status === 'open' && o.offeredBy !== me && rideStartMs(o.date, o.time) > nowMs ? { id: n.sourceId, ...o } : null;
+}
+const notifDone = (n, nowMs) => n.kind === 'offerBackup' ? !takeableOfferOf(n, nowMs) : ridesInSlotOf(n, nowMs).length > 0 && !offerableRidesFor(n, nowMs).length;
 function notifCardHtml({ n, txt }, go, nowMs = Date.now()){
   const rides = offerableRidesFor(n, nowMs);
+  const take = n.isTest ? null : takeableOfferOf(n, nowMs);
+  const problems = take ? problemLines(warningsFor(take, myLinkedFamilyId())) : [];   // shown up front, so Overnemen can be one tap
   const who = familyNameOf(n.fromFamilyId);   // the back-up: the offer form names them (and prefills the message)
   const offerBtns = rides.map(r => `<button type="button" class="btn entryCard__go" data-rboffernow="${esc(r.day)}|${esc(r.direction)}" data-rbwho="${esc(who)}">${rides.length === 1 ? t('ritbeurs.notif.biedAan') : t('ritbeurs.notif.biedAanRit', { when: `${dayLabel(r.day).toLowerCase()} ${dirShort(r.direction).toLowerCase()} ${r.time}` })}</button>`).join('');
-  go = go && !rides.length;
+  go = go && !rides.length && !take;
+  const takeBtns = take ? `<button type="button" class="btn entryCard__go" data-rbnotiftake="${esc(take.id)}">${t(problems.length ? 'ritbeurs.toch' : 'ritbeurs.notif.neemOver')}</button>` : '';
+  const dismissKey = n.kind === 'backupForRide' ? 'ritbeurs.notif.negeer' : take ? 'ritbeurs.notif.wijsAf' : 'ritbeurs.notif.sluit';
   return `<div class="entryCard entryCard--stack rbNotifCard${n.read === true ? '' : ' unread'}" role="status">
     <div class="entryCard__head"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b></div>
-    <p class="entryCard__text">${esc(txt.body)}</p>${n.isTest ? '' : `<div class="rbNotifActs">${offerBtns}${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}<button type="button" class="btn secondary entryCard__go" data-rbnotifdismiss="${esc(n.id)}">${t(n.kind === 'backupForRide' ? 'ritbeurs.notif.negeer' : 'ritbeurs.notif.sluit')}</button></div>`}</div>`;
+    <p class="entryCard__text">${esc(txt.body)}</p>${problems.length ? `<p class="rbChecks">${problems.map(esc).join('<br>')}</p>` : ''}${n.isTest ? '' : `<div class="rbNotifActs">${offerBtns}${takeBtns}${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}<button type="button" class="btn secondary entryCard__go" data-rbnotifdismiss="${esc(n.id)}">${t(dismissKey)}</button></div>`}</div>`;
 }
 // Mijn week: the notifications that still need something (unread, or a ride that can be offered), at most three.
 export function myWeekNotificationsHtml(nowMs = Date.now()){
@@ -201,7 +216,16 @@ export function myWeekNotificationsHtml(nowMs = Date.now()){
 export function wireMyWeekNotifications(box, goToRuilen, rerender){
   box.querySelectorAll('[data-rbnotifgo]').forEach(b => b.onclick = () => { hapticTap(); goToRuilen(); });
   box.querySelectorAll('[data-rboffernow]').forEach(b => b.onclick = () => offerNow(b, rerender));
+  box.querySelectorAll('[data-rbnotiftake]').forEach(b => b.onclick = () => { hapticTap(); b.disabled = true; takeFromNotification(b.dataset.rbnotiftake, rerender); });
   box.querySelectorAll('[data-rbnotifdismiss]').forEach(b => b.onclick = () => { hapticTap(); dismissNotification(b.dataset.rbnotifdismiss); renderDeviationTab(); if(rerender) rerender(); });
+}
+// "Overnemen" on a "Rit vrij" card: takes the ride over at once (the card shows a seat/time warning up front when there is one). Then both screens are
+// redrawn; the local copy of the offer is set to taken so the card is gone at once (the snapshot catches up).
+export async function takeFromNotification(offerId, rerender){
+  const ok = await takeOffer(offerId);
+  if(ok && S.offers[offerId]) S.offers[offerId] = { ...S.offers[offerId], status: 'taken', takenBy: myLinkedFamilyId() };
+  renderDeviationTab(); if(rerender) rerender(); else if(myWeekRedraw) myWeekRedraw();
+  return ok;
 }
 // "Bied mijn rit aan" on a notification card: the same offer form as in Mijn week (ui-driver-car.js) in its back-up variant (the back-up is named,
 // the message is prefilled, the button reads "Bied mijn rit aan"), then both screens are redrawn.
@@ -271,6 +295,7 @@ export function wireRitbeurs(){
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });
   $$('[data-rboffernow]', b => b.onclick = () => offerNow(b, null));
+  $$('[data-rbnotiftake]', b => b.onclick = () => { hapticTap(); b.disabled = true; takeFromNotification(b.dataset.rbnotiftake, null); });
   $$('[data-rbnotifdismiss]', b => b.onclick = () => { hapticTap(); dismissNotification(b.dataset.rbnotifdismiss); renderDeviationTab(); if(myWeekRedraw) myWeekRedraw(); });
   markSeenSoon();
 }

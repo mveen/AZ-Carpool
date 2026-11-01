@@ -14,7 +14,7 @@ const n = (extra = {}) => ({ kind: 'taken', toFamilyId: 'f1', fromFamilyId: 'f2'
 
 test('the five kinds each have a title and a body', () => {
   const line = (kind, extra) => notificationText(n({ kind, ...extra }), ctx);
-  assert.deepEqual(line('offerBackup'), { title: 'Rit vrij: donderdag 16:15', body: 'Ouder Noor biedt een rit aan. Je hebt je voor dit tijdvak beschikbaar gemeld. Tik om over te nemen.' });
+  assert.deepEqual(line('offerBackup'), { title: 'Rit vrij: donderdag 16:15', body: 'Ouder Noor biedt een rit aan. Je hebt je voor dit tijdvak beschikbaar gemeld. Wil je hem overnemen?' });
   assert.deepEqual(line('taken'), { title: 'Ouder Noor neemt je rit over', body: 'donderdag 16:15 is geregeld.' });
   assert.deepEqual(line('takenDayCoordinator'), { title: 'Wijziging donderdag 16:15', body: 'Jij bent dagcoördinator. Ouder Noor rijdt nu deze rit. Het rooster is bijgewerkt.' });
   assert.deepEqual(line('uncovered', { fromFamilyId: '' }), { title: 'Rit donderdag 16:15 nog niet gedekt', body: 'Het is 18:00 en niemand heeft hem overgenomen. Regel het of stuur de groep een appje.' });

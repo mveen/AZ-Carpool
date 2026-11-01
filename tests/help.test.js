@@ -262,6 +262,11 @@ test('v222: the Ruilen help explains the back-up card with Bied mijn rit aan and
   assert.match(a, /back-up zich gemeld[\s\S]*Bied mijn rit aan[\s\S]*al voor je ingevuld/);
 });
 
+test('v228: the Ruilen help explains the Rit vrij card with Overnemen and Afwijzen', () => {
+  const a = articles.find(x => x.id === 'ritbeurs').body.join(' ');
+  assert.match(a, /kaart Rit vrij[\s\S]*Overnemen[\s\S]*Afwijzen[\s\S]*Wie als eerste overneemt, rijdt/);
+});
+
 test('the Afwijkend weekrooster is always on: no Beheer switch article any more, but a parent article and a day coordinator article', () => {
   assert.ok(!articles.find(x => x.id === 'beheer-weekrooster'), 'the switch is gone, so is its article');
   const a = findArticle('afwijkend-weekrooster'), b = findArticle('dagcoordinator-aanvragen');

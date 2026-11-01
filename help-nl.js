@@ -404,6 +404,7 @@ export default [
       'Wil je een rit overnemen? Tik op Ik neem deze rit over en bevestig. Wie als eerste bevestigt, rijdt de rit. Ben je te laat, dan zie je dat meteen. Passen er te weinig kinderen in jouw auto, of rijd je al rond die tijd, dan krijg je een waarschuwing. Je mag de rit dan toch overnemen.',
       'Overgenomen is van jou, ook als je later toch niet kunt. Dan bied je hem zelf opnieuw aan. De aanbieder kan zijn aanbod intrekken zolang niemand de rit heeft.',
       'Heb je tijd en wil je kunnen inspringen? Meld bij Ik kan inspringen een tijdvak. Chauffeurs met een rit in dat tijdvak krijgen een bericht. Je krijgt alleen een bericht als je op dat moment niet zelf rijdt. Een tijdvak verwijder je met de prullenbak.',
+      'Wordt er een rit aangeboden in jouw tijdvak, dan staat er in Mijn week een kaart Rit vrij. Tik op Overnemen om de rit te rijden, of op Afwijzen als het niet past. Afwijzen sluit alleen de kaart: de rit blijft open voor de anderen. Wie als eerste overneemt, rijdt.',
       'Staat een aangeboden rit om 18:00 de dag ervoor nog open, dan krijgen de aanbieder en de dagcoördinator een melding.',
       'Meldingen staan onderaan in Ruilen, alleen als er iets is. Ze tellen als gelezen zodra je het tabblad even open hebt gehad. Heb je Push-meldingen aangezet (zie Instellingen), dan krijg je ze ook als melding op je telefoon.',
       'Zie je geen Ruilen? Dan heeft de coördinator dit uitgezet.',

@@ -28,7 +28,7 @@ Elke melding moet beginnen met de titel **Test · Ouder van Saar** en eronder de
 
 | # | Situatie | Verwachte tekst (ongeveer) | Push binnen 2 min | Voorbeeld in de kaart klopt |
 |---|---|---|---|---|
-| B1 | Een rit komt vrij waar ik back-up voor ben | "Rit vrij: …" + "… biedt een rit aan…" | | |
+| B1 | Een rit komt vrij waar ik back-up voor ben | "Rit vrij: …" + "… biedt een rit aan… Wil je hem overnemen?" met knoppen Overnemen en Afwijzen | | |
 | B2 | Iemand neemt mijn aangeboden rit over | "… neemt je rit over" | | |
 | B3 | Een back-up meldt zich voor mijn rit | "Er is een back-up voor je rit" | | |
 | B4 | Mijn aangeboden rit is niet gedekt (18:00) | "Rit … nog niet gedekt" | | |
