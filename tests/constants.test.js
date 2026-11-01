@@ -135,6 +135,7 @@ test('APP_VERSION is at least v166 (Mijn week: dagpil met afkorting, actiekaart 
 test('APP_VERSION is at least v167 (wissel van ouder samengevoegd met de laatste redesign)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 167); });
 test('APP_VERSION is at least v204 (Mijn week: green header and glow on the car you drive)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 204); });
 test('APP_VERSION is at least v205 (Mijn week: green glow inside the card from the top)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 205); });
+test('APP_VERSION is at least v206 (no timestamp footer, no wheel on match cards)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 206); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

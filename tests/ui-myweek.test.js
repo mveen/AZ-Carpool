@@ -521,6 +521,11 @@ test('v204: the car you drive has a green header (no wheel, no "Jij") and a gree
   const css = fs.readFileSync(new URL('../components.css', import.meta.url), 'utf8'), tok = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
   assert.match(css, /\.rideRow__lab--me\{color:var\(--ok-ink\)\}/); assert.match(css, /\.rideRow--glow\{background:linear-gradient\(180deg,var\(--ok-glow\) 0%,var\(--surface-card\) calc\(var\(--space-6\) \+ var\(--hit-min\) \+ var\(--space-3\)\)\)\}/); assert.equal((tok.match(/--ok-glow:/g) || []).length, 2);
 });
+test('v206: no "Laatst opgehaald" timestamp on Mijn week, also not when the matches come from the saved copy; a match car you drive has no wheel and no "Jij"', () => {
+  const h = text(renderDayAt(MON, { matchesSource: 'cache', cachedMatchesAt: NOW_MS, matchCarpools }));
+  assert.doesNotMatch(h, /Laatst opgehaald/);
+  assert.doesNotMatch(fs.readFileSync(new URL('../ui-myweek.js', import.meta.url), 'utf8'), /laatst_opgehaald|matchStatusNote|rideRow__who--me/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

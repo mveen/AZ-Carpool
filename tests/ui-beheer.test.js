@@ -2,6 +2,7 @@
 // The Beheer tab (coordinator only): families, shift priority, travel preferences, availability overview,
 // planning settings, match calendars, and the "Gewijzigde tijden" notifications.
 import assert from 'node:assert/strict';
+import fsV206 from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -739,6 +740,10 @@ test('the API-key card says that only the coordinator can read the key and that 
 });
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-beheer.js imports nothing it does not use', () => assertNoUnusedImports('ui-beheer.js'));
+test('v206: Beheer shows no "Laatst opgehaald" timestamp for the match calendars any more', () => {
+  const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /laatst_opgehaald|cachedMatchesAt/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

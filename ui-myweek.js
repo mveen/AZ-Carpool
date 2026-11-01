@@ -185,7 +185,7 @@ export function renderMyWeek(){
     const homeAway = a.isHome===true? t('myweek.thuis') : a.isHome===false? t('myweek.uit') : '';
     const passengers = sortGirlIds(r.car.girlIds||[]).map(id=>girlName(id)).join(', ');
     const status = r.driving
-      ? `<div class="rideRow__who rideRow__who--me">${phIcon('steering-wheel-fill')}${esc(t('ride.jij'))}</div>${passengers? `<div class="rideRow__pass">${passengers}</div>`:''}`
+      ? (passengers? `<div class="rideRow__pass">${passengers}</div>` : '')   // no wheel + "Jij" any more: the green top edge says you drive
       : driverButtonHtml(r.car.driverFamilyId);
     return `<div class="rideRow rideRow--match${r.driving? ' rideRow--mine' : ''}">
       <div class="rideRow__head">
@@ -270,11 +270,10 @@ export function renderMyWeek(){
     </button>`).join('')}</div>` : '';
   const panelHtml = shown ? `<div class="dayHead">${esc(shown.label)} <small>${dateText(shown.date)}</small></div>${shown.request}${shown.rows}${shown.tiles}` : '';
   const noRidesHtml = !list.length ? `<p class="muted">${t('myweek.geen_dagen_met_een_tijd')}</p>` : '';
-  const matchStatusNote = S.matchesSource==='live' ? '' : (S.cachedMatchesAt? `<p class="noteLine">${t('beheer.laatst_opgehaald')} ${new Date(S.cachedMatchesAt).toLocaleString(locale())}</p>` : '');
   const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
 
   box.innerHTML = `
-    ${pillsHtml}${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${matchStatusNote}${myWeekNextWeekHtml()}
+    ${pillsHtml}${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${myWeekNextWeekHtml()}
     ${dayCoordinatorHtml()}
   `;
   box.querySelectorAll('[data-mwday]').forEach(b=>b.onclick=()=>{ S.myWeekDay = b.dataset.mwday; hapticTap(); renderMyWeek(); });

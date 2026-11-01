@@ -401,6 +401,9 @@ test('the unused Gewijzigd label text is gone and the single-ride text exists', 
   const src = readSrcFile(new URL('../texts-nl.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /"myweek.gewijzigd"/); assert.match(src, /"schedule.een_rit": "1 rit"/);
 });
+test('v206: the "Laatst opgehaald" text is gone and "Mislukt: " has no leading dash', () => {
+  assert.equal(t('beheer.laatst_opgehaald'), 'beheer.laatst_opgehaald'); assert.equal(t('beheer.mislukt'), 'Mislukt: ');
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
