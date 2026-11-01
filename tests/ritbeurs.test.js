@@ -10,7 +10,7 @@ import './test-support.js';
 import {
   RITBEURS_MESSAGE_MAX, DEFAULT_QUIET, CONFLICT_MINUTES, NOTIFICATION_DAYS,
   normalizeRitbeurs, ritbeursDoc, isTime, isIsoDate, toMin, cleanMessage, rideStartMs, deadlineMs, urgency,
-  normalizeQuiet, inQuiet, deliverAtMs, offerId, buildOffer, openOffers, hasOpenOffer, findCarIndex, applyTakeOver, takeWarnings,
+  normalizeQuiet, inQuiet, deliverAtMs, offerId, buildOffer, openOffers, hasOpenOffer, openOfferOf, findCarIndex, applyTakeOver, takeWarnings,
   buildMoment, momentId, momentCovers, activeMoments, backupRecipients, ridersToWarn,
   notificationId, notificationDoc, unreadCount, sortedNotifications, stalePaths,
 } from '../ritbeurs.js';
@@ -120,6 +120,15 @@ test('a ride that is already on offer cannot be offered twice, a taken one can b
   assert.equal(hasOpenOffer(o, '2026-W42', 'Do', 'terug', 'fJoost'), false);
   assert.equal(hasOpenOffer(o, '2026-W42', 'Do', 'heen', 'fAnna'), false);
   assert.equal(hasOpenOffer({ a: { ...o.a, status: 'taken' } }, '2026-W42', 'Do', 'heen', 'fJoost'), false);
+});
+test('openOfferOf gives the open offer of that family on that ride with its id, or null', () => {
+  const o = { a: buildOffer(offerArgs) };
+  assert.equal(openOfferOf(o, '2026-W42', 'Do', 'heen', 'fJoost').id, 'a');
+  assert.equal(openOfferOf(o, '2026-W42', 'Do', 'heen', 'fJoost').offeredBy, 'fJoost');
+  assert.equal(openOfferOf(o, '2026-W42', 'Do', 'terug', 'fJoost'), null);
+  assert.equal(openOfferOf(o, '2026-W42', 'Do', 'heen', 'fAnna'), null);
+  assert.equal(openOfferOf({ a: { ...o.a, status: 'withdrawn' } }, '2026-W42', 'Do', 'heen', 'fJoost'), null);
+  assert.equal(openOfferOf(null, '2026-W42', 'Do', 'heen', 'fJoost'), null);
 });
 
 console.log('=== taking a ride over ===');

@@ -998,6 +998,10 @@ await testAsync('Ritbeurs: the switch, the offers and the moments are read; the 
   stopDataListeners(); assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {});
   S.links = {}; syncListeners(); assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null); assert.deepEqual(S.notifications, {});
 });
+await testAsync('Ritbeurs: Mijn week is drawn again when the offers change (the tag "Vervanger gezocht" follows the offer)', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  assert.match(src, /collection\("offers"\)\.onSnapshot\([^\n]*renderMyWeek\(\)/);
+});
 await testAsync('Afwijkend weekrooster: the old switch document is no longer read, and the app starts no request listener by itself from the data listeners', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'uit', updatedAt: 1 } }); sampleParentState({});
   startDataListeners(); await tick(); await tick();

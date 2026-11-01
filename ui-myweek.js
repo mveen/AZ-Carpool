@@ -22,6 +22,8 @@ import { openDayEditor } from './ui-weekrooster-edit.js';
 import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { timeChangeOf } from './driver-car.js';
+import { hasOpenOffer } from './ritbeurs.js';
+import { ritbeursOn } from './ritbeurs-data.js';
 import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, openAskedTimeOf, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
 // US-21: distance (from Busstation Aalsmeer) and carpool cost under a match, home or away.
@@ -95,6 +97,8 @@ export function renderMyWeek(){
       .sort((a,b)=> a.time===b.time? 0 : !a.time? 1 : !b.time? -1 : a.time<b.time? -1 : 1)
       .map(({id,time})=> time? `${girlName(id)} ${esc(time)}` : girlName(id)).join(', ');
   }
+  // The ride is on offer in Vervanger: the tag takes the empty line under the label (no extra height).
+  const offeredTag = (day,direction) => ritbeursOn() && hasOpenOffer(S.offers, S.currentWeekKey, day, direction, myId) ? `<span class="tag tag--ruil">${esc(t('ritbeurs.eigen.aangeboden'))}</span>` : '';
   function rideRow(day,direction){
     let s = rideTime(myId, day, direction);   // the handed-in time where the temporary rooster applies, else the standard time
     const cars = effectiveCars(day,direction);
@@ -116,8 +120,8 @@ export function renderMyWeek(){
       if(iDrive){
         // Full passenger list, including your own daughter — not just "everyone else".
         const names = timedNames(ownCar.girlIds, day, direction);
-        who = '';   // "Jij rijdt" is the green header; no wheel + "Jij" line any more
-        act = driverCarButtonHtml(day,direction);
+        who = offeredTag(day,direction);   // "Jij rijdt" is the green header; under it only the tag "Vervanger gezocht" while the ride is on offer
+        act = driverCarButtonHtml(day,direction,'roundBtn',true);
         passengers = names? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${names}</div>` : '';
       } else {
         const id = ownCar.driverFamilyId;
@@ -141,8 +145,8 @@ export function renderMyWeek(){
       driveCard = `<div class="rideRow rideRow--mine rideRow--glow" data-rideday="${day}" data-ridedir="${direction}">
       <div class="rideRow__head">
         <div class="rideRow__time"><div class="rideRow__dep">${esc(dg.departureTime||'--:--')}</div><div class="rideRow__sub">${esc(dirName(direction))}</div>${ch ? `<div class="rideRow__sub">${esc(t('myweek.was'))} ${esc(ch.from)}</div>` : ''}</div>
-        <div class="rideRow__mid"><div class="rideRow__lab rideRow__lab--me">${esc(t('myweek.jij_rijdt_lab'))}</div></div>
-        <div class="rideRow__act">${driverCarButtonHtml(day,direction)}</div>
+        <div class="rideRow__mid"><div class="rideRow__lab rideRow__lab--me">${esc(t('myweek.jij_rijdt_lab'))}</div>${offeredTag(day,direction)}</div>
+        <div class="rideRow__act">${driverCarButtonHtml(day,direction,'roundBtn',true)}</div>
       </div>
       <div class="rideRow__route">${phIcon('map-pin')}<span>${esc(routeLabel(dg,direction,cfg,day))}</span></div>
       ${dNames? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${dNames}</div>` : ''}

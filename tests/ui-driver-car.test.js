@@ -12,7 +12,7 @@ import { S } from '../state.js';
 import { syncWeekRequests } from '../weekrooster-data.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderMyWeek } from '../ui-myweek.js';
-import { driverCarButtonHtml, wireDriverCar, openDriverCarSheet } from '../ui-driver-car.js';
+import { driverCarButtonHtml, wireDriverCar, openDriverCarSheet, openRideMenu } from '../ui-driver-car.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -114,6 +114,49 @@ await testAsync('a changed departure time shows "was 18:00" under the new time a
   assert.doesNotMatch(text(myweek()), /was 18:00/);
   await setup([{ ...MINE, departureTime: '18:45' }], { groups: { Do_terug_1: { day: 'Do', direction: 'terug', girlIds: ['f1', 'f2'], driverFamilyId: 'f2', reserveFamilyIds: [], departureTime: '18:00' } }, links: { p1: { familyId: 'f1' } } });
   assert.match(text(myweek()), /18:45 Terug was 18:00/, 'the parent of a girl in that car sees it too');
+});
+
+console.log('=== the menu "Deze rit" (Vervanger on) ===');
+const byId = id => dom.doc.getElementById(id);
+const openMenu = () => { withFakeNow(NOW, () => openRideMenu('Do', 'terug', null)); return sheet(); };
+await testAsync('Vervanger off: Mijn week keeps the pencil. On: three dots "Deze rit" in Mijn week, the pencil stays in Rooster', async () => {
+  await setup([MINE], { ritbeurs: { on: false } });
+  assert.match(myweek(), /aria-label="Tijd en plek"/); assert.doesNotMatch(myweek(), /data-ridemenu/);
+  await setup([MINE], { ritbeurs: { on: true } });
+  const m = myweek(); assert.match(m, /data-ridemenu="1"/); assert.match(m, /aria-label="Deze rit"/); assert.doesNotMatch(m, /aria-label="Tijd en plek"/);
+  assert.match(rooster(), /aria-label="Tijd en plek"/); assert.doesNotMatch(rooster(), /data-ridemenu/);
+});
+await testAsync('the menu offers Tijd en plek and Vervanger zoeken; Tijd en plek opens the car sheet', async () => {
+  await setup([MINE], { ritbeurs: { on: true } });
+  const t = text(openMenu().innerHTML);
+  assert.match(t, /Deze rit/); assert.match(t, /Donderdag terug · 18:00/); assert.match(t, /Tijd en plek/); assert.match(t, /Vervanger zoeken/); assert.doesNotMatch(t, /Vervanger intrekken/);
+  byId('rmCar').onclick();
+  assert.match(text(sheet().innerHTML), /Tijd en plek van jouw auto/);
+});
+await testAsync('Vervanger zoeken: the form shows my own ride, one tap offers it, Mijn week shows "Vervanger gezocht" and the menu says Vervanger intrekken', async () => {
+  const fake = await setup([MINE], { ritbeurs: { on: true } });
+  openMenu(); byId('rmOffer').onclick();
+  const f = text(sheet().innerHTML);
+  assert.match(f, /Dit is jouw rit/); assert.match(f, /Jij rijdt/); assert.match(f, /Eline, Jahaimy/); assert.match(f, /Bericht erbij/); assert.match(f, /Bied|Vervanger zoeken/);
+  assert.doesNotMatch(myweek(), /Vervanger gezocht/);
+  byId('rmMessage').value = 'ik heb een afspraak';
+  await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });
+  assert.match(toast(), /Rit aangeboden/);
+  const offers = Object.values(S.offers).filter(o => o.status === 'open'); assert.equal(offers.length, 1); assert.equal(offers[0].message, 'ik heb een afspraak'); assert.equal(offers[0].day, 'Do');
+  assert.match(text(myweek()), /Vervanger gezocht/);
+  assert.match(text(openMenu().innerHTML), /Vervanger intrekken/);
+  assert.match(text(sheet().innerHTML), /Je hebt deze rit aangeboden/); assert.ok(fake);
+});
+await testAsync('Vervanger intrekken needs a second tap, then the tag is gone', async () => {
+  await setup([MINE], { ritbeurs: { on: true } });
+  openMenu(); byId('rmOffer').onclick();
+  await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });
+  openMenu();
+  await withFakeNowAsync(NOW, async () => { byId('rmWithdraw').onclick(); await tick(); });
+  assert.equal(Object.values(S.offers).filter(o => o.status === 'open').length, 1, 'first tap only asks');
+  await withFakeNowAsync(NOW, async () => { await byId('rmWithdraw').onclick(); await tick(); await tick(); });
+  assert.equal(Object.values(S.offers).filter(o => o.status === 'open').length, 0);
+  assert.doesNotMatch(text(myweek()), /Vervanger gezocht/);
 });
 
 await testAsync('ui-driver-car.js imports nothing it does not use', async () => assertNoUnusedImports('ui-driver-car.js'));

@@ -597,7 +597,7 @@ export function startDataListeners(){
     // Push: every member reads the switches (test and live), so no queue entry is written while both are off and the parent's Push-meldingen row knows whether it shows.
     db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
       err=>{});
-    db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); checkRitbeurs(); },
+    db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); renderMyWeek(); checkRitbeurs(); },
       err=>{});
     db.collection("backupMoments").onSnapshot(snap=>{ S.moments={}; snap.docs.forEach(d=>S.moments[d.id]=d.data()); renderDeviationTab(); },
       err=>{});

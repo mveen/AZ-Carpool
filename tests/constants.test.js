@@ -138,6 +138,7 @@ test('APP_VERSION is at least v205 (Mijn week: green glow inside the card from t
 test('APP_VERSION is at least v206 (no timestamp footer, no wheel on match cards)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 206); });
 test('v207: the filled steering wheel is gone from PH_PATHS (dead after "Jij" lost its wheel); the plain one stays as a profile avatar', () => { assert.equal(PH_PATHS['steering-wheel-fill'], undefined); assert.ok(PH_PATHS['steering-wheel'].startsWith('<path')); });
 test('APP_VERSION is at least v207 (Rooster: no wheel; dead wheel icon removed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 207); });
+test('APP_VERSION is at least v208 (Mijn week: menu "Deze rit" with Vervanger zoeken)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 208); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

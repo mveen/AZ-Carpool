@@ -526,6 +526,15 @@ test('v206: no "Laatst opgehaald" timestamp on Mijn week, also not when the matc
   assert.doesNotMatch(h, /Laatst opgehaald/);
   assert.doesNotMatch(fs.readFileSync(new URL('../ui-myweek.js', import.meta.url), 'utf8'), /laatst_opgehaald|matchStatusNote|rideRow__who--me/);
 });
+test('v208: with Vervanger on, an own ride on offer shows the tag "Vervanger gezocht" under the label (no extra line) and the three-dots menu; no offer, no tag', () => {
+  const offer = { weekKey: '2026-W40', day: 'Ma', direction: 'terug', date: '2026-09-28', time: '18:00', offeredBy: 'f2', message: '', status: 'open', createdAt: 1 };
+  const base = { ritbeurs: { on: true }, offers: {} };
+  const none = renderDayAt(MON, base), withOffer = renderDayAt(MON, { ...base, offers: { o1: offer } });
+  assert.doesNotMatch(none, /Vervanger gezocht/);
+  const w = text(withOffer);
+  if (/Jij rijdt/.test(w)) { assert.match(w, /Vervanger gezocht/); assert.match(withOffer, /rideRow__mid"><div class="rideRow__lab rideRow__lab--me">[^<]*<\/div><span class="tag tag--ruil">/); assert.match(withOffer, /data-ridemenu="1"/); }
+  const off = renderDayAt(MON, { ritbeurs: { on: false }, offers: { o1: offer } }); assert.doesNotMatch(text(off), /Vervanger gezocht|Deze rit/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

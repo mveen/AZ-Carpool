@@ -404,6 +404,12 @@ test('the unused Gewijzigd label text is gone and the single-ride text exists', 
 test('v206: the "Laatst opgehaald" text is gone and "Mislukt: " has no leading dash', () => {
   assert.equal(t('beheer.laatst_opgehaald'), 'beheer.laatst_opgehaald'); assert.equal(t('beheer.mislukt'), 'Mislukt: ');
 });
+test('v208: the menu "Deze rit" and the offer form say what they do', () => {
+  assert.equal(t('driverCar.menu'), 'Deze rit'); assert.equal(t('rideMenu.trekIn'), 'Vervanger intrekken');
+  assert.equal(t('rideMenu.sub', { p1: 'Woensdag', p2: 'heen', p3: '07:30' }), 'Woensdag heen · 07:30');
+  assert.equal(t('rideMenu.hintOpen', { p1: 'dinsdag' }), 'Je hebt deze rit aangeboden. Iedereen ziet hem bij Vervanger. Regelen vóór dinsdag 18:00.');
+  assert.match(t('ritbeurs.form.eigen'), /Dit is jouw rit/); assert.match(t('rideMenu.hintZoek'), /Wie het eerst ja zegt, rijdt/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

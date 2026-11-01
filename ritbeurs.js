@@ -97,6 +97,12 @@ export function hasOpenOffer(offers, weekKey, day, direction, familyId){
   return Object.values(offers || {}).some(o => o && o.status === 'open' && o.weekKey === weekKey && o.day === day && o.direction === direction && o.offeredBy === familyId);
 }
 
+// The open offer of this family on this ride: { id, ...offer }, or null. (hasOpenOffer says yes/no; the menu needs the id to withdraw it.)
+export function openOfferOf(offers, weekKey, day, direction, familyId){
+  const hit = Object.entries(offers || {}).find(([, o]) => o && o.status === 'open' && o.weekKey === weekKey && o.day === day && o.direction === direction && o.offeredBy === familyId);
+  return hit ? { id: hit[0], ...hit[1] } : null;
+}
+
 // The car an offer is about: the car of that shift driven by the offering family (the one with the same time when there are several).
 export function findCarIndex(cars, offer){
   const idx = (cars || []).map((c, i) => [c, i]).filter(([c]) => c && c.driverFamilyId === offer.offeredBy);
