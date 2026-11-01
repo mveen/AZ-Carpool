@@ -540,7 +540,8 @@ test('v212: an unread Ruilen notification is a card on top of Mijn week (amber, 
   const n = { kind: 'backupForRide', fromFamilyId: 'f3', momentFrom: '15:00', momentTo: '18:30', date: '2026-10-01', weekKey: '2026-W40', createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false };
   const html = renderDayAt(MON, { me: 'p2', links: { p2: { familyId: 'f2' } }, ritbeurs: { on: true }, notifications: { a: n } });
   assert.match(html, /entryCard entryCard--stack rbNotifCard/); assert.match(html, /data-rbnotifgo="1"/); assert.match(text(html), /Er is een back-up voor je rit/);
-  assert.ok(html.indexOf('rbNotifCard') < html.indexOf('data-mwday'), 'on top, above the day buttons');
+  assert.ok(html.indexOf('rbNotifCard') > html.indexOf('data-mwday'), 'below the day buttons (and Tijden wijzigen), above the day coordinator requests');
+  assert.doesNotMatch(html, /data-rboffernow/, 'no own ride in the back-up\'s slot: just Bekijk');
   assert.doesNotMatch(renderDayAt(MON, { me: 'p2', links: { p2: { familyId: 'f2' } }, ritbeurs: { on: true }, notifications: { a: { ...n, read: true } } }), /rbNotifCard/);
   assert.doesNotMatch(renderDayAt(MON, { me: 'p2', links: { p2: { familyId: 'f2' } }, ritbeurs: { on: false }, notifications: { a: n } }), /rbNotifCard/);
 });

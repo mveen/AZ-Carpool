@@ -328,5 +328,15 @@ test('a time list of "Nieuw tijdvak" that is open is not redrawn under the finge
   document.activeElement = null;
   withFakeNow(NOW, () => renderDeviationTab()); assert.match(dom.html('tab-deviation'), /id="rbmFrom"/);
 });
+test('v214: a back-up notification has the button "Bied mijn rit aan" for the own ride inside the back-up\'s slot; not for rides outside it or already on offer', () => {
+  const n = { kind: 'backupForRide', fromFamilyId: 'f3', momentFrom: '15:00', momentTo: '18:30', date: '2026-10-01', weekKey: WEEK_KEY, createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false };
+  asF2({ notifications: { a: n } });   // f2 drives Thursday 16:15 (heen)
+  let html = view();
+  assert.match(html, /data-rboffernow="Do\|heen">Bied mijn rit aan</);
+  asF2({ notifications: { a: { ...n, momentFrom: '07:00', momentTo: '08:00' } } });
+  assert.doesNotMatch(view(), /data-rboffernow/);
+  asF2({ notifications: { a: n }, offers: { o1: offerBy('f2') } });
+  assert.doesNotMatch(view(), /data-rboffernow/, 'already on offer: no button');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

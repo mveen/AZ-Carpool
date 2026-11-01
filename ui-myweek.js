@@ -278,11 +278,11 @@ export function renderMyWeek(){
   const matchFailNote = S.matchFetchFailedTeams.length? `<p class="noteLine">${t('myweek.kon_niet_ophalen')} ${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : '';
 
   box.innerHTML = `
-    ${myWeekNotificationsHtml()}${pillsHtml}${myWeekWeekroosterHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${myWeekNextWeekHtml()}
+    ${pillsHtml}${myWeekWeekroosterHtml()}${myWeekNotificationsHtml()}${myWeekActionCardsHtml()}${alertRows.filter(a=>shown && a.key===shown.key).map(a=>a.html).join('')}${noRidesHtml}${panelHtml}${matchFailNote}${myWeekNextWeekHtml()}
     ${dayCoordinatorHtml()}
   `;
   box.querySelectorAll('[data-mwday]').forEach(b=>b.onclick=()=>{ S.myWeekDay = b.dataset.mwday; hapticTap(); renderMyWeek(); });
-  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireMyWeekNotifications(box, () => { renderDeviationTab(); activateTab('deviation'); }); wireTakeOver(box); wireDriverCar(box, renderMyWeek);
+  wireMyWeekWeekrooster(box, renderMyWeek); wireMyWeekActions(box); wireMyWeekNotifications(box, () => { renderDeviationTab(); activateTab('deviation'); }, renderMyWeek); wireTakeOver(box); wireDriverCar(box, renderMyWeek);
   box.querySelectorAll('[data-gowijzig]').forEach(b=>b.onclick=()=>goToWijzigen(b.dataset.gowijzig));
   box.querySelectorAll('[data-ovtoggle]').forEach(b=>b.onclick=async ()=>{
     const on = b.dataset.ovon==='1';

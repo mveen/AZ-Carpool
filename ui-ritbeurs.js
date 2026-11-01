@@ -12,15 +12,16 @@ import { routeLabel } from './locations.js';
 import { notificationText } from './notif-text.js';
 import { pushVisible } from './push-access.js';
 import { renderDeviationTab } from './ui-deviation.js';
+import { openOfferSheet } from './ui-driver-car.js';
 import { redrawAfterTyping, weekroosterActive } from './ui-weekrooster-form.js';
 import { renderBeheer } from './ui-beheer.js';
 import { periodCardsHtml } from './ui-period.js';
 import { familiesWithPush, serverState } from './push.js';
 import {
-  activeMoments, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
+  activeMoments, hasOpenOffer, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
 import {
-  addMoment, allRides, markNotificationsRead, pushLiveOn, removeMoment, ritbeursOn, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
+  addMoment, allRides, markNotificationsRead, pushLiveOn, removeMoment, ridesOf, ritbeursOn, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
 } from './ritbeurs-data.js';
 
 const dayLabel = k => (DAYS.find(([d]) => d === k) || [k, String(k || '')])[1];
@@ -155,23 +156,42 @@ export function testNotificationsForView(nowMs = Date.now()){
   return out;
 }
 // A notification in the look of the day-coordinator card (amber edge, warning icon, bold title, text). `go` adds a button (used in Mijn week).
-function notifCardHtml({ n, txt }, go){
+// The own rides that a "back-up for your ride" notification is about and that can still be offered: inside the back-up's time slot, not started,
+// not on offer yet. The card then has the button(s) "Bied mijn rit aan" that open the offer form at once.
+export function offerableRidesFor(n, nowMs = Date.now()){
+  const me = myLinkedFamilyId();
+  if(!me || !n || n.kind !== 'backupForRide' || !n.date) return [];
+  return ridesOf(me).filter(r => momentCovers({ date: n.date, from: n.momentFrom, to: n.momentTo }, r.date, r.time)
+    && rideStartMs(r.date, r.time) > nowMs && !hasOpenOffer(S.offers, S.currentWeekKey, r.day, r.direction, me));
+}
+function notifCardHtml({ n, txt }, go, nowMs = Date.now()){
+  const rides = offerableRidesFor(n, nowMs);
+  const offerBtns = rides.map(r => `<button type="button" class="btn entryCard__go" data-rboffernow="${esc(r.day)}|${esc(r.direction)}">${rides.length === 1 ? t('ritbeurs.notif.biedAan') : t('ritbeurs.notif.biedAanRit', { when: `${dayLabel(r.day).toLowerCase()} ${dirShort(r.direction).toLowerCase()} ${r.time}` })}</button>`).join('');
+  go = go && !rides.length;
   return `<div class="entryCard entryCard--stack rbNotifCard${n.read === true ? '' : ' unread'}" role="status">
     <div class="entryCard__head"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b></div>
-    <p class="entryCard__text">${esc(txt.body)}</p>${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}</div>`;
+    <p class="entryCard__text">${esc(txt.body)}</p>${offerBtns}${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}</div>`;
 }
 // Mijn week: the unread notifications (at most three) on top. They disappear when the Ruilen tab has been open for a moment.
 export function myWeekNotificationsHtml(nowMs = Date.now()){
   if(!ritbeursAvailable()) return '';
-  return sortedNotifications(visibleNotifications(nowMs)).filter(n => n.read !== true).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt).slice(0, 3).map(x => notifCardHtml(x, true)).join('');
+  return sortedNotifications(visibleNotifications(nowMs)).filter(n => n.read !== true).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt).slice(0, 3).map(x => notifCardHtml(x, true, nowMs)).join('');
 }
-export function wireMyWeekNotifications(box, goToRuilen){ box.querySelectorAll('[data-rbnotifgo]').forEach(b => b.onclick = () => { hapticTap(); goToRuilen(); }); }
+export function wireMyWeekNotifications(box, goToRuilen, rerender){
+  box.querySelectorAll('[data-rbnotifgo]').forEach(b => b.onclick = () => { hapticTap(); goToRuilen(); });
+  box.querySelectorAll('[data-rboffernow]').forEach(b => b.onclick = () => offerNow(b, rerender));
+}
+// "Bied mijn rit aan" on a notification card: the offer form of Mijn week (ui-driver-car.js), then both screens are redrawn.
+function offerNow(b, rerender){
+  hapticTap(); const [day, direction] = b.dataset.rboffernow.split('|');
+  openOfferSheet(day, direction, () => { renderDeviationTab(); if(rerender) rerender(); });
+}
 
 // The latest few notifications; nothing at all when there are none. They count as read when the tab has been open for a moment.
 function notificationsHtml(nowMs){
   const tests = sortedNotifications(testNotificationsForView(nowMs)).map(n => ({ ...n, isTest: true, read: true }));
   const list = [...sortedNotifications(visibleNotifications(nowMs)), ...tests].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).map(n => ({ n, txt: notificationLine(n) })).filter(x => x.txt);
-  return list.slice(0, NOTIFICATIONS_SHOWN).map(x => notifCardHtml(x, false)).join('');
+  return list.slice(0, NOTIFICATIONS_SHOWN).map(x => notifCardHtml(x, false, nowMs)).join('');
 }
 
 export function ritbeursViewHtml(nowMs = Date.now()){
@@ -227,6 +247,7 @@ export function wireRitbeurs(){
   const openForm = document.getElementById('rbmOpen'); if(openForm) openForm.onclick = () => { hapticTap(); S.rbMomentOpen = true; renderDeviationTab(); };
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });
+  $$('[data-rboffernow]', b => b.onclick = () => offerNow(b, null));
   markSeenSoon();
 }
 // ---------- Beheer: the feature switches (coordinator) ----------
