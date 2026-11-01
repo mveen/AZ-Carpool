@@ -86,8 +86,7 @@ export const S = {
     key: null, status: null, devices: {}, queue: {}, tests: {},
     personaId: '',         // the family whose notifications the coordinator experiences ("Ouder van Saar")
     personaNotifs: {}, personaFor: null, personaUnsub: null,   // that family's real notifications (families/<id>/notifications)
-    timeChoice: 'nu',      // scenarios: pretend it is now, or the middle of the night
-    last: null,            // the last scenario that was played { id, rows, explain, ride, simMs }
+    last: null,            // the last scenario that was played { id, rows, explain, ride }
     thisDeviceId: '',      // the id of this browser's own device document, when it is subscribed
     pendingOpen: '',       // a family id from a tapped push, to open in Testweergave as soon as the app is ready
     pendingView: false,    // ...and then to show the Ritten-ruilen screen as soon as the app knows that Ritten ruilen is on

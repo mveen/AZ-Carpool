@@ -272,10 +272,10 @@ test('the Afwijkend weekrooster is always on: no Beheer switch article any more,
   assert.ok(ids('afwijkend weekrooster').includes('afwijkend-weekrooster')); assert.ok(ids('aanvragen dagcoordinator').includes('dagcoordinator-aanvragen'));
 });
 
-test('the push messages: a parent article (how to switch on, per phone, iPhone, quiet hours), the Beheer article (default off, count, testing always works) and the privacy and services articles', () => {
+test('the push messages: a parent article (how to switch on, per phone, iPhone), the Beheer article (default off, count, testing always works) and the privacy and services articles', () => {
   const a = findArticle('push-meldingen'), ritb = allText(findArticle('ritbeurs')), beheer = allText(findArticle('beheer-ritbeurs', { canEdit: true }));
   assert.ok(a && !a.coordinatorOnly); const t = allText(a);
-  assert.match(t, /rechtsboven op je avatar, kies Push-meldingen en zet Meldingen op deze telefoon aan/); assert.match(t, /per telefoon/); assert.match(t, /beginscherm/); assert.match(t, /22:00 tot 06:00/); assert.match(t, /Zie je Push-meldingen niet in Instellingen\? Dan staan ze uit/);
+  assert.match(t, /rechtsboven op je avatar, kies Push-meldingen en zet Meldingen op deze telefoon aan/); assert.match(t, /per telefoon/); assert.match(t, /beginscherm/); assert.doesNotMatch(t, /stille uren|22:00 tot 06:00/); assert.match(t, /Zie je Push-meldingen niet in Instellingen\? Dan staan ze uit/);
   assert.ok(top('push meldingen telefoon') === 'push-meldingen' || ids('push meldingen telefoon').includes('push-meldingen')); assert.ok(ids('pushmelding').includes('push-meldingen'));
   assert.match(ritb, /Heb je Push-meldingen aangezet \(zie Instellingen\)/);
   assert.match(beheer, /twee schakelaars/); assert.match(beheer, /Push-meldingen aan, staat standaard uit/); assert.match(beheer, /hoeveel gezinnen een telefoon hebben aangemeld/); assert.match(beheer, /Testen kan altijd, ook als Push-meldingen uit staan/);

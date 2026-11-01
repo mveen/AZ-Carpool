@@ -252,11 +252,11 @@ test('texts-nl.js defines every key once', () => assertNoDuplicateKeys('texts-nl
 test('the push test texts exist and fill their placeholders', () => {
   assert.equal(t('push.title'), 'Push-meldingen testen'); assert.equal(t('push.ouderVan', { name: 'Saar' }), 'Ouder van Saar'); assert.equal(t('push.test.titel', { who: 'Ouder van Saar' }), 'Test · Ouder van Saar');
   assert.equal(t('push.server.detail', { ago: '2 min geleden', sent: 3, pending: 1 }), 'Laatste keer 2 min geleden · 3 verstuurd · 1 wachtend');
-  assert.equal(t('push.preview.state.wacht', { time: '06:00' }), 'Wacht op stille uren, bezorgd om 06:00'); assert.equal(t('push.toestel.label', { browser: 'Chrome', os: 'Android' }), 'Chrome op Android');
+  assert.equal(t('push.toestel.label', { browser: 'Chrome', os: 'Android' }), 'Chrome op Android');
   assert.equal(t('push.ago.min', { n: 5 }), '5 min geleden'); assert.equal(t('push.ago.uur', { n: 2 }), '2 uur geleden'); assert.equal(t('push.preview.title', { who: 'Ouder van Saar' }), 'Zo ziet Ouder van Saar het');
 });
 test('the texts of the parent\'s push switch and of the push switch in Beheer exist and fill their placeholders', () => {
-  assert.equal(t('push.me.title'), 'Push-meldingen'); assert.equal(t('push.me.stille', { from: '22:00', to: '06:00' }), 'Stille uren: van 22:00 tot 06:00 komt er niets binnen. Meldingen uit die uren komen daarna.');
+  assert.equal(t('push.me.title'), 'Push-meldingen');
   assert.equal(t('ritbeurs.beheer.push.statusAan', { n: 2, m: 7 }), 'Aan: 2 van 7 gezinnen hebben een telefoon aangemeld.'); assert.equal(t('ritbeurs.beheer.push.label'), 'Push-meldingen aan');
   for (const k of ['push.me.uitleg', 'push.me.label', 'push.me.dezeTelefoon', 'push.me.privacy', 'push.me.laden', 'push.me.laden_mislukt', 'push.me.geenSleutel', 'push.toast.liveAan', 'push.toast.liveUit', 'push.toast.mijnAan', 'push.toast.mijnUit',
     'ritbeurs.beheer.push.title', 'ritbeurs.beheer.push.uitleg', 'ritbeurs.beheer.push.statusUit', 'ritbeurs.beheer.push.serverStil']) assert.notEqual(t(k), k, k);

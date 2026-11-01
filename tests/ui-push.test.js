@@ -14,7 +14,7 @@ import { renderBeheer } from '../ui-beheer.js';
 import { agoText, applyPendingPushOpen, enableThisDevice, pickPersona, playScenario, pushCardHtml, queuePushOpen, queuePushOpenFromUrl, refreshPushCard, togglePushTest, wirePushCard } from '../ui-push.js';
 import { setPersona } from '../push-data.js';
 import { deviceDoc, deviceId } from '../push.js';
-import { notificationDoc, normalizeQuiet } from '../ritbeurs.js';
+import { notificationDoc } from '../ritbeurs.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
@@ -36,7 +36,7 @@ function withBrowser(over, fn) {
     if (hadP === undefined) delete globalThis.PushManager; else globalThis.PushManager = hadP;
   }
 }
-const n = (extra = {}) => ({ ...notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() }), ...extra });
+const n = (extra = {}) => ({ ...notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's', fromFamilyId: 'f2', nowMs: NOWMS }), ...extra });
 
 console.log('=== who sees the card ===');
 await test('the coordinator sees it in Beheer, in the Berichten section, as a foldable card with a bell', () => {
@@ -141,13 +141,13 @@ await test('the families are listed as "Ouder van <dochter>", alphabetically; th
   assert.match(h, /<option value="f6" selected>Ouder van Saar<\/option>/); assert.equal((h.match(/data-pushscen="[a-zA-Z]+"( |>)/g) || []).length, 5); assert.doesNotMatch(h, /data-pushscen="\w+" disabled/);
   assert.match(text(h), /Zo ziet Ouder van Saar het/);
 });
-await test('the five situations and the choice between now and the middle of the night are offered; the test-off hint shows while the switch is off', () => {
+await test('the five situations are offered, without any choice of time; the test-off hint shows while the switch is off', () => {
   coordinator({ personaId: 'f6' });
   let h = card();
   for (const s of ['Een rit komt vrij waar ik back-up voor ben', 'Iemand neemt mijn aangeboden rit over', 'Een back-up meldt zich voor mijn rit', 'Mijn aangeboden rit is niet gedekt (18:00)', 'Ik ben dagcoördinator en een rit is overgenomen']) assert.ok(text(h).includes(s), s);
-  assert.match(h, /<option value="nu" selected>nu<\/option>/); assert.match(h, /<option value="nacht">midden in de nacht \(stille uren\)<\/option>/); assert.match(text(h), /Zet de test aan om meldingen naar je toestel te sturen/);
-  S.pushSettings = { mode: 'test' }; S.push.timeChoice = 'nacht'; h = card();
-  assert.match(h, /<option value="nacht" selected>/); assert.doesNotMatch(text(h), /Zet de test aan/);
+  assert.doesNotMatch(h, /pushTime|stille uren|midden in de nacht/); assert.match(text(h), /Zet de test aan om meldingen naar je toestel te sturen/);
+  S.pushSettings = { mode: 'test' }; h = card();
+  assert.doesNotMatch(text(h), /Zet de test aan/);
 });
 await test('choosing a family and playing a situation fills the preview', async () => {
   const fake = coordinator();
@@ -163,11 +163,6 @@ await test('a delivered notification: title, text, "test" chip, state, what happ
   const h = card();
   assert.match(text(h), /AZ Carpool .* Piet Pieters neemt je rit over donderdag 16:15 is geregeld\. Bezorgd test Niet naar jouw toestel gestuurd/);
   assert.match(h, /data-pushsend="testNotifications\/t1"/); assert.match(h, /class="pushNotif"/);
-});
-await test('a notification held back by quiet hours says when it will be delivered and has a dashed look', () => {
-  coordinator({ personaId: 'f6', tests: { t1: n({ deliverAt: new Date('2026-10-01T06:00:00+02:00').getTime() }) } });
-  const h = card();
-  assert.match(text(h), /Wacht op stille uren, bezorgd om 06:00/); assert.match(h, /pushNotif is-wait/); assert.doesNotMatch(h, /data-pushsend/, 'no send button while the switch is off');
 });
 await test('real notifications of the family are shown as "echt", with the push state from the queue', () => {
   coordinator({ personaId: 'f6', personaNotifs: { r1: n() }, queue: { q: { path: 'families/f6/notifications/r1' } } });
@@ -230,14 +225,12 @@ await test('choosing a family while the list still has the focus shows the resul
   assert.doesNotMatch(body.innerHTML, /data-pushscen="\w+" disabled/); assert.match(body.innerHTML, /<option value="f6" selected>/);
   dom.doc.activeElement = null; delete body.contains;
 });
-await test('the controls are wired: switch, enable button, family, time and clear', async () => {
+await test('the controls are wired: switch, enable button, family and clear', async () => {
   const fake = coordinator({ personaId: 'f6', tests: { t1: n() } }); S.push.key = { publicKey: 'K' };
   withBrowser({ Notification: { permission: 'default' } }, () => { withFakeNow(NOW, () => refreshPushCard()); });
   const el = x => dom.doc.getElementById(x);
-  for (const x of ['pushTestOn', 'pushPersona', 'pushTime', 'pushClear']) assert.equal(typeof (el(x).onchange || el(x).onclick), 'function', x);
+  for (const x of ['pushTestOn', 'pushPersona', 'pushClear']) assert.equal(typeof (el(x).onchange || el(x).onclick), 'function', x);
   el('pushTestOn').checked = true; await el('pushTestOn').onchange(); await tick(); assert.equal(fake.get('settings/push').mode, 'test');
-  el('pushTime').value = 'nacht'; el('pushTime').onchange(); assert.equal(S.push.timeChoice, 'nacht');
-  el('pushTime').value = 'rommel'; el('pushTime').onchange(); assert.equal(S.push.timeChoice, 'nu');
   el('pushPersona').value = 'f3'; el('pushPersona').onchange(); assert.equal(S.push.personaId, 'f3');
   await el('pushClear').onclick(); await tick(); assert.deepEqual(fake.collection('testNotifications'), []);
 });

@@ -22,7 +22,7 @@ Per stap: kruis aan als het klopt (✔) of schrijf op wat je zag (✘).
 | A3 | Kies bij "Ik ben…" **Ouder van Saar** | De vijf knoppen onder "Situaties afspelen" worden actief | |
 
 ## Deel B. De vijf situaties
-Kies telkens "Het is: nu", tik op de knop en wacht maximaal 2 minuten. Doe dit met **de app open** bij B1 en B2, en met **de app weggeswiped of het scherm vergrendeld** bij B3 t/m B5.
+Tik op de knop en wacht maximaal 2 minuten. Doe dit met **de app open** bij B1 en B2, en met **de app weggeswiped of het scherm vergrendeld** bij B3 t/m B5.
 
 Elke melding moet beginnen met de titel **Test · Ouder van Saar** en eronder de gewone tekst.
 
@@ -47,14 +47,7 @@ Controleer ook:
 | C3 | App open (als coördinator). Speel een situatie af en tik op de melding | De app komt naar voren en opent in Testweergave als Saar, zoals bij C1 | |
 | C4 | Speel een situatie af voor een ander gezin ("Ik ben…" wisselen) en tik op die melding | Testweergave als **dat** gezin | |
 
-## Deel D. Stille uren
-| # | Doe | Verwacht | ✔/✘ |
-|---|---|---|---|
-| D1 | Kies "Het is: midden in de nacht (stille uren)" en speel "Iemand neemt mijn aangeboden rit over" | In het voorbeeld staat **Wacht op stille uren, bezorgd om 06:00** (gestreepte rand). Er komt **geen** push | |
-| D2 | Tik bij die melding **Stuur naar mijn toestel** | Binnen 2 minuten komt de push alsnog | |
-| D3 | Kijk in Testweergave als Saar (via C-stappen) naar Meldingen | De nachtmelding staat daar pas vanaf 06:00 (nu nog niet) | |
-
-## Deel E. Uitzetten en opruimen
+## Deel D. Uitzetten en opruimen
 | # | Doe | Verwacht | ✔/✘ |
 |---|---|---|---|
 | E1 | Zet bij je toestel **Ritten ruilen** uit en speel een situatie af | Geen push. Zet hem daarna weer aan | |
@@ -63,13 +56,13 @@ Controleer ook:
 | E4 | Tik **Verwijder** (twee keer tikken) bij je toestel | Het toestel verdwijnt uit de lijst en er komt geen push meer | |
 | E5 | Meld je toestel opnieuw aan (A1) | Werkt weer | |
 
-## Deel F. Veiligheid: er mag niets naar anderen
+## Deel E. Veiligheid: er mag niets naar anderen
 - [ ] Open Instellingen → **Bekijk als: Ouder** (of laat een bekende ouder de app openen): er is **geen** Beheer-tab en nergens het woord "Push-meldingen testen".
 - [ ] Vraag aan één ouder of die vandaag iets heeft ontvangen: het antwoord moet **nee** zijn.
 - [ ] Zet na afloop **Test uit** (tenzij je nog verder test).
 
-## Deel G. Echte push-meldingen (live), met twee telefoons van twee gezinnen
-Doe dit pas als deel A t/m F goed zijn. Je hebt twee telefoons nodig van twee verschillende gezinnen (jouw gezin en een ander gezin dat meedoet).
+## Deel F. Echte push-meldingen (live), met twee telefoons van twee gezinnen
+Doe dit pas als deel A t/m E goed zijn. Je hebt twee telefoons nodig van twee verschillende gezinnen (jouw gezin en een ander gezin dat meedoet).
 | # | Doe | Verwacht | ✔/✘ |
 |---|---|---|---|
 | G1 | Beheer → Berichten → kaart **Ritten ruilen**: zet **Push-meldingen aan** | Er staat "Aan: 0 van N gezinnen hebben een telefoon aangemeld" en geen waarschuwing over de server | |

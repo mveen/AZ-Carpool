@@ -134,11 +134,10 @@ export function devicesFor(route, entry, devices){
 }
 
 // What is left to do for a queue entry at this moment.
-//   state: 'verlopen' (past expiry) | 'wacht' (not yet due: quiet hours) | 'geen-toestel' | 'klaar' (everything sent, given up or switched off) | 'open' (devices still to send to)
+//   state: 'verlopen' (past expiry) | 'geen-toestel' | 'klaar' (everything sent, given up or switched off) | 'open' (devices still to send to)
 export function entryPlan({ entry, devices, nowMs }){
   if(!entry || typeof entry !== 'object') return { state: 'verlopen', targets: [] };
   if(!(entry.expiresAt > nowMs)) return { state: 'verlopen', targets: [] };
-  if(entry.deliverAt > nowMs) return { state: 'wacht', targets: [], at: entry.deliverAt };
   const ids = Object.keys(devices || {});
   if(!ids.length) return { state: 'geen-toestel', targets: [] };
   const targets = ids.filter(id => deviceWants(devices[id], entry.kind) && !(entry.sentTo && entry.sentTo[id]) && !((entry.failedTo && entry.failedTo[id]) >= MAX_FAILS)).sort();
@@ -174,11 +173,11 @@ export function parseOpenLink(search){
 }
 
 // ---------- the preview in Beheer ----------
-// What a family would see of one of its notifications at this moment: 'bezorgd' | 'wacht' (quiet hours) | 'verlopen'.
+// What a family would see of one of its notifications at this moment: 'bezorgd' | 'verlopen'.
 export function previewState(n, nowMs){
   if(!n) return 'verlopen';
   if(n.expiresAt <= nowMs) return 'verlopen';
-  return n.deliverAt > nowMs ? 'wacht' : 'bezorgd';
+  return 'bezorgd';
 }
 
 // The public key as the browser wants it when subscribing.

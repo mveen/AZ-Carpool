@@ -8,7 +8,6 @@ export const DEADLINE_HOUR = 18;          // a ride must be arranged before 18:0
 export const SOON_HOURS = 24;             // within this many hours of the deadline a ride is "soon"
 export const CONFLICT_MINUTES = 90;       // another ride of the taker this close to the offered ride is a conflict (a warning, not a block)
 export const NOTIFICATION_DAYS = 14;      // how long a notification is kept
-export const DEFAULT_QUIET = { from: '22:00', to: '06:00' };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -69,26 +68,6 @@ export function urgency(dateIso, nowMs){
   if(dl == null) return 'ok';
   if(nowMs >= dl) return 'late';
   return dl - nowMs <= SOON_HOURS * 3600 * 1000 ? 'soon' : 'ok';
-}
-
-// ---------- quiet hours (instelbaar, standaard 22:00-06:00) ----------
-export function normalizeQuiet(raw){
-  const r = raw && typeof raw === 'object' ? raw : {};
-  return { from: isTime(r.from) ? r.from : DEFAULT_QUIET.from, to: isTime(r.to) ? r.to : DEFAULT_QUIET.to };
-}
-export function inQuiet(minutes, quiet){
-  const q = normalizeQuiet(quiet), f = toMin(q.from), e = toMin(q.to);
-  if(f === e) return false;                                   // same start and end: no quiet hours
-  return f < e ? (minutes >= f && minutes < e) : (minutes >= f || minutes < e);
-}
-// When a notification for someone with these quiet hours may be delivered (by a push sender, later): now, or when the quiet hours end.
-export function deliverAtMs(nowMs, quiet){
-  const q = normalizeQuiet(quiet), d = new Date(nowMs);
-  if(!inQuiet(d.getHours() * 60 + d.getMinutes(), q)) return nowMs;
-  const end = toMin(q.to), t = new Date(nowMs);
-  t.setHours(Math.floor(end / 60), end % 60, 0, 0);
-  if(t.getTime() <= nowMs) t.setDate(t.getDate() + 1);
-  return t.getTime();
 }
 
 // ---------- offers ----------
@@ -188,13 +167,13 @@ export function ridersToWarn({ moment, rides }){
 // One id per kind, source (offer or moment) and recipient, so a notification can never be written twice.
 export function notificationId(kind, sourceId, toFamilyId){ return `${kind}_${sourceId}_${toFamilyId}`; }
 
-export function notificationDoc({ kind, to, offer, sourceId, fromFamilyId, nowMs, quiet, moment }){
+export function notificationDoc({ kind, to, offer, sourceId, fromFamilyId, nowMs, moment }){
   return {
     kind, toFamilyId: to, sourceId: sourceId || '', fromFamilyId: fromFamilyId || '',
     weekKey: (offer && offer.weekKey) || '', day: (offer && offer.day) || '', direction: (offer && offer.direction) || '',
     date: (offer && offer.date) || (moment && moment.date) || '', time: (offer && offer.time) || '',
     momentFrom: (moment && moment.from) || '', momentTo: (moment && moment.to) || '',
-    createdAt: nowMs, deliverAt: deliverAtMs(nowMs, quiet), expiresAt: nowMs + NOTIFICATION_DAYS * DAY_MS, read: false,
+    createdAt: nowMs, deliverAt: nowMs, expiresAt: nowMs + NOTIFICATION_DAYS * DAY_MS, read: false,
   };
 }
 export function unreadCount(notifications){

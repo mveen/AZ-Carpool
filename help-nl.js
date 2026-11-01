@@ -405,7 +405,7 @@ export default [
       'Overgenomen is van jou, ook als je later toch niet kunt. Dan bied je hem zelf opnieuw aan. De aanbieder kan zijn aanbod intrekken zolang niemand de rit heeft.',
       'Heb je tijd en wil je kunnen inspringen? Meld bij Ik kan inspringen een tijdvak. Chauffeurs met een rit in dat tijdvak krijgen een bericht. Je krijgt alleen een bericht als je op dat moment niet zelf rijdt. Een tijdvak verwijder je met de prullenbak.',
       'Staat een aangeboden rit om 18:00 de dag ervoor nog open, dan krijgen de aanbieder en de dagcoördinator een melding.',
-      'Meldingen staan onderaan in Ruilen, alleen als er iets is. Ze tellen als gelezen zodra je het tabblad even open hebt gehad. Heb je Push-meldingen aangezet (zie Instellingen), dan krijg je ze ook als melding op je telefoon. In de stille uren (22:00 tot 06:00) komt er niets binnen. Wat in die uren gebeurt, krijg je daarna.',
+      'Meldingen staan onderaan in Ruilen, alleen als er iets is. Ze tellen als gelezen zodra je het tabblad even open hebt gehad. Heb je Push-meldingen aangezet (zie Instellingen), dan krijg je ze ook als melding op je telefoon.',
       'Zie je geen Ruilen? Dan heeft de coördinator dit uitgezet.',
     ],
     tab: 'deviation',
@@ -413,12 +413,12 @@ export default [
   {
     id: 'push-meldingen',
     title: 'Push-meldingen op mijn telefoon (Ruilen)',
-    keywords: 'push pushmelding pushmeldingen melding meldingen telefoon notificatie aanzetten uitzetten ritten ruilen back-up stille uren iphone beginscherm toestemming',
+    keywords: 'push pushmelding pushmeldingen melding meldingen telefoon notificatie aanzetten uitzetten ritten ruilen back-up iphone beginscherm toestemming',
     body: [
       'Met push-meldingen hoor je op je telefoon dat er bij Ruilen iets voor jouw gezin is: een rit komt vrij waar jij back-up voor bent, iemand neemt jouw rit over, een back-up meldt zich voor jouw rit, of een rit die jij aanbiedt is nog niet gedekt.',
       'Aanzetten: tik rechtsboven op je avatar, kies Push-meldingen en zet Meldingen op deze telefoon aan. Je browser vraagt dan om toestemming: kies Toestaan.',
       'Je zet dit per telefoon aan. Gebruik je meer toestellen, zet het dan op elk toestel aan. Uitzetten kan op dezelfde plek.',
-      'Een melding opent de app bij Ruilen. In de stille uren (22:00 tot 06:00) komt er niets binnen. Wat in die uren gebeurt, krijg je daarna.',
+      'Een melding opent de app bij Ruilen.',
       'iPhone en iPad: push werkt daar alleen als je de app eerst op je beginscherm zet (Deel, dan Zet op beginscherm). Open de app daarna vanaf het beginscherm en zet Push-meldingen aan.',
       'Geen toestemming gegeven of geweigerd? Zet meldingen voor deze site aan in de instellingen van je browser en probeer het opnieuw.',
       'Zie je Push-meldingen niet in Instellingen? Dan staan ze uit of staat Ruilen uit. Vraag het de coördinator.',

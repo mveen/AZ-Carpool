@@ -8,9 +8,9 @@ function test(name, fn) {
 }
 import './test-support.js';
 import {
-  RITBEURS_MESSAGE_MAX, DEFAULT_QUIET, CONFLICT_MINUTES, NOTIFICATION_DAYS,
+  RITBEURS_MESSAGE_MAX, CONFLICT_MINUTES, NOTIFICATION_DAYS,
   normalizeRitbeurs, ritbeursDoc, isTime, isIsoDate, toMin, cleanMessage, capFirst, keepCapital, rideStartMs, deadlineMs, urgency,
-  normalizeQuiet, inQuiet, deliverAtMs, offerId, buildOffer, openOffers, hasOpenOffer, openOfferOf, findCarIndex, applyTakeOver, takeWarnings,
+  offerId, buildOffer, openOffers, hasOpenOffer, openOfferOf, findCarIndex, applyTakeOver, takeWarnings,
   buildMoment, momentId, momentCovers, activeMoments, backupRecipients, ridersToWarn,
   notificationId, notificationDoc, unreadCount, sortedNotifications, stalePaths,
 } from '../ritbeurs.js';
@@ -66,33 +66,6 @@ test('urgency: ok, soon (within 24 hours of the deadline) and late (deadline pas
   assert.equal(urgency('2026-10-15', at('2026-10-14T18:00:00+02:00')), 'late');
   assert.equal(urgency('2026-10-15', at('2026-10-15T07:00:00+02:00')), 'late');
   assert.equal(urgency('bad', 0), 'ok');
-});
-
-console.log('=== quiet hours ===');
-test('the default is 22:00 to 06:00', () => {
-  assert.deepEqual(DEFAULT_QUIET, { from: '22:00', to: '06:00' });
-  [null, {}, { from: 'x', to: 5 }].forEach(r => assert.deepEqual(normalizeQuiet(r), DEFAULT_QUIET));
-  assert.deepEqual(normalizeQuiet({ from: '23:30', to: '07:15' }), { from: '23:30', to: '07:15' });
-});
-test('quiet hours across midnight', () => {
-  const q = { from: '22:00', to: '06:00' };
-  assert.equal(inQuiet(toMin('21:59'), q), false);
-  assert.equal(inQuiet(toMin('22:00'), q), true);
-  assert.equal(inQuiet(toMin('03:00'), q), true);
-  assert.equal(inQuiet(toMin('05:59'), q), true);
-  assert.equal(inQuiet(toMin('06:00'), q), false);
-});
-test('quiet hours inside one day, and none when start equals end', () => {
-  assert.equal(inQuiet(toMin('13:30'), { from: '13:00', to: '14:00' }), true);
-  assert.equal(inQuiet(toMin('14:00'), { from: '13:00', to: '14:00' }), false);
-  assert.equal(inQuiet(toMin('03:00'), { from: '08:00', to: '08:00' }), false);
-});
-test('delivery waits until the quiet hours end, otherwise it is immediate', () => {
-  const noon = at('2026-10-14T12:00:00+02:00');
-  assert.equal(deliverAtMs(noon, null), noon);
-  assert.equal(deliverAtMs(at('2026-10-14T23:10:00+02:00'), null), at('2026-10-15T06:00:00+02:00'));
-  assert.equal(deliverAtMs(at('2026-10-15T02:00:00+02:00'), null), at('2026-10-15T06:00:00+02:00'));
-  assert.equal(deliverAtMs(at('2026-10-14T23:10:00+02:00'), { from: '23:00', to: '07:30' }), at('2026-10-15T07:30:00+02:00'));
 });
 
 console.log('=== offers ===');
@@ -237,19 +210,14 @@ console.log('=== notifications ===');
 test('the notification id is the same for the same event, so it can never be written twice', () => {
   assert.equal(notificationId('taken', 'o1', 'fJoost'), 'taken_o1_fJoost');
 });
-test('a notification holds who, what, when, when to deliver and when it expires', () => {
+test('a notification holds who, what, when and when it expires, and is deliverable at once (there are no quiet hours)', () => {
   const now = at('2026-10-14T23:10:00+02:00');
   const n = notificationDoc({ kind: 'offerBackup', to: 'fSanne', offer, sourceId: 'o1', fromFamilyId: 'fJoost', nowMs: now });
   assert.equal(n.kind, 'offerBackup'); assert.equal(n.toFamilyId, 'fSanne'); assert.equal(n.fromFamilyId, 'fJoost');
   assert.equal(n.date, '2026-10-15'); assert.equal(n.time, '16:15'); assert.equal(n.day, 'Do'); assert.equal(n.direction, 'heen');
   assert.equal(n.read, false);
-  assert.equal(n.deliverAt, at('2026-10-15T06:00:00+02:00'), 'the default quiet hours (22:00-06:00) apply');
+  assert.equal(n.deliverAt, now, 'even in the middle of the night: no quiet hours');
   assert.equal(n.expiresAt, now + NOTIFICATION_DAYS * 24 * 3600 * 1000);
-});
-test('the receiver\'s own quiet hours decide the delivery time', () => {
-  const now = at('2026-10-14T23:10:00+02:00');
-  const n = notificationDoc({ kind: 'taken', to: 'fJoost', offer, sourceId: 'o1', nowMs: now, quiet: { from: '23:30', to: '07:00' } });
-  assert.equal(n.deliverAt, now);
 });
 test('a notification about a back-up moment carries the moment times', () => {
   const m = buildMoment(mArgs);

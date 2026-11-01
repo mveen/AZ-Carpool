@@ -7,8 +7,8 @@ function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { SCENARIOS, buildScenario, explainBackups, scenarioMoment } from '../push-scenarios.js';
-import { backupRecipients, notificationDoc, normalizeQuiet } from '../ritbeurs.js';
+import { SCENARIOS, buildScenario, explainBackups } from '../push-scenarios.js';
+import { backupRecipients, notificationDoc } from '../ritbeurs.js';
 import { TEST_NOTIFICATION_MS } from '../push.js';
 
 const NOW = new Date('2026-09-30T10:00:00+02:00').getTime();
@@ -21,7 +21,7 @@ const MOMENTS = {
   m3: { familyId: 'f1', date: '2026-10-01', from: '08:00', to: '09:00', onlyIfFree: true },
 };
 const ctx = (extra = {}) => ({
-  personaId: 'f1', families, nowMs: NOW, simMs: NOW, quietOf: () => normalizeQuiet(), ridesOf: id => RIDES[id] || [], moments: MOMENTS,
+  personaId: 'f1', families, nowMs: NOW, ridesOf: id => RIDES[id] || [], moments: MOMENTS,
   busy: (fid, date, time) => fid === 'f4' && date === '2026-10-01' && time === '16:30', dayCoordinatorOf: day => day === 'Do' ? 'f3' : '',
   weekKey: '2026-W40', fallbackRide: ride('Do', '2026-10-01', '16:15'), ...extra,
 });
@@ -36,7 +36,7 @@ test('every scenario gives the chosen family its notification, first, of the rig
     assert.equal(r.error, undefined, s.id); assert.equal(r.kind, s.kind);
     const first = r.rows[0];
     assert.equal(first.toFamilyId, 'f1', s.id); assert.equal(first.persona, true); assert.equal(first.doc.kind, s.kind); assert.equal(first.doc.toFamilyId, 'f1');
-    assert.deepEqual(Object.keys(first.doc).sort(), Object.keys(notificationDoc({ kind: s.kind, to: 'f1', sourceId: 'x', nowMs: 1, quiet: normalizeQuiet() })).sort(), s.id);
+    assert.deepEqual(Object.keys(first.doc).sort(), Object.keys(notificationDoc({ kind: s.kind, to: 'f1', sourceId: 'x', nowMs: 1 })).sort(), s.id);
     assert.match(first.id, new RegExp(`^${s.kind}_test-${s.id}-${NOW}_f1$`)); assert.equal(first.doc.read, false);
   }
 });
@@ -104,20 +104,10 @@ test('no chosen family, an unknown family or only one family: a clear error and 
   assert.deepEqual(buildScenario('overgenomen', ctx({ families: { f1: families.f1 } })), { error: 'geenAnder' });
 });
 
-console.log('\n=== pretending it is night ===');
-test('the quiet hours of the chosen family decide when a night-time notification is delivered', () => {
-  const night = scenarioMoment('nacht', NOW, normalizeQuiet());
-  assert.equal(new Date(night).getHours(), 23); assert.equal(new Date(night).getMinutes(), 30); assert.ok(night > NOW);
-  const r = buildScenario('overgenomen', ctx({ simMs: night }));
-  assert.equal(r.rows[0].doc.deliverAt, new Date('2026-10-01T06:00:00+02:00').getTime()); assert.ok(r.rows[0].doc.deliverAt > NOW);
-  assert.equal(r.rows[0].doc.createdAt, NOW);
-  assert.equal(buildScenario('overgenomen', ctx()).rows[0].doc.deliverAt, NOW);
-});
-test('"now" stays now; at night-time it already is quiet, so now is used; custom quiet hours are respected', () => {
-  assert.equal(scenarioMoment('nu', NOW, normalizeQuiet()), NOW); assert.equal(scenarioMoment('anders', NOW, normalizeQuiet()), NOW);
-  const late = new Date('2026-09-30T23:45:00+02:00').getTime(); assert.equal(scenarioMoment('nacht', late, normalizeQuiet()), late);
-  const none = { from: '03:00', to: '03:00' };
-  assert.ok(scenarioMoment('nacht', NOW, none) !== NOW);
+console.log('\n=== no quiet hours ===');
+test('a made-up notification is deliverable at once, also at night', () => {
+  const r = buildScenario('overgenomen', ctx());
+  assert.equal(r.rows[0].doc.deliverAt, NOW); assert.equal(r.rows[0].doc.createdAt, NOW);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

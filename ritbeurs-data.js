@@ -14,7 +14,7 @@ import { normalizePush, pushSettingsDoc, queueDoc, queueKey } from './push.js';
 import { showToast } from './ui-common.js';
 import { cleanCars, currentDeviationDoc, db, recordLastUpdate } from './data.js';
 import {
-  CONFLICT_MINUTES, applyTakeOver, backupRecipients, buildMoment, buildOffer, hasOpenOffer, momentId, normalizeQuiet, normalizeRitbeurs,
+  CONFLICT_MINUTES, applyTakeOver, backupRecipients, buildMoment, buildOffer, hasOpenOffer, momentId, normalizeRitbeurs,
   notificationDoc, notificationId, offerId, ridersToWarn, ritbeursDoc, rideStartMs, stalePaths, takeWarnings, toMin, urgency,
 } from './ritbeurs.js';
 
@@ -78,8 +78,6 @@ export function warningsFor(offer, takerId){
   return takeWarnings({ offer, cars: effectiveCars(offer.day, offer.direction), takerSeats: seats(fam(takerId)), takerRides: ridesOf(takerId) });
 }
 
-export function quietOf(familyId){ return normalizeQuiet(S.families[familyId] && S.families[familyId].ritbeursQuiet); }
-
 // Writes a notification into a batch for each recipient (nothing when the switch is off). With `queue` (an array) it also notes which
 // notifications were written, so flushPushQueue can hand them to the push server after the batch was saved.
 function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fromFamilyId, nowMs }, queue){
@@ -88,7 +86,7 @@ function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fr
   recipients.forEach(to => {
     if(!to || done.has(to) || !S.families[to]) return;
     done.add(to);
-    const doc = notificationDoc({ kind, to, offer, moment, sourceId, fromFamilyId, nowMs, quiet: quietOf(to) });
+    const doc = notificationDoc({ kind, to, offer, moment, sourceId, fromFamilyId, nowMs });
     const path = `families/${to}/notifications/${notificationId(kind, sourceId, to)}`;
     batch.set(path, doc);
     if(queue) queue.push({ path, toFamilyId: to, kind, deliverAt: doc.deliverAt, expiresAt: doc.expiresAt, nowMs });
@@ -229,15 +227,6 @@ export async function markNotificationsRead(){
     await batch.commit();
     return true;
   }catch(e){ return false; }
-}
-
-// The quiet hours of the own family (instelbaar; standaard 22:00-06:00). Saves at once.
-export async function saveQuiet(from, to){
-  const me = myLinkedFamilyId();
-  if(!db || !me) return false;
-  const q = normalizeQuiet({ from, to });
-  try{ await db.doc('families/' + me).set({ ritbeursQuiet: q }, { merge: true }); showToast(t('ritbeurs.toast.stilleUren')); return true; }
-  catch(e){ showToast(t('data.opslaan_mislukt') + (e && e.message || e)); return false; }
 }
 
 // ---------- background checks (on every data change and every minute) ----------

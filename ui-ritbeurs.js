@@ -33,7 +33,7 @@ const dirShort = d => t(d === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
 // Is the Ritbeurs usable for this user? The switch is on and the user has a linked family.
 export function ritbeursAvailable(){ return !!(S.me && ritbeursOn() && myLinkedFamilyId()); }
 
-// Notifications that may be shown now (those held back by quiet hours appear when the quiet hours end).
+// Notifications that may be shown now (not dismissed on this phone, not expired).
 // "Negeren" / "Sluiten" on a notification card is remembered on this phone only (the database rules let a notification change nothing but `read`).
 const DISMISS_KEY = 'azc.dismissedNotifications';
 let dismissedMem = null;
@@ -50,7 +50,7 @@ export function dismissNotification(id){
 export function resetDismissedNotifications(){ dismissedMem = null; }
 export function visibleNotifications(nowMs = Date.now()){
   const own = {}, gone = dismissedSet();
-  Object.entries(S.notifications || {}).forEach(([id, n]) => { if(n && !gone.has(id) && !(n.deliverAt > nowMs) && !(n.expiresAt < nowMs)) own[id] = n; });
+  Object.entries(S.notifications || {}).forEach(([id, n]) => { if(n && !gone.has(id) && !(n.expiresAt < nowMs)) own[id] = n; });
   return own;
 }
 // The number on the Ruilen tab: open rides of other families + unread notifications. 0 when the switch is off.
@@ -163,11 +163,11 @@ function notificationLine(n){
   return notificationText(n, { nameOf: familyNameOf, currentWeekKey: S.currentWeekKey });
 }
 // Test phase (coordinator only): in Testweergave as a family, the made-up notifications of that family are part of the inbox too, marked "test"
-// (never counted in the badge), so a tapped test push lands on the notification it was about. Held back by quiet hours like a real one.
+// (never counted in the badge), so a tapped test push lands on the notification it was about. 
 export function testNotificationsForView(nowMs = Date.now()){
   if(!S.impersonateFamilyId || !pushVisible()) return {};
   const out = {};
-  Object.entries(S.push.tests || {}).forEach(([id, n]) => { if(n && n.toFamilyId === S.impersonateFamilyId && !(n.deliverAt > nowMs) && !(n.expiresAt <= nowMs)) out[id] = n; });
+  Object.entries(S.push.tests || {}).forEach(([id, n]) => { if(n && n.toFamilyId === S.impersonateFamilyId && !(n.expiresAt <= nowMs)) out[id] = n; });
   return out;
 }
 // A notification in the look of the day-coordinator card (amber edge, warning icon, bold title, text). `go` adds a button (used in Mijn week).

@@ -5,7 +5,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { esc, hapticTap, closeSheet, showToast } from './ui-common.js';
-import { pushLiveOn, quietOf, ritbeursOn } from './ritbeurs-data.js';
+import { pushLiveOn, ritbeursOn } from './ritbeurs-data.js';
 import { disableFamilyDevice, enableFamilyDevice, loadMyDevice, ownPushFamilyId, permissionState, pushSupport } from './push-data.js';
 
 // Does this browser get the Push-meldingen row in Instellingen?
@@ -31,12 +31,10 @@ export function pushMeInnerHtml(){
     else if(!hasKey) hint = t('push.me.geenSleutel');
   }
   const canSwitch = me.on || (support === 'ok' && perm !== 'denied' && hasKey);
-  const quiet = quietOf(ownPushFamilyId());
   return `<div class="panel__sub">${t('push.me.uitleg')}</div>
     <label class="switchRow" for="pushMeOn"><span>${t('push.me.label')}</span>
       <input type="checkbox" role="switch" class="switch" id="pushMeOn"${me.on ? ' checked' : ''}${canSwitch ? '' : ' disabled'}></label>
     ${hint ? `<p class="muted">${esc(hint)}</p>` : ''}
-    <p class="muted">${esc(t('push.me.stille', { from: quiet.from, to: quiet.to }))}</p>
     <p class="muted">${t('push.me.dezeTelefoon')}</p>
     <p class="muted">${t('push.me.privacy')}</p>`;
 }

@@ -62,7 +62,7 @@ const FAMILIES = { f1: fam('Ouder Saar', 'Saar'), f2: fam('Ouder Noor', 'Noor'),
 const seedFamilies = () => Object.fromEntries(Object.entries(FAMILIES).map(([id, f]) => [`families/${id}`, f]));
 const ENDPOINT = 'https://fcm.googleapis.com/fcm/send/coordinator-phone';
 const device = (extra = {}) => ({ owner: 'coordinator', uid: 'coord', endpoint: ENDPOINT, p256dh: 'p'.repeat(87), auth: 'a'.repeat(22), label: 'Chrome op Android', categories: { ritbeurs: true }, createdAt: 1, lastOkAt: 0, ...extra });
-const notif = (to, extra = {}) => app.notificationDoc({ kind: 'taken', to, offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: T10, quiet: app.normalizeQuiet(), ...extra });
+const notif = (to, extra = {}) => app.notificationDoc({ kind: 'taken', to, offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: T10, ...extra });
 const queueEntry = (path, to, doc, extra = {}) => app.queueDoc({ path, toFamilyId: to, kind: doc.kind, deliverAt: doc.deliverAt, expiresAt: doc.expiresAt, nowMs: T10, test: path.startsWith('test') });
 // A database with the push switch on test, one coordinator device, and the made-up notification "n1" for f1 in the queue.
 function base(extra = {}, { mode = 'test' } = {}) {
@@ -120,14 +120,12 @@ await test('a real family notification is sent with the real text, labelled with
   const p = send.sent.map(a => JSON.parse(a.payload)).find(x => x.forFamilyId === 'f3');
   assert.equal(p.title, 'Test · Ouder van Lois'); assert.match(p.body, /^Rit vrij: donderdag 16:15\nOuder Noor biedt een rit aan/);
 });
-await test('quiet hours: a message that is not due yet waits and goes out when it is due', async () => {
-  const n = notif('f1', { nowMs: T2330, quiet: app.normalizeQuiet() });   // made at 23:30: due at 06:00
-  assert.ok(n.deliverAt > T2330);
+await test('a message made at night is sent in the first run that is allowed (the job itself rests between 00:00 and 05:00)', async () => {
+  const n = notif('f1', { nowMs: T2330 });
+  assert.equal(n.deliverAt, T2330);
   const fs = fakeFirestore(base({ 'testNotifications/n1': n, 'pushQueue/testNotifications__n1': queueEntry('testNotifications/n1', 'f1', n) })), send = sender();
-  const early = await run(fs, send, T2330);
-  assert.equal(send.sent.length, 0); assert.equal(early.pending, 1);
-  const later = await run(fs, send, n.deliverAt + 1000);
-  assert.equal(send.sent.length, 1); assert.equal(later.sent, 1);
+  const r = await run(fs, send, T2330);
+  assert.equal(send.sent.length, 1); assert.equal(r.sent, 1);
 });
 await test('a device with Ritten ruilen switched off gets nothing, without complaints', async () => {
   const fs = fakeFirestore(base({ 'pushDevices/dev1': device({ categories: { ritbeurs: false } }) })), send = sender();
@@ -273,12 +271,6 @@ await test('a phone whose family id is emptied (switched off but kept as a test 
   const fs = fakeFirestore(db), send = sender();
   assert.equal((await run(fs, send)).sent, 0);
 });
-await test('quiet hours also hold a real push back: it stays pending until 06:00', async () => {
-  const db = liveBase(); const e = db['pushQueue/' + app.queueKey(REAL_PATH)]; e.deliverAt = T10 + 3600000;
-  const fs = fakeFirestore(db), send = sender();
-  const r = await run(fs, send);
-  assert.equal(r.sent, 0); assert.equal(r.pending, 1);
-});
 await test('live only: made-up situations and hand-sent entries are not sent (they need the test switch); with test on as well they go to the coordinator, labelled', async () => {
   const n1 = notif('f1');
   const seed = { ...liveBase(), 'pushDevices/dev1': device(), 'testNotifications/n1': n1, 'pushQueue/testNotifications__n1': queueEntry('testNotifications/n1', 'f1', n1) };
@@ -335,14 +327,14 @@ await test('before 18:00, for another week, already announced, ride already star
   const noSwitch = ritOn(); delete noSwitch['settings/ritbeurs'];
   assert.equal(await unc(fakeFirestore(noSwitch)), 0);
 });
-await test('quiet hours of the receiving family apply to the announcement', async () => {
+await test('the announcement is deliverable at once, also when the family still has an old quiet-hours setting', async () => {
   const fs = fakeFirestore(ritOn({ 'families/f1': fam('Ouder Saar', 'Saar', { ritbeursQuiet: { from: '18:00', to: '19:00' } }) }));
   await unc(fs);
-  assert.ok(fs.data.get('families/f1/notifications/uncovered_o1_f1').deliverAt > T1805);
+  assert.equal(fs.data.get('families/f1/notifications/uncovered_o1_f1').deliverAt, T1805);
   assert.equal(fs.data.get('families/f3/notifications/uncovered_o1_f3').deliverAt, T1805);
 });
 await test('the app was first (it made a notification already): the server changes nothing, not even the offer', async () => {
-  const early = app.notificationDoc({ kind: 'uncovered', to: 'f1', offer: offer(), sourceId: 'o1', fromFamilyId: '', nowMs: T1805 - 1000, quiet: app.normalizeQuiet() });
+  const early = app.notificationDoc({ kind: 'uncovered', to: 'f1', offer: offer(), sourceId: 'o1', fromFamilyId: '', nowMs: T1805 - 1000 });
   const fs = fakeFirestore(ritOn({ 'families/f1/notifications/uncovered_o1_f1': early }));
   assert.equal(await unc(fs), 0);
   assert.equal(fs.data.get('offers/o1').uncoveredAt, undefined); assert.equal(fs.data.has('families/f3/notifications/uncovered_o1_f3'), false);

@@ -18,14 +18,14 @@ import { dayCoordinatorFor, isRealCoordinator } from './coordinator.js';
 import { db } from './data.js';
 import { showToast } from './ui-common.js';
 import { pushVisible } from './push-access.js';
-import { pushLiveOn, quietOf, ridesOf } from './ritbeurs-data.js';
+import { pushLiveOn, ridesOf } from './ritbeurs-data.js';
 import { CONFLICT_MINUTES, toMin } from './ritbeurs.js';
 import { notificationText } from './notif-text.js';
 import {
   bufferToBase64Url, deviceDoc, deviceId, deviceLabelFromUA, isTestCopy, normalizePush, previewState, pushSettingsDoc, queueDoc, queueKey,
   urlBase64ToUint8Array,
 } from './push.js';
-import { buildScenario, scenarioMoment } from './push-scenarios.js';
+import { buildScenario } from './push-scenarios.js';
 import { refreshPushCard } from './ui-push.js';
 import { renderDeviationTab } from './ui-deviation.js';
 
@@ -255,8 +255,7 @@ export function stopPushListeners(){
 
 // ---------- scenarios ----------
 // The data the scenario builder needs, from the current app state.
-export function scenarioContext(personaId, choice, nowMs = Date.now()){
-  const simMs = scenarioMoment(choice, nowMs, quietOf(personaId));
+export function scenarioContext(personaId, nowMs = Date.now()){
   const weekKey = S.currentWeekKey;
   const d = new Date(nowMs);
   const todayIso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -264,21 +263,19 @@ export function scenarioContext(personaId, choice, nowMs = Date.now()){
   const days = DAYS.map(([k]) => [k, weekKeyDayIso(weekKey, k)]);
   const [dayKey, iso] = days.find(([, date]) => date > todayIso) || days[0];
   return {
-    personaId, families: S.families, nowMs, simMs, quietOf, ridesOf, moments: S.moments, busy: busyAround, weekKey,
+    personaId, families: S.families, nowMs, ridesOf, moments: S.moments, busy: busyAround, weekKey,
     dayCoordinatorOf: day => { const dc = dayCoordinatorFor(S, day); return dc ? dc.familyId : ''; },
     fallbackRide: { day: dayKey, direction: 'heen', date: iso, time: '16:15' },
   };
 }
 
 // Plays a scenario: stores the made-up notifications and, with the switch on, queues the persona's own for the server.
-export async function runScenario(id, choice){
+export async function runScenario(id){
   if(!allowed()){ showToast(t('push.err.alleenCoordinator')); return null; }
   const personaId = S.push.personaId;
   if(!personaId){ showToast(t('push.err.kiesGezin')); return null; }
-  const choiceNow = choice === 'nacht' ? 'nacht' : 'nu';
-  S.push.timeChoice = choiceNow;
   const nowMs = Date.now();
-  const ctx = scenarioContext(personaId, choiceNow, nowMs);
+  const ctx = scenarioContext(personaId, nowMs);
   const res = buildScenario(id, ctx);
   if(res.error){ showToast(t(res.error === 'geenAnder' ? 'push.err.geenAnder' : 'push.err.kiesGezin')); return null; }
   try{
@@ -287,7 +284,7 @@ export async function runScenario(id, choice){
     const queued = [];
     if(pushMode() === 'test') res.rows.filter(r => r.persona).forEach(r => { const q = queueEntryFor(r, nowMs); batch.set('pushQueue/' + q.key, q.doc); queued.push(r.id); });
     await batch.commit();
-    S.push.last = { id, rows: res.rows.map(r => ({ id: r.id, toFamilyId: r.toFamilyId, persona: r.persona, why: r.why })), explain: res.explain, ride: res.ride, simMs: ctx.simMs, nowMs };
+    S.push.last = { id, rows: res.rows.map(r => ({ id: r.id, toFamilyId: r.toFamilyId, persona: r.persona, why: r.why })), explain: res.explain, ride: res.ride, nowMs };
     S.push.tests = { ...S.push.tests, ...Object.fromEntries(res.rows.map(r => [r.id, r.doc])) };
     showToast(t(queued.length ? 'push.toast.scenarioWachtrij' : 'push.toast.scenario'));
     refreshPushCard(true);
@@ -303,7 +300,7 @@ function queueEntryFor(row, nowMs, { suffix, deliverNow } = {}){
   };
 }
 
-// "Stuur naar mijn toestel": queue one notification (made-up or real) for the server right now, ignoring quiet hours.
+// "Stuur naar mijn toestel": queue one notification (made-up or real) for the server right now.
 export async function sendToMyDevice(path){
   if(!allowed()){ showToast(t('push.err.alleenCoordinator')); return false; }
   if(pushMode() !== 'test'){ showToast(t('push.err.zetTestAan')); return false; }

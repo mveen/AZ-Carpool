@@ -73,7 +73,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 ## Components added for "Push-meldingen testen" (Beheer, coordinator only, temporary)
 
-`.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushTime`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`, `.is-wait` for a notification held back by quiet hours) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
+`.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
 
 ## Avatar choice
 

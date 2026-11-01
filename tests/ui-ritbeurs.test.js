@@ -172,13 +172,13 @@ await testAsync('saveMomentDraft stores the moment and resets the draft', async 
 });
 
 console.log('=== notifications and the badge ===');
-test('Testweergave (coordinator): the made-up notifications of that family are in the inbox, marked "test", held back by quiet hours, never in the badge', () => {
+test('Testweergave (coordinator): the made-up notifications of that family are in the inbox, marked "test", never in the badge', () => {
   const mine = { kind: 'taken', toFamilyId: 'f2', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 5, deliverAt: 5, expiresAt: 9e12, read: false };
   sampleCoordinatorState({ impersonateFamilyId: 'f2', ritbeurs: { on: true }, groups: groups(), links: { coord: { familyId: 'f1' } },
-    push: { ...S.push, tests: { t1: mine, later: { ...mine, createdAt: 9, deliverAt: Date.now() + 3600e3 }, old: { ...mine, expiresAt: 5 }, other: { ...mine, toFamilyId: 'f3' } } } });
+    push: { ...S.push, tests: { t1: mine, old: { ...mine, expiresAt: 5 }, other: { ...mine, toFamilyId: 'f3' } } } });
   const html = view();
   assert.match(html, /Kees de Vries neemt je rit over <span class="noticeChip off">test<\/span>/);
-  assert.equal((html.match(/noticeChip off">test/g) || []).length, 1, 'only the delivered, unexpired one of this family');
+  assert.equal((html.match(/noticeChip off">test/g) || []).length, 1, 'only the unexpired one of this family');
   assert.doesNotMatch(html, /rbNotif unread/); assert.doesNotMatch(html, /id="rbReadAll"/);
   assert.equal(ritbeursBadgeCount(), 0); assert.deepEqual(Object.keys(testNotificationsForView(Date.now())), ['t1']);
   S.impersonateFamilyId = null; assert.deepEqual(testNotificationsForView(Date.now()), {}); assert.doesNotMatch(view(), /noticeChip off">test/);
@@ -212,9 +212,9 @@ test('notifications read in plain Dutch and never claim to know where someone is
   assert.doesNotMatch(s, /in de buurt/i);
   assert.doesNotMatch(s, /Alles gelezen/);
 });
-test('a notification held back by quiet hours or expired is not shown or counted', () => {
+test('an expired notification is not shown or counted, one with an old future deliverAt is shown at once', () => {
   asF2({ notifications: { a: { kind: 'taken', createdAt: 1, deliverAt: Date.now() + 3600e3, expiresAt: 9e12, read: false }, b: { kind: 'taken', createdAt: 1, deliverAt: 1, expiresAt: 5, read: false }, c: { kind: 'taken', createdAt: 1, deliverAt: 1, expiresAt: 9e12, read: false } } });
-  assert.deepEqual(Object.keys(visibleNotifications()), ['c']);
+  assert.deepEqual(Object.keys(visibleNotifications()).sort(), ['a', 'c']);
 });
 test('the number on the Wijzigen tab counts rides of others plus unread notifications, and is hidden when the switch is off', () => {
   asF3({ offers: { o1: offerBy('f2'), o2: offerBy('f3', { day: 'Vr' }) }, notifications: { c: { kind: 'taken', createdAt: 1, deliverAt: 1, expiresAt: 9e12, read: false } } });
