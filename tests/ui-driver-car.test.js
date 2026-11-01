@@ -160,7 +160,7 @@ await testAsync('v222: opened from a back-up notification the form names the bac
   await setup([MINE], { ritbeurs: { on: true } });
   withFakeNow(NOW, () => openOfferSheet('Do', 'terug', null, { backup: true, who: 'Ouder van Evi' }));
   const f = text(sheet().innerHTML);
-  assert.match(f, /Ouder van Evi kan inspringen\. Wie je rit overneemt, rijdt hem in jouw plaats/); assert.match(f, /Eerst horen back-ups zoals Ouder van Evi het/);
+  assert.match(f, /Ouder van Evi kan inspringen\. Wie je rit overneemt, rijdt hem in jouw plaats/); assert.match(f, /Ouder van Evi krijgt direct bericht en kan de rit overnemen\. Wordt hij om 18:00 de dag ervoor niet overgenomen/); assert.doesNotMatch(f, /Eerst horen back-ups/, 'the back-up has already reported: no explanation of who hears it first');
   assert.match(f, /Eline, Jahaimy/, 'the ride is still on top'); assert.match(f, /Bied mijn rit aan$/); assert.doesNotMatch(f, /Vervanger zoeken/);
   assert.equal(byId('rmMessage').value, 'Ik maak graag gebruik van jouw beschikbaarheid', 'prefilled');
   await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });

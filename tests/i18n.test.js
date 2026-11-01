@@ -424,6 +424,7 @@ test('v212: singular "1 rit", the shorter intro texts and the Bekijk button exis
 test('v222: the offer form is "Rit aanbieden"; the back-up variant has its own words', () => {
   assert.equal(t('ritbeurs.form.title'), 'Rit aanbieden'); assert.equal(t('ritbeurs.form.bevestig'), 'Rit aanbieden');
   assert.equal(t('ritbeurs.formBackup.bevestig'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.formBackup.bericht'), 'Ik maak graag gebruik van jouw beschikbaarheid');
+  assert.equal(t('ritbeurs.formBackup.stappen', { who: 'Ouder van Evi' }), 'Ouder van Evi krijgt direct bericht en kan de rit overnemen. Wordt hij om 18:00 de dag ervoor niet overgenomen, dan krijgen jij en de dagcoördinator een melding.');
   assert.equal(t('ritbeurs.formBackup.sub', { who: 'Ouder van Evi' }), 'Ouder van Evi kan inspringen. Wie je rit overneemt, rijdt hem in jouw plaats.');
 });
 test('v214: the offer buttons on a notification say what they do', () => { assert.equal(t('ritbeurs.notif.biedAan'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.notif.biedAanRit', { when: 'donderdag heen 16:15' }), 'Bied aan: donderdag heen 16:15'); });

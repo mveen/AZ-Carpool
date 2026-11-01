@@ -1128,7 +1128,7 @@ export default {
   "ritbeurs.form.eigen": "Dit is jouw rit. Wie hem overneemt, rijdt hem in jouw plaats.",
   "ritbeurs.formBackup.sub": "{who} kan inspringen. Wie je rit overneemt, rijdt hem in jouw plaats.",
   "ritbeurs.formBackup.bericht": "Ik maak graag gebruik van jouw beschikbaarheid",
-  "ritbeurs.formBackup.stappen": "Eerst horen back-ups zoals {who} het. Iedereen ziet de rit ook bij Ruilen. Wordt hij niet overgenomen, dan krijgen jij en de dagcoördinator om 18:00 de dag ervoor een melding.",
+  "ritbeurs.formBackup.stappen": "{who} krijgt direct bericht en kan de rit overnemen. Wordt hij om 18:00 de dag ervoor niet overgenomen, dan krijgen jij en de dagcoördinator een melding.",
   "ritbeurs.formBackup.bevestig": "Bied mijn rit aan",
   "ritbeurs.formBackup.onbekend": "Een back-up",
   "rideMenu.title": "Deze rit",
