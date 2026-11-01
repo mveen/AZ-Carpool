@@ -352,7 +352,7 @@ function doneHtml(done) {
 export function renderFlowScreen() {
   const html = S.wrAdvice || S.wrDone ? scheduleAdviceHtml() : '';
   let el = document.getElementById('flowScreen');
-  if (!html) { if (el && el.remove) el.remove(); if (document.body.classList) document.body.classList.remove('flowOpen'); return; }
+  if (!html) { if (el && el.remove) el.remove(); if (document.body.classList && !S.wrFlow) document.body.classList.remove('flowOpen'); return; }
   if (!el || !el.parentNode) {
     el = document.createElement('div'); el.id = 'flowScreen'; el.className = 'flowScreen';
     if (el.setAttribute) { el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'flowTitle'); }

@@ -1119,3 +1119,30 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 /* Rooster "Deze week": the direction is the tint only (.scene--heen / .scene--terug), no mark */
 .rideRow__act--seats{display:flex;align-items:center;gap:var(--space-3)}
 .rideRow--mine.scene--heen,.rideRow--mine.scene--terug{border-top-color:var(--ok)}
+
+/* ---------- Tijden wijzigen: its own screen (flow) over Mijn week. A changed day gets a border and a tag, not a fill; "was 09:00" shows what it was. ---------- */
+.wrFlow .flowScreen__body{display:flex;flex-direction:column;gap:var(--space-4)}
+.wrFlow .segmented{margin:0}
+.wrFlow__intro{margin:0 var(--space-1);font:var(--type-small);color:var(--text-2)}
+.wrFlow__cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-4);margin:0;padding:0 calc(var(--space-6) + 1px);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
+.wrDay{background:var(--surface-card);border:1px solid var(--edge);border-radius:var(--radius-card);padding:var(--space-5) var(--space-6) var(--space-4)}
+.wrDay--changed{border-color:var(--warn-icon)}
+.wrDay--past{background:var(--surface-soft);color:var(--text-muted)}
+.wrDay__head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);margin-bottom:var(--space-2)}
+.wrDay__name{font:var(--type-card-title)}
+.wrDay__name small{margin-left:var(--space-2);font:var(--type-caption);color:var(--text-muted)}
+.wrDay__cells{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-4)}
+.wrDay__past{margin:0;font:var(--type-small);color:var(--text-muted)}
+.wrCell__was{min-height:18px;margin-top:var(--space-1);padding-left:var(--hit-min);font:var(--type-caption);color:var(--text-muted)}
+.wrFlow input[type=time].periodTime.changed{border-color:var(--warn-icon);background:var(--surface-card)}
+.wrFlow .flowScreen__foot .linkbtn{align-self:center}
+.wrDay .tag[hidden]{display:none}
+.wrFlow .wrCell>input[type=time]{flex:1;min-width:0;width:100%}
+.wrFlow .wrCell>input[type=time]::-webkit-calendar-picker-indicator{display:none}
+
+/* ---------- Vervanger: the tab has its own colour, teal (--ruil) ---------- */
+#tab-deviation.tab--ruil{--tab:var(--ruil);--tab-ink:var(--on-accent)}
+#tab-deviation.tab--ruil .segmented button.active{background:var(--tab);color:var(--tab-ink);box-shadow:none}
+.navtab.active[data-tab="deviation"].navtab--ruil{color:var(--ruil)}
+.navtab--ruil .navbadge{background:var(--ruil)}
+.tag--ruil{background:var(--ruil-soft);color:var(--ruil-ink)}

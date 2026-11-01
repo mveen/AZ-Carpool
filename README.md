@@ -58,7 +58,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `notif-text.js` | The words of a Ritten-ruilen notification (inbox, preview and push server share them) | `notif-text.test.js` |
 | `push-scenarios.js` | Push-meldingen testen: the five made-up situations, built with the same functions as the real notifications | `push-scenarios.test.js` |
 | `push-data.js` | Push-meldingen: the test switch, this browser's push subscription (as a test device, or as a parent's own phone), the scenarios, the listeners | `push-data.test.js` |
-| `ui-push.js` | The Beheer card "Push-meldingen testen" and opening the app from a tapped push (as the right family for a test push, on Ritten ruilen for a real one) | `ui-push.test.js` |
+| `ui-push.js` | The Beheer card "Push-meldingen testen" and opening the app from a tapped push (as the right family for a test push, on Vervanger for a real one) | `ui-push.test.js` |
 | `ui-push-device.js` | Instellingen → Push-meldingen: a parent switches the real pushes on for this phone | `ui-push-device.test.js` |
 | `planning.js` | Planning engine (pure functions, no DOM/Firebase) | `planning.test.js` |
 | `schedule-changes.js` | Detects and merges changed arrival/pick-up times | `schedule-changes.test.js` |
@@ -75,9 +75,11 @@ All `*.test.js` files live in `tests/`; the site does not use that folder. Every
 
 The tests never touch the real Firebase. They run against `fake-db.js`, an in-memory Firestore that the app cannot tell apart from the real one.
 
-## Ritten ruilen (ritten aanbieden en overnemen; vroeger "Ritbeurs")
+## Vervanger (ritten aanbieden en overnemen; vroeger "Ritten ruilen" / "Ritbeurs")
 
-Wijzigen heeft bovenaan een segment *Wijzigen | Ritten ruilen (n)*. Alleen zichtbaar als de coördinator Ritten ruilen aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat).
+Als de coördinator het aanzet (Beheer → Berichten → *Ritbeurs*, één schakelaar die direct opslaat) neemt de tab die vroeger *Wijzigen* heette de naam *Vervanger* over: eigen icoon (`users-swap`, twee personen met een dubbele pijl) en eigen tealkleur (`--ruil`). De tab heet intern nog `deviation` (id, `data-tab`), en `syncVervangerNav()` in `ui-ritbeurs.js` wisselt label, icoon en kleur. Secties: *Jouw ritten* (hoofdtaak: een eigen rit kwijt), *Zoekt een vervanger*, *Ik kan inspringen*, *Meldingen* (onderaan). Het segment *Wijzigen | Ritten ruilen* bestaat niet meer.
+
+**Tijden wijzigen** (het weekformulier) is een eigen volledig scherm, geopend vanuit Mijn week (`openWrFlow` in `ui-weekrooster-form.js`, `S.wrFlow`), zoals de Advies-flow: de hele week op één scherm, randen in plaats van gekleurde vlakken, wijzigingen als "was …", Doorgeven sluit met een toast met *Ongedaan* (zolang de aanvraag nog niet is behandeld) en sluiten met niet-doorgegeven wijzigingen vraagt eerst.
 
 - **Aanbieden.** Een chauffeur biedt één rit aan (heen of terug), met een kort bericht (max 60 tekens). Intrekken kan zolang niemand de rit heeft. Overgenomen is van de nieuwe chauffeur; die kan hem zelf opnieuw aanbieden.
 - **Overnemen: eerste ja wint.** Het overnemen is één batch: aanbod `status: taken` + de rit in `deviations/<dag_richting>` (alleen `driverFamilyId` verandert) + meldingen. `firestore.rules` laat de wijziging alleen toe zolang het aanbod `open` is, dus de tweede batch faalt als geheel. Zitplaatsen en tijdsconflict (< 90 min) zijn alleen een waarschuwing.
@@ -91,7 +93,7 @@ Wijzigen heeft bovenaan een segment *Wijzigen | Ritten ruilen (n)*. Alleen zicht
 
 ## Afwijkend weekrooster (aanvragen, advies, akkoord)
 
-Een ouder geeft per dag de tijden van de eigen dochter door voor deze of volgende week (Wijzigen → weekformulier). De dagcoördinator van die weekdag ziet de aanvraag, krijgt een advies voor de auto's en neemt dat over of deelt zelf in. Het vaste rooster blijft gelden tot er akkoord is.
+Een ouder geeft per dag de tijden van de eigen dochter door voor deze of volgende week (Mijn week → Tijden wijzigen). De dagcoördinator van die weekdag ziet de aanvraag, krijgt een advies voor de auto's en neemt dat over of deelt zelf in. Het vaste rooster blijft gelden tot er akkoord is.
 
 - **Altijd aan.** Er is geen schakelaar meer en geen oude situatie. Elk gekoppeld gezin met een eigen dochter (niet Flex) gebruikt de functie. Het oude document `settings/weekrooster` wordt niet meer gelezen of geschreven; het mag in de database blijven staan (er wordt niets verwijderd). Oude aanvragen met `test: true` (uit de testperiode) blijven geldig.
 - **Gegevens (alleen additief).** `weekRequests/<week>_<dag>_<gezin>` met `weekKey, day, familyId, rides, heen, terug, status (pending|direct|accepted|withdrawn), createdAt, updatedAt, [decidedAt, decidedBy], [test]`. Daarnaast op `deviations/<Dag>_<richting>` drie optionele velden: `times` (afgesproken eenmalige tijden, '' = rijdt die kant niet), `selfBy` en `selfAt` (een wijziging van iemand die die dag niet beslist). Er wordt nergens een reden of vrije tekst opgeslagen.

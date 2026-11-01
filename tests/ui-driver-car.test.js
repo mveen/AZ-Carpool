@@ -60,7 +60,7 @@ await testAsync('the sheet shows the day, the calculated time, who rides along, 
 });
 await testAsync('a car that differs from automatic shows "Weer automatisch berekenen"; an offered ride gets a note', async () => {
   await setup([{ ...MINE, departureTime: '18:30' }], { offers: { o1: { status: 'open', weekKey: '2026-W40', day: 'Do', direction: 'terug', offeredBy: 'f2', date: '2026-10-01', time: '18:30' } } });
-  const html = open().innerHTML; assert.match(html, /id="drvReset"/); assert.match(text(html), /Je hebt deze rit aangeboden in Ritten ruilen/);
+  const html = open().innerHTML; assert.match(html, /id="drvReset"/); assert.match(text(html), /Je hebt deze rit aangeboden in Vervanger/);
 });
 await testAsync('Opslaan saves the time and the place and says so, with Ongedaan', async () => {
   const fake = await setup(); open();

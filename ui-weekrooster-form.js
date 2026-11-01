@@ -9,12 +9,10 @@ import { DAYS } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel, weekKeyDayIso } from './dates.js';
 import { esc, hapticTap, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
-import { baseCars, effectiveCars, fam, girlName, isFlex, rideTime, setAskedTimeOf } from './rides.js';
-import { contactButtonHtml } from './ui-contact.js';
+import { fam, girlName, isFlex, rideTime, setAskedTimeOf } from './rides.js';
 import { renderDeviationTab } from './ui-deviation.js';
-import { activateTab } from './app.js';
+import { renderAll } from './app.js';
 import { REQUEST_DAYS, requestId, requestState, weekFormFrom, openRequestsOf } from './weekrooster.js';
-import { expectedImpact } from './weekrooster-impact.js';
 import { currentMarks, dayEndMs, deciderFamilyOf, isDayPast, standardTimes, submitWeekRequests, weekKeyFor, withdrawWeekRequests } from './weekrooster-data.js';
 
 export const dayName = day => (DAYS.find(([k]) => k === day) || [day, day])[1];
@@ -61,6 +59,8 @@ function formFor(w) {
 const isOn = (d, dir) => d.rides !== false && ((d[dir] || '') !== '' || !!(d.want && d.want[dir]));
 const sameAsStandard = (d, std) => d.rides !== false && (d.heen || '') === (std.heen || '') && (d.terug || '') === (std.terug || '');
 
+// ---------- Tijden wijzigen: its own screen over Mijn week (no tab bar behind it), like the Advies flow ----------
+// S.wrFlow: false = closed, true = open, 'confirm' = open with the question "Wijzigingen weggooien?" (closing a form that was typed in).
 function weekSegmentHtml() {
   const w = which();
   return `<div class="segmented" role="group" aria-label="${esc(t('weekrooster.seg.aria'))}">
@@ -69,102 +69,90 @@ function weekSegmentHtml() {
   </div>`;
 }
 
-function formHtml(w) {
-  const f = formFor(w), wk = weekKeyFor(w), std = standardTimes(myFamilyId(), w);
-  const rows = REQUEST_DAYS.map(day => {
-    const d = f.days[day], past = isDayPast(wk, day), iso = weekKeyDayIso(wk, day);
-    const changed = !past && !sameAsStandard(d, std[day]);
-    const input = (dir, label) => `<input type="time" class="periodTime wrTime${(d[dir] || '') !== (std[day][dir] || '') ? ' changed' : ''}" id="${dir === 'heen' ? 'wrHeen_' : 'wrTerug_'}${day}" value="${esc(d[dir] || '')}" aria-label="${esc(label)} ${esc(dayName(day))}">`;
-    // One cell per ride, on one line: the switch (small version of the one in Mijn week), then the time, or "Rijdt niet mee" while it is off.
-    const cell = (dir, label) => {
-      const on = isOn(d, dir), name = t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
-      return `<div class="wrCell">
-          <button type="button" class="switch switch--sm${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(t('ov.switchLabel', { p1: name, p2: dayName(day) }))}" data-wrtoggle="${day}" data-wrdir="${dir}"><span class="switch__track"><span class="switch__knob">${phIcon(on ? 'car-profile-bold' : 'x-bold')}</span></span></button>
-          ${on ? input(dir, label) : `<div class="wrCell__off">${t('weekrooster.form.notRiding')}</div>`}
-        </div>`;
-    };
-    const body = past
-      ? `<p class="muted">${t('weekrooster.form.past')}</p>`
-      : `<div class="grid2">${cell('heen', t('weekrooster.form.heenAria'))}${cell('terug', t('weekrooster.form.terugAria'))}</div>`;
-    return `<div class="periodDay${changed ? ' changed' : ''}${past ? ' periodDay--past wrPastDay' : ''}" data-wrday="${day}">
-        <div class="periodDayHead">
-          <span><strong>${esc(dayUp(day))}</strong> <span class="muted">${esc(isoDayLabel(iso, ''))}</span></span>
-        </div>
-        ${body}
-      </div>`;
-  }).join('');
-  return `<div class="card" id="wrForm">
-      <h2>${esc(t(w === 'next' ? 'weekrooster.form.titleNext' : 'weekrooster.form.titleThis'))}</h2>
-      <p class="muted">${t('weekrooster.form.hint')}</p>
-      <div class="periodColHead"><span>${t('weekrooster.form.heen')}</span><span>${t('weekrooster.form.terug')}</span></div>
-      ${rows}
-      <div class="formActions">
-        <button type="button" class="btn secondary" id="wrCancel">${t('weekrooster.form.cancel')}</button>
-        <button type="button" class="btn" id="wrSubmit">${t('weekrooster.form.submit')}</button>
-      </div>
+// "was 09:00" under a time that differs from the fixed rooster ('' when it is the same). An empty standard says "rijdt niet mee".
+function wasText(d, std, dir) {
+  const now = isOn(d, dir) ? (d[dir] || '') : '', was = std[dir] || '';
+  if (d.rides !== false && now === was) return '';
+  if (!isOn(d, dir) && !was) return '';
+  return was ? t('weekrooster.flow.was', { p1: was }) : t('weekrooster.flow.wasOff');
+}
+const changedDays = (f, std, wk) => REQUEST_DAYS.filter(day => !isDayPast(wk, day) && !sameAsStandard(f.days[day], std[day]));
+const changedNote = n => n === 0 ? t('weekrooster.flow.noteNone') : n === 1 ? t('weekrooster.flow.noteOne') : t('weekrooster.flow.noteMany', { p1: n });
+
+function dayCardHtml(w, day, f, std, wk) {
+  const d = f.days[day], past = isDayPast(wk, day), iso = weekKeyDayIso(wk, day);
+  const changed = !past && !sameAsStandard(d, std[day]);
+  const cell = (dir, label) => {
+    const on = isOn(d, dir), name = t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
+    const field = on
+      ? `<input type="time" class="periodTime wrTime${(d[dir] || '') !== (std[day][dir] || '') ? ' changed' : ''}" id="${dir === 'heen' ? 'wrHeen_' : 'wrTerug_'}${day}" value="${esc(d[dir] || '')}" aria-label="${esc(label)} ${esc(dayName(day))}">`
+      : `<div class="wrCell__off">${t('weekrooster.form.notRiding')}</div>`;
+    return `<div><div class="wrCell">
+        <button type="button" class="switch switch--sm${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${esc(t('ov.switchLabel', { p1: name, p2: dayName(day) }))}" data-wrtoggle="${day}" data-wrdir="${dir}"><span class="switch__track"><span class="switch__knob">${phIcon(on ? 'car-profile-bold' : 'x-bold')}</span></span></button>
+        ${field}
+      </div><div class="wrCell__was" data-wrwas="${day}|${dir}">${esc(wasText(d, std[day], dir))}</div></div>`;
+  };
+  const body = past
+    ? `<p class="wrDay__past">${t('weekrooster.form.past')}</p>`
+    : `<div class="wrDay__cells">${cell('heen', t('weekrooster.form.heenAria'))}${cell('terug', t('weekrooster.form.terugAria'))}</div>`;
+  return `<div class="wrDay${changed ? ' wrDay--changed' : ''}${past ? ' wrDay--past wrPastDay' : ''}" data-wrday="${day}">
+      <div class="wrDay__head"><span class="wrDay__name">${esc(dayUp(day))}<small>${esc(isoDayLabel(iso, ''))}</small></span><span class="tag tag--warn" data-wrtag="${day}"${changed ? '' : ' hidden'}>${t('weekrooster.flow.changed')}</span></div>
+      ${body}
     </div>`;
 }
 
-// ---------- "Doorgegeven" + "Wie merkt dit" ----------
-function whoRowsHtml(w, open) {
-  const fid = myFamilyId();
-  const lines = [];
-  open.filter(r => r.status === 'pending').forEach(r => {
-    ['heen', 'terug'].forEach(dir => {
-      const time = r.rides === false ? '' : r[dir];
-      const res = expectedImpact({
-        day: r.day, direction: dir, cars: w === 'next' ? baseCars(r.day, dir) : effectiveCars(r.day, dir),
-        requests: [{ familyId: fid, rides: r.rides !== false, time }], families: S.families, settings: S.settings, prefs: S.prefs,
-        priority: (S.shiftPriority || {})[r.day + '_' + dir],
-      });
-      const who = deciderLabel(r.day), tag = `${dayUp(r.day)} ${t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort')}`;
-      const out = [];
-      res.changes.forEach(c => out.push(t('weekrooster.who.line', { p1: who, p2: girlName(c.familyId), p3: c.to, p4: c.from })));
-      if (res.noSolution) out.push(t('weekrooster.who.noSolution'));
-      else if (res.carsAfter < res.carsBefore) out.push(t('weekrooster.who.saves', { p1: who, p2: res.carsBefore - res.carsAfter }));
-      else if (res.carsAfter > res.carsBefore) out.push(t('weekrooster.who.extra'));
-      out.forEach(text => lines.push(`<p class="noteLine">${esc(tag)}: ${esc(text)}</p>`));
-    });
-  });
-  return lines.length ? lines.join('') : `<p class="noteLine">${esc(t('weekrooster.who.none'))}</p>`;
+export function wrFlowHtml() {
+  const w = which(), f = formFor(w), wk = weekKeyFor(w), std = standardTimes(myFamilyId(), w);
+  const n = changedDays(f, std, wk).length;
+  const head = `<div class="flowHead"><button type="button" class="roundBtn" id="wrFlowClose" aria-label="${esc(t('weekrooster.flow.close'))}">${phIcon('x')}</button>
+    <div class="flowHead__text"><div class="flowHead__ctx">${esc(t('weekrooster.flow.ctx', { p1: weekNumber(wk) }))}</div><h1 class="flowHead__title" id="flowTitle">${esc(t('weekrooster.flow.title'))}</h1></div></div>`;
+  const body = `${weekSegmentHtml()}
+    <p class="wrFlow__intro">${esc(t('weekrooster.flow.intro', { p1: girlName(myFamilyId()) }))}</p>
+    <div class="wrFlow__cols"><span>${t('weekrooster.flow.colHeen')}</span><span>${t('weekrooster.flow.colTerug')}</span></div>
+    ${REQUEST_DAYS.map(day => dayCardHtml(w, day, f, std, wk)).join('')}`;
+  const foot = S.wrFlow === 'confirm'
+    ? `<p class="flowScreen__note">${esc(t('weekrooster.flow.discardAsk'))}</p>
+       <button type="button" class="btn" id="wrKeep">${t('weekrooster.flow.keep')}</button>
+       <button type="button" class="linkbtn danger" id="wrDiscard">${t('weekrooster.flow.discard')}</button>`
+    : `<button type="button" class="btn" id="wrSubmit">${t('weekrooster.form.submit')}</button>
+       <p class="flowScreen__note" id="wrNote">${esc(changedNote(n))}</p>`;
+  return `<div class="flowScreen__panel" id="wrFlowPanel">${head}<div class="flowScreen__body">${body}</div><div class="flowScreen__foot">${foot}</div></div>`;
 }
 
-function coordLineHtml(open) {
-  const days = open.filter(r => r.status === 'pending').map(r => r.day);
-  if (!days.length) return '';
-  const parts = days.map((day, i) => {
-    const id = deciderFamilyOf(day), name = esc(deciderName(day) || t('weekrooster.decider.unknown'));
-    const who = id ? contactButtonHtml(id, name) : `<strong>${name}</strong>`;
-    return `${i === 0 ? esc(t('weekrooster.coord.prefix')) + ' ' : ''}${esc(lower(dayName(day)))}: ${who}`;
-  });
-  return `<div class="coordLine">${phIcon('user-circle-gear')} <span>${parts.join(' · ')}</span></div>`;
+// Draws (or removes) the layer. Called when it opens and after every change of the form, and from renderDeviationTab so that live data keeps it fresh.
+export function renderWrFlow() {
+  let el = document.getElementById('wrFlowScreen');
+  if (!S.wrFlow || !weekroosterActive()) {
+    if (el && el.remove) el.remove();
+    if (document.body.classList && !document.getElementById('flowScreen')) document.body.classList.remove('flowOpen');
+    return;
+  }
+  if (holdFormRedraw()) return;
+  if (!el || !el.parentNode) {
+    el = document.createElement('div'); el.id = 'wrFlowScreen'; el.className = 'flowScreen wrFlow';
+    if (el.setAttribute) { el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-labelledby', 'flowTitle'); }
+    el.addEventListener('keydown', e => { if (e.key === 'Escape' && !document.getElementById('sheetOverlay')) requestCloseWrFlow(); });
+    document.body.appendChild(el);
+  }
+  const body = el.querySelector && el.querySelector('.flowScreen__body'), keep = body ? body.scrollTop : 0;
+  el.innerHTML = wrFlowHtml();
+  const nb = el.querySelector && el.querySelector('.flowScreen__body'); if (nb) nb.scrollTop = keep;
+  if (document.body.classList) document.body.classList.add('flowOpen');
+  wireWeekrooster(el);
 }
-
-function doneHtml(w, open) {
-  const wk = weekKeyFor(w), waiting = open.some(r => r.status === 'pending');
-  const rows = open.map(r => {
-    const tag = r.status === 'pending'
-      ? `<span class="tag tag--warn">${esc(deciderName(r.day) ? t('weekrooster.tag.wait', { p1: deciderName(r.day) }) : t('weekrooster.tag.waitUnknown'))}</span>`
-      : `<span class="tag tag--ok">${esc(t('weekrooster.tag.direct'))}</span>`;
-    return `<div class="reqRow"><div><div class="reqRow__day">${esc(dayName(r.day))} <span>${esc(isoDayLabel(weekKeyDayIso(wk, r.day), ''))}</span></div><div class="reqRow__times">${esc(summaryOf(r))}</div></div>${tag}</div>`;
-  }).join('');
-  return `<div class="periodDone periodDone--stack${waiting ? ' periodDone--wait' : ''}" id="wrDone">
-      <p class="periodDoneTitle">${phIcon(waiting ? 'clock' : 'check')} ${esc(t('weekrooster.done.title', { p1: weekNumber(wk) }))}</p>
-      ${rows}
-      ${waiting ? `<div id="wrWho">${whoRowsHtml(w, open)}<p class="noteLine">${esc(t('weekrooster.done.body'))}</p></div>` : `<p class="noteLine">${esc(t('weekrooster.done.bodyDirect'))}</p>`}
-      <button type="button" class="btn secondary" id="wrEdit">${phIcon('pencil')}${t('weekrooster.done.edit')}</button>
-      ${waiting ? `<button type="button" class="linkbtn danger" id="wrWithdraw">${t('weekrooster.done.withdraw')}</button>` : ''}
-    </div>
-    ${coordLineHtml(open)}`;
+export function openWrFlow(w) {
+  S.wrWeek = w === 'next' ? 'next' : 'this'; S.wrForm = null; S.wrFlow = true;
+  formFor(which());
+  renderWrFlow();
 }
-
-// The whole body of Wijzigen while the new flow is on: the week segment, then the form or what was handed in.
-export function weekroosterBodyHtml() {
-  const w = which();
-  const open = mine(w);
-  const editing = S.wrForm && S.wrForm.which === w;
-  return weekSegmentHtml() + (open.length && !editing ? doneHtml(w, open) : formHtml(w));
+export function closeWrFlow() { S.wrFlow = false; S.wrForm = null; renderWrFlow(); }
+// X / Escape: a form nobody typed in closes at once; a typed-in form asks first.
+export function requestCloseWrFlow() {
+  if (S.wrForm && S.wrForm.touched) { S.wrFlow = 'confirm'; renderWrFlow(); return; }
+  closeWrFlow();
 }
+// Every redraw of the form goes through here: the flow when it is open (the form lives nowhere else now).
+const redrawForm = () => { if (S.wrFlow) renderWrFlow(); else renderDeviationTab(); };
 
 // ---------- the form: reading, amber, handing in ----------
 function readForm() {
@@ -176,18 +164,22 @@ function readForm() {
     });
   });
 }
-// Amber follows what is typed, without redrawing the form (a redraw would take the focus away).
+// What is typed shows at once (border and tag of the day, "was …", the note under Doorgeven), without redrawing the form (a redraw would take the focus away).
 function markChanged() {
   const f = S.wrForm; if (!f) return;
-  const std = standardTimes(myFamilyId(), f.which);
+  const std = standardTimes(myFamilyId(), f.which), wk = weekKeyFor(f.which);
   REQUEST_DAYS.forEach(day => {
+    const changed = !isDayPast(wk, day) && !sameAsStandard(f.days[day], std[day]);
     const row = document.querySelector && document.querySelector(`[data-wrday="${day}"]`);
-    if (row && row.classList) row.classList.toggle('changed', !sameAsStandard(f.days[day], std[day]));
+    if (row && row.classList) row.classList.toggle('wrDay--changed', changed);
+    const tag = document.querySelector && document.querySelector(`[data-wrtag="${day}"]`); if (tag) tag.hidden = !changed;
     ['heen', 'terug'].forEach(dir => {
       const el = document.getElementById((dir === 'heen' ? 'wrHeen_' : 'wrTerug_') + day);
       if (el && el.classList) el.classList.toggle('changed', (f.days[day][dir] || '') !== (std[day][dir] || ''));
+      const was = document.querySelector && document.querySelector(`[data-wrwas="${day}|${dir}"]`); if (was) was.textContent = wasText(f.days[day], std[day], dir);
     });
   });
+  const note = document.getElementById('wrNote'); if (note) note.textContent = changedNote(changedDays(f, std, wk).length);
 }
 
 // A switch of one ride: off empties the time (what an emptied time always meant: "rijdt niet mee" on that ride) and remembers it, on brings it back.
@@ -206,7 +198,7 @@ export function toggleRide(day, dir) {
     d.rides = true; d[dir] = d.keep[dir] || std[dir] || ''; d.want[dir] = true;
   }
   const needsTime = !d[dir];
-  renderDeviationTab();
+  redrawForm();
   const el = needsTime && document.getElementById((dir === 'heen' ? 'wrHeen_' : 'wrTerug_') + day);
   if (el && el.focus) el.focus();
 }
@@ -214,12 +206,30 @@ export function toggleRide(day, dir) {
 export async function submitWeekForm() {
   const f = S.wrForm; if (!f) return false;
   readForm();
-  const res = await submitWeekRequests(f.which, f.days);
-  if (res.ok) { S.wrForm = null; renderDeviationTab(); return true; }
+  const w = f.which;
+  const res = await submitWeekRequests(w, f.days);
+  if (res.ok) {
+    S.wrForm = null; S.wrFlow = false; renderWrFlow();
+    afterSubmit(w, res.written.map(d => d.day));
+    return true;
+  }
   if (res.error || S.wrBusy) return false;   // a refused save has shown its own message; do not say "nothing changed" on top of it
   if (res.skipped.some(s => s.why === 'time')) showToast(t('weekrooster.form.timeNeeded'));
   else if (!res.skipped.length || res.skipped.every(s => s.why === 'same' || s.why === 'past' || s.why === 'unchanged')) showToast(t('weekrooster.form.nothing'));
   return false;
+}
+// After Doorgeven: back on Mijn week, with a toast. "Ongedaan" takes back the requests that wait for a day coordinator (a request that was
+// accepted at once, because the family decides itself, has nothing to take back: the toast then has no button).
+function afterSubmit(w, days) {
+  renderAll();
+  const wk = weekKeyFor(w), fid = myFamilyId();
+  const waiting = days.filter(day => { const r = S.weekRequests[requestId(wk, day, fid)]; return r && r.status === 'pending'; });
+  if (!waiting.length) { showToast(t('weekrooster.flow.sentDirect')); return; }
+  showToast(t('weekrooster.flow.sent'), { action: { label: t('deviation.ongedaan'), run: async () => {
+    let ok = false;
+    for (const day of waiting) ok = (await withdrawWeekRequests(w, day)) || ok;
+    if (ok) { showToast(t('weekrooster.done.withdrawn')); renderAll(); }
+  } } });
 }
 
 // While a time field of the form (or a time list of Ritbeurs: class rbSel) has the focus (on a phone: the picker or list is open) the form must not be redrawn: the live data (any change in the
@@ -233,25 +243,22 @@ export function holdFormRedraw() {
 }
 export function redrawAfterTyping() {
   if (!redrawWaiting || holdFormRedraw()) return false;
-  redrawWaiting = false; renderDeviationTab(); return true;
+  redrawWaiting = false; redrawForm(); return true;
 }
 
-// Called at the end of renderDeviationTab, AFTER wirePeriod: the inputs share the period form's look (class periodTime), so this
-// has to be the last word on their handlers.
-export function wireWeekrooster() {
-  document.querySelectorAll('[data-wrweek]').forEach(b => b.onclick = () => { hapticTap(); S.wrWeek = b.dataset.wrweek === 'next' ? 'next' : 'this'; S.wrForm = null; renderDeviationTab(); });
+// Wires the flow layer (called by renderWrFlow). The time inputs share the period form's look (class periodTime).
+export function wireWeekrooster(root) {
+  const $$ = (sel, fn) => (root || document).querySelectorAll(sel).forEach(fn);
+  $$('[data-wrweek]', b => b.onclick = () => { hapticTap(); S.wrWeek = b.dataset.wrweek === 'next' ? 'next' : 'this'; S.wrForm = null; formFor(which()); redrawForm(); });
   // A picker on a phone gives 'change' (when OK is tapped) and not always 'input': listen to both, and draw again after the field is left.
   const typed = () => { if (S.wrForm) S.wrForm.touched = true; readForm(); markChanged(); };
-  // Not at once after the blur: a tap on 'Aanvragen' right after must still find its button.
-  document.querySelectorAll('.wrTime').forEach(el => { el.oninput = typed; el.onchange = typed; el.onblur = () => setTimeout(redrawAfterTyping, 700); });
-  document.querySelectorAll('[data-wrtoggle]').forEach(b => b.onclick = () => { hapticTap(); toggleRide(b.dataset.wrtoggle, b.dataset.wrdir); });
-  const cancel = document.getElementById('wrCancel'); if (cancel) cancel.onclick = () => { hapticTap(); S.wrForm = null; renderDeviationTab(); };
-  const submit = document.getElementById('wrSubmit'); if (submit) submit.onclick = () => { hapticTap(); return submitWeekForm(); };
-  const edit = document.getElementById('wrEdit'); if (edit) edit.onclick = () => { hapticTap(); S.wrForm = null; formFor(which()); renderDeviationTab(); };
-  const wd = document.getElementById('wrWithdraw');
-  if (wd) wd.onclick = () => twoStepConfirm(wd, t('weekrooster.done.withdrawConfirm'), async () => {
-    if (await withdrawWeekRequests(which())) { S.wrForm = null; showToast(t('weekrooster.done.withdrawn')); renderDeviationTab(); }
-  });
+  $$('.wrTime', el => { el.oninput = typed; el.onchange = typed; el.onblur = () => setTimeout(redrawAfterTyping, 700); });
+  $$('[data-wrtoggle]', b => b.onclick = () => { hapticTap(); toggleRide(b.dataset.wrtoggle, b.dataset.wrdir); });
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
+  on('wrFlowClose', () => { hapticTap(); requestCloseWrFlow(); });
+  on('wrSubmit', () => { hapticTap(); return submitWeekForm(); });
+  on('wrKeep', () => { hapticTap(); S.wrFlow = true; renderWrFlow(); });
+  on('wrDiscard', () => { hapticTap(); closeWrFlow(); });
 }
 
 // ---------- Mijn week ----------
@@ -310,13 +317,13 @@ export function myWeekNextWeekHtml() {
 }
 export function wireMyWeekWeekrooster(box, rerender) {
   const b = box.querySelector('#wrChange');
-  if (b) b.onclick = () => { hapticTap(); S.wrWeek = 'this'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };
+  if (b) b.onclick = () => { hapticTap(); openWrFlow('this'); };
   // The line "N aanvragen wachten op antwoord" folds the next-week block open and closed.
   const tg = box.querySelector('#wrNextToggle');
   if (tg) tg.onclick = () => { hapticTap(); S.myWeekNextOpen = !S.myWeekNextOpen; if (rerender) rerender(); };
-  // "Wijzigen" at next week: straight to the tab Volgende week of Wijzigen.
+  // "Wijzigen" at next week: the same screen, on "Volgende week".
   const n = box.querySelector('#wrChangeNext');
-  if (n) n.onclick = () => { hapticTap(); S.wrWeek = 'next'; S.wrForm = null; renderDeviationTab(); activateTab('deviation'); };
+  if (n) n.onclick = () => { hapticTap(); openWrFlow('next'); };
   // Intrekken in the request block of a day (this week) or in a row of next week: two taps (design rule 9a), only that day's request.
   const withdraw = (btn, w, day, label) => twoStepConfirm(btn, label, async () => {
     if (await withdrawWeekRequests(w, day)) { S.wrForm = null; showToast(t('weekrooster.done.withdrawn')); if (rerender) rerender(); }

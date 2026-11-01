@@ -170,6 +170,11 @@ await testAsync('the Rooster: one entry card opens the flow as its own screen on
   assert.doesNotMatch(dom.html('tab-schedule'), /id="wrAdvice"/);   // not in the Rooster itself
   S.wrAdvice = null; let removed = false; const el = dom.doc.getElementById('flowScreen'); el.remove = () => { removed = true; };
   withFakeNow(NOW, () => renderFlowScreen()); assert.ok(removed);
+  // Tijden wijzigen is another layer on top of the app: closing the Advies flow must not take its class off the page.
+  const cls = new Set(['flowOpen']); const body = document.body.classList, keep = { add: body.add, remove: body.remove, contains: body.contains };
+  body.add = c => cls.add(c); body.remove = c => cls.delete(c); S.wrFlow = true;
+  try { withFakeNow(NOW, () => renderFlowScreen()); assert.ok(cls.has('flowOpen'), 'kept while Tijden wijzigen is open'); S.wrFlow = false; withFakeNow(NOW, () => renderFlowScreen()); assert.ok(!cls.has('flowOpen'), 'removed when nothing is open'); }
+  finally { Object.assign(body, keep); S.wrFlow = false; }
 });
 
 console.log('=== the changes by hand ===');

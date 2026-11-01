@@ -18,6 +18,7 @@ import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { initContact } from './ui-contact.js';
 import { hasAgenda, openAgendaSheet } from './ui-agenda.js';
 import { openPushSheet, pushRowVisible } from './ui-push-device.js';
+import { ritbeursAvailable } from './ui-ritbeurs.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
@@ -50,7 +51,7 @@ export function contextLine(screen){
   const week = S.currentWeekKey ? weekRangeLabel() : '';
   if(screen === 'myweek') return S.currentWeekKey ? t('shell.context_mijnweek', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
   if(screen === 'schedule') return S.currentWeekKey ? t('shell.context_rooster', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
-  if(screen === 'deviation') return t('shell.context_wijzigen');
+  if(screen === 'deviation') return ritbeursAvailable() ? t('shell.context_vervanger', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_wijzigen');
   if(screen === 'matches'){ const team = (S.matchFeeds && S.matchFeeds[0] && S.matchFeeds[0].label) || ''; return team ? t('shell.context_wedstrijden', { team: team.replace(/^AZ\s+/i, '') }) : t('shell.context_wedstrijden_plain'); }
   if(screen === 'beheer') return t('shell.context_beheer');
   return t('shell.context_gezin');
@@ -61,7 +62,7 @@ export function updateHeader(tab){
   if(!tab){ const on = document.querySelector('nav button.active'); tab = on && on.dataset ? on.dataset.tab : 'myweek'; }
   const screen = TAB_TITLE_KEY[tab] ? tab : 'myweek';
   const title = document.getElementById('headerTitle');
-  if(title) title.textContent = t(TAB_TITLE_KEY[screen]);
+  if(title) title.textContent = t(screen === 'deviation' && ritbeursAvailable() ? 'nav.vervanger' : TAB_TITLE_KEY[screen]);
   const ctx = document.getElementById('headerContext');
   if(ctx) ctx.textContent = contextLine(screen);
   const share = document.getElementById('shareToggle');

@@ -231,7 +231,7 @@ test('the texts of the Gereden shifts screens', () => {
 
 test('the Ritbeurs texts exist and fill their placeholders (no place buttons any more)', () => {
   assert.equal(hasKey('ritbeurs.place.alkmaar'), false); assert.equal(hasKey('ritbeurs.moment.plaats'), false);
-  assert.equal(t('ritbeurs.seg.ritbeurs'), 'Ritten ruilen'); assert.equal(t('ritbeurs.title'), 'Ritten ruilen'); assert.equal(t('ritbeurs.urg.soon'), 'Vóór 18:00 regelen'); assert.equal(t('ritbeurs.urg.late'), 'Deadline voorbij');
+  assert.equal(t('ritbeurs.title'), 'Vervanger'); assert.equal(t('ritbeurs.urg.soon'), 'Vóór 18:00 regelen'); assert.equal(t('ritbeurs.urg.late'), 'Deadline voorbij');
   assert.equal(t('ritbeurs.toast.aangebodenBackups', { n: 2 }), 'Rit aangeboden. 2 back-up(s) gewaarschuwd.');
   assert.equal(t('ritbeurs.warn.zitplaatsen', { need: 3, have: 2 }), 'Let op: er zitten 3 kinderen in deze auto en jij hebt 2 plaatsen.');
   assert.match(t('ritbeurs.confirm.regel3'), /Overnemen is definitief/);
@@ -256,11 +256,11 @@ test('the push test texts exist and fill their placeholders', () => {
   assert.equal(t('push.ago.min', { n: 5 }), '5 min geleden'); assert.equal(t('push.ago.uur', { n: 2 }), '2 uur geleden'); assert.equal(t('push.preview.title', { who: 'Ouder van Saar' }), 'Zo ziet Ouder van Saar het');
 });
 test('the texts of the parent\'s push switch and of the push switch in Beheer exist and fill their placeholders', () => {
-  assert.equal(t('push.me.title'), 'Push-meldingen'); assert.equal(t('push.me.stille', { from: '22:00', to: '06:00' }), 'Stille uren: van 22:00 tot 06:00 komt er niets binnen. Meldingen uit die uren komen daarna. Je stelt dit in bij Ritten ruilen.');
+  assert.equal(t('push.me.title'), 'Push-meldingen'); assert.equal(t('push.me.stille', { from: '22:00', to: '06:00' }), 'Stille uren: van 22:00 tot 06:00 komt er niets binnen. Meldingen uit die uren komen daarna. Je stelt dit in bij Vervanger.');
   assert.equal(t('ritbeurs.beheer.push.statusAan', { n: 2, m: 7 }), 'Aan: 2 van 7 gezinnen hebben een telefoon aangemeld.'); assert.equal(t('ritbeurs.beheer.push.label'), 'Push-meldingen aan');
   for (const k of ['push.me.uitleg', 'push.me.label', 'push.me.dezeTelefoon', 'push.me.privacy', 'push.me.laden', 'push.me.laden_mislukt', 'push.me.geenSleutel', 'push.toast.liveAan', 'push.toast.liveUit', 'push.toast.mijnAan', 'push.toast.mijnUit',
     'ritbeurs.beheer.push.title', 'ritbeurs.beheer.push.uitleg', 'ritbeurs.beheer.push.statusUit', 'ritbeurs.beheer.push.serverStil']) assert.notEqual(t(k), k, k);
-  assert.match(t('push.me.privacy'), /Google, Mozilla of Apple/); assert.match(t('push.intro'), /Testen kan altijd, ook als Push-meldingen bij Ritten ruilen uit staan/);
+  assert.match(t('push.me.privacy'), /Google, Mozilla of Apple/); assert.match(t('push.intro'), /Testen kan altijd, ook als Push-meldingen bij Vervanger uit staan/);
 });
 test('every state the push screen can be in has a text', () => {
   for (const k of ['push.server.ok', 'push.server.stil', 'push.server.onbekend', 'push.preview.state.bezorgd', 'push.preview.state.verlopen', 'push.preview.push.verstuurd', 'push.preview.push.wachtrij', 'push.preview.push.geen',

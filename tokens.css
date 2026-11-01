@@ -57,6 +57,9 @@
   --match-ink:var(--violet-700);        /* everything about matches */
   --info:var(--blue-500);               /* progress bars, back-up selection, focus ring */
   --info-soft:var(--blue-50);
+  --ruil:#0d7f7b;                       /* teal: the colour of Vervanger (tab, selected pill, section marks) */
+  --ruil-soft:#dff3f1;
+  --ruil-ink:#0a6663;
   --scrim:rgba(10,11,13,.45);
   --toast-bg:#14161a; --toast-ink:#ffffff;
   color-scheme:light;
@@ -117,6 +120,7 @@
   --warn-soft:#33270f; --warn-icon:#f5a524; --warn-ink:#f5b94a; --warn-edge:#78510f;
   --match-soft:#251d40; --match-ink:#b9a6ff;
   --info-soft:#122036;
+  --ruil:#3cc0bb; --ruil-soft:#0f2a29; --ruil-ink:#6fd8d3;
   --shadow-card:0 0 0 1px #24262a;
   --heen-glow:#1c2833; --heen-edge:#364a5e; --heen-ink:#9bbbe0; --heen-badge:#202d3a;
   --terug-glow:#33202f; --terug-edge:#5e3d58; --terug-ink:#e0a0d2; --terug-badge:#3a2536;

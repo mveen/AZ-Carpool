@@ -71,6 +71,7 @@ export const S = {
   wrDone: null,            // right after Doorvoeren: { day, n, undo } (shows the Dagbericht and "Alles terugdraaien")
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
+  wrFlow: false,           // Tijden wijzigen, its own screen over Mijn week: false = closed, true = open, 'confirm' = asking whether to throw away what was typed
   wrBusy: false,           // a request is being saved (a double tap makes no double request)
   myWeekDay: '',   // Mijn week: the day shown under the day pills (a Date toDateString); empty = today, else the first day
   myWeekNextOpen: false,   // Mijn week: the block "Volgende week" (open requests) is unfolded; closed by default

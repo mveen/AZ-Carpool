@@ -36,6 +36,9 @@ test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig,
   sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true);
   assert.equal(dom.el('overviewBtn').hidden, false); assert.match(dom.el('overviewIcon').innerHTML, /<svg/); updateHeader('myweek'); assert.equal(dom.el('overviewBtn').hidden, true); updateHeader('schedule');   // Weekoverzicht sits in the header of Rooster only assert.equal(dom.el('headerContext').textContent, 'Week 40 · iedereen');
   updateHeader('deviation'); assert.equal(dom.el('headerContext').textContent, 'Eenmalig, deze week');
+  sampleParentState({ ritbeurs: { on: true } }); updateHeader('deviation');   // Ritbeurs on: the tab is Vervanger
+  assert.equal(dom.el('headerTitle').textContent, 'Vervanger'); assert.match(dom.el('headerContext').textContent, /^Week \d+ · mijn ritten$/);
+  sampleParentState(); updateHeader('deviation'); assert.equal(dom.el('headerTitle').textContent, 'Wijzigen');
   updateHeader('matches'); assert.equal(dom.el('headerTitle').textContent, 'Wedstrijden'); assert.equal(dom.el('headerContext').textContent, 'Komende 4 weken');
   S.matchFeeds = [{ calendarId: 'c', label: 'AZ O15-1' }]; updateHeader('matches'); assert.equal(dom.el('headerContext').textContent, 'O15-1 · komende 4 weken');
   updateHeader('beheer'); assert.equal(dom.el('headerContext').textContent, 'Alleen voor de coördinator');

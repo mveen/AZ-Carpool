@@ -1,9 +1,9 @@
-// ui-ritbeurs.js — the Ritbeurs screen (a segment inside the Wijzigen tab): open rides to take over, own rides to offer, "Ik kan inspringen"
-// moments and the notifications inbox. The rules are in ritbeurs.js, everything that writes is in ritbeurs-data.js.
+// ui-ritbeurs.js — the Vervanger tab (the Ritbeurs): own rides you cannot drive ("Jouw ritten"), rides that look for a replacement ("Zoekt een vervanger"),
+// "Ik kan inspringen" moments and the notifications inbox. The rules are in ritbeurs.js, everything that writes is in ritbeurs-data.js.
 // Everything here is hidden when the feature switch (settings/ritbeurs) is off; the Beheer card with that switch is at the bottom.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { DAYS } from './constants.js';
+import { DAYS, PH_PATHS } from './constants.js';
 import { weekKeyDayIso } from './dates.js';
 import { myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { effectiveCars, fam } from './rides.js';
@@ -12,11 +12,12 @@ import { routeLabel } from './locations.js';
 import { notificationText } from './notif-text.js';
 import { pushVisible } from './push-access.js';
 import { renderDeviationTab } from './ui-deviation.js';
-import { redrawAfterTyping } from './ui-weekrooster-form.js';
+import { redrawAfterTyping, weekroosterActive } from './ui-weekrooster-form.js';
 import { renderBeheer } from './ui-beheer.js';
+import { periodCardsHtml } from './ui-period.js';
 import { familiesWithPush, serverState } from './push.js';
 import {
-  RITBEURS_MESSAGE_MAX, activeMoments, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
+  RITBEURS_MESSAGE_MAX, activeMoments, deadlineMs, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
 import {
   addMoment, allRides, createOffer, markNotificationsRead, pushLiveOn, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
@@ -35,21 +36,24 @@ export function visibleNotifications(nowMs = Date.now()){
   Object.entries(S.notifications || {}).forEach(([id, n]) => { if(n && !(n.deliverAt > nowMs) && !(n.expiresAt < nowMs)) own[id] = n; });
   return own;
 }
-// The number on the Wijzigen tab: open rides of other families + unread notifications. 0 when the switch is off.
+// The number on the Vervanger tab: open rides of other families + unread notifications. 0 when the switch is off.
 export function ritbeursBadgeCount(nowMs = Date.now()){
   if(!ritbeursAvailable()) return 0;
   const me = myLinkedFamilyId();
   return openOffers(S.offers, S.currentWeekKey, nowMs).filter(o => o.offeredBy !== me).length + unreadCount(visibleNotifications(nowMs));
 }
 
-// ---------- the segment "Wijzigen | Ritbeurs (n)" ----------
-export function ritbeursSegmentHtml(){
-  const n = ritbeursBadgeCount();
-  const on = S.rbView === 'ritbeurs';
-  return `<div class="segmented" role="group" aria-label="${esc(t('ritbeurs.seg.aria'))}">
-    <button type="button" class="${on ? '' : 'active'}" data-rbview="wijzigen" aria-pressed="${!on}">${t('ritbeurs.seg.wijzigen')}</button>
-    <button type="button" class="${on ? 'active' : ''}" data-rbview="ritbeurs" aria-pressed="${on}">${t('ritbeurs.seg.ritbeurs')}${n ? ` (${n})` : ''}</button>
-  </div>`;
+// ---------- the tab: name, icon and colour follow the feature ----------
+// While the Ritbeurs is on the tab is Vervanger (teal, two people with an arrow). Without it the tab is the old Wijzigen (day by day editor), and for a
+// family with a weekrooster it is hidden: Tijden wijzigen opens from Mijn week.
+export function syncVervangerNav(){
+  const btn = document.querySelector && document.querySelector('nav button[data-tab="deviation"]'); if(!btn || !btn.querySelector) return;
+  const on = ritbeursAvailable(), icon = btn.querySelector('.navicon'), label = btn.querySelector('.navlabel');
+  if(icon && !btn.dataset.iconDefault) btn.dataset.iconDefault = icon.innerHTML;
+  if(btn.classList) btn.classList.toggle('navtab--ruil', on);
+  if(icon) icon.innerHTML = on ? `<svg class="ph-regular" viewBox="0 0 256 256" aria-hidden="true">${PH_PATHS['users-swap']}</svg><svg class="ph-fill" viewBox="0 0 256 256" aria-hidden="true">${PH_PATHS['users-swap-fill']}</svg>` : btn.dataset.iconDefault;
+  if(label){ label.setAttribute('data-i18n', on ? 'nav.vervanger' : 'nav.deviation'); label.textContent = t(on ? 'nav.vervanger' : 'nav.deviation'); }
+  btn.style.display = (!on && weekroosterActive() && !periodCardsHtml()) ? 'none' : '';   // a waiting period task keeps the tab
 }
 export function setRbView(view){ S.rbView = view === 'ritbeurs' ? 'ritbeurs' : 'wijzigen'; S.rbConfirm = null; S.rbOffering = null; renderDeviationTab(); }
 
@@ -76,7 +80,7 @@ function offerCardHtml(o, nowMs){
       <div class="rowflex" style="gap:8px;margin-top:8px"><button type="button" class="btn" data-rbtake="${esc(o.id)}">${t('ritbeurs.confirm.ja')}</button>
       <button type="button" class="btn secondary" data-rbconfirmno="1">${t('ritbeurs.confirm.nee')}</button></div></div>`;
   }
-  const status = mine ? `<span class="tag tag--ok">${t('ritbeurs.open.eigen')}</span>` : `<span class="tag tag--warn">${t('ritbeurs.tag.open')}</span>`;
+  const status = mine ? `<span class="tag tag--ok">${t('ritbeurs.open.eigen')}</span>` : `<span class="tag tag--ruil">${t('ritbeurs.tag.open')}</span>`;
   return `<div class="card rbOffer${hasWarn ? ' rbHasWarn' : ''}" data-rboffer="${esc(o.id)}">
     <div class="rbHeadline">${status}<span class="rbWhen">${esc(dayLabel(o.day))} · ${esc(dirShort(o.direction).toLowerCase())}${esc(urgentText)}</span></div>
     <div class="rbRideLine"><span class="rbTime">${esc(o.time)}</span><span class="rbRoute">${esc(route)}</span></div>
@@ -106,8 +110,10 @@ function ownRidesHtml(nowMs){
     const action = offer
       ? `<button type="button" class="btn secondary pill small" data-rbwithdraw="${esc(offer.id)}">${t('ritbeurs.trekIn')}</button>`
       : `<button type="button" class="btn pill small" data-rboffer-open="${esc(key)}">${t('ritbeurs.eigen.aanbieden')}</button>`;
+    const dl = new Date(deadlineMs(r.date)).toLocaleDateString('nl-NL', { weekday: 'long' });
+    const sub = offer ? `<span class="tag tag--ruil">${t('ritbeurs.eigen.aangeboden')}</span>` : '';
     return `<div class="card rbRide"><div class="rbRide__row"><span class="rbRide__time">${esc(r.time)}</span>
-        <div class="rbRide__what"><div class="rbRide__when">${esc(dayLabel(r.day))} · ${esc(dirShort(r.direction).toLowerCase())}</div>${offer ? `<div class="rbRide__sub">${t('ritbeurs.eigen.aangeboden')}</div>` : ''}</div>${action}</div>${form}</div>`;
+        <div class="rbRide__what"><div class="rbRide__when">${esc(dayLabel(r.day))} · ${esc(dirShort(r.direction).toLowerCase())}</div><div class="rbRide__sub">${sub || esc(t('ritbeurs.eigen.deadline', { day: dl }))}</div></div>${action}</div>${form}</div>`;
   }).join('');
 }
 
@@ -182,11 +188,12 @@ export function ritbeursViewHtml(nowMs = Date.now()){
   const me = myLinkedFamilyId();
   const open = openOffers(S.offers, S.currentWeekKey, nowMs);
   const mineFirst = [...open.filter(o => o.offeredBy !== me), ...open.filter(o => o.offeredBy === me)];
+  const head = key => `<div class="sectionHead"><span class="sectionHead__title">${t(key)}</span></div>`;
   return `<div class="infoLine"><span class="infoLine__text">${t('ritbeurs.intro')}</span></div>
-    <div class="sectionLabel">${t('ritbeurs.open.title')}</div>${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
-    <div class="sectionLabel">${t('ritbeurs.eigen.title')}</div>${ownRidesHtml(nowMs)}
-    <div class="card" id="rbMomentCard"><h2>${t('ritbeurs.moment.title')}</h2><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>
-    <div class="card" id="rbNotifCard"><h2>${t('ritbeurs.notif.title')}</h2>${notificationsHtml(nowMs)}</div>`;
+    ${head('ritbeurs.eigen.title')}${ownRidesHtml(nowMs)}
+    ${head('ritbeurs.open.title')}${mineFirst.length ? mineFirst.map(o => offerCardHtml(o, nowMs)).join('') : `<p class="muted">${t('ritbeurs.open.leeg')}</p>`}
+    ${head('ritbeurs.moment.title')}<div class="card" id="rbMomentCard"><p class="muted">${t('ritbeurs.moment.intro')}</p>${momentsHtml(nowMs)}</div>
+    ${head('ritbeurs.notif.title')}<div class="card" id="rbNotifCard">${notificationsHtml(nowMs)}</div>`;
 }
 
 // ---------- actions (also used by the tests) ----------
@@ -215,7 +222,6 @@ export async function takeRide(id){ const ok = await takeOffer(id); renderDeviat
 
 export function wireRitbeurs(){
   const $$ = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
-  wireRitbeursSegment();
   $$('[data-rbask]', b => b.onclick = () => { hapticTap(); S.rbConfirm = b.dataset.rbask; renderDeviationTab(); });
   $$('[data-rbconfirmno]', b => b.onclick = () => { S.rbConfirm = null; renderDeviationTab(); });
   $$('[data-rbtake]', b => b.onclick = () => { hapticTap(); takeRide(b.dataset.rbtake); });
@@ -234,10 +240,6 @@ export function wireRitbeurs(){
   const saveQ = () => saveQuiet(qf.value, qt.value);
   if(qf) qf.onchange = saveQ; if(qt) qt.onchange = saveQ;
 }
-export function wireRitbeursSegment(){
-  document.querySelectorAll('[data-rbview]').forEach(b => b.onclick = () => { hapticTap(); setRbView(b.dataset.rbview); });
-}
-
 // ---------- Beheer: the feature switches (coordinator) ----------
 // The card has two switches: Ritten ruilen itself, and the push messages for the parents (default off). Testing the pushes always works,
 // whatever these two say: that is the card "Push-meldingen testen".

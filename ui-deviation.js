@@ -12,8 +12,8 @@ import { dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.j
 import { contactButtonHtml } from './ui-contact.js';
 import { flexSuffix, renderSchedule } from './ui-schedule.js';
 import { markPeriodShown, periodCardsHtml, periodFormActive, periodFormHtml, wirePeriod } from './ui-period.js';
-import { ritbeursAvailable, ritbeursSegmentHtml, ritbeursViewHtml, wireRitbeurs, wireRitbeursSegment } from './ui-ritbeurs.js';
-import { holdFormRedraw, weekroosterActive, weekroosterBodyHtml, wireWeekrooster } from './ui-weekrooster-form.js';
+import { ritbeursAvailable, ritbeursViewHtml, syncVervangerNav, wireRitbeurs } from './ui-ritbeurs.js';
+import { holdFormRedraw, openWrFlow, renderWrFlow, weekroosterActive } from './ui-weekrooster-form.js';
 import { pendingOfDay } from './weekrooster-data.js';
 import { carsWithFreeSeat, flexDriveOwn, flexIsSignedUp, flexJoinCar, flexSignOff } from './flex.js';
 
@@ -51,19 +51,19 @@ export function deviationIntentHtml(){
 export function renderDeviationTab(){
   const box=document.getElementById('tab-deviation');
   if(!box) return;
+  renderWrFlow();   // Tijden wijzigen (its own screen over Mijn week) keeps up with the live data, whatever tab is open
+  syncVervangerNav();
+  if(box.classList) box.classList.toggle('tab--ruil', ritbeursAvailable());
   if(!S.me){ box.innerHTML=`<div class="card"><h2>${t('deviation.wijzigen')}</h2><p class="muted">${t('deviation.kon_je_account_niet_herkennen')}</p></div>`; markPeriodShown(); return; }
   if(renderLoadingIfNeeded(box)){ markPeriodShown(); return; }
   // The car editor lives in Rooster while the new flow is on (S.wrEdit): its handlers draw again through here, so draw Rooster.
   if(S.wrEdit && weekroosterActive() && document.getElementById('tab-schedule') && document.getElementById('tab-schedule').style.display==='block'){ renderSchedule(); return; }
   // Periode met andere tijden: while the form is open it is all Wijzigen shows.
   if(periodFormActive()){ box.innerHTML = periodFormHtml(); wirePeriod(); markPeriodShown(); return; }
-  // Ritbeurs (only while the feature switch is on): a segment "Wijzigen | Ritbeurs" at the top; the Ritbeurs view replaces the rest.
-  const rbOn = ritbeursAvailable();
-  if(!rbOn && S.rbView==='ritbeurs') S.rbView = 'wijzigen';
-  const seg = rbOn? ritbeursSegmentHtml() : '';
-  if(rbOn && S.rbView==='ritbeurs'){ if(holdFormRedraw()) return; box.innerHTML = seg + ritbeursViewHtml(); wireRitbeurs(); markPeriodShown(); return; }
-  // Afwijkend weekrooster (for a person with a family of their own): the week form replaces the day-by-day editor.
-  if(weekroosterActive()){ if(holdFormRedraw()) return; box.innerHTML = seg + periodCardsHtml() + weekroosterBodyHtml(); wireRitbeursSegment(); wirePeriod(); wireWeekrooster(); markPeriodShown(); return; }
+  // Vervanger (only while the Ritbeurs feature switch is on): the whole tab. Tijden wijzigen is its own screen, opened from Mijn week.
+  if(ritbeursAvailable()){ if(holdFormRedraw()) return; box.innerHTML = periodCardsHtml() + ritbeursViewHtml(); wirePeriod(); wireRitbeurs(); markPeriodShown(); return; }
+  // A family with a weekrooster has no day editor here (it is in Rooster) and no form (Tijden wijzigen is a screen of Mijn week): only the period task and a pointer.
+  if(weekroosterActive()){ box.innerHTML = `${periodCardsHtml()}<div class="card"><p class="muted">${t('weekrooster.flow.moved')}</p><button type="button" class="btn" id="wrOpenFlow">${t('weekrooster.myweek.change')}</button></div>`; wirePeriod(); const go=document.getElementById('wrOpenFlow'); if(go) go.onclick=()=>{ hapticTap(); openWrFlow('this'); }; markPeriodShown(); return; }
   // Same as Rooster: a day is always open (today, or Monday on a weekend) and a tap on a pill loads that day.
   if(!S.deviationDay || !DAYS.some(([k])=>k===S.deviationDay)) S.deviationDay = todayKeyNow() || 'Ma';
   const day = S.deviationDay;
@@ -82,7 +82,7 @@ export function renderDeviationTab(){
       ${changed? '<span class="dayPill__dot" aria-hidden="true"></span>' : ''}
     </button>`;
   }).join('');
-  box.innerHTML = `${seg}${periodCardsHtml()}${deviationIntentHtml()}
+  box.innerHTML = `${periodCardsHtml()}${deviationIntentHtml()}
     <div class="dayPills dayPills--${pillDays.length}" role="group" aria-label="${t('deviation.kies_een_dag')}">${pillsHtml}</div>
     <div class="infoLine"><span class="infoLine__text">${t('deviation.eenmalige_ritaanpassing_voor_deze_week')}</span></div>
     ${changedDays.length? `<p class="noteLine"><span class="dayPill__dot dayPill__dot--inline" aria-hidden="true"></span> ${t('deviation.deze_week_gewijzigd')}</p>` : ''}
@@ -94,7 +94,6 @@ export function renderDeviationTab(){
   document.querySelectorAll('[data-devday]').forEach(b=>b.onclick=()=>{ S.deviationDay=b.dataset.devday; S.devKid=null; S.devUndo=null; hapticTap(); renderDeviationTab(); });
   const ic=document.getElementById('devIntentClose'); if(ic) ic.onclick=()=>{ S.deviationIntent=null; hapticTap(); renderDeviationTab(); };
   wireWhatsAppButton('conclusieBtn', ()=>buildConclusieMessage(day));
-  wireRitbeursSegment();
   attachDeviationHandlers();
   wirePeriod();
   markPeriodShown();

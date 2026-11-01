@@ -90,9 +90,9 @@ test('a day does not show a match card of its own, even when a carpool is stored
 
 console.log('\n=== periode met andere tijden: the card sits on top of Wijzigen ===');
 const periodDoc = { name: 'Herfstvakantie', firstDay: '2026-10-26', lastDay: '2026-10-30', opensOn: '2026-10-14', deadlineDate: '2026-10-16', deadlineTime: '12:00' };
-test('while filling in is open the task card comes before the week form; without a period Wijzigen shows only the form', () => {
+test('while filling in is open the task card comes first, then the pointer to Tijden wijzigen; without a period only the pointer', () => {
   const html = withFakeNow('2026-10-15T09:00:00+02:00', () => { sampleParentState({ periods: oneP(periodDoc), periodEntries: {}, periodEntriesLoaded: true }); renderDeviationTab(); return dom.html('tab-deviation'); });
-  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('id="wrForm"'));
+  assert.ok(html.indexOf('id="periodTask_2026-10-26"') > -1 && html.indexOf('id="periodTask_2026-10-26"') < html.indexOf('id="wrOpenFlow"'));
   assert.doesNotMatch(render(sampleParentState, { deviationDay: 'Ma' }), /periodTask|periodDone/);
 });
 
@@ -509,15 +509,12 @@ await testAsync('moving a child offers one button per other car and shows "Onged
   assert.match(text(dom.html('tab-deviation')), /verplaatst\. Ongedaan/);
 });
 
-test('Ritbeurs: only while the switch is on does Wijzigen show the segment; off leaves only the week form', () => {
+test('Ritbeurs: only while the switch is on is the tab Vervanger; off leaves the pointer to Tijden wijzigen (weekrooster family)', () => {
   const off = render(sampleParentState, { ritbeurs: { on: false } });
-  assert.doesNotMatch(off, /data-rbview/);
+  assert.doesNotMatch(off, /data-rbview|Zoekt een vervanger/); assert.match(off, /id="wrOpenFlow"/);
   const on = render(sampleParentState, { ritbeurs: { on: true } });
-  assert.match(on, /class="segmented"[\s\S]*data-rbview="ritbeurs"/);
-  assert.match(on, /id="wrForm"/);
-  S.rbView = 'ritbeurs';
-  const rb = render(sampleParentState, { ritbeurs: { on: true }, rbView: 'ritbeurs' });
-  assert.match(text(rb), /Aangeboden ritten/); assert.doesNotMatch(rb, /id="wrForm"/);
+  assert.doesNotMatch(on, /data-rbview|class="segmented"|id="wrForm"|id="wrOpenFlow"/);
+  assert.match(text(on), /Zoekt een vervanger/);
 });
 
 test('design v2: ui-deviation.js only uses variables from tokens.css in its inline styles', async () => {
@@ -555,12 +552,14 @@ test('Wijzigen: for a Flex family (no week form) an open Rooster editor (S.wrEdi
 });
 test('ui-deviation.js imports nothing it does not use', () => assertNoUnusedImports('ui-deviation.js'));
 
-test('Afwijkend weekrooster: Wijzigen shows the week form for a family with a daughter of their own, and the day editor for a Flex family', () => {
+test('Afwijkend weekrooster: a family with a daughter of their own has no form and no day editor in this tab (Tijden wijzigen is a screen of Mijn week); a Flex family keeps the day editor', () => {
   useFakeDb(sampleDbSeed());
   sampleParentState({}); withFakeNow(NOW, () => renderDeviationTab());
-  assert.match(dom.html('tab-deviation'), /id="wrForm"/); assert.doesNotMatch(dom.html('tab-deviation'), /data-devday/);
+  assert.match(dom.html('tab-deviation'), /id="wrOpenFlow"/); assert.doesNotMatch(dom.html('tab-deviation'), /id="wrForm"|data-devday/);
+  assert.match(text(dom.html('tab-deviation')), /Tijden wijzigen vind je nu in Mijn week/);
+  withFakeNow(NOW, () => dom.el('wrOpenFlow').onclick()); assert.equal(S.wrFlow, true, 'the button opens the screen'); S.wrFlow = false; S.wrForm = null;
   sampleFlexParentState({}); withFakeNow(NOW, () => renderDeviationTab());
-  assert.doesNotMatch(dom.html('tab-deviation'), /id="wrForm"/); assert.match(dom.html('tab-deviation'), /data-devday/);
+  assert.doesNotMatch(dom.html('tab-deviation'), /id="wrOpenFlow"/); assert.match(dom.html('tab-deviation'), /data-devday/);
 });
 
 test('Wijzigen shows the spinner while the data is loading', () => {
