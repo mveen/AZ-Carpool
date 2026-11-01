@@ -1134,6 +1134,7 @@ export default {
   "rideMenu.title": "Deze rit",
   "rideMenu.sub": "{p1} {p2} · {p3}",
   "rideMenu.trekIn": "Vervanger intrekken",
+  "rideMenu.trekInVraag": "Vervanger intrekken? De rit staat dan niet meer bij Vervanger en je rijdt hem zelf.",
   "rideMenu.hintZoek": "Kun je niet rijden? Bied de rit dan aan. Wie het eerst ja zegt, rijdt.",
   "rideMenu.hintOpen": "Je hebt deze rit aangeboden. Iedereen ziet hem bij Vervanger. Regelen vóór {p1} 18:00.",
   "ritbeurs.moment.title": "Ik kan inspringen",

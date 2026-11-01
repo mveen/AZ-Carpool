@@ -5,7 +5,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { DAYS } from './constants.js';
-import { esc, hapticTap, locationsCfg, phIcon, showToast, closeSheet, twoStepConfirm } from './ui-common.js';
+import { esc, hapticTap, locationsCfg, phIcon, showToast, closeSheet } from './ui-common.js';
 import { FREE_TEXT_MAX, carStdId, freeText, routeLabel } from './locations.js';
 import { computeRideDeparture, girlName } from './rides.js';
 import { weekroosterActive } from './ui-weekrooster-form.js';
@@ -56,16 +56,24 @@ export function openRideMenu(day, direction, rerender) {
   const dl = offer ? new Date(deadlineMs(offer.date)).toLocaleDateString('nl-NL', { weekday: 'long' }) : '';
   openShell(`<h3 id="sheetTitle">${esc(t('rideMenu.title'))}</h3>
     <p class="sheet__sub">${esc(rideWhen(day, direction, car))}${offer ? ' · ' + esc(t('ritbeurs.eigen.aangeboden')) : ''}</p>
-    <div>${row('rmCar', 'pencil', t('driverCar.knop'))}${offer ? row('rmWithdraw', 'arrow-counter-clockwise', t('rideMenu.trekIn')) : row('rmOffer', 'arrows-left-right', t('ritbeurs.eigen.aanbieden'))}</div>
+    <div id="rmRows">${row('rmCar', 'pencil', t('driverCar.knop'))}${offer ? row('rmWithdraw', 'arrow-counter-clockwise', t('rideMenu.trekIn')) : row('rmOffer', 'arrows-left-right', t('ritbeurs.eigen.aanbieden'))}</div>
     <p class="noteLine">${esc(offer ? t('rideMenu.hintOpen', { p1: dl }) : t('rideMenu.hintZoek'))}</p>`);
   document.getElementById('rmCar').onclick = () => { hapticTap(); openDriverCarSheet(day, direction, rerender); };
   const off = document.getElementById('rmOffer'); if (off) off.onclick = () => { hapticTap(); openOfferSheet(day, direction, rerender); };
   const wd = document.getElementById('rmWithdraw');
-  if (wd) wd.onclick = () => twoStepConfirm(wd, t('ritbeurs.trekIn') + '?', async () => {
-    if (!(await withdrawOffer(offer.id))) return;
-    if (S.offers[offer.id]) S.offers[offer.id] = { ...S.offers[offer.id], status: 'withdrawn' };   // the database says so too; the snapshot catches up
-    closeSheet(); if (rerender) rerender();
-  });
+  // Withdrawing asks once, inside the sheet: the rows give way to a question with two buttons (no red bar, nothing happens by accident).
+  if (wd) wd.onclick = () => {
+    hapticTap();
+    document.getElementById('rmRows').innerHTML = `<p class="noteLine">${esc(t('rideMenu.trekInVraag'))}</p>
+      <div class="sheet__actions"><button type="button" class="btn secondary" id="rmKeep">${esc(t('common.annuleren'))}</button><button type="button" class="btn danger" id="rmDo">${esc(t('ritbeurs.trekIn'))}</button></div>`;
+    document.getElementById('rmKeep').onclick = () => { hapticTap(); openRideMenu(day, direction, rerender); };
+    document.getElementById('rmDo').onclick = async () => {
+      hapticTap();
+      if (!(await withdrawOffer(offer.id))) return;
+      if (S.offers[offer.id]) S.offers[offer.id] = { ...S.offers[offer.id], status: 'withdrawn' };   // the database says so too; the snapshot catches up
+      closeSheet(); if (rerender) rerender();
+    };
+  };
 }
 
 // Vervanger zoeken for the OWN ride: the ride on top (so it is clear whose ride it is), a message, what happens next, one button.

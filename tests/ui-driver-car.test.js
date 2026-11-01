@@ -147,14 +147,16 @@ await testAsync('Vervanger zoeken: the form shows my own ride, one tap offers it
   assert.match(text(openMenu().innerHTML), /Vervanger intrekken/);
   assert.match(text(sheet().innerHTML), /Je hebt deze rit aangeboden/); assert.ok(fake);
 });
-await testAsync('Vervanger intrekken needs a second tap, then the tag is gone', async () => {
+await testAsync('Vervanger intrekken asks once inside the sheet (no red bar), Annuleren goes back, Intrekken withdraws and the tag is gone', async () => {
   await setup([MINE], { ritbeurs: { on: true } });
   openMenu(); byId('rmOffer').onclick();
   await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });
-  openMenu();
-  await withFakeNowAsync(NOW, async () => { byId('rmWithdraw').onclick(); await tick(); });
-  assert.equal(Object.values(S.offers).filter(o => o.status === 'open').length, 1, 'first tap only asks');
-  await withFakeNowAsync(NOW, async () => { await byId('rmWithdraw').onclick(); await tick(); await tick(); });
+  openMenu(); byId('rmWithdraw').onclick();
+  const q = text(byId('rmRows').innerHTML); assert.match(q, /Vervanger intrekken\? De rit staat dan niet meer bij Vervanger/); assert.doesNotMatch(byId('rmRows').innerHTML, /confirming/); assert.match(byId('rmRows').innerHTML, /btn danger/);
+  assert.equal(Object.values(S.offers).filter(o => o.status === 'open').length, 1, 'asking changes nothing');
+  withFakeNow(NOW, () => byId('rmKeep').onclick()); assert.match(text(sheet().innerHTML), /Vervanger intrekken/); assert.match(text(sheet().innerHTML), /Tijd en plek/, 'back in the menu');
+  byId('rmWithdraw').onclick();
+  await withFakeNowAsync(NOW, async () => { await byId('rmDo').onclick(); await tick(); await tick(); });
   assert.equal(Object.values(S.offers).filter(o => o.status === 'open').length, 0);
   assert.doesNotMatch(text(myweek()), /Vervanger gezocht/);
 });
