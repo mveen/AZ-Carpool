@@ -1174,5 +1174,14 @@ await testAsync('v218: a refused listener restarts the live listeners (3 times a
   assert.equal(restartListenersSoon(fakeTimer), false, 'after 3 restarts it stops');
   stopDataListeners(); listenerRetry.n = 0;
 });
+await testAsync('v224: db.onAuthChange passes the SDK sign-in changes on (user ID or null) and is a no-op for adapters without it', async () => {
+  const seen = []; let push = null;
+  const auth = { currentUser: null, onAuthStateChanged: cb => { push = cb; return () => seen.push('unsub'); } };
+  const real = createFirestoreDb({ sdk: { collection(){}, doc(){}, signInAnonymously(){} }, firestoreDb: {}, auth, calendarApiKey: '' });
+  const off = real.onAuthChange(id => seen.push(id));
+  push({ uid: 'u1' }); push(null); off();
+  assert.deepEqual(seen, ['u1', null, 'unsub']);
+  assert.equal(typeof createFirestoreDb({ sdk: { collection(){}, doc(){}, signInAnonymously(){} }, firestoreDb: {}, auth: {}, calendarApiKey: '' }).onAuthChange(() => {}), 'function');
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

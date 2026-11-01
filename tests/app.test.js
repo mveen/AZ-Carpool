@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { recomputeCanEdit } from '../coordinator.js';
-import { getWithRetry, syncCoordinatorNav, bootstrap, init, activateTab, openTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
+import { getWithRetry, syncCoordinatorNav, bootstrap, init, activateTab, openTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover, handleAuthChange } from '../app.js';
 
 const dom = installFakeDom();
 const status = () => dom.doc.getElementById('whoami').innerHTML;
@@ -347,6 +347,19 @@ test('v221: init installs the Firestore self-repair before the global error log'
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
   assert.match(src, /import \{ installFirestoreHeal \} from '\.\/session-reset\.js'/);
   assert.ok(src.indexOf('installFirestoreHeal(window') > 0 && src.indexOf('installFirestoreHeal(window') < src.indexOf('installGlobalErrorLogging(window)'));
+});
+
+test('v224: a changed or lost sign-in is reported (log + status line); the same user and a page without a user say nothing', async () => {
+  installNav(); localStorage.removeItem('az-error-queue'); (await import('../error-log.js'))._resetErrorLogForTests();
+  resetState({ me: 'u1' });
+  assert.equal(handleAuthChange('u1'), false);
+  assert.equal(handleAuthChange(null), true);
+  assert.match(localStorage.getItem('az-error-queue'), /auth/); assert.match(localStorage.getItem('az-error-queue'), /signed-out/);
+  resetState({}); assert.equal(handleAuthChange(null), false, 'before sign-in there is nothing to lose');
+});
+test('v224: init subscribes to sign-in changes right after sign-in', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.ok(src.indexOf('db.onAuthChange(handleAuthChange)') > src.indexOf('S.me = cred.user.uid'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

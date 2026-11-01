@@ -1,7 +1,7 @@
 {
   "app.js": {
-    "module": "6e41d20d8742c14d651c1905d06e137c73c316f562bf7d43fccc320a4b71c3f2",
-    "test": "1b809691f9fdb81442f014caf31add4e0afa32b30420b6358df8a3b4d22159fb"
+    "module": "ecfe6b1391f8779e27ee9a68e4545627854144059058d516f3d9aa147c5606e0",
+    "test": "ebb989393653407e7e8760a9fbfec31f1b35d8ca74732d37c4bede0be042c4f1"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
@@ -12,16 +12,16 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "7242434380893d44a50f8500b43dbcb595c2920ae6b27802ab44fcd12380fc68",
-    "test": "2b946bff633076a8396715a37ef779365a65a34d64df39de2d7bfd5cb0a452ba"
+    "module": "4e912d24f4bd13999d0846e9017c18ec97baca111d336c33e2c5069822ddc9c1",
+    "test": "f9d94f81e293330cda056c5c9b3d664d6ca39e56bd25b27528db0580eb7046b9"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
     "test": "88f8a7468d4de0bd6f9e155fb8ca961bb66e842867e3387516f74d9a37d60f1b"
   },
   "data.js": {
-    "module": "bb70fc42a6500ef539cf5ff0a791dfe001ecc0ba809bf0cb2ea3e275699a29b2",
-    "test": "f40ba4f1549bb11d3d76a6bc9bd0251cafdfc5e86ee82db29c2f1748afabb9f0"
+    "module": "5d43a645562a2ae2fe25d51e1ba79c7b7a820a2d3e37251a2f63c71e82d46de5",
+    "test": "5182b32931a53d3d05a06b386e79316b892416fec561e5ab79f399bcdee3cdf9"
   },
   "dates.js": {
     "module": "ed5a2dd1459bb0f037672976b5b45e4feb5cfb2ae8524ed77a93cec890de6a46",
@@ -69,7 +69,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "25ae9db6b07d9d700c8f20bf37840e14b634dab05edfc684250823504227b2d6"
+    "test": "77890127160b84d9ce4c6ee1167bb50e5e71ef849c77c601320becc17d7faa6c"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -164,8 +164,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "29be83e13f109a0a90bc5d658bb362febf60fae1d5e390210403bf9a2b349287",
-    "test": "25ae9db6b07d9d700c8f20bf37840e14b634dab05edfc684250823504227b2d6"
+    "module": "49e69b66bc3fd462c5c4986fd8e207141863f1b726a4ab9f3c5d9768aca972e2",
+    "test": "77890127160b84d9ce4c6ee1167bb50e5e71ef849c77c601320becc17d7faa6c"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",

@@ -469,6 +469,7 @@ export default {
   "schedule.gewisseld": "Gewisseld ✓",
   "schedule.fout_bij_koppelen_roosterknoppen": "Fout bij koppelen roosterknoppen: ",
   // ---- added by hand ----
+  "app.uitgelogd": "Je bent uitgelogd, bijvoorbeeld in een ander tabblad. Ververs de pagina en log opnieuw in.",
   "app.verbinden": "Verbinden…",
   "coordinator.onbekend": "Onbekend",
   "common.ouder": "Ouder",

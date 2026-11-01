@@ -58,6 +58,15 @@ export async function getWithRetry(read, delays = START_RETRY_DELAYS_MS) {
   }
 }
 
+// The SDK's sign-in is shared by all tabs of this browser. When it is gone or another one (another tab signed out, or the browser data was wiped while this
+// page was open), every reading from here on is refused and the screen would quietly show defaults. So say it, and write it down.
+export function handleAuthChange(uid){
+  if(!S.me || uid === S.me) return false;
+  logError({ where:'auth', code: uid ? 'other-user' : 'signed-out', message:'sign-in of this browser changed while the app was open' });
+  setStatus(t('app.uitgelogd'), true);
+  return true;
+}
+
 export async function init(){
   applyStaticTexts();
   queuePushOpenFromUrl(location.search);   // a tapped push brings the person here with ?pushas=<family> (a test push, coordinator) or ?open=ritbeurs (a real push)
@@ -66,6 +75,7 @@ export async function init(){
   try{
     const cred = await db.signIn();
     S.me = cred.user.uid;
+    db.onAuthChange(handleAuthChange);
     flushErrorLog();   // problems that could not be sent last time (no session yet)
   }catch(e){
     logError({ where:'start', code:'signin-'+((e&&e.code)||'error'), message:e && e.message });   // kept on this phone and sent at the next start

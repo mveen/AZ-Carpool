@@ -76,6 +76,7 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
     authUid: ()=> (auth && auth.currentUser && auth.currentUser.uid) || null,
+    onAuthChange: (cb)=> (auth && auth.onAuthStateChanged)? auth.onAuthStateChanged(u=>cb((u && u.uid) || null)) : ()=>{},
     // Forgets this browser's anonymous account (a new one is made at the next start). Older index.html files don't pass signOut.
     signOut: ()=> sdk.signOut? sdk.signOut(auth) : Promise.resolve(),
     calendarApiKey,
@@ -91,6 +92,8 @@ export const db = {
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
   authUid: ()=> (dbImpl && dbImpl.authUid)? dbImpl.authUid() : null,
+  // Called with the user ID (or null) now and every time the SDK's sign-in changes, also when ANOTHER tab of this browser signs out or in.
+  onAuthChange: (cb)=> (dbImpl && dbImpl.onAuthChange)? dbImpl.onAuthChange(cb) : ()=>{},
   signOut: ()=>dbImpl.signOut(),
   get calendarApiKey(){ return dbImpl.calendarApiKey; },
   setListenerSink: (a)=>dbImpl.setListenerSink(a)
