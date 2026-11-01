@@ -34,9 +34,23 @@ const dirShort = d => t(d === 'heen' ? 'dir.heenShort' : 'dir.terugShort');
 export function ritbeursAvailable(){ return !!(S.me && ritbeursOn() && myLinkedFamilyId()); }
 
 // Notifications that may be shown now (those held back by quiet hours appear when the quiet hours end).
+// "Negeren" / "Sluiten" on a notification card is remembered on this phone only (the database rules let a notification change nothing but `read`).
+const DISMISS_KEY = 'azc.dismissedNotifications';
+let dismissedMem = null;
+function dismissedSet(){
+  if(!dismissedMem){ try{ dismissedMem = new Set(JSON.parse(localStorage.getItem(DISMISS_KEY) || '[]')); }catch(e){ dismissedMem = new Set(); } }
+  return dismissedMem;
+}
+var myWeekRedraw;   // var on purpose: ui-myweek.js sets it while this module is still loading (circular import)
+export function setMyWeekRedraw(fn){ myWeekRedraw = fn; }
+export function dismissNotification(id){
+  const set = dismissedSet(); set.add(id);
+  try{ localStorage.setItem(DISMISS_KEY, JSON.stringify([...set].slice(-200))); }catch(e){ /* kept in memory for this session */ }
+}
+export function resetDismissedNotifications(){ dismissedMem = null; }
 export function visibleNotifications(nowMs = Date.now()){
-  const own = {};
-  Object.entries(S.notifications || {}).forEach(([id, n]) => { if(n && !(n.deliverAt > nowMs) && !(n.expiresAt < nowMs)) own[id] = n; });
+  const own = {}, gone = dismissedSet();
+  Object.entries(S.notifications || {}).forEach(([id, n]) => { if(n && !gone.has(id) && !(n.deliverAt > nowMs) && !(n.expiresAt < nowMs)) own[id] = n; });
   return own;
 }
 // The number on the Ruilen tab: open rides of other families + unread notifications. 0 when the switch is off.
@@ -175,7 +189,7 @@ function notifCardHtml({ n, txt }, go, nowMs = Date.now()){
   go = go && !rides.length;
   return `<div class="entryCard entryCard--stack rbNotifCard${n.read === true ? '' : ' unread'}" role="status">
     <div class="entryCard__head"><span class="entryCard__icon">${phIcon('warning-circle-fill')}</span><b>${esc(txt.title)}${n.isTest ? ` <span class="noticeChip off">${t('push.preview.bron.test')}</span>` : ''}</b></div>
-    <p class="entryCard__text">${esc(txt.body)}</p>${offerBtns}${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}</div>`;
+    <p class="entryCard__text">${esc(txt.body)}</p>${n.isTest ? '' : `<div class="rbNotifActs">${offerBtns}${go ? `<button type="button" class="btn entryCard__go" data-rbnotifgo="1">${t('ritbeurs.notif.bekijk')}</button>` : ''}<button type="button" class="btn secondary entryCard__go" data-rbnotifdismiss="${esc(n.id)}">${t(n.kind === 'backupForRide' ? 'ritbeurs.notif.negeer' : 'ritbeurs.notif.sluit')}</button></div>`}</div>`;
 }
 // Mijn week: the notifications that still need something (unread, or a ride that can be offered), at most three.
 export function myWeekNotificationsHtml(nowMs = Date.now()){
@@ -185,6 +199,7 @@ export function myWeekNotificationsHtml(nowMs = Date.now()){
 export function wireMyWeekNotifications(box, goToRuilen, rerender){
   box.querySelectorAll('[data-rbnotifgo]').forEach(b => b.onclick = () => { hapticTap(); goToRuilen(); });
   box.querySelectorAll('[data-rboffernow]').forEach(b => b.onclick = () => offerNow(b, rerender));
+  box.querySelectorAll('[data-rbnotifdismiss]').forEach(b => b.onclick = () => { hapticTap(); dismissNotification(b.dataset.rbnotifdismiss); renderDeviationTab(); if(rerender) rerender(); });
 }
 // "Bied mijn rit aan" on a notification card: the offer form of Mijn week (ui-driver-car.js), then both screens are redrawn.
 function offerNow(b, rerender){
@@ -253,6 +268,7 @@ export function wireRitbeurs(){
   const save = document.getElementById('rbmSave'); if(save) save.onclick = () => { hapticTap(); saveMomentDraft(); };
   $$('[data-rbmomentdel]', b => b.onclick = () => { removeMoment(b.dataset.rbmomentdel).then(() => renderDeviationTab()); });
   $$('[data-rboffernow]', b => b.onclick = () => offerNow(b, null));
+  $$('[data-rbnotifdismiss]', b => b.onclick = () => { hapticTap(); dismissNotification(b.dataset.rbnotifdismiss); renderDeviationTab(); if(myWeekRedraw) myWeekRedraw(); });
   markSeenSoon();
 }
 // ---------- Beheer: the feature switches (coordinator) ----------

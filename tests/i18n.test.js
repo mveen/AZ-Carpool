@@ -422,6 +422,7 @@ test('v212: singular "1 rit", the shorter intro texts and the Bekijk button exis
   assert.match(t('ritbeurs.moment.intro'), /^Heb je tijd en kun je een rit kunnen overnemen\? Meld een tijdvak\./);
 });
 test('v214: the offer buttons on a notification say what they do', () => { assert.equal(t('ritbeurs.notif.biedAan'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.notif.biedAanRit', { when: 'donderdag heen 16:15' }), 'Bied aan: donderdag heen 16:15'); });
+test('v216: Negeren and Sluiten exist', () => { assert.equal(t('ritbeurs.notif.negeer'), 'Negeren'); assert.equal(t('ritbeurs.notif.sluit'), 'Sluiten'); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

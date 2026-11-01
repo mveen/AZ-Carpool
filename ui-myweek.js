@@ -23,7 +23,7 @@ import { driverCarButtonHtml, wireDriverCar } from './ui-driver-car.js';
 import { contactButtonHtml } from './ui-contact.js';
 import { timeChangeOf } from './driver-car.js';
 import { hasOpenOffer } from './ritbeurs.js';
-import { myWeekNotificationsHtml, wireMyWeekNotifications } from './ui-ritbeurs.js';
+import { myWeekNotificationsHtml, setMyWeekRedraw, wireMyWeekNotifications } from './ui-ritbeurs.js';
 import { ritbeursOn } from './ritbeurs-data.js';
 import { myWeekNextWeekHtml, myWeekWeekroosterHtml, openAskedTime, openAskedTimeOf, requestBlockHtml, weekroosterActive, wireMyWeekWeekrooster } from './ui-weekrooster-form.js';
 
@@ -320,3 +320,4 @@ export function goToMatchCarpool(){
   S.openMatchCarpoolForm = null;
   renderMatchesTab(); activateTab('matches'); hapticTap();
 }
+setMyWeekRedraw(() => renderMyWeek());   // the notification cards on Mijn week and in Ruilen redraw each other

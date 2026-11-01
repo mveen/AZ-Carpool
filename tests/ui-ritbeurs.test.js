@@ -19,7 +19,7 @@ import { renderBeheer } from '../ui-beheer.js';
 import { updatePeriodBadge } from '../ui-period.js';
 import {
   ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, syncVervangerNav, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
-  ritbeursCardHtml, wireRitbeursCard, takeRide, saveMomentDraft, testNotificationsForView,
+  dismissNotification, resetDismissedNotifications, ritbeursCardHtml, wireRitbeursCard, takeRide, saveMomentDraft, testNotificationsForView,
 } from '../ui-ritbeurs.js';
 
 const dom = installFakeDom();
@@ -337,6 +337,18 @@ test('v214: a back-up notification has the button "Bied mijn rit aan" for the ow
   assert.doesNotMatch(view(), /data-rboffernow/);
   asF2({ notifications: { a: n }, offers: { o1: offerBy('f2') } });
   assert.doesNotMatch(view(), /data-rboffernow|rbNotifCard/, 'already on offer: nothing left to do, so no card either');
+});
+test('v216: every notification card has Negeren (back-up) or Sluiten; a dismissed notification is gone from the cards and the badge, the others stay', () => {
+  const n = { kind: 'backupForRide', fromFamilyId: 'f3', momentFrom: '15:00', momentTo: '18:30', date: '2026-10-01', weekKey: WEEK_KEY, createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false };
+  const taken = { kind: 'taken', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 4, deliverAt: 1, expiresAt: 9e12, read: false };
+  resetDismissedNotifications(); asF2({ notifications: { a: n, b: taken } });
+  let html = view();
+  assert.match(html, /data-rbnotifdismiss="a">Negeren</); assert.match(html, /data-rbnotifdismiss="b">Sluiten</);
+  assert.equal(ritbeursBadgeCount(), 2);
+  dismissNotification('a');
+  html = view(); assert.doesNotMatch(html, /data-rbnotifdismiss="a"/); assert.match(html, /data-rbnotifdismiss="b"/);
+  assert.equal(ritbeursBadgeCount(), 1);
+  resetDismissedNotifications();
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

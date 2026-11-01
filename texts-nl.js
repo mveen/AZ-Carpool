@@ -1140,6 +1140,8 @@ export default {
   "ritbeurs.moment.toevoegen": "Tijdvak toevoegen",
   "ritbeurs.moment.raaktEen": "Dit tijdvak raakt 1 rit.",
   "ritbeurs.notif.bekijk": "Bekijk",
+  "ritbeurs.notif.negeer": "Negeren",
+  "ritbeurs.notif.sluit": "Sluiten",
   "ritbeurs.notif.biedAan": "Bied mijn rit aan",
   "ritbeurs.notif.biedAanRit": "Bied aan: {when}",
   "ritbeurs.moment.raaktGeen": "Dit tijdvak raakt nu geen ritten.",

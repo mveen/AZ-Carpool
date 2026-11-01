@@ -553,6 +553,7 @@ test('v214: a READ back-up notification stays on Mijn week while a ride in its s
   assert.match(html, /rbNotifCard/); assert.match(html, /data-rboffernow="Do\|heen">Bied mijn rit aan/);
   const offer = { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15', offeredBy: 'f2', message: '', status: 'open', createdAt: 1 };
   assert.doesNotMatch(renderDayAt(MON, { ...base, offers: { o1: offer } }), /rbNotifCard/);
+  assert.match(html, /data-rbnotifdismiss="a">Negeren</, 'the card can be ignored, not only left to disappear');
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

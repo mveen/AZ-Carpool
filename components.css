@@ -850,6 +850,8 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .sheetRide .rideRow{margin:0}
 .rbForm{margin-top:var(--space-5);padding-top:var(--space-5);border-top:1px solid var(--line)}
 .rbSel{width:auto;min-width:92px}
+.rbNotifActs{display:flex;flex-wrap:wrap;gap:var(--space-3)}
+.rbNotifActs .entryCard__go{width:auto;flex:1 1 40%}
 .rbNotifCard .entryCard__text{margin:0;font:var(--type-small);color:var(--text-2)}
 .rbNotifCard.unread .entryCard__head b::after{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-left:var(--space-3)}
 #rbNotifCard .entryCard:first-child{margin-top:0}
