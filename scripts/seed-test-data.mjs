@@ -5,6 +5,10 @@
 //   - left out: the history (ride log), who-is-linked-to-which-browser, sessions, calendar links, push data, the API key, notices and the
 //     maintenance switch (see DROP_*): the test browsers link again with the new codes.
 // --fixed-code familyId=CODE (repeatable) keeps a family's code the same at every refresh, for the automatic smoke test.
+// --planning: a PARTIAL refresh instead of a reset. Only the planning of the live app is copied over the test database; the test users stay as they are
+//   (families' phone numbers, invite codes, links, sessions, notifications, config/coordinator are not touched, nobody has to log in again):
+//   replaced: groups (shifts), deviations, weekRequests, periods*, offers, matchCarpools, practiceMatches and every settings/ document that is not in DROP_SETTINGS;
+//   per family only the fields in FAMILY_PLAN_FIELDS (availability, daughter's times, time changes); a family that is not in the test database is reported, not created.
 // Without --write nothing is written and no key is needed (dry run: only the report). It writes ONLY to the project az-carpool-test: the key file must belong to
 // that project, and the project id is fixed in this file. The back-up and the key file stay on your computer (folder backups/ is in .gitignore).
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
@@ -85,6 +89,10 @@ export function checkFixedCodes(fixedCodes, familyIds, oldCodes = new Set()) {
   }
 }
 
+// --planning mode: what is replaced as a whole, and which fields of a family are updated.
+export const PLAN_COLLECTIONS = ['groups', 'deviations', 'weekRequests', 'periods', 'periodEntries', 'periodCars', 'periodBackups', 'offers', 'matchCarpools', 'practiceMatches'];
+export const FAMILY_PLAN_FIELDS = ['availability', 'schedule', 'timeChanges'];
+
 export function transformBackup(rows, { phone = TEST_PHONE, makeCode = randomCode, fixedCodes = {} } = {}) {
   const testKey = normalizePhone(phone);
   const secrets = new Set(); const kept = []; const dropped = {}; const codes = [];
@@ -120,6 +128,22 @@ export function transformBackup(rows, { phone = TEST_PHONE, makeCode = randomCod
   return { docs: kept, codes, dropped, counts, leaks: findLeaks(kept, { secrets, testKey }) };
 }
 
+// Takes the phone-cleaned copy (transformBackup) and keeps only the planning: whole documents for PLAN_COLLECTIONS and settings/, some fields for families.
+export function planningFromCopy(copy) {
+  const replace = [], families = [];
+  for (const d of copy.docs) {
+    const parts = d.path.split('/');
+    if (PLAN_COLLECTIONS.includes(parts[0]) && parts.length === 2) replace.push(d);
+    else if (parts[0] === 'settings' && parts.length === 2) replace.push(d);
+    else if (parts[0] === 'families' && parts.length === 2) {
+      const fields = {}; for (const k of FAMILY_PLAN_FIELDS) if (d.data[k] !== undefined) fields[k] = d.data[k];
+      families.push({ path: d.path, fields });
+    }
+  }
+  const counts = {}; for (const d of replace) { const k = d.path.startsWith('settings/') ? 'settings' : d.path.split('/')[0]; counts[k] = (counts[k] || 0) + 1; }
+  return { replace, families, counts, dropped: copy.dropped, leaks: copy.leaks };
+}
+
 // The list the coordinator needs to log in as a family: one row per family, new code, test phone number.
 export function codesCsv(docs, codes, phone = TEST_PHONE) {
   const fam = Object.fromEntries(docs.filter(d => /^families\/[^/]+$/.test(d.path)).map(d => [d.path.split('/')[1], d.data]));
@@ -151,15 +175,36 @@ export async function seed({ fs, docs }) {
   return { deleted: existing.length, written: docs.length };
 }
 
+// Partial refresh of the test database: replaces the planning, updates some fields per family, touches nothing else. Returns what happened.
+export async function seedPlanning({ fs, plan }) {
+  const existing = [];
+  for await (const x of fs.walk()) if (!x.missing && PLAN_COLLECTIONS.includes(x.path.split('/')[0]) && x.path.split('/').length === 2) existing.push(x.path);
+  await pool(existing, p => fs.deleteDocument(p));
+  await pool(plan.replace, d => fs.setDocument(d.path, d.data));
+  const updated = [], missing = [];
+  for (const f of plan.families) {
+    if (!Object.keys(f.fields).length) continue;
+    ((await fs.commit([{ update: f.path, fields: f.fields }])) ? updated : missing).push(f.path.split('/')[1]);
+  }
+  const after = [];
+  for await (const x of fs.walk()) if (!x.missing && PLAN_COLLECTIONS.includes(x.path.split('/')[0]) && x.path.split('/').length === 2) after.push(x.path);
+  const sortedAfter = [...after].sort();
+  const want = plan.replace.filter(d => PLAN_COLLECTIONS.includes(d.path.split('/')[0])).map(d => d.path).sort();
+  if (want.length !== after.length || want.some((p, i) => p !== sortedAfter[i])) throw new Error(`After writing, the planning in the test database is not what was expected (${want.length} expected, ${after.length} found).`);
+  return { deleted: existing.length, written: plan.replace.length, updated, missing };
+}
+
 async function main() {
   const arg = n => { const i = process.argv.indexOf(n); return i > -1 ? process.argv[i + 1] : undefined; };
   const backup = arg('--backup'), keyFile = arg('--key'), write = process.argv.includes('--write');
-  if (!backup || (write && !keyFile)) { console.error('Usage: npm run seed:test -- --backup backups/firestore-DATE.jsonl.gz [--key backups/test-key.json --write] [--fixed-code familyId=CODE ...]   (the key is only needed with --write)'); process.exit(1); }
+  if (!backup || (write && !keyFile)) { console.error('Usage: npm run seed:test -- --backup backups/firestore-DATE.jsonl.gz [--key backups/test-key.json --write] [--planning] [--fixed-code familyId=CODE ...]   (the key is only needed with --write)'); process.exit(1); }
   const account = write ? readServiceAccount(resolve(keyFile)) : null;
   if (write) assertTestProject(account);
   const fixedCodes = {};
   process.argv.forEach((a, i) => { if (a === '--fixed-code') { const [fam, code] = String(process.argv[i + 1] || '').split('='); fixedCodes[fam] = code; } });
+  const planning = process.argv.includes('--planning');
   const res = transformBackup(readBackup(resolve(backup)), { fixedCodes });
+  if (planning) return mainPlanning({ res, write, account });
   console.log(`Back-up: ${res.docs.length} documents will be copied (${res.codes.length} families with a new code).`);
   console.log('Copied per collection:', Object.entries(res.counts).map(([k, v]) => `${k} ${v}`).join(', '));
   console.log('Left out:', Object.entries(res.dropped).map(([k, v]) => `${v}× ${k}`).join('; ') || 'nothing');
@@ -171,5 +216,18 @@ async function main() {
   const out = resolve(arg('--codes') || join(root, 'backups', 'test-toegangscodes.csv'));
   mkdirSync(dirname(out), { recursive: true }); writeFileSync(out, codesCsv(res.docs, res.codes), { mode: 0o600 });
   console.log(`\nDone: ${r.deleted} old test documents removed, ${r.written} written to ${TEST_PROJECT}.\nCodes per family: ${out}`);
+}
+async function mainPlanning({ res, write, account }) {
+  const plan = planningFromCopy(res);
+  console.log(`Planning-only refresh: ${plan.replace.length} documents replace the planning in the test database, ${plan.families.length} families get their availability, times and time changes updated.`);
+  console.log('Replaced per collection:', Object.entries(plan.counts).map(([k, v]) => `${k} ${v}`).join(', '));
+  console.log('Not touched: phone numbers, invite codes, links, sessions, notifications, config/coordinator, history. Left out of live: ' + (Object.keys(plan.dropped).join('; ') || 'nothing'));
+  if (plan.leaks.length) { console.error('\nSTOP: the copy still holds things that must not be copied:\n  ' + plan.leaks.join('\n  ')); process.exit(1); }
+  console.log('Check: no old code, token, key or other phone number is left in the copy.');
+  if (!write) { console.log('\nDry run: nothing was written. Add --key backups/test-key.json --write to apply it.'); return; }
+  const fs = createFirestore({ projectId: TEST_PROJECT, getToken: tokenProvider({ account }) });
+  const r = await seedPlanning({ fs, plan });
+  console.log(`\nDone: ${r.deleted} old planning documents removed, ${r.written} written, ${r.updated.length} families updated.`);
+  if (r.missing.length) console.log(`Families in live but not in the test database (skipped): ${r.missing.join(', ')}`);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(e => { console.error(e.message); process.exit(1); });
