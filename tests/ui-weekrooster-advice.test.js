@@ -403,9 +403,9 @@ await testAsync('Indeling: a direction without any car says "Geen ritten" and ha
 await testAsync('Controleren lists the way back too, in the same green line as Indeling; the way there keeps its rows', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
   const html = view(), s = text(html);
-  assert.match(html, /planSum__group scene--heen/); assert.match(html, /planSum__group scene--terug/); assert.match(html, /<p class="scene__ok">/); assert.doesNotMatch(html, /chip--ok" style/);
-  assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/); assert.match(s, /Terug Geen wijzigingen nodig 17:00 Jan Jansen/); assert.match(s, /18:00 Piet Pieters/);
-  assert.ok(s.indexOf('Heen 07:30') < s.indexOf('Terug Geen wijzigingen nodig'), 'Heen first');
+  assert.match(html, /planSum__group scene--heen/); assert.match(html, /planSum__group scene--terug/); assert.match(html, /<span class="planSum__same">\(ongewijzigd\)<\/span>/); assert.doesNotMatch(html, /planSum__group[^>]*>(?:(?!<\/div><\/div>).)*scene__ok/); assert.doesNotMatch(html, /chip--ok" style/);
+  assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/); assert.match(s, /Terug \(ongewijzigd\) 17:00 Jan Jansen/); assert.doesNotMatch(s, /Geen wijzigingen nodig/); assert.match(s, /18:00 Piet Pieters/);
+  assert.ok(s.indexOf('Heen 07:30') < s.indexOf('Terug (ongewijzigd)'), 'Heen first');
 });
 await testAsync('Doorvoeren saves only the direction that changed: nothing is written for the one that stays as it is', async () => {
   const fake = await setup(); S.wrAdvice = { day: 'Do', step: 'check' };

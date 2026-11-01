@@ -581,6 +581,7 @@ button.planRow{cursor:pointer}
 .planSum{display:flex;flex-direction:column;gap:var(--space-2)}
 .planSum__group{display:flex;flex-direction:column;gap:var(--space-2);border:1px solid;border-radius:var(--radius-card);padding:var(--space-4)}
 .planSum__dir{display:flex;gap:var(--space-3);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
+.planSum__same{margin-left:auto;font:var(--type-caption);letter-spacing:0;text-transform:none;font-weight:500;color:var(--text-muted)}
 .applyBox{display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
 .applyBox .btn{width:100%}
 .applyBox__sub{margin:0;font:var(--type-caption);color:var(--text-muted);text-align:center}

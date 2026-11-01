@@ -257,7 +257,6 @@ function openWhySheet() {
 function dayDirs(f, plan) {
   return DIRS.map(dir => (plan.dirs[dir] ? { dir, changed: true, cars: [] } : { dir, changed: false, cars: effectiveCars(f.day, dir).filter(c => (c.girlIds || []).length) }));
 }
-const okLine = text => `<p class="scene__ok">${phIcon('check')}<span>${esc(text)}</span></p>`;
 
 // A direction nobody asked to change: the cars as they are, no buttons (there is nothing to decide).
 function quietSceneHtml(dir, cars) {
@@ -311,8 +310,8 @@ function checkStep(adv, f, plan, stats) {
   const notice = stats.familiesChanged.length ? `<div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.noticeSee', { p1: stats.familiesChanged.map(rawParent).join(', ') }))}</span></div>` : '';
   const lines = dayDirs(f, plan).map(({ dir, changed, cars }) => {
     const rows = (changed ? plan.dirs[dir].cars.filter(c => c.girlIds.length) : cars).map(quietRowHtml).join('');
-    const note = changed ? '' : okLine(t(cars.length ? 'weekrooster.flow.sceneQuietTitle' : 'weekrooster.flow.sceneNone'));
-    return `<div class="planSum__group scene--${dir}"><div class="planSum__dir"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${note}${rows}</div>`;
+    const tag = changed ? '' : `<span class="planSum__same">${esc(t(cars.length ? 'weekrooster.flow.sameTag' : 'weekrooster.flow.sceneNone'))}</span>`;   // on the line of Heen/Terug: no extra row
+    return `<div class="planSum__group scene--${dir}"><div class="planSum__dir"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}${tag}</div>${rows}</div>`;
   }).join('');
   return {
     body: `<div class="flowStack"><div class="chips">${chips}</div>${notice}
