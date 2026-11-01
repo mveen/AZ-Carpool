@@ -3,6 +3,7 @@
 // pinned as a snapshot (__snapshots__/ui-schedule.snap.json) so an accidental change of the screen shows up.
 // Deliberate change of the screen?  UPDATE_SNAPSHOTS=1 npm test
 import assert from 'node:assert/strict';
+import fsV207 from 'node:fs';
 import { readFileSync } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -461,6 +462,10 @@ test('Rooster car: your own car has the green edge, the quiet green "Jij" (no ba
   assert.match(terug, /^<div class="rideRow scene--terug rideRow--mine"/); assert.match(terug, /carCard__driver carCard__driver--me">[^]*?Jij/); assert.doesNotMatch(terug, /tag--drive|Jij rijdt/, 'no filled badge any more: quiet green text'); assert.doesNotMatch(terug.slice(0, terug.indexOf('rideRow__route')), /data-contact/, 'no contact button on your own car (the pencil, Tijd en plek, is tested in ui-driver-car)');
 });
 
+test('v207: Rooster "Jij" has no steering wheel any more', () => {
+  const src = fsV207.readFileSync(new URL('../ui-schedule.js', import.meta.url), 'utf8');
+  assert.match(src, /carCard__driver--me">\$\{t\('ride\.jij'\)\}</); assert.doesNotMatch(src, /steering-wheel/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

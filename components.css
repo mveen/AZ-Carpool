@@ -447,9 +447,8 @@ button.chip{cursor:pointer;font-family:inherit}
 .daughterTime b{font-family:var(--font-mono);color:var(--text-1)}
 .rideRow__kid .swWrap{flex-direction:row;gap:var(--space-3)}
 .rideRow__kid .swCap{margin-top:0}
-/* "Jij rijdt": a filled green badge (the card you drive also has the green top edge) */
-.rideRow__who--me,.carCard__driver--me{display:flex;align-items:center;gap:var(--space-2);color:var(--ok-ink)}
-.rideRow__who--me svg,.carCard__driver--me svg{width:15px;height:15px;fill:currentColor}
+/* "Jij": quiet green text (the card you drive also has the green top edge) */
+.carCard__driver--me{color:var(--ok-ink)}
 
 /* ---------- Tile that links elsewhere (matches), and the one-line coordinator note ---------- */
 .matchTile{width:100%;text-align:left;background:var(--surface-card);border-radius:var(--radius-card);padding:var(--space-6) var(--space-7);border:1px solid var(--edge);margin-bottom:var(--space-4);display:flex;align-items:center;

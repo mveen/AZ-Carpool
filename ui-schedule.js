@@ -149,7 +149,7 @@ export function neededTimesHtml(day,direction,girlIds,timeOf=famTime,car=null){
 // wa = {day,time}: "Deze week": the contact sheet starts WhatsApp with the question to take over this ride.
 export function driverLineHtml(driverId,myId,wa){
   if(!driverId) return `<div class="carCard__driver carCard__driver--none">${phIcon('warning')} ${t('schedule.geen_chauffeur')}</div>`;
-  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me">${phIcon('steering-wheel-fill')} ${t('ride.jij')}</div>`;
+  if(myId && driverId===myId) return `<div class="carCard__driver carCard__driver--me">${t('ride.jij')}</div>`;
   const name = wa? contactButtonHtml(driverId, esc(fam(driverId).parentName||'?'), driverAskText(wa.day, wa.time), 'carCard__driver') : `<span class="carCard__driver">${driverNameHtml(driverId)}</span>`;
   return `<div>${name}</div>`;
 }

@@ -41,7 +41,7 @@ test('the Beheer section icons exist and are Phosphor paths', () => {
 });
 
 test('the Phosphor icons of the design system v2 exist, regular and -fill (tab bar and header)', () => {
-  for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat','steering-wheel','warning-circle','whatsapp-logo','phone','megaphone']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
+  for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat','warning-circle','whatsapp-logo','phone','megaphone']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
 });
 test('the own icon of the Vervanger tab (two people with a swap arrow, drawn in the Phosphor style) exists, regular and -fill, inside the 256 grid', () => {
   for (const k of ['users-swap', 'users-swap-fill']) {
@@ -136,6 +136,8 @@ test('APP_VERSION is at least v167 (wissel van ouder samengevoegd met de laatste
 test('APP_VERSION is at least v204 (Mijn week: green header and glow on the car you drive)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 204); });
 test('APP_VERSION is at least v205 (Mijn week: green glow inside the card from the top)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 205); });
 test('APP_VERSION is at least v206 (no timestamp footer, no wheel on match cards)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 206); });
+test('v207: the filled steering wheel is gone from PH_PATHS (dead after "Jij" lost its wheel); the plain one stays as a profile avatar', () => { assert.equal(PH_PATHS['steering-wheel-fill'], undefined); assert.ok(PH_PATHS['steering-wheel'].startsWith('<path')); });
+test('APP_VERSION is at least v207 (Rooster: no wheel; dead wheel icon removed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 207); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
