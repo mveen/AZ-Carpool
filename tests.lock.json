@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "d674fcdb314bf6c699089590db035924f063d3fda71169a62cca5c808eb89455",
-    "test": "efb01918bd5cdc06e9c75ab4e0e13706ff0749ad76930729c1959e066bdc3296"
+    "module": "d163d4039e8720cc79b25ba6a52ed6391caaa820b14159a38b432b0cc13fdecc",
+    "test": "9c722ce279babc5777dbb104dd897220e70e9a4a5b5989e65df57f9b9e3fa690"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -144,8 +144,8 @@
     "test": "d378616fcfdfb7c069c26e968b33d1cf2183954157420eb4f7eb46018eebd940"
   },
   "ritbeurs.js": {
-    "module": "c234a3f45b50e143feddd02404296abaeb335320da805af9afd282e93c5ecb7b",
-    "test": "05a5c5910b651afa44e21a4f030363cfbb2518c803b2753be915d5f908b8466c"
+    "module": "1d41044563f234a05a94b8e8b189e9529524451fdf70b63d819b9ee16ab17103",
+    "test": "d4fd0a91f2a44cc70ad9a09bebea23cf6fa585a657d075bf7f40562b937474df"
   },
   "schedule-changes.js": {
     "module": "0b69458d4a2e942cdc63184f90768ea837d702b72c21ade9b6a3591e6ef6bce1",
@@ -188,8 +188,8 @@
     "test": "16a3452e2708117db559285b3ee57c2d0bc63c9ed64ba459b037d55b65396b8f"
   },
   "ui-driver-car.js": {
-    "module": "de7517e591cf4564775e78801ccb43cc59402cd37b41f5cb843a69ca6b1d4fa7",
-    "test": "4928df78fb0744c47daf2bd0e53ab4eb8afce0c14d5df2a80b3f0171930062dc"
+    "module": "16fd4b670f3ebe997b28aad16a15781bf279925060a86443382c8be3e5b44e04",
+    "test": "532e466a4b3f9f67accfe5be5b57b47d14cdcba9ac337242b2c08190dc1ed04b"
   },
   "ui-help.js": {
     "module": "766d29eb7984e12328a4fc6b6c24aa2d899e94f600953bad31e9cec9d9c7edb5",
@@ -244,7 +244,7 @@
     "test": "64537463570fb438502adad7fc64b7802ec72f2848e2b553bd107c89fac6ea5b"
   },
   "ui-ritbeurs.js": {
-    "module": "064a5ec1806a9968b302a0e63f1c5d85c14743a95538965d3b7ce13da242bea1",
+    "module": "7a90c1ef3a78ae9926c1f3ff80029e84345739766b51da8403e5d9f7cbf78c82",
     "test": "7843357604fe12b3eaf4429dc15b2a790d1a56c52503635509c28e0fbaa62b26"
   },
   "ui-schedule.js": {

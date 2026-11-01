@@ -139,10 +139,12 @@ await testAsync('Vervanger zoeken: the form shows my own ride, one tap offers it
   const f = text(sheet().innerHTML);
   assert.match(f, /Dit is jouw rit/); assert.match(f, /Jij rijdt/); assert.match(f, /Eline, Jahaimy/); assert.match(f, /Bericht erbij/); assert.match(f, /Bied|Vervanger zoeken/);
   assert.doesNotMatch(myweek(), /Vervanger gezocht/);
-  byId('rmMessage').value = 'ik heb een afspraak';
+  assert.match(sheet().innerHTML, /id="rmMessage"[^>]*autocapitalize="sentences"/);
+  const inp = byId('rmMessage'); inp.value = 'ik heb een afspraak'; inp.selectionStart = 3; inp.setSelectionRange = () => {}; inp.oninput(); assert.equal(inp.value, 'Ik heb een afspraak', 'typing a lower-case first letter makes it a capital');
+  inp.value = 'ik heb een afspraak';
   await withFakeNowAsync(NOW, async () => { await byId('rmGo').onclick(); await tick(); });
   assert.match(toast(), /Rit aangeboden/);
-  const offers = Object.values(S.offers).filter(o => o.status === 'open'); assert.equal(offers.length, 1); assert.equal(offers[0].message, 'ik heb een afspraak'); assert.equal(offers[0].day, 'Do');
+  const offers = Object.values(S.offers).filter(o => o.status === 'open'); assert.equal(offers.length, 1); assert.equal(offers[0].message, 'Ik heb een afspraak'); assert.equal(offers[0].day, 'Do');
   assert.match(text(myweek()), /Vervanger gezocht/);
   assert.match(text(openMenu().innerHTML), /Vervanger intrekken/);
   assert.match(text(sheet().innerHTML), /Je hebt deze rit aangeboden/); assert.ok(fake);

@@ -17,7 +17,7 @@ import { renderBeheer } from './ui-beheer.js';
 import { periodCardsHtml } from './ui-period.js';
 import { familiesWithPush, serverState } from './push.js';
 import {
-  RITBEURS_MESSAGE_MAX, activeMoments, deadlineMs, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
+  RITBEURS_MESSAGE_MAX, activeMoments, keepCapital, deadlineMs, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
 import {
   addMoment, allRides, createOffer, markNotificationsRead, pushLiveOn, quietOf, removeMoment, ridesOf, ritbeursOn, saveQuiet, setPushLive, setRitbeurs, takeOffer, warningsFor, withdrawOffer,
@@ -103,7 +103,7 @@ function ownRidesHtml(nowMs){
     const offer = openOffers(S.offers, S.currentWeekKey, nowMs).find(o => o.offeredBy === me && o.day === r.day && o.direction === r.direction);
     const form = S.rbOffering === key ? `<div class="rbForm">
         <label for="rbMessage">${t('ritbeurs.form.bericht')}</label>
-        <input type="text" id="rbMessage" maxlength="${RITBEURS_MESSAGE_MAX}" autocomplete="off" placeholder="${esc(t('ritbeurs.form.placeholder'))}">
+        <input type="text" id="rbMessage" maxlength="${RITBEURS_MESSAGE_MAX}" autocomplete="off" autocapitalize="sentences" placeholder="${esc(t('ritbeurs.form.placeholder'))}">
         <p class="muted">${t('ritbeurs.form.stappen')}</p>
         <div class="rowflex" style="gap:8px"><button type="button" class="btn" data-rboffergo="${esc(key)}">${t('ritbeurs.form.bevestig')}</button>
         <button type="button" class="btn secondary" data-rbofferno="1">${t('ritbeurs.confirm.nee')}</button></div></div>` : '';
@@ -226,6 +226,7 @@ export function wireRitbeurs(){
   $$('[data-rbconfirmno]', b => b.onclick = () => { S.rbConfirm = null; renderDeviationTab(); });
   $$('[data-rbtake]', b => b.onclick = () => { hapticTap(); takeRide(b.dataset.rbtake); });
   $$('[data-rbwithdraw]', b => b.onclick = () => twoStepConfirm(b, t('ritbeurs.trekIn') + '?', async () => { await withdrawOffer(b.dataset.rbwithdraw); renderDeviationTab(); }));
+  keepCapital(document.getElementById('rbMessage'));
   $$('[data-rboffer-open]', b => b.onclick = () => { hapticTap(); S.rbOffering = b.dataset['rbofferOpen']; renderDeviationTab(); });
   $$('[data-rbofferno]', b => b.onclick = () => { S.rbOffering = null; renderDeviationTab(); });
   $$('[data-rboffergo]', b => b.onclick = () => { hapticTap(); offerRide(b.dataset.rboffergo); });

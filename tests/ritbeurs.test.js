@@ -9,7 +9,7 @@ function test(name, fn) {
 import './test-support.js';
 import {
   RITBEURS_MESSAGE_MAX, DEFAULT_QUIET, CONFLICT_MINUTES, NOTIFICATION_DAYS,
-  normalizeRitbeurs, ritbeursDoc, isTime, isIsoDate, toMin, cleanMessage, rideStartMs, deadlineMs, urgency,
+  normalizeRitbeurs, ritbeursDoc, isTime, isIsoDate, toMin, cleanMessage, capFirst, keepCapital, rideStartMs, deadlineMs, urgency,
   normalizeQuiet, inQuiet, deliverAtMs, offerId, buildOffer, openOffers, hasOpenOffer, openOfferOf, findCarIndex, applyTakeOver, takeWarnings,
   buildMoment, momentId, momentCovers, activeMoments, backupRecipients, ridersToWarn,
   notificationId, notificationDoc, unreadCount, sortedNotifications, stalePaths,
@@ -39,6 +39,9 @@ test('the message is one plain line, cut at the maximum', () => {
   assert.equal(RITBEURS_MESSAGE_MAX, 60);
   assert.equal(cleanMessage('  Werk\n loopt   uit '), 'Werk loopt uit');
   assert.equal(cleanMessage('x'.repeat(100)).length, 60);
+  assert.equal(cleanMessage('  ik heb een afspraak'), 'Ik heb een afspraak', 'the first letter is a capital');
+  assert.equal(cleanMessage('éven later'), 'Even later'.replace('E', 'É'));
+  assert.equal(cleanMessage('1 uur later'), '1 uur later'); assert.equal(cleanMessage(''), '');
   assert.equal(cleanMessage(null), '');
   assert.equal(cleanMessage('<b>hoi</b>'), '<b>hoi</b>', 'kept as text; the UI escapes it');
 });

@@ -12,7 +12,7 @@ import { weekroosterActive } from './ui-weekrooster-form.js';
 import { isDayPast } from './weekrooster-data.js';
 import { differsFromAuto } from './driver-car.js';
 import { myCarOf, saveDriverCar } from './driver-car-data.js';
-import { RITBEURS_MESSAGE_MAX, deadlineMs, hasOpenOffer, openOfferOf } from './ritbeurs.js';
+import { RITBEURS_MESSAGE_MAX, deadlineMs, hasOpenOffer, keepCapital, openOfferOf } from './ritbeurs.js';
 import { createOffer, ritbeursOn, withdrawOffer } from './ritbeurs-data.js';
 import { myLinkedFamilyId } from './coordinator.js';
 
@@ -90,9 +90,10 @@ export function openOfferSheet(day, direction, rerender) {
       <div class="rideRow__route">${phIcon('map-pin')}<span>${esc(routeLabel(car, direction, cfg, day))}</span></div>
       ${names ? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${esc(names)}</div>` : ''}</div></div>
     <div class="rbForm"><label for="rmMessage">${esc(t('ritbeurs.form.bericht'))}</label>
-      <input type="text" id="rmMessage" maxlength="${RITBEURS_MESSAGE_MAX}" autocomplete="off" placeholder="${esc(t('ritbeurs.form.placeholder'))}">
+      <input type="text" id="rmMessage" maxlength="${RITBEURS_MESSAGE_MAX}" autocomplete="off" autocapitalize="sentences" placeholder="${esc(t('ritbeurs.form.placeholder'))}">
       <p class="noteLine">${esc(t('ritbeurs.form.stappen'))}</p></div>
     <div class="sheet__actions"><button type="button" class="btn secondary" id="rmCancel">${esc(t('common.annuleren'))}</button><button type="button" class="btn" id="rmGo">${esc(t('ritbeurs.form.bevestig'))}</button></div>`);
+  keepCapital(document.getElementById('rmMessage'));
   document.getElementById('rmCancel').onclick = () => { hapticTap(); closeSheet(); };
   document.getElementById('rmGo').onclick = async () => {
     hapticTap();

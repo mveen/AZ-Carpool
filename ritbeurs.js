@@ -31,8 +31,21 @@ export function isIsoDate(v){
 export function toMin(v){ return isTime(v) ? (+v.slice(0, 2)) * 60 + (+v.slice(3, 5)) : null; }
 
 // One line of plain text, at most RITBEURS_MESSAGE_MAX characters. Never HTML: the UI escapes it again when it shows it.
+// The first letter is always a capital (the phone keyboard does not always do it).
+export function capFirst(s){ return String(s == null ? '' : s).replace(/^(\s*)(\p{Ll})/u, (m, sp, c) => sp + c.toUpperCase()); }
 export function cleanMessage(s){
-  return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, RITBEURS_MESSAGE_MAX).trim();
+  return capFirst(String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, RITBEURS_MESSAGE_MAX).trim());
+}
+// While typing in the message field: a lower-case first letter turns into a capital at once (the cursor stays where it was).
+export function keepCapital(input){
+  if(!input) return;
+  input.oninput = () => {
+    const v = input.value, c = capFirst(v);
+    if(c === v) return;
+    const p = input.selectionStart;
+    input.value = c;
+    try{ input.setSelectionRange(p, p); }catch(e){ /* a field that cannot place the cursor keeps the browser default */ }
+  };
 }
 
 // Start of a ride as a moment (ms); a ride without a valid time counts as the end of that day, so it stays visible all day.

@@ -140,6 +140,7 @@ test('v207: the filled steering wheel is gone from PH_PATHS (dead after "Jij" lo
 test('APP_VERSION is at least v207 (Rooster: no wheel; dead wheel icon removed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 207); });
 test('APP_VERSION is at least v208 (Mijn week: menu "Deze rit" with Vervanger zoeken)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 208); });
 test('APP_VERSION is at least v209 (Vervanger intrekken asks inside the sheet)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 209); });
+test('APP_VERSION is at least v210 (the Vervanger message starts with a capital)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 210); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
