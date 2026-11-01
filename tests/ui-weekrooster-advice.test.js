@@ -376,6 +376,50 @@ test('the texts of the flow say what the design says', () => {
   assert.equal(t('weekrooster.flow.noticeN', { p1: 2 }), '2 chauffeurs met impact');
   assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 2, p2: 'donderdag' }), '2 aanvragen voor donderdag');
 });
+console.log('=== the direction nobody asked to change stays visible ===');
+await testAsync('Indeling shows the way back too when only the way there changes: "Geen wijzigingen nodig", the cars as they are, nothing to adjust', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = view(), s = text(html);
+  assert.match(s, /Heen Lois moet er om 09:00 zijn/); assert.match(s, /Terug Geen wijzigingen nodig/);
+  assert.match(s, /Niemand vroeg een andere terugrit\. De auto’s blijven zoals ze zijn\./); assert.match(s, /Auto’s terug · vertrek bij/);
+  assert.match(s, /17:00 Jan Jansen Anouk, Eline/); assert.match(s, /18:00 Piet Pieters/); assert.match(s, /Geen impact voor chauffeurs/);
+  assert.ok(s.indexOf('Heen Lois') < s.indexOf('Terug Geen wijzigingen nodig'), 'Heen first');
+  assert.doesNotMatch(html, /data-wradjust="terug"/); assert.match(html, /data-wradjust="heen"/); assert.match(html, /scene scene--terug/);
+  assert.match(s, /0 speelsters in andere auto/);   // the tiles only count real changes
+});
+await testAsync('Indeling: when only the way back changes, the way there is shown first as unchanged', async () => {
+  await setup({ 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '08:30', terug: '18:30' }) }); S.wrAdvice = { day: 'Do', step: 'plan' };
+  assert.deepEqual(Object.keys(withFakeNow(NOW, () => adviceForDay('Do')).directions), ['terug']);
+  const s = text(view());
+  assert.match(s, /Heen Geen wijzigingen nodig/); assert.match(s, /Niemand vroeg een andere heenrit/); assert.match(s, /07:30 Jan Jansen/); assert.match(s, /Terug Lois is om 18:30 klaar/);
+  assert.ok(s.indexOf('Heen Geen wijzigingen nodig') < s.indexOf('Terug Lois'), 'Heen first');
+});
+await testAsync('Indeling: a direction without any car says "Geen ritten" and has no car list', async () => {
+  const groups = Object.fromEntries(Object.entries(CARS).filter(([k]) => !k.includes('terug')));
+  await setup({}, { groups }); S.wrAdvice = { day: 'Do', step: 'plan' };
+  const s = text(view()); assert.match(s, /Terug Geen ritten/); assert.match(s, /Er zijn op dit dagdeel geen auto’s gepland/); assert.doesNotMatch(s, /Auto’s terug/);
+});
+await testAsync('Controleren lists the way back too, in the same green line as Indeling; the way there keeps its rows', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
+  const html = view(), s = text(html);
+  assert.match(html, /planSum__group scene--heen/); assert.match(html, /planSum__group scene--terug/); assert.match(html, /<p class="scene__ok">/); assert.doesNotMatch(html, /chip--ok" style/);
+  assert.match(s, /Heen 07:30 Jan Jansen Anouk, Eline, Lois/); assert.match(s, /Terug Geen wijzigingen nodig 17:00 Jan Jansen/); assert.match(s, /18:00 Piet Pieters/);
+  assert.ok(s.indexOf('Heen 07:30') < s.indexOf('Terug Geen wijzigingen nodig'), 'Heen first');
+});
+await testAsync('Doorvoeren saves only the direction that changed: nothing is written for the one that stays as it is', async () => {
+  const fake = await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
+  await withFakeNowAsync(NOW, async () => { wired(view()); await dom.doc.getElementById('wrAccept').onclick(); });
+  assert.ok(fake.get('deviations/Do_heen')); assert.equal(fake.get('deviations/Do_terug'), undefined);
+});
+console.log('=== way back: "nog niet klaar" instead of "komt te laat" ===');
+await testAsync('On the way back someone whose car leaves before she is done is "nog niet klaar" (not "komt te laat"); on the way there it stays "komt te laat"', async () => {
+  await setup({ 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '08:30', terug: '18:30' }) });
+  S.wrAdvice = { day: 'Do', step: 'plan', edits: { terug: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f3'], departureTime: '17:00' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f4', 'f5'], departureTime: '18:00' }] } };
+  const s = text(view()); assert.match(s, /Lois 18:30 nog niet klaar/); assert.doesNotMatch(s, /komt te laat/);
+  S.wrAdvice.step = 'check'; const c = text(view()); assert.match(c, /Iemand is nog niet klaar/); assert.doesNotMatch(c, /komt te laat/);
+  await setup(); S.wrAdvice = { day: 'Do', step: 'check', edits: { heen: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f3'], departureTime: '07:30' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f4', 'f5'], departureTime: '09:15' }] } };
+  assert.match(text(view()), /Iemand komt te laat/); assert.doesNotMatch(text(view()), /nog niet klaar/);
+});
 test('ui-weekrooster-advice.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-advice.js'));
 
 console.log(`\n${passed} passed, ${failed} failed`);

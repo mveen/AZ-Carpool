@@ -10,7 +10,7 @@
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { closeSheet, esc, hapticTap, locationsCfg, phIcon, showToast } from './ui-common.js';
-import { driverNameHtml, fam, girlName, isFlex, seats, sortGirlIds } from './rides.js';
+import { driverNameHtml, effectiveCars, fam, girlName, isFlex, seats, sortGirlIds } from './rides.js';
 import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { ATC_NAME, FREE_TEXT_MAX, arrivalLabel, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
 import { wireWhatsAppButton } from './ui-deviation.js';
@@ -125,8 +125,10 @@ function sceneTitle(dir, ctx) {
 
 // A rider in a car, with HER time, how long she waits and (when she moves) where she comes from. Tap = another car.
 // Vocabulary (the same everywhere in this step): "haar tijd" = her own time, "vertrek" = when the car leaves, "wacht" = the difference.
-function waitChip(w) {
-  if (w < 0) return `<span class="chip chip--bad">${esc(t('weekrooster.flow.riderLate'))}</span>`;
+// A negative wait means "late" on the way there (heen) but "not ready yet" on the way back (terug): the car leaves before she is done.
+const lateKey = (dir, base) => (dir === 'terug' ? base + 'Terug' : base);
+function waitChip(w, dir) {
+  if (w < 0) return `<span class="chip chip--bad">${esc(t(lateKey(dir, 'weekrooster.flow.riderLate')))}</span>`;
   return w > 0 ? `<span class="chip chip--warn">${esc(t('weekrooster.flow.riderWait', { p1: w }))}</span>` : `<span class="chip chip--ok">${esc(t('weekrooster.flow.riderZero'))}</span>`;
 }
 // Who is new in a car, as few lines as possible: where they come from once (when it is another car), and everybody with the same time and wait on one line.
@@ -137,7 +139,7 @@ function changesHtml(d, ev, c, ids) {
   return [...groups.entries()].map(([from, g]) => {
     const lines = new Map();
     g.forEach(id => { const k = `${timeAfter(d.ctx, id) || '--:--'}|${ev.waitOf[id]}`; if (!lines.has(k)) lines.set(k, []); lines.get(k).push(id); });
-    const body = [...lines.values()].map(x => `<div class="chgLine"><b>${niceList(sortGirlIds(x).map(rawGirl).map(esc))}</b><span class="chgLine__t">${esc(timeAfter(d.ctx, x[0]) || '--:--')}</span>${waitChip(ev.waitOf[x[0]])}</div>`).join('');
+    const body = [...lines.values()].map(x => `<div class="chgLine"><b>${niceList(sortGirlIds(x).map(rawGirl).map(esc))}</b><span class="chgLine__t">${esc(timeAfter(d.ctx, x[0]) || '--:--')}</span>${waitChip(ev.waitOf[x[0]], d.ctx.direction)}</div>`).join('');
     return `<div class="chgGroup">${from ? `<div class="chgGroup__cap">${esc(t('weekrooster.flow.fromCar', { p1: rawParent(from) }))}</div>` : ''}${body}</div>`;
   }).join('');
 }
@@ -250,6 +252,24 @@ function openWhySheet() {
   ov.addEventListener('click', closeSheet);
 }
 
+// Both directions of the day, always Heen first: the ones the requests change (they are in the plan) and the ones that stay as they are.
+// A direction without changes shows the cars as they are now, so the day coordinator sees the whole day and nothing looks forgotten.
+function dayDirs(f, plan) {
+  return DIRS.map(dir => (plan.dirs[dir] ? { dir, changed: true, cars: [] } : { dir, changed: false, cars: effectiveCars(f.day, dir).filter(c => (c.girlIds || []).length) }));
+}
+const okLine = text => `<p class="scene__ok">${phIcon('check')}<span>${esc(text)}</span></p>`;
+
+// A direction nobody asked to change: the cars as they are, no buttons (there is nothing to decide).
+function quietSceneHtml(dir, cars) {
+  const heen = dir === 'heen', none = !cars.length;
+  return `<section class="scene scene--${heen ? 'heen' : 'terug'}" data-wrdir="${dir}">
+    <div class="scene__head"><span class="scene__badge">${phIcon(heen ? 'sun' : 'moon')}</span><div class="scene__headText"><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span><b>${esc(t(none ? 'weekrooster.flow.sceneNone' : 'weekrooster.flow.sceneQuietTitle'))}</b></div></div>
+    ${none ? `<p class="scene__chg"><span class="chip chip--muted">${esc(t('weekrooster.flow.sceneNoneNote'))}</span></p>` : `${okLine(t(heen ? 'weekrooster.flow.sceneQuietHeen' : 'weekrooster.flow.sceneQuietTerug'))}
+    <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, cars) }))}</div>
+      ${cars.map(c => carCardHtml(dir, null, null, c, null, true, new Map(), false, cars)).join('')}</div>
+    <div class="scene__note">${phIcon('info')}<span>${esc(t('weekrooster.flow.notice0'))}</span></div>`}</section>`;
+}
+
 function planStep(adv, f, plan, stats) {
   const hasAlt = !plan.fallback && Object.values(adv.directions).some(d => d.keep && d.keep.alt);
   // The subtitle is what the choice costs, worked out per variant (never a fixed claim).
@@ -261,7 +281,7 @@ function planStep(adv, f, plan, stats) {
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
     body: `<div class="flowStack">${seg}${plan.fallback ? '' : whyLine()}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
-      ${Object.keys(plan.dirs).map(dir => sceneHtml(dir, adv, plan, stats, f.editDir)).join('')}
+      ${dayDirs(f, plan).map(x => (x.changed ? sceneHtml(x.dir, adv, plan, stats, f.editDir) : quietSceneHtml(x.dir, x.cars))).join('')}
       ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
       ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(rawGirl).join(', ') }))}</div>` : ''}</div>`,
     foot: `<button type="button" class="btn" id="wrToCheck"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.toCheck'))}${phIcon('arrow-right')}</button>
@@ -287,11 +307,14 @@ function checkStep(adv, f, plan, stats) {
     chip(!swapped, t(swapped ? 'weekrooster.flow.chipSwap' : 'weekrooster.flow.chipNoSwap')),
     chip(!bad('seats'), t(bad('seats') ? 'weekrooster.flow.chipSeatsBad' : 'weekrooster.flow.chipSeatsOk')),
     ...(bad('unplaced') ? [chip(false, t('weekrooster.flow.chipUnplaced'))] : []),
-    ...(bad('late') ? [chip(false, t('weekrooster.flow.chipLate'))] : []),
+    ...DIRS.filter(dir => stats.problems.some(p => p.key === 'late' && p.dir === dir)).map(dir => chip(false, t(lateKey(dir, 'weekrooster.flow.chipLate')))),
   ].join('');
   const notice = stats.familiesChanged.length ? `<div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.noticeSee', { p1: stats.familiesChanged.map(rawParent).join(', ') }))}</span></div>` : '';
-  const lines = Object.entries(plan.dirs).map(([dir, p]) => `<div class="planSum__group scene--${dir}"><div class="planSum__dir"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${
-    p.cars.filter(c => c.girlIds.length).map(quietRowHtml).join('')}</div>`).join('');
+  const lines = dayDirs(f, plan).map(({ dir, changed, cars }) => {
+    const rows = (changed ? plan.dirs[dir].cars.filter(c => c.girlIds.length) : cars).map(quietRowHtml).join('');
+    const note = changed ? '' : okLine(t(cars.length ? 'weekrooster.flow.sceneQuietTitle' : 'weekrooster.flow.sceneNone'));
+    return `<div class="planSum__group scene--${dir}"><div class="planSum__dir"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}</div>${note}${rows}</div>`;
+  }).join('');
   return {
     body: `<div class="flowStack"><div class="chips">${chips}</div>${notice}
       <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.flow.summary', { p1: dayLabel(day).toLowerCase() }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.afterApply'))}</div></div>
@@ -399,7 +422,7 @@ function openGirlSheet(dir, id) {
     const bits = [c === here ? t('weekrooster.flow.pickHere') : free <= 0 ? t('weekrooster.flow.pickFull') : t(free === 1 ? 'weekrooster.flow.pickSeats1' : 'weekrooster.flow.pickSeatsN', { p1: free })];
     const more = [];
     if (c !== here && free > 0) {
-      bits.push(w < 0 ? t('weekrooster.flow.pickLate') : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : '');
+      bits.push(w < 0 ? t(lateKey(dir, 'weekrooster.flow.pickLate')) : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : '');
       if (nextDep !== (c.departureTime || '--:--')) more.push(t('weekrooster.flow.pickDepChange', { p1: nextDep, p2: rawGirl(id) }));
       const worse = (nextCar ? nextCar.girlIds : []).filter(o => o !== id && Math.max(0, ev.waitOf[o] || 0) > Math.max(0, ev0.waitOf[o] || 0));
       if (worse.length) more.push(t(worse.length === 1 ? 'weekrooster.flow.pickOthers1' : 'weekrooster.flow.pickOthersN', { p1: niceList(sortGirlIds(worse).map(rawGirl)) }));
@@ -467,7 +490,7 @@ function openAddSheet(dir, driverId, more, from = '') {
     if (more) return { id, label: esc(rawGirl(id) + (isFlex(fam(id)) ? ' · ' + t('flex.chip') : '')), sub: esc(t('weekrooster.flow.addNoRide')) };
     const from = cars.find(c => c.girlIds.includes(id)), next = withGirlIn(d.ctx, [...cars], id, driverId), ev = evaluateCars(d.ctx, next), w = ev.waitOf[id];
     const nextCar = next.find(x => x.driverFamilyId === driverId), nextDep = (nextCar && nextCar.departureTime) || target.departureTime || '--:--';
-    const bits = [from ? t('weekrooster.flow.addNow', { p1: fam(from.driverFamilyId).parentName || '?', p2: timeAfter(d.ctx, id) || '--:--' }) : t('weekrooster.flow.addNone'), w < 0 ? t('weekrooster.flow.pickLate') : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : ''];
+    const bits = [from ? t('weekrooster.flow.addNow', { p1: fam(from.driverFamilyId).parentName || '?', p2: timeAfter(d.ctx, id) || '--:--' }) : t('weekrooster.flow.addNone'), w < 0 ? t(lateKey(dir, 'weekrooster.flow.pickLate')) : w > 0 ? t('weekrooster.flow.pickWait', { p1: w }) : ''];
     if (nextDep !== (target.departureTime || '--:--')) bits.push(t('weekrooster.flow.pickDepChange', { p1: nextDep, p2: rawGirl(id) }));
     return { id, label: esc(rawGirl(id)), sub: esc(bits.filter(Boolean).join(' · ')) };
   });

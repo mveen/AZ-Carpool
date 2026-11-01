@@ -373,6 +373,14 @@ test('the screen after Doorvoeren has its texts', () => {
   assert.equal(t('weekrooster.flow.doneTitle', { p1: 'Maandag' }), 'Maandag is geregeld'); assert.equal(t('weekrooster.flow.doneShare'), 'Deel in de WhatsApp-groep');
   assert.equal(t('weekrooster.flow.doneCount1'), '1 wijziging'); assert.equal(t('weekrooster.flow.doneReqN', { p1: 2 }), '2 aanvragen'); assert.equal(t('weekrooster.flow.doneNoHeen'), 'Rijdt heen niet mee');
 });
+test('the direction nobody asked to change has its texts, and the way back says "nog niet klaar" where the way there says "komt te laat"', () => {
+  assert.equal(t('weekrooster.flow.sceneQuietTitle'), 'Geen wijzigingen nodig'); assert.equal(t('weekrooster.flow.sceneNone'), 'Geen ritten');
+  assert.equal(t('weekrooster.flow.sceneQuietTerug'), 'Niemand vroeg een andere terugrit. De auto’s blijven zoals ze zijn.'); assert.equal(t('weekrooster.flow.sceneQuietHeen'), 'Niemand vroeg een andere heenrit. De auto’s blijven zoals ze zijn.');
+  assert.equal(t('weekrooster.flow.sceneNoneNote'), 'Er zijn op dit dagdeel geen auto’s gepland.');
+  assert.equal(t('weekrooster.flow.riderLate'), 'komt te laat'); assert.equal(t('weekrooster.flow.riderLateTerug'), 'nog niet klaar');
+  assert.equal(t('weekrooster.flow.pickLate'), 'komt te laat'); assert.equal(t('weekrooster.flow.pickLateTerug'), 'nog niet klaar');
+  assert.equal(t('weekrooster.flow.chipLate'), 'Iemand komt te laat'); assert.equal(t('weekrooster.flow.chipLateTerug'), 'Iemand is nog niet klaar');
+});
 test('the flow of the day coordinator (Indeling, Controleren, Doorvoeren) has its texts, and the old counters are gone', () => {
   ['step1', 'step2', 'step3', 'segAdvice', 'segAlt', 'wait0', 'moved0', 'notice0', 'adjust', 'toCheck', 'notFit', 'pickTitle', 'blockChanges', 'blockSeats', 'blockOut', 'blockEdit', 'fromCar', 'addPassenger', 'addTitle', 'addSub', 'addNow', 'addNone', 'addEmpty', 'removeItem', 'removeTitle', 'removeText', 'removeLast', 'removeNo', 'removeYes', 'addMore', 'addMoreSub', 'addNoRide', 'timeTitle', 'timeHeen', 'timeTerug', 'timeAdd', 'chipNoSwap', 'chipSeatsOk', 'summary', 'apply', 'applySub', 'backToPlan', 'doneTitle', 'undoAll', 'undoSure'].forEach(k => assert.ok(hasKey('weekrooster.flow.' + k), k));
   ['dep', 'join1', 'joinN', 'gone', 'off'].forEach(k => assert.ok(hasKey('weekrooster.essence.' + k), k)); ['adviceMoved1', 'adviceMovedN', 'waitNone', 'waitSome'].forEach(k => assert.ok(hasKey('weekrooster.action.' + k), k));
