@@ -1145,5 +1145,18 @@ test('v211: leaving the data listeners no longer keeps a rbOffering field (offer
 await testAsync('v212: the notifications listener also redraws Mijn week (the notification card sits there)', async () => {
   assert.match((await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8'), /S\.notifications\[d\.id\]=d\.data\(\)\);\s*renderDeviationTab\(\); renderMyWeek\(\);/);
 });
+await testAsync('v218: every live listener in startDataListeners reports a refusal to the error log (path + code), so it is visible WHICH reading failed', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export function startDataListeners'));
+  const handlers = (body.slice(0, body.indexOf('\nexport function', 10)).match(/err=>\{/g) || []).length;
+  const reported = (body.slice(0, body.indexOf('\nexport function', 10)).match(/err=>\{ listenFailed\("/g) || []).length;
+  assert.ok(handlers > 10); assert.equal(reported, handlers);
+  assert.match(src, /settings\/ritbeurs"\)\.onSnapshot[^]*?listenFailed\("settings\/ritbeurs"/);
+});
+await testAsync('v218: listenFailed logs where=listen with the path and error code, and never throws', async () => {
+  const { listenFailed } = await import('../data.js');
+  assert.doesNotThrow(() => listenFailed('settings/dayCoordinators', { code: 'permission-denied', message: 'x' }));
+  assert.doesNotThrow(() => listenFailed('families', null));
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

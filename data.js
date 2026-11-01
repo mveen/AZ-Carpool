@@ -26,7 +26,7 @@ import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDriv
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
-import { purgeOldErrorLogs } from './error-log.js';
+import { logError, purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
 import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
@@ -570,6 +570,12 @@ export function syncListeners(){
   }
 }
 
+// A live listener that is refused (or breaks) is written to the error log with the document or collection it was about, so the coordinator can see
+// WHICH reading failed (Beheer > Koppelingen > Gemelde problemen). Only the path and the error code go in, never data.
+export function listenFailed(path, err){
+  try{ logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:err && err.message }); }catch(e){ /* never break the app */ }
+}
+
 export function startDataListeners(){
   db.setListenerSink(S.dataUnsubs);
   try{
@@ -580,74 +586,74 @@ export function startDataListeners(){
         notifyCoordinatorOfNewTimeChanges();
         if(isRealCoordinator()) migrateLegacyFamilySecrets();
         renderAll(); },
-      err=>{ S.familiesLoaded=true; setStatus(t('data.fout_bij_laden_gezinnen')+(err&&err.message||err), true); renderMyWeek(); });
+      err=>{ listenFailed("families", err); S.familiesLoaded=true; setStatus(t('data.fout_bij_laden_gezinnen')+(err&&err.message||err), true); renderMyWeek(); });
     db.collection("groups").onSnapshot(snap=>{ S.groupsLoaded=true; S.groups={}; snap.docs.forEach(d=>S.groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
-      err=>{ S.groupsLoaded=true; setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); renderMyWeek(); });
+      err=>{ listenFailed("groups", err); S.groupsLoaded=true; setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); renderMyWeek(); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) S.settings={...S.settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/planning", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{ S.periodCarsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/dayCoordinators", err); S.periodCarsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/notice").onSnapshot(snap=>{ S.notice = snap.exists? normalizeNotice(snap.data()) : null; renderNoticeBanner(); renderBeheer(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/notice", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/maintenance").onSnapshot(snap=>{ S.maintenance = snap.exists? normalizeMaintenance(snap.data()) : null; renderMaintenance(); renderBeheer(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/maintenance", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
     db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; applyPendingPushOpen(); renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/ritbeurs", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Push: every member reads the switches (test and live), so no queue entry is written while both are off and the parent's Push-meldingen row knows whether it shows.
     db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
-      err=>{});
+      err=>{ listenFailed("settings/push", err);});
     db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); renderMyWeek(); checkRitbeurs(); },
-      err=>{});
+      err=>{ listenFailed("offers", err);});
     db.collection("backupMoments").onSnapshot(snap=>{ S.moments={}; snap.docs.forEach(d=>S.moments[d.id]=d.data()); renderDeviationTab(); },
-      err=>{});
+      err=>{ listenFailed("backupMoments", err);});
     db.collection("periods").onSnapshot(snap=>{
       S.periodsLoaded=true; S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
       rebuildPeriods(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
-    }, err=>{ S.periodsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    }, err=>{ listenFailed("periods", err); S.periodsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // The first version stored ONE period in settings/period: still read, and moved into periods/ by the coordinator's app.
     db.doc("settings/period").onSnapshot(snap=>{
       S.legacyPeriod = snap.exists? storedPeriod(snap.data()) : null;
       rebuildPeriods(); migrateLegacyPeriod(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
-    }, err=>{});
+    }, err=>{ listenFailed("settings/period", err);});
     db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); renderBeheer(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("periodEntries", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.collection("periodCars").onSnapshot(snap=>{ S.periodCarsLoaded=true; S.periodCars={}; snap.docs.forEach(d=>S.periodCars[d.id]=d.data()); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("periodCars", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/prefs", err); setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
     db.doc("settings/priority").onSnapshot(snap=>{ S.shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus(t('data.fout_bij_laden_prioriteit')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/priority", err); setStatus(t('data.fout_bij_laden_prioriteit')+(err&&err.message||err), true); });
     db.collection("deviations").onSnapshot(snap=>{
       S.deviations={}; snap.docs.forEach(d=>S.deviations[d.id]=d.data());
       S.deviationsLoaded = true;
       purgeStaleDeviations();
       renderSchedule(); renderMyWeek(); renderDeviationTab();
-    }, err=>{ S.deviationsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_wijzigingen')+(err&&err.message||err), true); });
+    }, err=>{ listenFailed("deviations", err); S.deviationsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_wijzigingen')+(err&&err.message||err), true); });
     db.collection("matchCarpools").onSnapshot(snap=>{
       S.matchCarpools={}; snap.docs.forEach(d=>S.matchCarpools[d.id]=d.data());
       purgeStaleMatchCarpools();
       renderMatchesTab(); renderMyWeek();
-    }, err=>{});
+    }, err=>{ listenFailed("matchCarpools", err);});
     db.collection("practiceMatches").onSnapshot(snap=>{
       S.practiceMatches={}; snap.docs.forEach(d=>S.practiceMatches[d.id]=d.data());
       purgeStalePracticeMatches();
       renderMatchesTab(); renderMyWeek(); calculateMatchDistances(currentMatchList());
-    }, err=>{});
+    }, err=>{ listenFailed("practiceMatches", err);});
     db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ S.lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
-      err=>{});
+      err=>{ listenFailed("settings/lastUpdateRooster", err);});
     db.doc("settings/lastUpdateDeviation").onSnapshot(snap=>{ S.lastUpdateDeviation = snap.exists? snap.data() : null; renderDeviationTab(); renderMyWeek(); },
-      err=>{});
+      err=>{ listenFailed("settings/lastUpdateDeviation", err);});
     db.doc("settings/matchFeeds").onSnapshot(snap=>{
       S.matchFeeds = (snap.exists && snap.data().feeds) || [];
       S.matchFeedsLoaded = true;
       refreshMatchesIfStale();   // first member of the day fetches; also when the calendars in Beheer changed
       renderBeheer(); renderMyWeek(); renderDeviationTab();
-    }, err=>{});
+    }, err=>{ listenFailed("settings/matchFeeds", err);});
     db.doc("settings/locations").onSnapshot(snap=>{ S.locationsDoc = snap.exists? snap.data() : null; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{});
+      err=>{ listenFailed("settings/locations", err);});
     db.doc("settings/matchDistances").onSnapshot(snap=>{ S.matchDistances = snap.exists? (snap.data()||{}) : {}; S.matchDistancesLoaded = true; renderMyWeek(); renderMatchesTab(); calculateMatchDistances(currentMatchList()); },
-      err=>{});
+      err=>{ listenFailed("settings/matchDistances", err);});
     db.doc("settings/matchCache").onSnapshot(snap=>{
       if(snap.exists){
         const d=snap.data();
@@ -660,14 +666,14 @@ export function startDataListeners(){
       S.matchCacheLoaded = true;
       renderMyWeek(); renderMatchesTab();
       refreshMatchesIfStale();
-    }, err=>{ S.matchCacheLoaded = true; refreshMatchesIfStale(); });
+    }, err=>{ listenFailed("settings/matchCache", err); S.matchCacheLoaded = true; refreshMatchesIfStale(); });
     // API keys that must not sit in the public GitHub folder. Coordinator only (Firestore rules): for a parent this listener is refused and
     // S.orsApiKey stays empty, so a parent's browser never calculates distances; the daily server job does (cron/match-calendars.mjs).
     db.doc("settings/apiKeys").onSnapshot(snap=>{
       S.orsApiKey = snap.exists? String((snap.data()||{}).ors||'').trim() : '';
       renderBeheer(); renderMyWeek(); renderMatchesTab();
       calculateMatchDistances(currentMatchList());
-    }, err=>{});
+    }, err=>{ listenFailed("settings/apiKeys", err);});
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   finally{ db.setListenerSink(null); }
 }
