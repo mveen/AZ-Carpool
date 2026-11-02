@@ -2,7 +2,7 @@
 import { t } from './i18n.js';
 import { esc, foldHtml, hapticTap, locationsCfg, phIcon, renderLoadingIfNeeded, showToast, twoStepConfirm } from './ui-common.js';
 import { ATC_NAME, CITY_AFC, CITY_ATC, FREE_TEXT_MAX, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
-import { activeDeviation, computeRideDeparture, ownCarWarning, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, shownTime, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
+import { activeDeviation, computeRideDeparture, ownCarWarning, ownCarBrokenNames, driverNameHtml, effectiveCars, fam, famTime, girlName, isAvailable, isFlex, ovGirlsFor, seats, shownTime, sortFamEntriesByGirl, sortGirlIds, tripReserveIds, unplacedFor } from './rides.js';
 import { S } from './state.js';
 import { db, recordLastUpdate, saveDeviationCars } from './data.js';
 import { buildConclusieMessage, reserveAskText } from './message-texts.js';
@@ -273,6 +273,19 @@ function devRideHtml(day,direction,idx,cars,ctx){
   return `<div class="devRide carCard devCard${open?' open':''}${activeDeviation(day,direction)?' carCard--changed':''}" data-devcar="${key}">${head}${body}${toast}</div>`;
 }
 
+// "Eigen ouder rijdt mee" after a change that breaks it: a card that stays until the coordinator chooses. Zet terug puts the cars back as they were,
+// Toch zo laten keeps the plan on purpose (then a quiet line says so). Nothing blocks; the card goes away by itself when the rule holds again.
+export function ownCarCardHtml(day,direction,cars){
+  const st = S.devOwn && S.devOwn[`${day}|${direction}`];
+  const names = st && ownCarBrokenNames(direction, cars);
+  if(!names) return '';
+  if(st.kept) return `<p class="noteLine">${phIcon('warning')}<span>${esc(t('deviation.eigen_ouder_bewust',{p1:names}))}</span></p>`;
+  return `<div class="alertCard alertCard--stack" role="alert" data-devown="${day}|${direction}">
+    <div class="alertCard__top"><span class="alertCard__icon">${phIcon('warning')}</span><span class="alertCard__text">${esc(ownCarWarning(direction, cars))}</span></div>
+    <div class="actionBar"><button type="button" class="btn secondary" data-devownback="${day}|${direction}">${phIcon('arrow-counter-clockwise')} ${esc(t('deviation.eigen_ouder_zet_terug'))}</button><button type="button" class="btn" data-devownkeep="${day}|${direction}">${esc(t('deviation.eigen_ouder_laten'))}</button></div>
+  </div>`;
+}
+
 export function renderDevDirection(day,direction){
   const cars = effectiveCars(day,direction);
   const dev = activeDeviation(day,direction);
@@ -299,7 +312,7 @@ export function renderDevDirection(day,direction){
 
   const focus = !!(S.deviationIntent && S.deviationIntent.some(c=>c.day===day && c.direction===direction));
   return `<div class="devDir${focus?' devFocus':''}">
-    ${devDirHeader(direction,cars)}
+    ${devDirHeader(direction,cars)}${ownCarCardHtml(day,direction,cars)}
     ${cardsHtml}
     ${backupHtml(day,direction,cars)}
     ${unplacedHtml}${notRidingHtml}
@@ -312,13 +325,27 @@ export function renderDevDirection(day,direction){
 const snapshotCars = (day,direction)=>effectiveCars(day,direction).map(c=>({...c, girlIds:[...(c.girlIds||[])]}));
 export async function saveWithUndo(day,direction,prev,cars,text){
   const ok = await saveDeviationCars(day,direction,cars);
-  const warning = ok? ownCarWarning(direction, cars) : '';   // soft: the change is saved, the warning replaces the confirmation text, "Ongedaan" stays
-  if(ok) showToast(warning || text, { ...(warning? {icon:'warning'} : {}), action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) showToast(t('deviation.hersteld')); } } });
+  const warning = ok? ownCarWarning(direction, cars) : '';   // soft: the change is saved; the warning stays in a card with "Zet terug" and "Toch zo laten" until the coordinator chooses
+  if(ok){
+    const key = `${day}|${direction}`;
+    if(warning) S.devOwn[key] = { prev, kept:false }; else delete S.devOwn[key];
+    showToast(text, { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) { delete S.devOwn[key]; showToast(t('deviation.hersteld')); } } } });
+    if(warning) renderDeviationTab();
+  }
   return ok;
 }
 
 export function attachDeviationHandlers(){
  try{
+  document.querySelectorAll('[data-devownback]').forEach(b=>b.onclick=async ()=>{
+    const key=b.dataset.devownback, [day,direction]=key.split('|'), st=S.devOwn[key]; if(!st) return;
+    hapticTap();
+    if(await saveDeviationCars(day,direction,st.prev,{skipGate:true})){ delete S.devOwn[key]; showToast(t('deviation.hersteld')); renderDeviationTab(); }
+  });
+  document.querySelectorAll('[data-devownkeep]').forEach(b=>b.onclick=()=>{
+    const key=b.dataset.devownkeep; if(!S.devOwn[key]) return;
+    hapticTap(); S.devOwn[key].kept=true; renderDeviationTab();
+  });
   document.querySelectorAll('.devDriverSel').forEach(sel=>sel.onchange=async ()=>{
     const {day,direction,caridx}=sel.dataset; const idx=+caridx;
     const prev=snapshotCars(day,direction);
@@ -398,10 +425,10 @@ export function attachDeviationHandlers(){
     cars[toIdx]={...cars[toIdx], girlIds:newTo, departureTime: computeRideDeparture(day,direction,newTo)};
     const ok = await saveDeviationCars(day,direction,cars);
     if(ok){
+      const ownKey = `${day}|${direction}`;
+      if(ownCarWarning(direction, cars)) S.devOwn[ownKey] = { prev, kept:false }; else delete S.devOwn[ownKey];
       afterChange(day,direction,fromIdx,prev, girlName(girl)+t('deviation.verplaatst'));
       if(overfull) showToast(t('deviation.deze_auto_zit_nu_vol', { p1: newTo.length, p2: toSeatsAvail }), {icon:'warning'});
-      const ownWarning = ownCarWarning(direction, cars);
-      if(ownWarning) showToast(ownWarning, {icon:'warning'});
     }
   });
   // Remove a whole car (one-off, this shift only). An empty car goes at once (with "Ongedaan"); a car with passengers asks a second tap first,

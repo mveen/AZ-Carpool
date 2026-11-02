@@ -354,6 +354,7 @@ test('the day coordinator article explains the flow: Verzoeken verwerken, the th
   assert.match(s, /in Mijn week: Advies bekijken en aanpassen/); assert.match(s, /waar niets verandert staat er ook bij, met Geen wijzigingen nodig/); assert.match(s, /Verzoeken verwerken/); assert.match(s, /Aanvragen/); assert.match(s, /Alternatief/); assert.match(s, /Controleren/); assert.match(s, /Doorvoeren/); assert.match(s, /terugdraaien/); assert.match(s, /Dagbericht/); assert.doesNotMatch(s, /Zelf indelen onder aan stap 1/); assert.match(s, /stap 2 bij Heen of Terug op Aanpassen/); assert.doesNotMatch(s, /Zuinigst|Minste gedoe|Overnemen/);
 });
 
+test('Rooster help: the link Carpooldag aanpassen is under the day for every role (v231)', () => { assert.match(allText(findArticle('wijzigen')), /voor iedereen de link Carpooldag aanpassen/); });
 test('the day coordinator article explains Zelf indelen, Toch zelf wijzigen with the warning and Zelf gewijzigd', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
   assert.match(s, /Zelf indelen/); assert.match(s, /Carpooldag aanpassen/); assert.doesNotMatch(s, /Toch zelf wijzigen/); assert.match(s, /waarschuwing/); assert.match(s, /Zelf gewijzigd/);

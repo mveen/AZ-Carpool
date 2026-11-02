@@ -83,7 +83,7 @@ await testAsync('two requests are counted together; with none waiting there is n
   assert.match(text(rooster()), /2 aanvragen voor donderdag/); assert.equal(weekroosterActionCount(), 2);
   await asDecider(); S.dayRequests = { '2026-W40_Do_f4': S.dayRequests['2026-W40_Do_f4'] };
   const html = rooster(); assert.doesNotMatch(html, /id="wrAlert"/); assert.match(html, /id="wrLog"/); assert.equal(weekroosterActionCount(), 0);
-  assert.doesNotMatch(html, /coordLine/); assert.doesNotMatch(html, /data-wredit="Do"/, 'no link Zelf indelen at the bottom of the day');
+  assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wroverride="Do"/, 'the link Carpooldag aanpassen is at the bottom of the day for every role');
 });
 await testAsync('there is no line about the day coordinator above the day, and the cars show the direction as a mark (no Heen/Terug titles)', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f2': doc('Do', 'f2', { heen: '07:30', terug: '16:00' }) });
@@ -167,7 +167,7 @@ await testAsync('the entry card has the button "Verzoeken verwerken" for the day
   await asDecider(); const html = rooster();
   assert.match(html, /class="entryCard [^"]*"[^>]*id="wrAlert"/); assert.match(html, /data-wradvice="Do"/); assert.match(text(html), /Verzoeken verwerken/);
   assert.doesNotMatch(html, /devAlert/);
-  assert.doesNotMatch(html, /coordLine/); assert.doesNotMatch(html, /data-wredit="Do"/);   // the flow is the way in; there is no link at the bottom
+  assert.doesNotMatch(html, /coordLine/); assert.match(html, /data-wroverride="Do"/);   // the day can always be arranged by hand: the link at the bottom stays next to the flow
 });
 await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the log of the day coordinator with the neutral tag Zelf gewijzigd', async () => {
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };

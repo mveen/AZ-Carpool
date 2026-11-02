@@ -717,6 +717,8 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .carCard__edit select,.carCard__edit input{margin:0}
 .alertCard__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-2) 0;border-top:1px solid var(--warn-edge);font:var(--type-small)}
 .alertCard--stack .alertCard__text{flex:none}
+.alertCard__top{display:flex;align-items:flex-start;gap:var(--space-4);min-width:0}
+.alertCard__top .alertCard__text{flex:1 1 0;min-width:0;overflow-wrap:anywhere}
 /* Mijn week, design B: an open request sits in the card of its day (dashed amber block, compact); next week is one block with columns. */
 .reqBlock{margin:0 0 var(--space-4);padding:var(--space-4) var(--space-5) 0;border:1px dashed var(--warn-edge);border-radius:var(--radius-panel);background:var(--warn-soft)}
 .reqBlock__head{display:flex;align-items:center;gap:var(--space-3);font-size:18px;color:var(--warn-ink)}

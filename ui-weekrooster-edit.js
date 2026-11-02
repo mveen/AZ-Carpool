@@ -67,11 +67,11 @@ export function scheduleEditHtml() {
     <div class="actionBar">${hasAdvice(day) ? `<button type="button" class="btn secondary" id="wrEditAdvice">${esc(t('weekrooster.advice.look'))}</button>` : ''}<button type="button" class="btn" id="wrEditDone">${esc(t('deviation.klaar'))}</button></div></div>`;
 }
 
-// Under the day in Rooster "Deze week": nothing for who plans the day (no "Zelf indelen" link any more), the small link "Toch zelf wijzigen" for everybody else.
+// Under the day in Rooster "Deze week": the small link "Carpooldag aanpassen" for EVERY role (v231; without a request the day coordinator had no way in).
+// Who plans the day goes straight into the editor; everybody else gets the warning "Dagcoördinator beslist" first (openDayEditor decides).
 // (There is no line about the day coordinator above the day any more: with requests waiting the card says who decides.)
 export function scheduleDayFootHtml(day) {
   if (!weekroosterActive() || S.wrEdit) return '';
-  if (mayPlanDay(day)) return '';   // who plans the day starts from Regelen, the pencil of the own car or Tijden wijzigen in Mijn week
   return `<button type="button" class="linkbtn" data-wroverride="${day}">${esc(t('weekrooster.edit.override_link'))}</button>`;
 }
 

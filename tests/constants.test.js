@@ -112,6 +112,7 @@ test('the caret icons for folding exist', () => { for (const k of ['caret-up', '
 test('APP_VERSION looks like the cache name of the service worker: v and a number', () => { assert.match(APP_VERSION, /^v\d+$/); });
 
 test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 155); });
+test('APP_VERSION is at least v231 (the link Carpooldag aanpassen shows for every role)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 231); });
 
 test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 156); });
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });

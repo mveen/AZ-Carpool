@@ -148,6 +148,7 @@ export const S = {
   devKid: null,            // Wijzigen: the child whose options (move / remove) are open: 'Ma|heen|0|<girlId>'
   devPick: {},             // Wijzigen: ride cards whose "+ Passagier toevoegen" list is open, by 'Ma|heen|0'
   devFree: {},             // Wijzigen: ride cards whose free place input was asked for ("Ander adres") before anything is typed
+  devOwn: {},              // Wijzigen / Zelf indelen: the warning 'Eigen ouder rijdt mee' after a change, by 'Ma|terug': { prev: cars before the change, kept: true after 'Toch zo laten' }
   devUndo: null,           // Wijzigen: the last change that can be undone { key, text, day, direction, cars }
   deviationDay: null,
   weekschemaBase: null,   // Mijn gezin: Weekschema as saved, while an edit waits for confirmation

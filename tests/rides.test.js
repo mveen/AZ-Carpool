@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import {
   fam, seats, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
-  planOptions, ownCarWarning, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
+  planOptions, ownCarWarning, ownCarBrokenNames, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
   baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
   shownTime, setAskedTimeOf, periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
@@ -505,6 +505,12 @@ test('rides.js escapes with escape.js and does not import any screen code (the s
   assert.match(src, /from '\.\/escape\.js'/); assert.doesNotMatch(src, /from '\.\/ui-/);
 });
 console.log('\n=== ownCarWarning: the soft warning for manual choices ===');
+test('ownCarBrokenNames gives the daughters of a broken rule, empty when it holds (the card Zet terug / Toch zo laten uses it)', () => {
+  const st = state({ prefs: { rules: [ownRule('f2')] } });
+  assert.equal(ownCarBrokenNames('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), 'Jahaimy');
+  assert.equal(ownCarBrokenNames('terug', [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'] }], st), '');
+  assert.equal(ownCarBrokenNames('heen', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), '', 'the rule is for terug only');
+});
 test('ownCarWarning names the daughter who sits in another car than her driving parent; nothing when the rule holds', () => {
   const st = state({ prefs: { rules: [ownRule('f2')] } });
   assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), 'Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto (regel Eigen ouder rijdt mee).');
