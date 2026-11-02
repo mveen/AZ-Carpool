@@ -218,6 +218,28 @@ await testAsync('Alternatief shows the cars with the riders who move: where they
   assert.match(s, /Komen uit Jan Jansen Anouk en Eline 08:30 0 min/);   // equal outcomes on one line
   assert.match(s, /Waarom 07:30: Lois vroeg 09:00\./);
 });
+const ASKS_TERUG = { 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '09:00', terug: '19:00' }) };   // a request for terug too, so the flow has a terug direction to change
+const OWN = { prefs: { rules: [{ type: 'ownCar', girlId: 'f1', direction: 'terug' }] } };
+const OWN_EDIT = { terug: [{ driverFamilyId: 'f1', girlIds: ['f3'], departureTime: '17:00' }, { driverFamilyId: 'f2', girlIds: ['f1', 'f4'], departureTime: '18:00' }] };
+await testAsync('Eigen ouder rijdt mee: a change by hand against the rule shows a card with Zet terug and Toch zo laten; the advice itself shows none', async () => {
+  await setup(ASKS_TERUG, OWN); S.wrAdvice = { day: 'Do', step: 'plan' };
+  assert.doesNotMatch(view(), /data-wrown=/, 'the advice keeps the rule');
+  S.wrAdvice = { day: 'Do', step: 'plan', edits: OWN_EDIT };
+  const html = view(); assert.match(html, /data-wrown="terug"/); assert.match(text(html), /Let op: de eigen ouder rijdt, maar .* zit in een andere auto/); assert.match(text(html), /Zet terug/); assert.match(text(html), /Toch zo laten/);
+  assert.doesNotMatch(html, /data-wrown="heen"/);
+});
+await testAsync('Toch zo laten keeps the plan on purpose: a quiet line (and a chip in Controleren), no buttons', async () => {
+  await setup(ASKS_TERUG, OWN); S.wrAdvice = { day: 'Do', step: 'plan', edits: OWN_EDIT };
+  wired(view()).querySelectorAll('[data-wrownkeep]')[0].onclick();
+  assert.equal(S.wrAdvice.ownKept.terug, true); assert.deepEqual(S.wrAdvice.edits, OWN_EDIT, 'the plan is not touched');
+  const html = view(); assert.doesNotMatch(html, /data-wrownback|data-wrownkeep/); assert.match(text(html), /Bewust ingedeeld tegen de regel/);
+  S.wrAdvice.step = 'check'; assert.match(text(view()), /Tegen de regel: .* zit niet bij de eigen ouder/);
+});
+await testAsync('Zet terug takes the changes of that direction back to the advice, the card is gone', async () => {
+  await setup(ASKS_TERUG, OWN); S.wrAdvice = { day: 'Do', step: 'plan', edits: OWN_EDIT };
+  wired(view()).querySelectorAll('[data-wrownback]')[0].onclick();
+  assert.equal(S.wrAdvice.edits.terug, undefined); assert.doesNotMatch(view(), /data-wrown=|Bewust ingedeeld/);
+});
 await testAsync('Aanpassen per richting: the fields come inside the car cards (time and driver side by side), Klaar closes them', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };
   let html = view(); assert.doesNotMatch(html, /data-adj=|carCard--editing/);

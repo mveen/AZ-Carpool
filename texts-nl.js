@@ -53,6 +53,7 @@ export default {
   "beheer.eigen_ouder": "Eigen ouder rijdt mee",
   "beheer.eigen_ouder_uitleg": "(terug: rijdt de ouder, dan zit haar dochter altijd in die auto en nooit in een andere):",
   "beheer.eigen_ouder_regel": "Eigen ouder rijdt mee (terug): {p1}",
+  "weekrooster.flow.chipOwn": "Tegen de regel: {p1} zit niet bij de eigen ouder",
   "deviation.eigen_ouder_zet_terug": "Zet terug",
   "deviation.eigen_ouder_laten": "Toch zo laten",
   "deviation.eigen_ouder_bewust": "Bewust ingedeeld tegen de regel: {p1} zit niet bij haar eigen ouder.",

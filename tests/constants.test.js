@@ -113,6 +113,7 @@ test('APP_VERSION looks like the cache name of the service worker: v and a numbe
 
 test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 155); });
 test('APP_VERSION is at least v231 (the link Carpooldag aanpassen shows for every role)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 231); });
+test('APP_VERSION is at least v232 (Eigen ouder rijdt mee: the warning card also in the Advies flow)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 232); });
 
 test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 156); });
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });

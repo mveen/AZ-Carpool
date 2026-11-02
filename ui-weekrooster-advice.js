@@ -268,6 +268,19 @@ function quietSceneHtml(dir, cars) {
     <div class="scene__note">${phIcon('info')}<span>${esc(t('weekrooster.flow.notice0'))}</span></div>`}</section>`;
 }
 
+// "Eigen ouder rijdt mee" (terug) broken by a change by hand: a card that stays until the day coordinator chooses. Zet terug takes the changes of this
+// direction back to the advice, Toch zo laten keeps the plan on purpose (then a quiet line). Nothing blocks.
+export function ownCardHtml(dir, stats, f) {
+  const p = stats.problems.find(x => x.key === 'own' && x.dir === dir);
+  if (!p) return '';
+  const names = sortGirlIds(p.ids).map(rawGirl).join(' & ');
+  if (f.ownKept && f.ownKept[dir]) return `<p class="noteLine">${phIcon('warning')}<span>${esc(t('deviation.eigen_ouder_bewust', { p1: names }))}</span></p>`;
+  return `<div class="alertCard alertCard--stack" role="alert" data-wrown="${dir}">
+    <div class="alertCard__top"><span class="alertCard__icon">${phIcon('warning')}</span><span class="alertCard__text">${esc(t('beheer.eigen_ouder_waarschuwing', { p1: names }))}</span></div>
+    <div class="actionBar"><button type="button" class="btn secondary" data-wrownback="${dir}">${phIcon('arrow-counter-clockwise')} ${esc(t('deviation.eigen_ouder_zet_terug'))}</button><button type="button" class="btn" data-wrownkeep="${dir}">${esc(t('deviation.eigen_ouder_laten'))}</button></div>
+  </div>`;
+}
+
 function planStep(adv, f, plan, stats) {
   const hasAlt = !plan.fallback && Object.values(adv.directions).some(d => d.keep && d.keep.alt);
   // The subtitle is what the choice costs, worked out per variant (never a fixed claim).
@@ -279,7 +292,7 @@ function planStep(adv, f, plan, stats) {
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
   return {
     body: `<div class="flowStack">${seg}${plan.fallback ? '' : whyLine()}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
-      ${dayDirs(f, plan).map(x => (x.changed ? sceneHtml(x.dir, adv, plan, stats, f.editDir) : quietSceneHtml(x.dir, x.cars))).join('')}
+      ${dayDirs(f, plan).map(x => (x.changed ? sceneHtml(x.dir, adv, plan, stats, f.editDir) + ownCardHtml(x.dir, stats, f) : quietSceneHtml(x.dir, x.cars))).join('')}
       ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
       ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(rawGirl).join(', ') }))}</div>` : ''}</div>`,
     foot: `<button type="button" class="btn" id="wrToCheck"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.toCheck'))}${phIcon('arrow-right')}</button>
@@ -305,6 +318,7 @@ function checkStep(adv, f, plan, stats) {
     chip(!swapped, t(swapped ? 'weekrooster.flow.chipSwap' : 'weekrooster.flow.chipNoSwap')),
     chip(!bad('seats'), t(bad('seats') ? 'weekrooster.flow.chipSeatsBad' : 'weekrooster.flow.chipSeatsOk')),
     ...(bad('unplaced') ? [chip(false, t('weekrooster.flow.chipUnplaced'))] : []),
+    ...stats.problems.filter(x => x.key === 'own').map(x => chip(false, t('weekrooster.flow.chipOwn', { p1: sortGirlIds(x.ids).map(rawGirl).join(' & ') }))),
     ...DIRS.filter(dir => stats.problems.some(p => p.key === 'late' && p.dir === dir)).map(dir => chip(false, t(lateKey(dir, 'weekrooster.flow.chipLate')))),
   ].join('');
   const notice = stats.familiesChanged.length ? `<div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.noticeSee', { p1: stats.familiesChanged.map(rawParent).join(', ') }))}</span></div>` : '';
@@ -576,7 +590,13 @@ export function wireAdviceEntry(box) {
   box.querySelectorAll('[data-wradvice]').forEach(b => b.onclick = () => { hapticTap(); S.wrAdvice = fresh(b.dataset.wradvice); S.wrDone = null; renderSchedule(); });
 }
 export function wireAdvice(box) {
-  box.querySelectorAll('[data-wrvariant]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); f.variant = b.dataset.wrvariant; f.edits = {}; renderSchedule(); });
+  box.querySelectorAll('[data-wrvariant]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); f.variant = b.dataset.wrvariant; f.edits = {}; f.ownKept = {}; renderSchedule(); });
+  box.querySelectorAll('[data-wrownback]').forEach(b => b.onclick = () => {
+    hapticTap(); const f = flowState(), dir = b.dataset.wrownback, e = { ...f.edits };
+    delete e[dir]; e.off = { ...e.off, [dir]: [] }; e.add = { ...e.add, [dir]: {} };
+    f.edits = e; f.ownKept = { ...f.ownKept, [dir]: false }; renderSchedule();
+  });
+  box.querySelectorAll('[data-wrownkeep]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); f.ownKept = { ...f.ownKept, [b.dataset.wrownkeep]: true }; renderSchedule(); });
   box.querySelectorAll('[data-wrgirl]').forEach(b => b.onclick = () => { hapticTap(); const [dir, id] = b.dataset.wrgirl.split('|'); openGirlSheet(dir, id); });
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
   on('wrNav', () => { hapticTap(); navBack(); });
