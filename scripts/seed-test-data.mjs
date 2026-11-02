@@ -6,8 +6,8 @@
 //     maintenance switch (see DROP_*): the test browsers link again with the new codes.
 // --fixed-code familyId=CODE (repeatable) keeps a family's code the same at every refresh, for the automatic smoke test.
 // --planning: a PARTIAL refresh instead of a reset. Only the planning of the live app is copied over the test database; the test users stay as they are
-//   (families' phone numbers, invite codes, links, sessions, notifications, config/coordinator are not touched, nobody has to log in again):
-//   replaced: groups (shifts), deviations, weekRequests, periods*, offers, matchCarpools, practiceMatches and every settings/ document that is not in DROP_SETTINGS;
+//   (families' phone numbers, invite codes, links, sessions, config/coordinator are not touched, nobody has to log in again; the old inbox notifications of the test families ARE removed, because they belong to the old test planning and live notifications are never copied):
+//   replaced: groups (shifts), deviations, weekRequests, periods*, offers, matchCarpools, practiceMatches, backupMoments ("ik kan inspringen") and every settings/ document that is not in DROP_SETTINGS;
 //   per family only the fields in FAMILY_PLAN_FIELDS (availability, daughter's times, time changes); a family that is not in the test database is reported, not created.
 // Without --write nothing is written and no key is needed (dry run: only the report). It writes ONLY to the project az-carpool-test: the key file must belong to
 // that project, and the project id is fixed in this file. The back-up and the key file stay on your computer (folder backups/ is in .gitignore).
@@ -90,7 +90,7 @@ export function checkFixedCodes(fixedCodes, familyIds, oldCodes = new Set()) {
 }
 
 // --planning mode: what is replaced as a whole, and which fields of a family are updated.
-export const PLAN_COLLECTIONS = ['groups', 'deviations', 'weekRequests', 'periods', 'periodEntries', 'periodCars', 'periodBackups', 'offers', 'matchCarpools', 'practiceMatches'];
+export const PLAN_COLLECTIONS = ['groups', 'deviations', 'weekRequests', 'periods', 'periodEntries', 'periodCars', 'periodBackups', 'offers', 'matchCarpools', 'practiceMatches', 'backupMoments'];
 export const FAMILY_PLAN_FIELDS = ['availability', 'schedule', 'timeChanges'];
 
 export function transformBackup(rows, { phone = TEST_PHONE, makeCode = randomCode, fixedCodes = {} } = {}) {
@@ -175,23 +175,38 @@ export async function seed({ fs, docs }) {
   return { deleted: existing.length, written: docs.length };
 }
 
+// families/<id>/notifications/<id>: the inbox of a family (never copied from live, so in the test database they can only be old test ones).
+const isNotification = parts => parts.length === 4 && parts[0] === 'families' && parts[2] === 'notifications';
+
 // Partial refresh of the test database: replaces the planning, updates some fields per family, touches nothing else. Returns what happened.
 export async function seedPlanning({ fs, plan }) {
-  const existing = [];
-  for await (const x of fs.walk()) if (!x.missing && PLAN_COLLECTIONS.includes(x.path.split('/')[0]) && x.path.split('/').length === 2) existing.push(x.path);
+  const existing = [], oldNotifications = [];
+  for await (const x of fs.walk()) {
+    if (x.missing) continue;
+    const parts = x.path.split('/');
+    if (PLAN_COLLECTIONS.includes(parts[0]) && parts.length === 2) existing.push(x.path);
+    else if (isNotification(parts)) oldNotifications.push(x.path);
+  }
   await pool(existing, p => fs.deleteDocument(p));
+  await pool(oldNotifications, p => fs.deleteDocument(p));
   await pool(plan.replace, d => fs.setDocument(d.path, d.data));
   const updated = [], missing = [];
   for (const f of plan.families) {
     if (!Object.keys(f.fields).length) continue;
     ((await fs.commit([{ update: f.path, fields: f.fields }])) ? updated : missing).push(f.path.split('/')[1]);
   }
-  const after = [];
-  for await (const x of fs.walk()) if (!x.missing && PLAN_COLLECTIONS.includes(x.path.split('/')[0]) && x.path.split('/').length === 2) after.push(x.path);
+  const after = [], notificationsLeft = [];
+  for await (const x of fs.walk()) {
+    if (x.missing) continue;
+    const parts = x.path.split('/');
+    if (PLAN_COLLECTIONS.includes(parts[0]) && parts.length === 2) after.push(x.path);
+    else if (isNotification(parts)) notificationsLeft.push(x.path);
+  }
+  if (notificationsLeft.length) throw new Error(`After writing, ${notificationsLeft.length} old notifications are still in the test database.`);
   const sortedAfter = [...after].sort();
   const want = plan.replace.filter(d => PLAN_COLLECTIONS.includes(d.path.split('/')[0])).map(d => d.path).sort();
   if (want.length !== after.length || want.some((p, i) => p !== sortedAfter[i])) throw new Error(`After writing, the planning in the test database is not what was expected (${want.length} expected, ${after.length} found).`);
-  return { deleted: existing.length, written: plan.replace.length, updated, missing };
+  return { deleted: existing.length, notificationsRemoved: oldNotifications.length, written: plan.replace.length, updated, missing };
 }
 
 async function main() {
@@ -221,13 +236,13 @@ async function mainPlanning({ res, write, account }) {
   const plan = planningFromCopy(res);
   console.log(`Planning-only refresh: ${plan.replace.length} documents replace the planning in the test database, ${plan.families.length} families get their availability, times and time changes updated.`);
   console.log('Replaced per collection:', Object.entries(plan.counts).map(([k, v]) => `${k} ${v}`).join(', '));
-  console.log('Not touched: phone numbers, invite codes, links, sessions, notifications, config/coordinator, history. Left out of live: ' + (Object.keys(plan.dropped).join('; ') || 'nothing'));
+  console.log('Removed from test: the old inbox notifications of the families (they belong to the old test planning). Not touched: phone numbers, invite codes, links, sessions, config/coordinator, history. Left out of live: ' + (Object.keys(plan.dropped).join('; ') || 'nothing'));
   if (plan.leaks.length) { console.error('\nSTOP: the copy still holds things that must not be copied:\n  ' + plan.leaks.join('\n  ')); process.exit(1); }
   console.log('Check: no old code, token, key or other phone number is left in the copy.');
   if (!write) { console.log('\nDry run: nothing was written. Add --key backups/test-key.json --write to apply it.'); return; }
   const fs = createFirestore({ projectId: TEST_PROJECT, getToken: tokenProvider({ account }) });
   const r = await seedPlanning({ fs, plan });
-  console.log(`\nDone: ${r.deleted} old planning documents removed, ${r.written} written, ${r.updated.length} families updated.`);
+  console.log(`\nDone: ${r.deleted} old planning documents and ${r.notificationsRemoved} old notifications removed, ${r.written} written, ${r.updated.length} families updated.`);
   if (r.missing.length) console.log(`Families in live but not in the test database (skipped): ${r.missing.join(', ')}`);
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main().catch(e => { console.error(e.message); process.exit(1); });

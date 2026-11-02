@@ -35,6 +35,11 @@ test('every design token role used by DESIGN.md exists in light and dark where i
   const dark = tokens.slice(tokens.indexOf('[data-theme="dark"]{'), tokens.indexOf('/* ---------- DEPRECATED'));
   for (const v of ['--surface-page', '--surface-card', '--text-1', '--action-bg', '--accent-ink', '--ok-ink', '--warn-ink', '--warn-edge', '--match-ink']) assert.match(dark, new RegExp(v + ':'), v + ' has no dark value');
 });
+test('the own-daughter chip is grey with a green dot, not red (red reads as an alarm)', () => {
+  const mine = components.match(/\.chip--mine\{[^}]*\}/)[0];
+  assert.doesNotMatch(mine, /accent/);
+  assert.match(components, /\.chip--mine::before\{[^}]*background:var\(--ok\)/);
+});
 test('primary buttons are ink, never red', () => {
   assert.match(components, /button\.btn,\.btn\{[^}]*background:var\(--action-bg\)/);
   assert.match(tokens, /--action-bg:var\(--ink-900\)/);

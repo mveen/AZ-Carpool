@@ -27,8 +27,9 @@ export function phoneText(p){
 }
 
 // A name as a button that opens the contact sheet. `askText` (optional) is put in the WhatsApp message.
-export function contactButtonHtml(familyId, nameHtml, askText, cls){
-  return `<button type="button" class="${cls || 'nameLink'}" data-contact="${esc(familyId)}"${askText ? ` data-contact-text="${esc(askText)}"` : ''}>${nameHtml}</button>`;
+// `label` (optional): aria-label for a button that holds only an icon (the round phone button of a ride).
+export function contactButtonHtml(familyId, nameHtml, askText, cls, label){
+  return `<button type="button" class="${cls || 'nameLink'}" data-contact="${esc(familyId)}"${askText ? ` data-contact-text="${esc(askText)}"` : ''}${label ? ` aria-label="${esc(label)}"` : ''}>${nameHtml}</button>`;
 }
 
 export function openContactSheet(familyId, askText){

@@ -63,14 +63,13 @@ await test('loading and error: a short text, no switch', () => {
   S.pushMe.status = 'idle'; assert.match(pushMeInnerHtml(), /Even laden/);
   S.pushMe.status = 'error'; assert.match(text(pushMeInnerHtml()), /Laden is niet gelukt/); assert.doesNotMatch(pushMeInnerHtml(), /pushMeOn/);
 });
-await test('off, in a browser that can do push: what it is for, a switch that is off, the quiet hours of the family and the privacy line', () => withBrowser({}, () => {
+await test('off, in a browser that can do push: what it is for, a switch that is off, no quiet hours and the privacy line', () => withBrowser({}, () => {
   parent(); ready();
   const html = pushMeInnerHtml(), s = text(html);
-  assert.match(s, /Krijg een melding op deze telefoon als er bij Ritten ruilen iets voor jouw gezin is/); assert.match(s, /een rit komt vrij waar jij back-up voor bent/);
+  assert.match(s, /Krijg een melding op deze telefoon als er bij Ruilen iets voor jouw gezin is/); assert.match(s, /een rit komt vrij waar jij back-up voor bent/);
   assert.match(html, /<input type="checkbox" role="switch" class="switch" id="pushMeOn">/); assert.doesNotMatch(html, /pushMeOn" checked/); assert.doesNotMatch(html, /disabled/);
-  assert.match(s, /Stille uren: van 22:00 tot 06:00/); assert.match(s, /Dit geldt alleen voor deze telefoon/);
+  assert.doesNotMatch(s, /Stille uren/); assert.match(s, /Dit geldt alleen voor deze telefoon/);
   assert.match(s, /push-adres van deze telefoon.*Google, Mozilla of Apple.*niet wat erin staat/); assert.doesNotMatch(html, /style=/);
-  S.families.f2.ritbeursQuiet = { from: '21:30', to: '07:00' }; assert.match(text(pushMeInnerHtml()), /van 21:30 tot 07:00/);
   expectSnapshot('ui-push-device', 'sheet, off', html);
 }));
 await test('on: the switch is on and can be turned off, also when the server key is missing', () => withBrowser({ permission: 'granted' }, () => {

@@ -8,7 +8,6 @@ export const DEADLINE_HOUR = 18;          // a ride must be arranged before 18:0
 export const SOON_HOURS = 24;             // within this many hours of the deadline a ride is "soon"
 export const CONFLICT_MINUTES = 90;       // another ride of the taker this close to the offered ride is a conflict (a warning, not a block)
 export const NOTIFICATION_DAYS = 14;      // how long a notification is kept
-export const DEFAULT_QUIET = { from: '22:00', to: '06:00' };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -31,8 +30,21 @@ export function isIsoDate(v){
 export function toMin(v){ return isTime(v) ? (+v.slice(0, 2)) * 60 + (+v.slice(3, 5)) : null; }
 
 // One line of plain text, at most RITBEURS_MESSAGE_MAX characters. Never HTML: the UI escapes it again when it shows it.
+// The first letter is always a capital (the phone keyboard does not always do it).
+export function capFirst(s){ return String(s == null ? '' : s).replace(/^(\s*)(\p{Ll})/u, (m, sp, c) => sp + c.toUpperCase()); }
 export function cleanMessage(s){
-  return String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, RITBEURS_MESSAGE_MAX).trim();
+  return capFirst(String(s == null ? '' : s).replace(/\s+/g, ' ').trim().slice(0, RITBEURS_MESSAGE_MAX).trim());
+}
+// While typing in the message field: a lower-case first letter turns into a capital at once (the cursor stays where it was).
+export function keepCapital(input){
+  if(!input) return;
+  input.oninput = () => {
+    const v = input.value, c = capFirst(v);
+    if(c === v) return;
+    const p = input.selectionStart;
+    input.value = c;
+    try{ input.setSelectionRange(p, p); }catch(e){ /* a field that cannot place the cursor keeps the browser default */ }
+  };
 }
 
 // Start of a ride as a moment (ms); a ride without a valid time counts as the end of that day, so it stays visible all day.
@@ -58,26 +70,6 @@ export function urgency(dateIso, nowMs){
   return dl - nowMs <= SOON_HOURS * 3600 * 1000 ? 'soon' : 'ok';
 }
 
-// ---------- quiet hours (instelbaar, standaard 22:00-06:00) ----------
-export function normalizeQuiet(raw){
-  const r = raw && typeof raw === 'object' ? raw : {};
-  return { from: isTime(r.from) ? r.from : DEFAULT_QUIET.from, to: isTime(r.to) ? r.to : DEFAULT_QUIET.to };
-}
-export function inQuiet(minutes, quiet){
-  const q = normalizeQuiet(quiet), f = toMin(q.from), e = toMin(q.to);
-  if(f === e) return false;                                   // same start and end: no quiet hours
-  return f < e ? (minutes >= f && minutes < e) : (minutes >= f || minutes < e);
-}
-// When a notification for someone with these quiet hours may be delivered (by a push sender, later): now, or when the quiet hours end.
-export function deliverAtMs(nowMs, quiet){
-  const q = normalizeQuiet(quiet), d = new Date(nowMs);
-  if(!inQuiet(d.getHours() * 60 + d.getMinutes(), q)) return nowMs;
-  const end = toMin(q.to), t = new Date(nowMs);
-  t.setHours(Math.floor(end / 60), end % 60, 0, 0);
-  if(t.getTime() <= nowMs) t.setDate(t.getDate() + 1);
-  return t.getTime();
-}
-
 // ---------- offers ----------
 export function offerId({ weekKey, day, direction, familyId, nowMs }){ return `${weekKey}_${day}_${direction}_${familyId}_${nowMs}`; }
 
@@ -95,6 +87,12 @@ export function openOffers(offers, weekKey, nowMs){
 // Is this ride already on offer (so it cannot be offered twice)?
 export function hasOpenOffer(offers, weekKey, day, direction, familyId){
   return Object.values(offers || {}).some(o => o && o.status === 'open' && o.weekKey === weekKey && o.day === day && o.direction === direction && o.offeredBy === familyId);
+}
+
+// The open offer of this family on this ride: { id, ...offer }, or null. (hasOpenOffer says yes/no; the menu needs the id to withdraw it.)
+export function openOfferOf(offers, weekKey, day, direction, familyId){
+  const hit = Object.entries(offers || {}).find(([, o]) => o && o.status === 'open' && o.weekKey === weekKey && o.day === day && o.direction === direction && o.offeredBy === familyId);
+  return hit ? { id: hit[0], ...hit[1] } : null;
 }
 
 // The car an offer is about: the car of that shift driven by the offering family (the one with the same time when there are several).
@@ -169,13 +167,13 @@ export function ridersToWarn({ moment, rides }){
 // One id per kind, source (offer or moment) and recipient, so a notification can never be written twice.
 export function notificationId(kind, sourceId, toFamilyId){ return `${kind}_${sourceId}_${toFamilyId}`; }
 
-export function notificationDoc({ kind, to, offer, sourceId, fromFamilyId, nowMs, quiet, moment }){
+export function notificationDoc({ kind, to, offer, sourceId, fromFamilyId, nowMs, moment }){
   return {
     kind, toFamilyId: to, sourceId: sourceId || '', fromFamilyId: fromFamilyId || '',
     weekKey: (offer && offer.weekKey) || '', day: (offer && offer.day) || '', direction: (offer && offer.direction) || '',
     date: (offer && offer.date) || (moment && moment.date) || '', time: (offer && offer.time) || '',
     momentFrom: (moment && moment.from) || '', momentTo: (moment && moment.to) || '',
-    createdAt: nowMs, deliverAt: deliverAtMs(nowMs, quiet), expiresAt: nowMs + NOTIFICATION_DAYS * DAY_MS, read: false,
+    createdAt: nowMs, deliverAt: nowMs, expiresAt: nowMs + NOTIFICATION_DAYS * DAY_MS, read: false,
   };
 }
 export function unreadCount(notifications){

@@ -2,6 +2,7 @@
 // Gate (phone + invite code), first-run coordinator claim, "Mijn gezin" profile tab, saving the profile,
 // and the coordinator's test view as another parent.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -14,6 +15,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, NOW, expectSnapshot } from './test-support.js';
 import { S } from '../state.js';
 import { _resetErrorLogForTests } from '../error-log.js';
+import { syncListeners } from '../data.js';
 import {
   renderImpersonateBanner, startImpersonate, stopImpersonate, familyFormHtml, readFamilyForm, renderClaimCoordinator,
   renderGateOrApp, renderGate, submitGate, introWaHref, renderProfile, saveProfile, weekschemaWarningHtml, weekschemaWarningInnerHtml, isWeekschemaField,
@@ -372,6 +374,21 @@ test('starting the test view drops coordinator rights; stopping restores them', 
   assert.equal(S.impersonateFamilyId, null); assert.equal(S.canEdit, true); assert.equal(S.roosterMode, 'week');
   assert.equal(dom.el('navBeheer').style.display, '');
 });
+await testAsync('test view: the Ruilen inbox follows the family being viewed (never the notifications of the previous view) and returns on Stoppen', async () => {
+  const tick = () => new Promise(r => setImmediate(r));
+  useFakeDb({ ...sampleDbSeed(), 'settings/ritbeurs': { on: true }, 'families/f1/notifications/own1': { kind: 'taken' }, 'families/f2/notifications/two1': { kind: 'backupForRide' }, 'families/f3/notifications/three1': { kind: 'taken' } });
+  sampleCoordinatorState({ links: { coord: { familyId: 'f1' } }, notifications: {}, notificationsFor: null });
+  await withFakeNow(NOW, async () => {
+    syncListeners(); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f1'); assert.deepEqual(Object.keys(S.notifications), ['own1']);
+    startImpersonate('f2'); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f2'); assert.deepEqual(Object.keys(S.notifications), ['two1'], 'only the inbox of the family being viewed');
+    startImpersonate('f3'); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f3'); assert.deepEqual(Object.keys(S.notifications), ['three1'], 'switching again swaps the inbox again');
+    stopImpersonate(); await tick(); await tick();
+    assert.equal(S.notificationsFor, 'f1'); assert.deepEqual(Object.keys(S.notifications), ['own1'], 'Stoppen brings the own inbox back');
+  });
+});
 test('switching parents keeps the tab you are on; from Beheer it moves to Mijn week; stopping never changes the tab', () => {
   useFakeDb(sampleDbSeed());
   const activated = [];
@@ -491,6 +508,10 @@ test('design v2: the test view is a black bar (class testBar) with an eye and a 
 
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-profile.js imports nothing it does not use', () => assertNoUnusedImports('ui-profile.js'));
+
+test('no lightning icon in this screen (owner, 2026-10-31)', () => {
+  assert.doesNotMatch(readSrcFile(new URL('../ui-profile.js', import.meta.url), 'utf8'), /lightning/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

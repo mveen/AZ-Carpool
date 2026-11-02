@@ -41,14 +41,28 @@ test('the Beheer section icons exist and are Phosphor paths', () => {
 });
 
 test('the Phosphor icons of the design system v2 exist, regular and -fill (tab bar and header)', () => {
-  for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat','steering-wheel','warning-circle','whatsapp-logo','phone','megaphone']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
+  for (const n of ['house','calendar-blank','arrows-left-right','soccer-ball','gear-six','share-fat','warning-circle','whatsapp-logo','phone','megaphone']) for (const k of [n, n + '-fill']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
+});
+test('the own icon of the Vervanger tab (two people with a swap arrow, drawn in the Phosphor style) exists, regular and -fill, inside the 256 grid', () => {
+  for (const k of ['users-swap', 'users-swap-fill']) {
+    assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path') && !PH_PATHS[k].includes('<script'), k);
+    const nums = [...PH_PATHS[k].matchAll(/-?\d+(?:\.\d+)?/g)].map(m => +m[0]);
+    assert.ok(Math.min(...nums) >= 0 && Math.max(...nums) <= 256, k + ' stays inside the viewBox');
+  }
+  assert.notEqual(PH_PATHS['users-swap'], PH_PATHS['users-swap-fill']);
+});
+test('the sun and moon icons for the direction mark exist', () => {
+  for (const k of ['sun','moon']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
+});
+test('the lightning icon is gone from the whole app (owner, 2026-10-31)', () => {
+  assert.ok(!PH_PATHS['lightning'] && !PH_PATHS['lightning-fill']);
 });
 test('the other Phosphor icons of the ride rows exist (regular or bold, as used)', () => {
-  for (const k of ['caret-right','caret-down','car-profile','car-profile-bold','x-bold','user-circle-gear','shuffle','table','printer']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
+  for (const k of ['caret-right','caret-down','car-profile','car-profile-bold','share-network','x-bold','user-circle-gear','shuffle','table','printer']) assert.ok(PH_PATHS[k] && PH_PATHS[k].startsWith('<path'), k);
 });
 test('the icons of the settings sheet and Mijn gezin exist, and the app version looks like a cache name', () => {
   for (const k of ['lifebuoy','user-switch','caret-left','users','moon','question','info']) assert.ok(PH_PATHS[k], k);
-  assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 70);
+  assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 199);
 });
 test('the info icon exists', () => { assert.ok(PH_PATHS.info && PH_PATHS.info.startsWith('<path')); });
 test('design v2: no hand-drawn icon is left (no <line>, <circle>, <rect>, <polyline>) and every icon is drawn in the text colour', () => {
@@ -101,8 +115,50 @@ test('APP_VERSION is at least v155 (Zelf indelen shows asked times)', () => { as
 
 test('APP_VERSION is at least v156 (Afwijkend weekrooster always on)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 156); });
 test('APP_VERSION is at least v157 (match carpool saves once)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 157); });
+test('APP_VERSION is at least v165 (the Advies flow as its own full screen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
+test('APP_VERSION is at least v203 (Controleren: (ongewijzigd) right-aligned on the line of Heen/Terug)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 203); });
+test('APP_VERSION is at least v202 (a quiet direction has no second line under its title)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 202); });
+test('APP_VERSION is at least v201 (a direction without changes stays visible in Indeling and Controleren; nog niet klaar on the way back)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 201); });
+test('APP_VERSION is at least v168 (step 2 of the Advies flow: cars first, one meaning per time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 168); });
+test('APP_VERSION is at least v169 (Mijn week: the same button as the flow, Advies bekijken en aanpassen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 169); });
+test('APP_VERSION is at least v190 (dagen van een ander, Weekoverzicht in de kop)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 188); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
 test('APP_VERSION is at least v160 (test data: alleen de planning verversen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
+
+test('APP_VERSION is at least v160 (own-daughter chip grey with a green dot, plain was-time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
+
+test('APP_VERSION is at least v161 (the day coordinator\'s flow; the undo icon exists)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 161); assert.ok(PH_PATHS['arrow-counter-clockwise']); });
+
+test('APP_VERSION is at least v163 (screen after Doorvoeren, Rooster tab resets)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 163); });
+test('APP_VERSION is at least v165 (Flex-gezinnen onderaan bij wissel van ouder)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 165); });
+test('APP_VERSION is at least v166 (Mijn week: dagpil met afkorting, actiekaart dagcoördinator ingeklapt)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 166); });
+test('APP_VERSION is at least v167 (wissel van ouder samengevoegd met de laatste redesign)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 167); });
+test('APP_VERSION is at least v204 (Mijn week: green header and glow on the car you drive)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 204); });
+test('APP_VERSION is at least v205 (Mijn week: green glow inside the card from the top)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 205); });
+test('APP_VERSION is at least v206 (no timestamp footer, no wheel on match cards)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 206); });
+test('v207: the filled steering wheel is gone from PH_PATHS (dead after "Jij" lost its wheel); the plain one stays as a profile avatar', () => { assert.equal(PH_PATHS['steering-wheel-fill'], undefined); assert.ok(PH_PATHS['steering-wheel'].startsWith('<path')); });
+test('APP_VERSION is at least v207 (Rooster: no wheel; dead wheel icon removed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 207); });
+test('APP_VERSION is at least v208 (Mijn week: menu "Deze rit" with Vervanger zoeken)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 208); });
+test('APP_VERSION is at least v209 (Vervanger intrekken asks inside the sheet)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 209); });
+test('APP_VERSION is at least v210 (the Vervanger message starts with a capital)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 210); });
+test('APP_VERSION is at least v211 (Ruilen tab: no Jouw ritten, compact notifications, no quiet-hours UI)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 211); });
+test('APP_VERSION is at least v212 (notification cards on top of Ruilen and Mijn week)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 212); });
+test('APP_VERSION is at least v213 (Ruilen: Tijdvak toevoegen folds the form, compact offer card)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 213); });
+test('APP_VERSION is at least v230 (testdata: --planning ruimt oude testmeldingen op)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 230); });
+test('APP_VERSION is at least v228 (Rit vrij card: Overnemen / Afwijzen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 228); });
+test('APP_VERSION is at least v226 (back-up offer form: short explanation that fits the situation)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 226); });
+test('APP_VERSION is at least v222 (offer form: "Rit aanbieden", own variant from a back-up notification)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 222); });
+test('APP_VERSION is at least v214 (a back-up notification has the button Bied mijn rit aan)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 214); });
+test('APP_VERSION is at least v215 (the back-up card stays on Mijn week while a ride can be offered)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 215); });
+test('APP_VERSION is at least v216 (notification cards can be ignored or closed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 216); });
+test('APP_VERSION is at least v221 (Firestore self-repair)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 221); });
+test('APP_VERSION is at least v220 (listener log says whether the SDK sign-in is the page sign-in)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 220); });
+test('APP_VERSION is at least v219 (refused listeners restart)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 219); });
+test('APP_VERSION is at least v218 (listener refusals are logged)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 218); });
+test('APP_VERSION is at least v217 (device ID shown under Gemelde problemen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 217); });
+test('APP_VERSION is at least v225 (listener log names the browser storage)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 225); });
+test('APP_VERSION is at least v224 (sign-in changes are reported)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 224); });
+test('APP_VERSION is at least v223 (the Testweergave shows the inbox of the family being viewed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 223); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

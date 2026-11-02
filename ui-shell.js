@@ -3,7 +3,8 @@
 // (Mijn gezin, theme, Agenda, help). The tab bar itself is plain markup in index.html.
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast } from './ui-common.js';
+import { esc, phIcon, closeSheet, applyTheme, currentTheme, setTheme, showToast, hapticTap } from './ui-common.js';
+import { openOverview } from './ui-overview.js';
 import { APP_VERSION } from './constants.js';
 import { weekRangeLabel } from './dates.js';
 import { fam, isFlex } from './rides.js';
@@ -17,6 +18,7 @@ import { buildMyWeekWhatsAppMessage } from './message-texts.js';
 import { initContact } from './ui-contact.js';
 import { hasAgenda, openAgendaSheet } from './ui-agenda.js';
 import { openPushSheet, pushRowVisible } from './ui-push-device.js';
+import { ritbeursAvailable } from './ui-ritbeurs.js';
 
 // Which text key names each screen in the header.
 export const TAB_TITLE_KEY = { myweek: 'nav.myweek', schedule: 'nav.rooster', deviation: 'nav.deviation', matches: 'nav.matches', beheer: 'nav.beheer', profile: 'nav.profile' };
@@ -47,9 +49,9 @@ function ownAvatar(){ const id = ownFamilyId(); return id ? avatarOf(fam(id)) : 
 // The small line above the screen title (design v2): Mijn week shows the week, the other screens say what they are for.
 export function contextLine(screen){
   const week = S.currentWeekKey ? weekRangeLabel() : '';
-  if(screen === 'myweek') return week || t('shell.context_gezin');
+  if(screen === 'myweek') return S.currentWeekKey ? t('shell.context_mijnweek', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
   if(screen === 'schedule') return S.currentWeekKey ? t('shell.context_rooster', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_gezin');
-  if(screen === 'deviation') return t('shell.context_wijzigen');
+  if(screen === 'deviation') return ritbeursAvailable() ? t('shell.context_vervanger', { week: week.split(' · ')[0].replace(/^\D+/, '') }) : t('shell.context_wijzigen');
   if(screen === 'matches'){ const team = (S.matchFeeds && S.matchFeeds[0] && S.matchFeeds[0].label) || ''; return team ? t('shell.context_wedstrijden', { team: team.replace(/^AZ\s+/i, '') }) : t('shell.context_wedstrijden_plain'); }
   if(screen === 'beheer') return t('shell.context_beheer');
   return t('shell.context_gezin');
@@ -60,11 +62,13 @@ export function updateHeader(tab){
   if(!tab){ const on = document.querySelector('nav button.active'); tab = on && on.dataset ? on.dataset.tab : 'myweek'; }
   const screen = TAB_TITLE_KEY[tab] ? tab : 'myweek';
   const title = document.getElementById('headerTitle');
-  if(title) title.textContent = t(TAB_TITLE_KEY[screen]);
+  if(title) title.textContent = t(screen === 'deviation' && ritbeursAvailable() ? 'nav.vervanger' : TAB_TITLE_KEY[screen]);
   const ctx = document.getElementById('headerContext');
   if(ctx) ctx.textContent = contextLine(screen);
   const share = document.getElementById('shareToggle');
-  if(share) share.hidden = !SHOWS_SHARE.has(screen);
+  if(share){ share.hidden = !SHOWS_SHARE.has(screen); const si = document.getElementById('shareIcon'); if(si) si.innerHTML = phIcon('share-network'); }
+  const ovb = document.getElementById('overviewBtn');   // Weekoverzicht (PDF) lives in the header of Rooster: it costs no line in the screen
+  if(ovb){ ovb.hidden = screen !== 'schedule'; const oi = document.getElementById('overviewIcon'); if(oi) oi.innerHTML = phIcon('table'); }
   const sw = document.getElementById('switchParentBtn');
   if(sw){
     sw.hidden = !isRealCoordinator();   // real coordinator rights, so it stays when the Beheer tab is hidden in a test view
@@ -139,7 +143,7 @@ export function openShare(){
     <div class="sheet__handle"></div>
     <h3 id="sheetTitle">${esc(t('shell.share_title'))}</h3><p class="sheet__sub">${esc(t('shell.share_sub'))}</p>
     <div class="sharePreview">${esc(text)}</div>
-    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-fat')}${esc(t('shell.share_button'))}</button>
+    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-network')}${esc(t('shell.share_button'))}</button>
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
@@ -265,6 +269,7 @@ export function initShell(onNavigate, onViewChange){
   if(av) av.onclick = () => openSettings(onNavigate, onViewChange);
   const sh = document.getElementById('shareToggle'); if(sh) sh.onclick = openShare;
   const sw = document.getElementById('switchParentBtn'); if(sw) sw.onclick = openSwitchParent;
+  const ovb = document.getElementById('overviewBtn'); if(ovb) ovb.onclick = () => { hapticTap(); openOverview(); };
   initContact();
   syncAppHeight();
   for(const ev of ['resize', 'orientationchange', 'pageshow']) window.addEventListener(ev, syncAppHeight);

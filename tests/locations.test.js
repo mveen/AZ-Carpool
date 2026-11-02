@@ -1,6 +1,7 @@
 // Run with: node locations.test.js
 // Pickup / drop-off places per shift, one-off overrides, map links and fixed venues (US-15, US-21, US-22).
 import assert from 'node:assert/strict';
+import { arrivalLabel } from '../locations.js';
 import { MATCH_FROM_OTHER, matchFromChoice, matchFromFields, matchFromName, matchFromOptions } from '../locations.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -171,6 +172,12 @@ test('matchFromFields: what the form stores', () => {
   assert.equal(matchFromFields(MATCH_FROM_OTHER, '   ', cfg), null, 'a free input needs text');
   assert.deepEqual(matchFromFields('', '', cfg), { fromId: 'busstation', fromText: '' }, 'nothing chosen: the default');
   assert.deepEqual(matchFromFields('onbekend', '', cfg), { fromId: 'busstation', fromText: '' });
+});
+
+test('arrivalLabel: AFC \'34 as it is, ATC with its place (the short name alone is not clear on a title)', () => {
+  const cfg = normalizeLocations(null);
+  assert.equal(arrivalLabel(destinationFor({}, cfg)), "AFC '34");
+  assert.equal(arrivalLabel(destinationFor({ destination: 'ATC' }, cfg)), 'ATC Wijdewormer');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

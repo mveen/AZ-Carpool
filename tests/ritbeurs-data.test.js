@@ -10,8 +10,8 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import {
-  ritbeursOn, pushLiveOn, setPushLive, setRitbeurs, ridesOf, allRides, warningsFor, quietOf, createOffer, withdrawOffer, takeOffer, addMoment, removeMoment,
-  markNotificationsRead, saveQuiet, checkRitbeurs,
+  ritbeursOn, pushLiveOn, setPushLive, setRitbeurs, ridesOf, allRides, warningsFor, createOffer, withdrawOffer, takeOffer, addMoment, removeMoment,
+  markNotificationsRead, checkRitbeurs,
 } from '../ritbeurs-data.js';
 
 const dom = installFakeDom();
@@ -160,6 +160,14 @@ await testAsync('first yes wins: when the offer is already taken in the database
   assert.equal(keys(fake, 'families/').filter(k => k.includes('/notifications/')).length, 0);
   assert.equal(S.rbConfirm, null);
 });
+await testAsync('in the Testweergave taking over, offering and reporting are stopped with the real reason (not "Te laat"), and nothing is written', async () => {
+  const fake = useFakeDb(seed({ 'offers/o1': openOffer }));
+  parent({ me: 'coord', links: { coord: { familyId: 'f1' } }, impersonateFamilyId: 'f3', offers: { o1: openOffer } });
+  assert.equal(await run(() => takeOffer('o1')), false); assert.match(toast(), /In de testweergave kun je niets/); assert.doesNotMatch(toast(), /Te laat/);
+  assert.equal(await run(() => createOffer('Do', 'heen', '')), false); assert.match(toast(), /testweergave/);
+  assert.equal(await run(() => addMoment({ date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true })), false);
+  assert.equal(fake.get('offers/o1').status, 'open'); assert.equal(fake.get('deviations/Do_heen'), undefined);
+});
 await testAsync('one cannot take the own ride, or a ride that is no longer open', async () => {
   const fake = useFakeDb(seed({ 'offers/o1': openOffer })); parent({ offers: { o1: openOffer } });
   assert.equal(await run(() => takeOffer('o1')), false); assert.match(toast(), /je eigen rit/);
@@ -204,24 +212,28 @@ await testAsync('with the switch off a moment is refused and no one is notified'
   assert.equal(keys(fake, 'backupMoments/').length + keys(fake, 'families/f2/notifications/').length, 0);
 });
 
-console.log('=== notifications and quiet hours ===');
-await testAsync('notifications are held back in the quiet hours of the receiver', async () => {
+console.log('=== notifications ===');
+await testAsync('a notification is deliverable at once, also late at night: there are no quiet hours', async () => {
   const fake = useFakeDb(seed({ 'offers/o1': openOffer }));
   parent({ me: 'p3', links: { p3: { familyId: 'f3' } }, offers: { o1: openOffer } });
-  S.families.f2.ritbeursQuiet = { from: '00:00', to: '23:00' };
+  S.families.f2.ritbeursQuiet = { from: '00:00', to: '23:00' };   // an old setting is ignored
   await run(() => takeOffer('o1'));
   const n = fake.get(keys(fake, 'families/f2/notifications/')[0]);
-  assert.ok(n.deliverAt > n.createdAt);
+  assert.equal(n.deliverAt, n.createdAt);
   assert.equal(n.kind, 'taken'); assert.equal(n.read, false); assert.ok(n.expiresAt > n.createdAt);
 });
-await testAsync('quiet hours default to 22:00-06:00, are saved on the own family, and everything can be marked read', async () => {
+await testAsync('everything can be marked read', async () => {
   const fake = useFakeDb(seed({ 'families/f2/notifications/a': { kind: 'taken', read: false }, 'families/f2/notifications/b': { kind: 'taken', read: false } }));
   parent({ notifications: { a: { kind: 'taken', read: false }, b: { kind: 'taken', read: false } } });
-  assert.deepEqual(quietOf('f2'), { from: '22:00', to: '06:00' });
-  assert.equal(await saveQuiet('21:00', '07:00'), true);
-  assert.deepEqual(fake.get('families/f2').ritbeursQuiet, { from: '21:00', to: '07:00' });
   assert.equal(await markNotificationsRead(), true);
   assert.equal(fake.get('families/f2/notifications/a').read, true); assert.equal(fake.get('families/f2/notifications/b').read, true);
+});
+
+await testAsync('a test view (Testweergave) never marks the notifications of the family it looks at as read', async () => {
+  const fake = useFakeDb(seed({ 'families/f2/notifications/a': { kind: 'taken', read: false } }));
+  parent({ impersonateFamilyId: 'f2', notifications: { a: { kind: 'taken', read: false } } });
+  assert.equal(await markNotificationsRead(), true);
+  assert.equal(fake.get('families/f2/notifications/a').read, false);
 });
 
 console.log('=== the push queue (test phase) ===');

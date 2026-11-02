@@ -14,7 +14,7 @@
 //   5. reports itself in settings/pushStatus, so Beheer can show that the server is alive.
 // Safe to run at any time and as often as you like; a lock keeps two runs from overlapping.
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json). Writes the push key file in the secrets folder (mode 600).
-process.env.TZ = 'Europe/Amsterdam';   // 18:00 and the quiet hours are Amsterdam time, whatever time zone the host is in
+process.env.TZ = 'Europe/Amsterdam';   // 18:00 is Amsterdam time, whatever time zone the host is in
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -24,8 +24,8 @@ import { ensureVapidFile, sendPush } from './lib/webpush.mjs';
 import { dataDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
 import { skipReason } from './lib/run-window.mjs';
 
-// Reads cost quota (Firestore free plan: 50,000 a day for the whole app). So: no runs at night (the quiet hours of a family are 22:00-06:00 by
-// default, so nothing is lost: an entry that was due waits and goes out from 05:00), and only read what a run really needs.
+// Reads cost quota (Firestore free plan: 50,000 a day for the whole app). So: no runs at night (an entry that was made at night waits and goes out
+// from 05:00), and only read what a run really needs.
 export const PUSH_QUIET = { fromHour: 0, toHour: 5 };
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
@@ -88,7 +88,7 @@ export async function runUncovered({ firestore, app, now = Date.now(), log = con
     const recipients = [...new Set([o.offeredBy, dc].filter(to => to && fams[to]))];
     const writes = [{ update: 'offers/' + id, fields: { uncoveredAt: now }, updateTime }];
     for (const to of recipients) {
-      const doc = app.notificationDoc({ kind: 'uncovered', to, offer: o, sourceId: id, fromFamilyId: '', nowMs: now, quiet: app.normalizeQuiet(fams[to].ritbeursQuiet) });
+      const doc = app.notificationDoc({ kind: 'uncovered', to, offer: o, sourceId: id, fromFamilyId: '', nowMs: now });
       const path = `families/${to}/notifications/${app.notificationId('uncovered', id, to)}`;
       writes.push({ create: path, data: doc });
       writes.push({ create: 'pushQueue/' + app.queueKey(path), data: app.queueDoc({ path, toFamilyId: to, kind: 'uncovered', deliverAt: doc.deliverAt, expiresAt: doc.expiresAt, nowMs: now, test: false }) });
@@ -137,7 +137,6 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
     if (route === 'none') continue;   // its switch is off (or it is a test copy and only live is on): leave it, it expires by itself
     const pool = app.devicesFor(route, entry, devices);
     const plan = app.entryPlan({ entry, devices: pool, nowMs: now });
-    if (plan.state === 'wacht') { pending++; continue; }
     if (plan.state === 'geen-toestel') { if (route === 'coordinator') pending++; continue; }   // a family without a phone simply gets no push
     if (plan.state === 'klaar') continue;
     // state 'open': there are devices that still have to get it.

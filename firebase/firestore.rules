@@ -185,13 +185,13 @@ service cloud.firestore {
         && (!('decidedBy' in d) || d.decidedBy is string)
         && (!('test' in d) || d.test == true);
     }
-    // A family writing its OWN request: 'pending' or 'withdrawn', or 'direct' only for "rijdt niet mee" or on a day it coordinates itself.
+    // A family writing its OWN request: 'pending' or 'withdrawn', or 'direct' only for "rijdt niet mee" (a day coordinator's own new times are a request too).
     // It can never write 'accepted'. 'decidedBy' may only name itself (on a direct request).
     function ownRequestOk(reqId) {
       let d = request.resource.data;
       return isLinked() && d.familyId == linkedFamilyId() && validRequest(reqId)
         && d.status in ['pending', 'direct', 'withdrawn']
-        && (d.status != 'direct' || d.rides == false || isDayCoordinatorOf(d.day))
+        && (d.status != 'direct' || d.rides == false)
         && (!('decidedAt' in d || 'decidedBy' in d) || (d.status in ['direct', 'withdrawn'] && d.decidedBy == d.familyId));
     }
     match /weekRequests/{reqId} {

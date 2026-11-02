@@ -19,7 +19,7 @@ import { effectiveCars } from '../rides.js';
 import { renderSchedule } from '../ui-schedule.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { goToWijzigen } from '../ui-myweek.js';
-import { mayPlanDay, openDayEditor, scheduleEditHtml, scheduleDayFootHtml, wireEdit } from '../ui-weekrooster-edit.js';
+import { mayPlanDay, openDayEditor, scheduleEditHtml, scheduleDayFootHtml, wireEdit, wireTakeOver } from '../ui-weekrooster-edit.js';
 import { scheduleAdviceHtml, wireAdvice } from '../ui-weekrooster-advice.js';
 
 const dom = installFakeDom();
@@ -38,7 +38,7 @@ await testAsync('Zelf indelen is one screen: the request card on top (no buttons
   await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
   S.wrEdit = { day: 'Do', override: false };
   const html = rooster(), s = text(html);
-  assert.match(html, /id="wrEdit"/); assert.match(s, /Actie nodig voor donderdag/); assert.match(s, /Aanvraag/); assert.doesNotMatch(s, /Advies: /);
+  assert.match(html, /id="wrEdit"/); assert.match(s, /1 aanvraag voor donderdag/); assert.match(s, /aanwezig om 07:00/); assert.doesNotMatch(s, /Advies: /);
   assert.doesNotMatch(html, /data-wrtake|data-wrlook|dayPills|data-rmode|coordLine/);
   assert.match(html, /id="wrEditDone"/); assert.match(html, /id="wrEditDone">Klaar</);
   wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditDone').onclick());
@@ -80,9 +80,10 @@ await testAsync('Terug (and Toch zelf wijzigen) leave the requests open: only th
 await testAsync('from Zelf indelen there is a way back to the Advies (next to Klaar), for who decides the day and only while an advice exists', async () => {
   const req = { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
   await setup({ dayCoordinators: { Do: 'f2' } }, req); S.wrEdit = { day: 'Do', override: false };
-  let html = rooster(); assert.match(text(html.slice(html.indexOf('<div class="actionBar"'))), /^ *Advies bekijken Klaar/);
+  let html = rooster(); assert.match(text(html.slice(html.indexOf('<div class="actionBar"'))), /^ *Advies bekijken en aanpassen Klaar/);
   wireEdit({ querySelectorAll: () => [] }); withFakeNow(NOW, () => dom.doc.getElementById('wrEditAdvice').onclick());
-  assert.equal(S.wrEdit, null); assert.deepEqual(S.wrAdvice, { day: 'Do' }); html = rooster(); assert.match(html, /id="wrAdvice"/); assert.match(html, /id="wrSelf"/);   // and on to Zelf indelen again
+  assert.equal(S.wrEdit, null); assert.equal(S.wrAdvice.day, 'Do'); assert.equal(S.wrAdvice.step, 'plan'); html = rooster(); assert.doesNotMatch(html, /id="wrAdvice"/);   // the flow is its own screen, not part of the Rooster
+  const flow = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.match(flow, /data-wradjust="heen"/); assert.doesNotMatch(flow, /wrSelf/);   // it opens at the plan, which has its own way to change the cars
   S.wrAdvice = null;
   await setup({ dayCoordinators: { Do: 'f3' } }, req); S.wrEdit = { day: 'Do', override: true };   // a parent after the warning: no advice of his own
   assert.doesNotMatch(rooster(), /wrEditAdvice/); assert.match(rooster(), /id="wrEditDone"/);
@@ -105,11 +106,11 @@ await testAsync('the Dagbericht is one folded bar (title + Deel in de groep) tha
 });
 const reqF3 = { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } };
 const oneCar = [{ driverFamilyId: 'f1', departureTime: '07:00', girlIds: ['f1', 'f3'] }];   // a manual change: the asker is in a car
-await testAsync('a child with a request gets an amber dot in the cars and in the request card, with a short legend; no dot without a request', async () => {
+await testAsync('a child with a request gets an amber dot in the cars, with a short legend; no dot without a request', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }, reqF3); S.wrEdit = { day: 'Do', override: false };
   S.deviations.Do_heen = { day: 'Do', direction: 'heen', weekKey: S.currentWeekKey, cars: oneCar };
   let html = rooster();
-  assert.match(html, /class="chip[^"]*chip--req/); assert.match(html, /class="reqDot"/); assert.match(text(html), /Heeft een aanvraag voor deze dag/);
+  assert.match(html, /class="chip[^"]*chip--req/); assert.match(text(html), /Heeft een aanvraag voor deze dag/);
   assert.equal((html.match(/chip--req/g) || []).length, 1);   // only the asker, not the driver
   await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };
   html = rooster(); assert.doesNotMatch(html, /chip--req|reqDot/);
@@ -127,7 +128,7 @@ await testAsync('after a manual change a hint says that Advies bekijken recalcul
 console.log('=== a parent: Toch zelf wijzigen ===');
 await testAsync('under the day there is only the small link; no editor is open', async () => {
   await setup(); const html = rooster();
-  assert.match(html, /data-wroverride="Do"/); assert.match(text(html), /Toch zelf wijzigen/); assert.doesNotMatch(html, /data-wredit=|id="wrEdit"/);
+  assert.match(html, /data-wroverride="Do"/); assert.match(text(html), /Carpooldag aanpassen/); assert.doesNotMatch(text(html), /Toch zelf wijzigen/); assert.doesNotMatch(html, /data-wredit=|id="wrEdit"/);
   assert.equal(mayPlanDay('Do'), false);
 });
 await testAsync('the link first shows the warning with the name of THAT day\'s coordinator; Terug closes it and changes nothing', async () => {
@@ -170,21 +171,33 @@ await testAsync('a change by the planner himself is never marked', async () => {
 });
 
 console.log('=== the one who decides: Zelf indelen ===');
-await testAsync('the day coordinator gets "Zelf indelen" under his day and goes straight into the editor, without a warning', async () => {
+await testAsync('the day coordinator gets the link "Zelf indelen" under his day (no line at the top) and goes straight into the editor, without a warning', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } });
-  const html = rooster(); assert.match(html, /data-wredit="Do"/); assert.doesNotMatch(html, /data-wroverride/); assert.equal(mayPlanDay('Do'), true);
-  assert.match(html, /<div class="coordLine coordLine--act">[^]*?data-wredit="Do"[^]*?<\/div>/, 'the button sits on the line of the day coordinator, at the top');
-  assert.equal(scheduleDayFootHtml('Do'), '', 'no link at the bottom of the day any more');
+  const html = rooster(); assert.doesNotMatch(html, /data-wredit|data-wroverride|coordLine|Zelf indelen/); assert.equal(mayPlanDay('Do'), true);
+  assert.equal(scheduleDayFootHtml('Do'), '', 'no "Zelf indelen" link at the bottom of the day any more');
   const before = dom.doc.body.children.length;
   openDayEditor('Do'); assert.deepEqual(S.wrEdit, { day: 'Do', override: false }); assert.equal(dom.doc.body.children.length, before, 'no sheet');
   assert.doesNotMatch(text(scheduleEditHtml()), /rechtstreeks aan/);
 });
-await testAsync('the Advies view has "Zelf indelen" next to Overnemen; it closes the advice and opens the editor', async () => {
+await testAsync('a day somebody else decides: Overnemen shows the warning in the card, Ja opens Zelf indelen with the note, Annuleren puts the buttons back', async () => {
+  await setup({ dayCoordinators: { Do: 'f3' } }, { 'weekRequests/2026-W40_Do_f4': { weekKey: '2026-W40', day: 'Do', familyId: 'f4', rides: true, heen: '12:15', terug: '17:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
+  const html = rooster(), s = text(html);
+  assert.match(html, /data-wrtake="Do"/); assert.match(s, /1 aanvraag voor donderdag Dagcoördinator: Kees de Vries/); assert.match(s, /Contact met Kees de Vries/); assert.match(s, /Verwerken/); assert.doesNotMatch(s, /Overnemen/);
+  assert.match(html, /data-take-warn hidden/); assert.match(s, /Let op: dit is de taak van Kees de Vries/); assert.match(s, /Kees de Vries ziet je wijzigingen terug onder Recente wijzigingen/);
+  assert.doesNotMatch(html.slice(html.indexOf('data-wrtake="Do"')).split('data-wrtakeover')[0], /entryCard__icon/);   // Rooster: no signal
+  const btns = { hidden: false }, warn = { hidden: true }, card = { querySelector: sel => (sel === '[data-take-btns]' ? btns : warn) };
+  const over = { dataset: {}, closest: () => card }, no = { dataset: {}, closest: () => card }, yes = { dataset: { wrtakeyes: 'Do' }, closest: () => card };
+  wireTakeOver({ querySelectorAll: sel => ({ '[data-wrtakeover]': [over], '[data-wrtakeno]': [no], '[data-wrtakeyes]': [yes] })[sel] || [] });
+  over.onclick(); assert.equal(btns.hidden, true); assert.equal(warn.hidden, false);
+  no.onclick(); assert.equal(btns.hidden, false); assert.equal(warn.hidden, true);
+  assert.equal(S.wrEdit, null); yes.onclick(); assert.deepEqual(S.wrEdit, { day: 'Do', override: true });   // the editor says that the day coordinator decides
+  S.wrEdit = null;
+});
+await testAsync('the plan step of the Advies flow has no "Zelf indelen": the cars are changed in the step itself', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }, { 'weekRequests/2026-W40_Do_f3': { weekKey: '2026-W40', day: 'Do', familyId: 'f3', rides: true, heen: '07:00', terug: '15:00', status: 'pending', createdAt: 1, updatedAt: 1 } });
-  S.wrAdvice = { day: 'Do', direction: 'heen', variant: 'zuinig' };
-  const html = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.match(html, /id="wrSelf"/); assert.match(html, /id="wrAccept"/);
-  wireAdvice({ querySelectorAll: () => [] }); dom.doc.getElementById('wrSelf').onclick();
-  assert.equal(S.wrAdvice, null); assert.deepEqual(S.wrEdit, { day: 'Do', override: false });
+  S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = withFakeNow(NOW, () => scheduleAdviceHtml()); assert.doesNotMatch(html, /wrSelf|data-wredit/); assert.match(html, /data-wradjust="heen"/); assert.match(html, /id="wrToCheck"/);
+  S.wrAdvice = null;
 });
 await testAsync('the old way in (Mijn week "Regelen", the Wijzigen link) lands in the Rooster editor; without a day it stays as it was', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } });
@@ -194,7 +207,7 @@ await testAsync('the old way in (Mijn week "Regelen", the Wijzigen link) lands i
 await testAsync('Terug closes the editor and the day is shown again', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };
   rooster(); wireEdit({ querySelectorAll: () => [] }); dom.doc.getElementById('wrEditBack').onclick();
-  assert.equal(S.wrEdit, null); assert.match(dom.html('tab-schedule'), /data-wredit="Do"/);
+  assert.equal(S.wrEdit, null); assert.doesNotMatch(dom.html('tab-schedule'), /data-wredit="Do"/);
 });
 await testAsync('when the editor draws again through Wijzigen (its handlers do) and Rooster is on screen, Rooster is drawn', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };
@@ -207,7 +220,7 @@ console.log('=== nobody linked ===');
 await testAsync('nobody linked: no link, no editor, and Wijzigen keeps its own day editor', async () => {
   await setup({ links: {} });
   assert.equal(scheduleDayFootHtml('Do'), ''); S.wrEdit = { day: 'Do', override: true }; assert.equal(scheduleEditHtml(), '');
-  S.wrEdit = null; assert.doesNotMatch(rooster(), /wroverride|wredit|Toch zelf wijzigen/);
+  S.wrEdit = null; assert.doesNotMatch(rooster(), /wroverride|wredit|Carpooldag aanpassen/);
   withFakeNow(NOW, () => goToWijzigen('Do')); assert.equal(S.wrEdit, null); assert.equal(S.deviationDay, 'Do');
 });
 

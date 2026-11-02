@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { recomputeCanEdit } from '../coordinator.js';
-import { getWithRetry, syncCoordinatorNav, bootstrap, init, activateTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover } from '../app.js';
+import { getWithRetry, syncCoordinatorNav, bootstrap, init, activateTab, openTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover, handleAuthChange } from '../app.js';
 
 const dom = installFakeDom();
 const status = () => dom.doc.getElementById('whoami').innerHTML;
@@ -40,6 +40,13 @@ test('activateTab shows only the chosen tab and marks its button current', () =>
   assert.equal(dom.el('tab-schedule').style.display, 'none');
   assert.equal(buttons.find(b => b.dataset.tab === 'deviation').getAttribute('aria-current'), 'page');
   assert.equal(buttons.find(b => b.dataset.tab === 'schedule').getAttribute('aria-current'), null);
+});
+test('a tap on the Rooster tab closes the flow of the day coordinator, the editor and the screen after Doorvoeren; other tabs leave them alone', () => {
+  installNav(); useFakeDb(sampleDbSeed()); sampleParentState({}); dom.el('tab-gate').style.display = 'none';
+  S.wrAdvice = { day: 'Do' }; S.wrEdit = { day: 'Do', override: false }; S.wrDone = { day: 'Do', n: 1, undo: async () => true };
+  withFakeNow(NOW, () => openTab('myweek')); assert.ok(S.wrAdvice && S.wrEdit && S.wrDone);
+  withFakeNow(NOW, () => openTab('schedule'));
+  assert.equal(S.wrAdvice, null); assert.equal(S.wrEdit, null); assert.equal(S.wrDone, null); assert.equal(dom.el('tab-schedule').style.display, 'block');
 });
 test('opening Beheer for the first time starts the coordinator-only listeners (ride log, error log, back-ups); other tabs do not', () => {
   installNav(); useFakeDb(sampleDbSeed()); sampleCoordinatorState({ links: {}, families: {} });
@@ -334,6 +341,25 @@ test('Afwijkend weekrooster: every redraw keeps the request listeners in step wi
   withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0, 'nobody linked: nothing is read');
   S.links = { p1: { familyId: 'f2' } }; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 10);
   S.links = {}; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0);
+});
+
+test('v221: init installs the Firestore self-repair before the global error log', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /import \{ installFirestoreHeal \} from '\.\/session-reset\.js'/);
+  assert.ok(src.indexOf('installFirestoreHeal(window') > 0 && src.indexOf('installFirestoreHeal(window') < src.indexOf('installGlobalErrorLogging(window)'));
+});
+
+test('v224: a changed or lost sign-in is reported (log + status line); the same user and a page without a user say nothing', async () => {
+  installNav(); localStorage.removeItem('az-error-queue'); (await import('../error-log.js'))._resetErrorLogForTests();
+  resetState({ me: 'u1' });
+  assert.equal(handleAuthChange('u1'), false);
+  assert.equal(handleAuthChange(null), true);
+  assert.match(localStorage.getItem('az-error-queue'), /auth/); assert.match(localStorage.getItem('az-error-queue'), /signed-out/);
+  resetState({}); assert.equal(handleAuthChange(null), false, 'before sign-in there is nothing to lose');
+});
+test('v224: init subscribes to sign-in changes right after sign-in', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.ok(src.indexOf('db.onAuthChange(handleAuthChange)') > src.indexOf('S.me = cred.user.uid'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

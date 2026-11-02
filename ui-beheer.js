@@ -208,6 +208,7 @@ export function errorLogCardHtml(){
   return `<div class="card" id="errorLogCard">
       <h2>${t('beheer.fouten_titel')}</h2>
       <p class="muted">${t('beheer.fouten_uitleg')}</p>
+      ${S.me? `<p class="muted" id="myUid">${t('beheer.fouten_mijn_id',{p1:esc(S.me)})}</p>` : ''}
       ${list.length? rows+more : `<p class="muted">${t('beheer.fouten_leeg')}</p>`}
       ${list.length? `<div class="cardActions"><button type="button" class="btn small secondary" id="errorLogClear">${t('beheer.fouten_wis_alles')}</button></div>` : ''}
     </div>`;
@@ -705,7 +706,7 @@ export function renderBeheer(){
           <button type="button" class="btn small secondary" id="addMatchFeedBtn">${t('beheer.nieuwe_kalender_toevoegen')}</button>
           <button type="button" class="btn small secondary" id="refreshMatchesBtn">${phIcon('refresh')} ${t('beheer.nu_verversen')}</button>
         </div>
-        ${(S.matchesFetchedAt||S.cachedMatchesAt)? `<p class="muted" style="margin-top:6px">${t('beheer.laatst_opgehaald')} ${new Date(Math.max(S.matchesFetchedAt||0, S.cachedMatchesAt||0)).toLocaleString(locale())}${S.matchFetchFailedTeams.length? t('beheer.mislukt')+esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; ')) : ''}</p>` : ''}
+        ${S.matchFetchFailedTeams.length? `<p class="muted" style="margin-top:6px">${t('beheer.mislukt')}${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : ''}
       </div>`),
       ic('key', apiKeysCardHtml()),
       ic('download', familyBackupCardHtml()),

@@ -88,9 +88,8 @@ test('an entry is named after the notification it is about; a manual send gets i
 });
 const devices = { d1: { categories: { ritbeurs: true } }, d2: { categories: { ritbeurs: true } } };
 const entry = (extra = {}) => ({ kind: 'taken', deliverAt: 100, expiresAt: 1000, ...extra });
-test('what is left to do for an entry: expired, waiting, no device, done or open', () => {
+test('what is left to do for an entry: expired, no device, done or open', () => {
   assert.equal(entryPlan({ entry: entry(), devices, nowMs: 1000 }).state, 'verlopen'); assert.equal(entryPlan({ entry: null, devices, nowMs: 5 }).state, 'verlopen');
-  const wait = entryPlan({ entry: entry(), devices, nowMs: 50 }); assert.equal(wait.state, 'wacht'); assert.equal(wait.at, 100); assert.deepEqual(wait.targets, []);
   assert.equal(entryPlan({ entry: entry(), devices: {}, nowMs: 200 }).state, 'geen-toestel');
   assert.deepEqual(entryPlan({ entry: entry(), devices, nowMs: 200 }), { state: 'open', targets: ['d1', 'd2'] });
   assert.equal(entryPlan({ entry: entry({ sentTo: { d1: 1, d2: 1 } }), devices, nowMs: 200 }).state, 'klaar');
@@ -120,8 +119,8 @@ test('a tapped link gives the family id, and nothing else gets through', () => {
 });
 
 console.log('\n=== the preview ===');
-test('a notification is delivered, waiting for the quiet hours to end, or expired', () => {
-  assert.equal(previewState({ deliverAt: 10, expiresAt: 100 }, 50), 'bezorgd'); assert.equal(previewState({ deliverAt: 60, expiresAt: 100 }, 50), 'wacht');
+test('a notification is delivered or expired', () => {
+  assert.equal(previewState({ deliverAt: 10, expiresAt: 100 }, 50), 'bezorgd');
   assert.equal(previewState({ deliverAt: 10, expiresAt: 50 }, 50), 'verlopen'); assert.equal(previewState(null, 50), 'verlopen');
 });
 test('made-up notifications live a day', () => { assert.equal(TEST_NOTIFICATION_MS, 24 * 3600 * 1000); });

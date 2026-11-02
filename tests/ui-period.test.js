@@ -1,6 +1,7 @@
 // Run with: node ui-period.test.js
 // Step 2 of "periode met andere tijden": task card, form and "doorgegeven" card in Wijzigen, and the badge on the Wijzigen tab.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -85,7 +86,7 @@ test('the task card names the period, the dates, the daughter and the deadline, 
   parent(); const s = text(render());
   assert.match(s, /^Actie nodig: geef tijden door Herfstvakantie · 26 – 30 okt\. Geef door hoe laat Jahaimy heen en terug moet, of dat ze niet meerijdt\. Deadline: vrijdag 16 okt 12:00 Het vaste rooster blijft staan voor andere weken\. Tijden doorgeven /);
   assert.match(html, /id="periodOpen_2026-10-26"/);
-  assert.match(s, /Tijden doorgeven .*Tijden deze week/, 'the week form stays below the task');
+  assert.match(s, /Tijden doorgeven .*Tijden wijzigen vind je nu in Mijn week/, 'the pointer to Tijden wijzigen stays below the task');
 });
 test('after the deadline the coordinator sees that only they can still fill in', () => {
   coordinator(); const s = text(render(CLOSED));
@@ -457,6 +458,10 @@ test('Ritbeurs: the Wijzigen badge also counts open rides of other families, and
   S.ritbeurs = { on: false };
   assert.equal(badge(), base);
   S.offers = {}; S.ritbeurs = null;
+});
+
+test('no lightning icon in this screen (owner, 2026-10-31)', () => {
+  assert.doesNotMatch(readSrcFile(new URL('../ui-period.js', import.meta.url), 'utf8'), /lightning/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

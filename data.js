@@ -26,7 +26,7 @@ import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDriv
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
 import { impactGate } from './impact.js';
-import { purgeOldErrorLogs } from './error-log.js';
+import { logError, purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
 import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, periodForDate, periodList, periodShiftId, periodWorkdays, storedPeriod, validateEntry, validatePeriod } from './period.js';
@@ -75,6 +75,8 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
       return { set:(p,d,o)=>b.set(r(p),d,o), update:(p,d)=>b.update(r(p),d), delete:(p)=>b.delete(r(p)), commit:()=>b.commit() }; },
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
+    authUid: ()=> (auth && auth.currentUser && auth.currentUser.uid) || null,
+    onAuthChange: (cb)=> (auth && auth.onAuthStateChanged)? auth.onAuthStateChanged(u=>cb((u && u.uid) || null)) : ()=>{},
     // Forgets this browser's anonymous account (a new one is made at the next start). Older index.html files don't pass signOut.
     signOut: ()=> sdk.signOut? sdk.signOut(auth) : Promise.resolve(),
     calendarApiKey,
@@ -89,6 +91,9 @@ export const db = {
   batch: ()=>dbImpl.batch(),
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
+  authUid: ()=> (dbImpl && dbImpl.authUid)? dbImpl.authUid() : null,
+  // Called with the user ID (or null) now and every time the SDK's sign-in changes, also when ANOTHER tab of this browser signs out or in.
+  onAuthChange: (cb)=> (dbImpl && dbImpl.onAuthChange)? dbImpl.onAuthChange(cb) : ()=>{},
   signOut: ()=>dbImpl.signOut(),
   get calendarApiKey(){ return dbImpl.calendarApiKey; },
   setListenerSink: (a)=>dbImpl.setListenerSink(a)
@@ -498,7 +503,7 @@ export function syncListeners(){
     if(nf){
       S.notificationsUnsub = db.collection("families/"+nf+"/notifications").onSnapshot(snap=>{
         S.notifications={}; snap.docs.forEach(d=>S.notifications[d.id]=d.data());
-        renderDeviationTab();
+        renderDeviationTab(); renderMyWeek();
       }, err=>{});
     }
   }
@@ -570,6 +575,41 @@ export function syncListeners(){
   }
 }
 
+// A live listener that is refused (or breaks) is written to the error log with the document or collection it was about, so the coordinator can see
+// WHICH reading failed (Beheer > Koppelingen > Gemelde problemen). Only the path and the error code go in, never data.
+// What this browser still has of the app's own storage (names only): the sign-in database, Firestore's offline copy, and whether localStorage works.
+export async function storageProbe(){
+  const out = [];
+  try{ const names = (await indexedDB.databases()).map(d=>String((d && d.name) || '')); out.push('idbAuth:'+(names.some(n=>/firebaseLocalStorageDb/.test(n))?'y':'n')); out.push('idbFs:'+(names.some(n=>/^firestore\//.test(n))?'y':'n')); }
+  catch(e){ out.push('idb:err'); }
+  try{ localStorage.setItem('az-probe','1'); localStorage.removeItem('az-probe'); out.push('ls:ok'); }catch(e){ out.push('ls:blocked'); }
+  return out.join(' ');
+}
+export function listenFailed(path, err){
+  try{
+    // Which sign-in the SDK itself holds right now, compared with the one this page believes it has (never the ID itself).
+    const a = db.authUid(); const auth = !a? 'auth none' : (a===S.me? 'auth same' : 'auth DIFFERENT');
+    storageProbe().then(probe=>{
+      logError({ where:'listen', code:String(path).replace(/\//g,'.').slice(0,40)+'-'+((err&&err.code)||'error'), message:(err && err.message)+' | '+auth+' | '+probe });
+    });
+  }catch(e){ /* never break the app */ }
+  if(err && err.code==='permission-denied') restartListenersSoon();
+}
+// A refused listener is cancelled by Firestore for good, and then the screen keeps its defaults (Ruilen off, no day coordinators) although the data is
+// fine. Refusals right after a (new) sign-in or link can be a matter of timing, so the whole set is started again, at most 3 times per page load
+// (after 1.5 s, 4 s and 10 s). A real refusal is logged each time and then left alone.
+export const LISTENER_RETRY_DELAYS_MS = [1500, 4000, 10000];
+export const listenerRetry = { n: 0, timer: null };
+export function restartListenersSoon(setTimer = setTimeout){
+  if(listenerRetry.timer || listenerRetry.n >= LISTENER_RETRY_DELAYS_MS.length) return false;
+  const delay = LISTENER_RETRY_DELAYS_MS[listenerRetry.n++];
+  listenerRetry.timer = setTimer(()=>{
+    listenerRetry.timer = null;
+    try{ if(S.dataUnsubs.length) stopDataListeners(); syncListeners(); }catch(e){ /* the next refusal tries again */ }
+  }, delay);
+  return true;
+}
+
 export function startDataListeners(){
   db.setListenerSink(S.dataUnsubs);
   try{
@@ -580,74 +620,74 @@ export function startDataListeners(){
         notifyCoordinatorOfNewTimeChanges();
         if(isRealCoordinator()) migrateLegacyFamilySecrets();
         renderAll(); },
-      err=>{ S.familiesLoaded=true; setStatus(t('data.fout_bij_laden_gezinnen')+(err&&err.message||err), true); renderMyWeek(); });
+      err=>{ listenFailed("families", err); S.familiesLoaded=true; setStatus(t('data.fout_bij_laden_gezinnen')+(err&&err.message||err), true); renderMyWeek(); });
     db.collection("groups").onSnapshot(snap=>{ S.groupsLoaded=true; S.groups={}; snap.docs.forEach(d=>S.groups[d.id]=d.data()); renderSchedule(); renderMyWeek(); },
-      err=>{ S.groupsLoaded=true; setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); renderMyWeek(); });
+      err=>{ listenFailed("groups", err); S.groupsLoaded=true; setStatus(t('data.fout_bij_laden_rooster')+(err&&err.message||err), true); renderMyWeek(); });
     db.doc("settings/planning").onSnapshot(snap=>{ if(snap.exists) S.settings={...S.settings, ...snap.data()}; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/planning", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/dayCoordinators").onSnapshot(snap=>{ S.dayCoordinators = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{ S.periodCarsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/dayCoordinators", err); S.periodCarsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/notice").onSnapshot(snap=>{ S.notice = snap.exists? normalizeNotice(snap.data()) : null; renderNoticeBanner(); renderBeheer(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/notice", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/maintenance").onSnapshot(snap=>{ S.maintenance = snap.exists? normalizeMaintenance(snap.data()) : null; renderMaintenance(); renderBeheer(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/maintenance", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
     db.doc("settings/ritbeurs").onSnapshot(snap=>{ S.ritbeurs = snap.exists? normalizeRitbeurs(snap.data()) : null; applyPendingPushOpen(); renderDeviationTab(); renderBeheer(); checkRitbeurs(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/ritbeurs", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Push: every member reads the switches (test and live), so no queue entry is written while both are off and the parent's Push-meldingen row knows whether it shows.
     db.doc("settings/push").onSnapshot(snap=>{ S.pushSettings = snap.exists? normalizePush(snap.data()) : null; },
-      err=>{});
-    db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); checkRitbeurs(); },
-      err=>{});
+      err=>{ listenFailed("settings/push", err);});
+    db.collection("offers").onSnapshot(snap=>{ S.offers={}; snap.docs.forEach(d=>S.offers[d.id]=d.data()); renderDeviationTab(); renderMyWeek(); checkRitbeurs(); },
+      err=>{ listenFailed("offers", err);});
     db.collection("backupMoments").onSnapshot(snap=>{ S.moments={}; snap.docs.forEach(d=>S.moments[d.id]=d.data()); renderDeviationTab(); },
-      err=>{});
+      err=>{ listenFailed("backupMoments", err);});
     db.collection("periods").onSnapshot(snap=>{
       S.periodsLoaded=true; S.periodsColl={}; snap.docs.forEach(d=>{ const p = storedPeriod(d.data()); if(p && p.firstDay===d.id) S.periodsColl[d.id]=p; });
       rebuildPeriods(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
-    }, err=>{ S.periodsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    }, err=>{ listenFailed("periods", err); S.periodsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // The first version stored ONE period in settings/period: still read, and moved into periods/ by the coordinator's app.
     db.doc("settings/period").onSnapshot(snap=>{
       S.legacyPeriod = snap.exists? storedPeriod(snap.data()) : null;
       rebuildPeriods(); migrateLegacyPeriod(); renderBeheer(); renderDeviationTab(); renderSchedule(); renderMyWeek();
-    }, err=>{});
+    }, err=>{ listenFailed("settings/period", err);});
     db.collection("periodEntries").onSnapshot(snap=>{ S.periodEntries={}; snap.docs.forEach(d=>S.periodEntries[d.id]=d.data()); S.periodEntriesLoaded=true; renderDeviationTab(); renderBeheer(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("periodEntries", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.collection("periodCars").onSnapshot(snap=>{ S.periodCarsLoaded=true; S.periodCars={}; snap.docs.forEach(d=>S.periodCars[d.id]=d.data()); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{ setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+      err=>{ listenFailed("periodCars", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/prefs").onSnapshot(snap=>{ S.prefs = snap.exists? (snap.data()||{rules:[]}) : {rules:[]}; if(!S.prefs.rules) S.prefs.rules=[]; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/prefs", err); setStatus(t('data.fout_bij_laden_voorkeuren')+(err&&err.message||err), true); });
     db.doc("settings/priority").onSnapshot(snap=>{ S.shiftPriority = snap.exists? (snap.data()||{}) : {}; renderBeheer(); renderSchedule(); },
-      err=>{ setStatus(t('data.fout_bij_laden_prioriteit')+(err&&err.message||err), true); });
+      err=>{ listenFailed("settings/priority", err); setStatus(t('data.fout_bij_laden_prioriteit')+(err&&err.message||err), true); });
     db.collection("deviations").onSnapshot(snap=>{
       S.deviations={}; snap.docs.forEach(d=>S.deviations[d.id]=d.data());
       S.deviationsLoaded = true;
       purgeStaleDeviations();
       renderSchedule(); renderMyWeek(); renderDeviationTab();
-    }, err=>{ S.deviationsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_wijzigingen')+(err&&err.message||err), true); });
+    }, err=>{ listenFailed("deviations", err); S.deviationsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_wijzigingen')+(err&&err.message||err), true); });
     db.collection("matchCarpools").onSnapshot(snap=>{
       S.matchCarpools={}; snap.docs.forEach(d=>S.matchCarpools[d.id]=d.data());
       purgeStaleMatchCarpools();
       renderMatchesTab(); renderMyWeek();
-    }, err=>{});
+    }, err=>{ listenFailed("matchCarpools", err);});
     db.collection("practiceMatches").onSnapshot(snap=>{
       S.practiceMatches={}; snap.docs.forEach(d=>S.practiceMatches[d.id]=d.data());
       purgeStalePracticeMatches();
       renderMatchesTab(); renderMyWeek(); calculateMatchDistances(currentMatchList());
-    }, err=>{});
+    }, err=>{ listenFailed("practiceMatches", err);});
     db.doc("settings/lastUpdateRooster").onSnapshot(snap=>{ S.lastUpdateRooster = snap.exists? snap.data() : null; renderSchedule(); renderMyWeek(); },
-      err=>{});
+      err=>{ listenFailed("settings/lastUpdateRooster", err);});
     db.doc("settings/lastUpdateDeviation").onSnapshot(snap=>{ S.lastUpdateDeviation = snap.exists? snap.data() : null; renderDeviationTab(); renderMyWeek(); },
-      err=>{});
+      err=>{ listenFailed("settings/lastUpdateDeviation", err);});
     db.doc("settings/matchFeeds").onSnapshot(snap=>{
       S.matchFeeds = (snap.exists && snap.data().feeds) || [];
       S.matchFeedsLoaded = true;
       refreshMatchesIfStale();   // first member of the day fetches; also when the calendars in Beheer changed
       renderBeheer(); renderMyWeek(); renderDeviationTab();
-    }, err=>{});
+    }, err=>{ listenFailed("settings/matchFeeds", err);});
     db.doc("settings/locations").onSnapshot(snap=>{ S.locationsDoc = snap.exists? snap.data() : null; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
-      err=>{});
+      err=>{ listenFailed("settings/locations", err);});
     db.doc("settings/matchDistances").onSnapshot(snap=>{ S.matchDistances = snap.exists? (snap.data()||{}) : {}; S.matchDistancesLoaded = true; renderMyWeek(); renderMatchesTab(); calculateMatchDistances(currentMatchList()); },
-      err=>{});
+      err=>{ listenFailed("settings/matchDistances", err);});
     db.doc("settings/matchCache").onSnapshot(snap=>{
       if(snap.exists){
         const d=snap.data();
@@ -660,14 +700,14 @@ export function startDataListeners(){
       S.matchCacheLoaded = true;
       renderMyWeek(); renderMatchesTab();
       refreshMatchesIfStale();
-    }, err=>{ S.matchCacheLoaded = true; refreshMatchesIfStale(); });
+    }, err=>{ listenFailed("settings/matchCache", err); S.matchCacheLoaded = true; refreshMatchesIfStale(); });
     // API keys that must not sit in the public GitHub folder. Coordinator only (Firestore rules): for a parent this listener is refused and
     // S.orsApiKey stays empty, so a parent's browser never calculates distances; the daily server job does (cron/match-calendars.mjs).
     db.doc("settings/apiKeys").onSnapshot(snap=>{
       S.orsApiKey = snap.exists? String((snap.data()||{}).ors||'').trim() : '';
       renderBeheer(); renderMyWeek(); renderMatchesTab();
       calculateMatchDistances(currentMatchList());
-    }, err=>{});
+    }, err=>{ listenFailed("settings/apiKeys", err);});
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   finally{ db.setListenerSink(null); }
 }
@@ -676,7 +716,7 @@ export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
   stopWeekRequests();
-  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbOffering=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   stopPushListeners();
   renderNoticeBanner();

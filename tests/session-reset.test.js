@@ -8,7 +8,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { installFakeDom, resetState, useFakeDb } from './test-support.js';
-import { resetSession, clearOfflineCopy, shouldAutoReset, clearAutoReset } from '../session-reset.js';
+import { resetSession, clearOfflineCopy, shouldAutoReset, clearAutoReset, shouldHeal, healFirestoreState, installFirestoreHeal, FIRESTORE_ASSERT, HEAL_WINDOW_MS } from '../session-reset.js';
 
 installFakeDom();
 const memStore = () => { const m = new Map(); return { getItem: k => (m.has(k) ? m.get(k) : null), setItem: (k, v) => m.set(k, String(v)), removeItem: k => m.delete(k) }; };
@@ -77,5 +77,40 @@ await testAsync('without usable storage it never restarts by itself', async () =
 import { assertNoUnusedImports } from './test-support.js';
 await testAsync('session-reset.js imports nothing it does not use', async () => assertNoUnusedImports('session-reset.js'));
 
+
+console.log('=== v221: self-repair for Firestore "Unexpected state" ===');
+await testAsync('the pattern matches the Firestore assertion text and nothing else', () => {
+  assert.ok(FIRESTORE_ASSERT.test('FIRESTORE (10.14.1) INTERNAL ASSERTION FAILED: Unexpected state'));
+  assert.ok(!FIRESTORE_ASSERT.test('Missing or insufficient permissions.'));
+});
+await testAsync('shouldHeal: once per 10 minutes per tab, again after that, never without storage', () => {
+  const st = memStore();
+  assert.equal(shouldHeal(st, 1000), true); assert.equal(shouldHeal(st, 1000 + 5000), false);
+  assert.equal(shouldHeal(st, 1000 + HEAL_WINDOW_MS + 1), true);
+  assert.equal(shouldHeal(null), false);
+});
+await testAsync('the first assertion removes only the offline copy and reloads; the second within 10 minutes shows a message and does not reload', async () => {
+  useFakeDb({}); resetState({ me: 'u1' });
+  const log = []; const st = memStore();
+  const idb = { databases: async () => [{ name: 'firestore/[DEFAULT]/x/main' }, { name: 'firebaseLocalStorageDb' }], deleteDatabase: n => log.push('del:' + n) };
+  const win = { location: { reload: () => log.push('reload') } };
+  const toasts = [];
+  assert.equal(await healFirestoreState({ store: st, win, idb, toast: m => toasts.push(m), now: 5000 }), 'reloaded');
+  assert.deepEqual(log, ['del:firestore/[DEFAULT]/x/main', 'reload'], 'the sign-in database is left alone');
+  assert.equal(await healFirestoreState({ store: st, win, idb, toast: m => toasts.push(m), now: 6000 }), 'message');
+  assert.equal(log.length, 2); assert.match(toasts[0], /Sluit andere tabbladen/);
+});
+await testAsync('installFirestoreHeal reacts to an error event and to a rejection with that text, and ignores other errors', async () => {
+  useFakeDb({}); resetState({ me: 'u1' });
+  const handlers = {}; const toasts = [];
+  const store = memStore(); store.setItem('az-firestore-heal', String(Date.now()));   // already healed a moment ago: only the message shows
+  const win = { addEventListener: (n, f) => { handlers[n] = f; }, sessionStorage: store, location: { reload: () => { throw new Error('no reload expected'); } } };
+  installFirestoreHeal(win, { toast: m => toasts.push(m) });
+  handlers.error({ message: 'something else' }); await new Promise(r => setImmediate(r)); assert.equal(toasts.length, 0);
+  handlers.error({ message: 'FIRESTORE (10.14.1) INTERNAL ASSERTION FAILED: Unexpected state' }); await new Promise(r => setImmediate(r));
+  assert.equal(toasts.length, 1);
+  handlers.unhandledrejection({ reason: { message: 'FIRESTORE (10.14.1) INTERNAL ASSERTION FAILED: Unexpected state' } }); await new Promise(r => setImmediate(r));
+  assert.equal(toasts.length, 2);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

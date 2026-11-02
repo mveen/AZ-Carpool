@@ -2,6 +2,7 @@
 // The Beheer tab (coordinator only): families, shift priority, travel preferences, availability overview,
 // planning settings, match calendars, and the "Gewijzigde tijden" notifications.
 import assert from 'node:assert/strict';
+import fsV206 from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -259,6 +260,12 @@ test('only the 20 newest are shown, with a line for the rest', () => {
   sampleCoordinatorState({ errorLog: log });
   const html = errorLogCardHtml();
   assert.equal((html.match(/class="errRow"/g) || []).length, 20); assert.match(text(html), /En nog 5 oudere meldingen/); assert.match(html, /c24/); assert.doesNotMatch(html, /c0</);
+});
+test('v217: the card shows the ID of this device (to find it in Firebase Authentication), escaped; nothing without a session', () => {
+  useFakeDb({}); sampleCoordinatorState({ errorLog: {} }); S.me = 'abc123<b>';
+  const html = errorLogCardHtml();
+  assert.match(html, /ID van dit apparaat: abc123&lt;b&gt;/); assert.match(html, /id="myUid"/); assert.doesNotMatch(html, /abc123<b>/);
+  S.me = null; assert.doesNotMatch(errorLogCardHtml(), /myUid/);
 });
 test('entries without a time stamp are ignored', () => {
   useFakeDb({}); sampleCoordinatorState({ errorLog: { a: { where: 'x' }, b: logRow(5) } });
@@ -739,6 +746,10 @@ test('the API-key card says that only the coordinator can read the key and that 
 });
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-beheer.js imports nothing it does not use', () => assertNoUnusedImports('ui-beheer.js'));
+test('v206: Beheer shows no "Laatst opgehaald" timestamp for the match calendars any more', () => {
+  const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(src, /laatst_opgehaald|cachedMatchesAt/);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

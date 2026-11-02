@@ -3,6 +3,7 @@ export const S = {
   scheduleDay: null,
   roosterMode: 'week',
   pendingSwapRequest: null,
+  stdEditGid: null,   // Vast rooster: the car (group id) whose edit fields are unfolded by the pencil
   periodSwap: null,   // temporary rooster: a move into a full car waiting for a rider to swap with { iso, direction, girlId, toIndex }
   me: null,
   canEdit: false,
@@ -63,13 +64,16 @@ export const S = {
   dayRequests: {},         // weekRequests/* of OTHER families for the days this person decides (day coordinator), this week only
   dayRequestsKey: '',
   dayRequestsUnsubs: [],
-  wrAdvice: null,          // the Advies view open in Rooster: { day, direction, variant } (null = closed)
+  wrAdvice: null,          // the Advies flow open in Rooster: { day, step: 'plan'|'check', variant: 'best'|'alt', edits: { heen?: cars, terug?: cars } } (null = closed)
+  adjFree: null,           // "Auto's aanpassen": the car ('dir|driverId') whose pickup place is typed as free text
   wrEdit: null,            // the car editor open in Rooster: { day, override } (override = a parent changing it after the warning)
   wrMsgOpen: false,        // Zelf indelen: the Dagbericht text is unfolded
-  wrDone: null,            // right after Overnemen: { day } (shows the Dagbericht)
+  wrDone: null,            // right after Doorvoeren: { day, n, undo } (shows the Dagbericht and "Alles terugdraaien")
   wrWeek: 'this',          // Wijzigen with the weekrooster on: 'this' or 'next' week
   wrForm: null,            // the week form being filled in: { which, days } (null = nothing typed)
+  wrFlow: false,           // Tijden wijzigen, its own screen over Mijn week: false = closed, true = open, 'confirm' = asking whether to throw away what was typed
   wrBusy: false,           // a request is being saved (a double tap makes no double request)
+  myWeekDay: '',   // Mijn week: the day shown under the day pills (a Date toDateString); empty = today, else the first day
   myWeekNextOpen: false,   // Mijn week: the block "Volgende week" (open requests) is unfolded; closed by default
   offers: {},              // offers/*: rides offered in the Ritbeurs, by document id (see ritbeurs.js)
   moments: {},             // backupMoments/*: "Ik kan inspringen" moments of all families, by document id
@@ -82,8 +86,7 @@ export const S = {
     key: null, status: null, devices: {}, queue: {}, tests: {},
     personaId: '',         // the family whose notifications the coordinator experiences ("Ouder van Saar")
     personaNotifs: {}, personaFor: null, personaUnsub: null,   // that family's real notifications (families/<id>/notifications)
-    timeChoice: 'nu',      // scenarios: pretend it is now, or the middle of the night
-    last: null,            // the last scenario that was played { id, rows, explain, ride, simMs }
+    last: null,            // the last scenario that was played { id, rows, explain, ride }
     thisDeviceId: '',      // the id of this browser's own device document, when it is subscribed
     pendingOpen: '',       // a family id from a tapped push, to open in Testweergave as soon as the app is ready
     pendingView: false,    // ...and then to show the Ritten-ruilen screen as soon as the app knows that Ritten ruilen is on
@@ -97,7 +100,7 @@ export const S = {
   },
   rbView: 'wijzigen',      // Wijzigen tab: 'wijzigen' (the ride cards) or 'ritbeurs'
   rbConfirm: null,         // Ritbeurs: id of the offer whose "Neem over" confirmation is open (null = none)
-  rbOffering: null,        // Ritbeurs: the own ride whose "Aanbieden" form is open, 'Do|heen' (null = none)
+  rbMomentOpen: false,     // Ritbeurs: the form "Nieuw tijdvak" is open (Ruilen tab)
   rbMomentDraft: null,     // Ritbeurs: what is typed in the "Nieuw moment" form { date, from, to, place, onlyIfFree } (null = defaults)
   rbBusy: false,           // Ritbeurs: a background check (late offers, housekeeping) is running
   periodDraft: null,       // Beheer: the period form { editing: firstDay of the period being edited or '', value } while it is open (null = closed)

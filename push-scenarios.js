@@ -6,15 +6,14 @@
 // ctx: {
 //   personaId,                   the family whose notifications the coordinator wants to experience ("Ouder van Saar")
 //   families,                    { id: family }
-//   nowMs, simMs,                the real moment, and the moment the scenario pretends it is (for quiet hours)
-//   quietOf(familyId),           the quiet hours of a family
+//   nowMs,                       the moment the scenario is played
 //   ridesOf(familyId),           [{ day, direction, date, time }] the rides a family drives this week
 //   moments,                     { id: backupMoment } as they are now
 //   busy(familyId, date, time),  does the family already drive around that time?
 //   dayCoordinatorOf(day),       family id of the day coordinator or ''
 //   weekKey, fallbackRide        a ride { day, direction, date, time } to use when nobody drives anything this week
 // }
-import { backupRecipients, deliverAtMs, momentCovers, notificationDoc, notificationId, ridersToWarn, toMin } from './ritbeurs.js';
+import { backupRecipients, momentCovers, notificationDoc, notificationId, ridersToWarn, toMin } from './ritbeurs.js';
 import { TEST_NOTIFICATION_MS } from './push.js';
 
 export const SCENARIOS = [
@@ -24,15 +23,6 @@ export const SCENARIOS = [
   { id: 'nietGedekt', kind: 'uncovered' },
   { id: 'dagcoordinator', kind: 'takenDayCoordinator' },
 ];
-
-// The moment the scenario pretends it is: now, or "in the middle of the night" (23:30, or now when it already is quiet).
-export function scenarioMoment(choice, nowMs, quiet){
-  if(choice !== 'nacht') return nowMs;
-  const d = new Date(nowMs);
-  if(deliverAtMs(nowMs, quiet) > nowMs) return nowMs;
-  d.setHours(23, 30, 0, 0);
-  return d.getTime() > nowMs ? d.getTime() : nowMs + 24 * 3600 * 1000;
-}
 
 const firstOther = (families, personaId) => Object.keys(families || {}).sort().find(id => id !== personaId) || '';
 const nextRide = (rides, nowMs, startMs) => (rides || []).filter(r => startMs(r) > nowMs).sort((a, b) => startMs(a) - startMs(b))[0] || null;
@@ -69,7 +59,7 @@ export function buildScenario(id, ctx){
   const add = (to, extra, persona, why) => {
     if(!to || !families[to] || rows.some(r => r.toFamilyId === to)) return;
     const sourceId = `test-${id}-${stamp}`;
-    const doc = notificationDoc({ kind: def.kind, to, sourceId, nowMs: ctx.simMs, quiet: ctx.quietOf(to), ...extra });
+    const doc = notificationDoc({ kind: def.kind, to, sourceId, nowMs, ...extra });
     doc.createdAt = nowMs; doc.expiresAt = nowMs + TEST_NOTIFICATION_MS;
     rows.push({ id: notificationId(def.kind, sourceId, to), toFamilyId: to, doc, persona, why });
   };

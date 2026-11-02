@@ -14,7 +14,7 @@ import { normalizePush, pushSettingsDoc, queueDoc, queueKey } from './push.js';
 import { showToast } from './ui-common.js';
 import { cleanCars, currentDeviationDoc, db, recordLastUpdate } from './data.js';
 import {
-  CONFLICT_MINUTES, applyTakeOver, backupRecipients, buildMoment, buildOffer, hasOpenOffer, momentId, normalizeQuiet, normalizeRitbeurs,
+  CONFLICT_MINUTES, applyTakeOver, backupRecipients, buildMoment, buildOffer, hasOpenOffer, momentId, normalizeRitbeurs,
   notificationDoc, notificationId, offerId, ridersToWarn, ritbeursDoc, rideStartMs, stalePaths, takeWarnings, toMin, urgency,
 } from './ritbeurs.js';
 
@@ -23,6 +23,9 @@ const DIRECTIONS = ['heen', 'terug'];
 export function ritbeursOn(){ return normalizeRitbeurs(S.ritbeurs).on; }
 // The push switch on the Ritten-ruilen card (settings/push.live): real pushes to the parents' own phones. Off unless it says true.
 export function pushLiveOn(){ return normalizePush(S.pushSettings).live; }
+// In the Testweergave the coordinator sees and acts as another family, but the database rules know only who is really logged in. Writing for that
+// family would be refused, and a refusal must not be reported as "too late". So these actions are stopped with the real reason.
+const asOtherFamily = () => { if(!S.impersonateFamilyId) return false; showToast(t('ritbeurs.err.testweergave')); return true; };
 const isPermissionError = e => /permission|insufficient|denied/i.test(String(e && (e.code || e.message) || e));
 
 // ---------- the feature switch (coordinator) ----------
@@ -75,8 +78,6 @@ export function warningsFor(offer, takerId){
   return takeWarnings({ offer, cars: effectiveCars(offer.day, offer.direction), takerSeats: seats(fam(takerId)), takerRides: ridesOf(takerId) });
 }
 
-export function quietOf(familyId){ return normalizeQuiet(S.families[familyId] && S.families[familyId].ritbeursQuiet); }
-
 // Writes a notification into a batch for each recipient (nothing when the switch is off). With `queue` (an array) it also notes which
 // notifications were written, so flushPushQueue can hand them to the push server after the batch was saved.
 function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fromFamilyId, nowMs }, queue){
@@ -85,7 +86,7 @@ function addNotifications(batch, { kind, recipients, offer, moment, sourceId, fr
   recipients.forEach(to => {
     if(!to || done.has(to) || !S.families[to]) return;
     done.add(to);
-    const doc = notificationDoc({ kind, to, offer, moment, sourceId, fromFamilyId, nowMs, quiet: quietOf(to) });
+    const doc = notificationDoc({ kind, to, offer, moment, sourceId, fromFamilyId, nowMs });
     const path = `families/${to}/notifications/${notificationId(kind, sourceId, to)}`;
     batch.set(path, doc);
     if(queue) queue.push({ path, toFamilyId: to, kind, deliverAt: doc.deliverAt, expiresAt: doc.expiresAt, nowMs });
@@ -110,6 +111,7 @@ export async function createOffer(day, direction, message){
   if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
   const me = myLinkedFamilyId();
   if(!ritbeursOn() || !me) return false;
+  if(asOtherFamily()) return false;
   refreshWeekKey();
   const ride = ridesOf(me).find(r => r.day === day && r.direction === direction);
   if(!ride){ showToast(t('ritbeurs.err.geenRit')); return false; }
@@ -149,6 +151,7 @@ export async function takeOffer(id){
   const me = myLinkedFamilyId(), o = S.offers[id];
   if(!ritbeursOn() || !me || !o) return false;
   if(o.status !== 'open'){ showToast(t('ritbeurs.err.alOvergenomen')); return false; }
+  if(asOtherFamily()) return false;
   if(o.offeredBy === me){ showToast(t('ritbeurs.err.eigenRit')); return false; }
   refreshWeekKey();
   const newCars = applyTakeOver(effectiveCars(o.day, o.direction), o, me);
@@ -171,7 +174,10 @@ export async function takeOffer(id){
     return true;
   }catch(e){
     S.rbConfirm = null;
-    showToast(isPermissionError(e) ? t('ritbeurs.err.teLaat') : t('data.opslaan_mislukt') + (e && e.message || e));
+    // "Too late" only when the offer really is gone; a refusal while it is still open is something else and says so.
+    let stillOpen = false;
+    if(isPermissionError(e)){ try{ const snap = await db.doc('offers/' + id).get(); stillOpen = !!(snap && snap.exists && snap.data().status === 'open'); }catch(_){ /* unknown: keep the old message */ } }
+    showToast(isPermissionError(e) ? t(stillOpen ? 'ritbeurs.err.geenToestemming' : 'ritbeurs.err.teLaat') : t('data.opslaan_mislukt') + (e && e.message || e));
     return false;
   }
 }
@@ -181,6 +187,7 @@ export async function addMoment(raw){
   if(!db){ showToast(t('data.geen_verbinding_met_opslag')); return false; }
   const me = myLinkedFamilyId();
   if(!ritbeursOn() || !me) return false;
+  if(asOtherFamily()) return false;
   const nowMs = Date.now();
   const moment = buildMoment({ ...raw, familyId: me, nowMs });
   if(!moment){ showToast(t('ritbeurs.err.momentOngeldig')); return false; }
@@ -211,6 +218,7 @@ export async function removeMoment(id){
 export async function markNotificationsRead(){
   const me = myLinkedFamilyId();
   if(!db || !me) return false;
+  if(S.impersonateFamilyId) return true;   // a test view only looks: it never marks the real notifications of that family as read
   const unread = Object.entries(S.notifications || {}).filter(([, n]) => n && n.read !== true);
   if(!unread.length) return true;
   try{
@@ -219,15 +227,6 @@ export async function markNotificationsRead(){
     await batch.commit();
     return true;
   }catch(e){ return false; }
-}
-
-// The quiet hours of the own family (instelbaar; standaard 22:00-06:00). Saves at once.
-export async function saveQuiet(from, to){
-  const me = myLinkedFamilyId();
-  if(!db || !me) return false;
-  const q = normalizeQuiet({ from, to });
-  try{ await db.doc('families/' + me).set({ ritbeursQuiet: q }, { merge: true }); showToast(t('ritbeurs.toast.stilleUren')); return true; }
-  catch(e){ showToast(t('data.opslaan_mislukt') + (e && e.message || e)); return false; }
 }
 
 // ---------- background checks (on every data change and every minute) ----------

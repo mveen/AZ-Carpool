@@ -39,6 +39,7 @@ const fixture = () => [
   row('deviations/Di_heen', { day: 'Di', weekKey: '2026-W43', cars: [] }),
   row('periods/2026-10-12', { name: 'Herfst', firstDay: '2026-10-12' }),
   row('periodBackups/b1', { by: 'Merel', cars: [] }),
+  row('backupMoments/m1', { familyId: 'anouk', date: '2026-11-04', from: '15:00', to: '18:30' }),
 ];
 const byPath = (res, p) => res.docs.find(d => d.path === p);
 let n = 0; const seq = () => String(3000000000 + n++);
@@ -86,7 +87,7 @@ await test('everything that makes the app behave the same is copied unchanged (c
   }
 });
 await test('the report says what was left out and how many documents are copied', () => {
-  assert.equal(res.docs.length, 11);
+  assert.equal(res.docs.length, 12);
   assert.ok(Object.keys(res.dropped).length >= 8);
 });
 
@@ -147,7 +148,7 @@ console.log('=== --planning: only the planning, test users stay ===');
 const plan = planningFromCopy(res);
 await test('replaces shifts, one-off changes, periods and every kept settings document; nothing about users', () => {
   const paths = plan.replace.map(d => d.path).sort();
-  assert.deepEqual(paths, ['deviations/Di_heen', 'groups/Ma_heen_1', 'periodBackups/b1', 'periods/2026-10-12', 'settings/dayCoordinators', 'settings/priority']);
+  assert.deepEqual(paths, ['backupMoments/m1', 'deviations/Di_heen', 'groups/Ma_heen_1', 'periodBackups/b1', 'periods/2026-10-12', 'settings/dayCoordinators', 'settings/priority']);
   for (const p of paths) assert.ok(!/^(invites|links|sessions|config|families)\//.test(p), p);
   assert.deepEqual(plan.leaks, []);
 });
@@ -163,17 +164,18 @@ const fakeFs = (store, families) => ({
   async setDocument(p, d) { store.set(p, d); },
   async commit(ws) { const w = ws[0]; if (!families.has(w.update)) return false; Object.assign(store.get(w.update), w.fields); return true; },
 });
-await test('seedPlanning replaces old planning, merges family fields and leaves users, codes, links and notifications untouched', async () => {
+await test('seedPlanning replaces old planning, merges family fields and removes the old test notifications and leaves users, codes and links untouched', async () => {
   const store = new Map([
-    ['groups/old', {}], ['deviations/old', {}], ['settings/prefs', { keep: 1 }],
+    ['groups/old', {}], ['deviations/old', {}], ['backupMoments/old', {}], ['settings/prefs', { keep: 1 }],
     ['families/eline', { parentPhone1: TEST_PHONE, availability: { old: 1 }, girlName: 'Eline' }],
-    ['invites/9999999999', { familyId: 'eline' }], ['links/u1', { familyId: 'eline' }], ['sessions/u1', {}], ['config/coordinator', { familyId: 'eline' }], ['families/eline/notifications/n', {}],
+    ['invites/9999999999', { familyId: 'eline' }], ['links/u1', { familyId: 'eline' }], ['sessions/u1', {}], ['config/coordinator', { familyId: 'eline' }], ['families/eline/notifications/n', {}], ['families/anouk/notifications/n2', {}],
   ]);
   const r = await seedPlanning({ fs: fakeFs(store, new Set(['families/eline'])), plan });
-  assert.equal(r.deleted, 2); assert.deepEqual(r.updated, ['eline']); assert.deepEqual(r.missing, []);
-  assert.ok(!store.has('groups/old') && store.has('groups/Ma_heen_1') && store.has('settings/priority') && store.has('settings/prefs'));
+  assert.equal(r.deleted, 3); assert.equal(r.notificationsRemoved, 2); assert.deepEqual(r.updated, ['eline']); assert.deepEqual(r.missing, []);
+  assert.ok(!store.has('groups/old') && !store.has('backupMoments/old') && store.has('backupMoments/m1') && store.has('groups/Ma_heen_1') && store.has('settings/priority') && store.has('settings/prefs'));
   assert.deepEqual(store.get('families/eline'), { parentPhone1: TEST_PHONE, availability: { Di_heen: 'beschikbaar' }, girlName: 'Eline', schedule: { Ma_heen: { a: 1 } } });
-  for (const p of ['invites/9999999999', 'links/u1', 'sessions/u1', 'config/coordinator', 'families/eline/notifications/n']) assert.ok(store.has(p), p);
+  for (const p of ['invites/9999999999', 'links/u1', 'sessions/u1', 'config/coordinator']) assert.ok(store.has(p), p);
+  for (const p of ['families/eline/notifications/n', 'families/anouk/notifications/n2']) assert.ok(!store.has(p), p + ' should be gone');
 });
 await test('a family that is not in the test database is reported, not created', async () => {
   const store = new Map();

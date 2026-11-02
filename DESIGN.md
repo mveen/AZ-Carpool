@@ -19,8 +19,8 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 2. **No colour literals** (`#fff`, `rgb(...)`) and **no radius or shadow literals** in CSS or in `style="..."` of new code. Use `var(--...)`.
 3. **No font sizes in px in screens.** Use a `--type-*` token (`font:var(--type-body)`). Times and counts use `--font-mono`, nothing else does.
 4. **Need something that does not exist?** Add the block to `components.css`, from tokens, and list it below. Then use it. Do not make a one-off.
-5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab, "vandaag", the own daughter's chip, a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
-6. **Primary buttons are ink** (`--action-bg`). Selected = ink. Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
+5. **Red (`--az-red`) is an accent only.** It is for: the app icon, the active tab (Rooster: blue, see below), "vandaag", a chosen avatar icon (`.avatar--icon`), badges, and the second tap of a destructive action. It is **never** for headers, hero cards, primary buttons, alerts, selected states, links or borders.
+6. **Primary buttons are ink** (`--action-bg`). Selected = ink (`--tab`; in Rooster blue, see below). Alerts and changes = amber. Success / "you drive" = green. Matches = violet.
 7. **Every tap target is at least 44 px** (`--hit-min`).
 8. **Dark theme comes free** if you only use role tokens (`--surface-card`, `--text-1`, ...). Never use the raw palette (`--ink-900`, `--paper-0`, ...) in components.
 9. **Texts** go in `texts-nl.js`. Icons: Phosphor ONLY, through `phIcon('name')` (regular; `name-fill` for the active state, `-bold` in the switch knob). No hand-drawn SVG (a test checks `PH_PATHS`).
@@ -47,7 +47,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 ## Components added in phase 2 (Mijn week, Rooster)
 
 - **Card** `.card`, **section label** `.sectionLabel`, **section head** `.sectionHead` (title left, sub right), **info line** `.infoLine`.
-- **Chip** `.chip` (+ `--mine` red = own daughter, `--flex` dashed) in a `.chips` row. **Tag** `.tag` (+ `--ok`, `--warn`, `--match`, `--accent`).
+- **Chip** `.chip` (+ `--mine` grey with a green dot = own daughter, `--flex` dashed) in a `.chips` row. **Tag** `.tag` (+ `--ok`, `--warn`, `--match`, `--accent`).
 - **Switch** `.switch` (+ `.on`): `button role=switch`, green + car when she rides along, grey + x when not.
 - **Alert card** `.alertCard` (amber, one action), `--stack` for a list of rows (`__row`).
 - **Mijn week, requests (design B)**: no amber card per request. An open request of THIS week is a compact dashed amber `.reqBlock` (`__head` clock + title, `__times` with one `.reqBlock__line` for "aanwezig" and one for "klaar": the time that holds now is `<s>`, the asked time `<b>`, no arrow; `__foot` with who decides and a `.linkbtn.danger` Intrekken, two taps, that day only) at the bottom of the card of its day. The block has no padding under the foot: the 44 px tap area of Intrekken is the space; `.rideCard` is `flow-root` so the block's bottom margin stays inside the card. Next week's requests are one `.reqBlock.reqBlock--week` that is CLOSED by default: its first line (`.reqBlock__toggle`, clock + "N aanvragen wachten op antwoord" + chevron, 44 px) is the button that unfolds the columns (`S.myWeekNextOpen`; it stays open after an Intrekken and resets when no request is left). The columns (`.nwHead`, `.nwRow`: `__day`, two `__t` times or `__t--off` "niet mee", `__who`, and an `.iconBtn` Intrekken per day, two taps) under a `.sectionHead` with the dates (`__dates`) and a `.linkbtn` "Wijzigen" that opens Wijzigen on the tab Volgende week. The ride rows have no "Aanvraag" tag; the pill "Gewijzigd" (amber, `.tag--warn`) sits in the time column under "vertrek" because it is about the whole ride (time, place or driver); the matches of the week are `.matchTile`s under their own `.sectionHead` ("Wedstrijden · deze week") right after the day cards, and "Volgende week" comes last; the driver button ends in the neutral `phone` icon (it opens the contact sheet), and there is no "speelster-chauffeur" pill anywhere; the same driver for heen and terug is one `.rideRow__driver.driverOnce` line ("Ouder van Saar rijdt heen en terug"); a changed departure time is `was <s>07:00</s>` under the new time (`.rideRow__sub s`), a changed time of a car you drive is `.rideRow__extra--changed` (amber); the switch sits in `.swWrap` with a `.swCap` ("rijdt mee" / "rijdt niet mee"); `.daughterTime` reads "Eva aanwezig om" (heen) / "Eva klaar om" (terug).
@@ -59,10 +59,13 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 - **Contact sheet**: `.sheet__actions` with two `.btn`.
 - Forms: inputs, selects and labels have one look (end of `components.css`).
 
-## Components added in phase 3 (Wijzigen, Ritten ruilen, Wedstrijden)
+## Components added in phase 3 (Wijzigen, Ruilen, Wedstrijden)
+
+- Ruilen colour: `--ruil`, `--ruil-soft`, `--ruil-ink` (teal, light and dark). Used only for the Ruilen tab (`.tab--ruil`, `.navtab--ruil`) and `.tag--ruil`; own icon `users-swap` in `PH_PATHS`.
+- Tijden wijzigen is a full-screen layer (`.flowScreen` + `.wrFlow`): one `.wrDay` card per weekday, changed days get `.wrDay--changed` (border, no fill), the old time shows as `.wrCell__was`.
 
 - Wijzigen: a closed car is a `.carCard` (`.devRide`) with a head button (time, driver, route, Wijzig/Klaar) and chips; open it shows the form (`.devForm`: time + driver, destination tiles `.devDest`, kids with `···` actions `.devKid*`). Undo bar `.devToast`. Day message card `.conclusieCard` with one ink button.
-- Ritten ruilen offer card = `.card.rbOffer`: mono time, route, chips, one full-width ink button; confirm block `.rbConfirm`. Own rides, moments, notifications are plain cards with `.rbMine` / `.rbMoment` rows.
+- Ruilen (was Vervanger / Ritten ruilen) offer card = `.card.rbOffer`: mono time, route, chips, one full-width ink button; confirm block `.rbConfirm` shows only problems (⚠), otherwise just the question and two buttons. New tijdvak: `.dayPills` (same day buttons as Mijn week) and `.rbTimes` (Van/Tot side by side, label above). Moments are `.rbMoment` rows; notifications are `.rbNotif` in a card that only exists when there is something.
 - Wedstrijden: one `.card.matchCard` per match (`.matchInfo`, `.matchTitle`, `.matchCarRow`), under an `.infoLine`.
 - Contact: no direct WhatsApp buttons per driver any more; names open the contact sheet. Group sharing stays (Dagbericht, share button).
 
@@ -70,7 +73,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 ## Components added for "Push-meldingen testen" (Beheer, coordinator only, temporary)
 
-`.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushTime`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`, `.is-wait` for a notification held back by quiet hours) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
+`.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
 
 ## Avatar choice
 
@@ -82,7 +85,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - [x] Phase 1: tokens, fonts (Onest), header, avatar + Instellingen sheet, tab bar, buttons, segmented, sheet, toast.
 - [x] Phase 2: Mijn week, Rooster (Deze week, Vast rooster, tijdelijk rooster).
-- [x] Phase 3: Wijzigen (+ Ritten ruilen inside it), Wedstrijden.
+- [x] Phase 3: Wijzigen (the tab is Ruilen when Ritbeurs is on; Tijden wijzigen is a flow from Mijn week), Wedstrijden.
 - [x] Phase 4: Beheer, Mijn gezin, Help, banners and forms moved onto tokens; `legacy.css`, the old variable names and the Plus Jakarta fonts are deleted.
 - [ ] Follow-up (nice to have): the first block of `components.css` ("Screens migrated from the old stylesheet") still holds the rules of Beheer, Mijn gezin and the period cards in their old shape. Turn them into proper components screen by screen. The ratchet test in `tests/design-rules.test.js` only lets the number of inline `style="..."` attributes go down.
 
@@ -118,3 +121,47 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - **Small switch** `.switch--sm`: the `.switch` of Mijn week at 40 x 24 (the tap area stays 44 px), for places where a switch sits next to a field.
 - **Ride cell** `.wrCell` (+ `.wrCell__off`): in "Tijden deze week" per ride (heen, terug) the small switch and the time field on one line; while the ride is off the dashed `.wrCell__off` ("Rijdt niet mee") takes the place of the field. **Past day** `.wrPastDay`: day name and "Voorbij" on one line.
+
+## Redesign of Mijn week and Rooster (v159)
+
+- **Borders, not grey fills.** White cards sit on the page with a 1 px border in `--edge` (`.rideRow`, `.carCard`, `.matchTile`, `.dayPill`); no shadow. `--edge` is the border colour, `--line` stays for dividers inside a card.
+- **Where am I:** `--tab` / `--tab-ink` are the colour of the selected day pill and the selected switch of the current tab. Ink by default (Mijn week); `#tab-schedule` sets them to `--info` (blue) and the active Rooster tab is blue too (`.navtab.active[data-tab="schedule"]`). Mijn week says "Week 44 · mijn gezin", Rooster "Week 44 · iedereen" (`contextLine()`).
+- **Day pills on top of both tabs:** `.dayPills` > `.dayPill` (Mijn week: `data-mwday`, one day open under the pills, amber `.dayPill__dot` = something to arrange that day, `.dayPills--6/--7` when a weekend match day is added; Rooster: `.dayPill--cars` with `.dayPill__cars`: wheel icon + number of rides that day). Heading of the open day: `.dayHead`.
+- **One ride, one card** (`ui-myweek.js` `rideRow`, `ui-schedule.js` `weekCarHtml`): head = time + direction (`.rideRow__time`) | "Chauffeur" label (`.rideRow__lab`) + who (`.rideRow__who`) | one round button (`.roundBtn`: your own car = pencil, Tijd en plek, `aria-label` only; another car = phone, opens the contact sheet); then the route as a bordered line (`.rideRow__route`, `.carCard__route--inset`), passengers (`.rideRow__pass` with label, or chips in Rooster), and in Mijn week her own time + the switch (`.rideRow__kid`). Seats in Rooster: `.seats` (two-people icon + 3/4).
+- **The card you drive:** green top edge (`.rideRow--mine`, `.carCard--mine`) only when YOU drive. Mijn week: the card also has a green tint from the top (`.rideRow--glow`, `--ok-glow`, fading out at the height of the time block) and a green label ("Jij rijdt, … rijdt mee", `.rideRow__lab--me`); there is no "Jij" line and no wheel. Rooster: quiet green text "Jij" in the Chauffeur place (`.carCard__driver--me`), no wheel. No filled badge, no lightning icon, no steering wheel icon anywhere (owner, 2026-11-01); `steering-wheel` stays only as a profile avatar.
+- **Heen / Terug titles** always say what the time means: `.sectionHead__note` "Aankomst bij AFC '34" / "Vertrek bij AFC '34". Cars with another arrival place (ATC Wijdewormer) form their own block with their own title (no pill); `arrivalPlaces()` / `arrivalLabel()` in `locations.js`.
+- **Own daughter** `.chip--mine`: a grey chip with a green dot, not red (red reads as an alarm). **"was 07:00"** under a changed time (`.rideRow__sub`) is plain text, no strikethrough, the same as `.wasTime` in Rooster.
+- Matches of the week are one folded `.matchTile` under the day they are played on (no separate block); a weekend day with a match gets its own pill.
+
+## The Advies flow as its own full screen (v165)
+- The day coordinator's flow is a layer of its own: `#flowScreen.flowScreen` (fixed, above Rooster and the tab bar, below sheets and the toast), drawn by `renderFlowScreen()` in `ui-weekrooster-advice.js`. The Rooster only holds a small entry card.
+- Three steps with a steps bar (`.flowSteps`): 1 Aanvragen, 2 Indeling, 3 Controleren; then the done screen. Every step has a head (`.flowHead`: round back/close button, context line, title), a scrolling body (`.flowScreen__body`) and a foot with the one primary action (`.flowScreen__foot`).
+- New blocks: `.entryCard` (Rooster, "Regel dit"), `.reqPanel`/`.reqItem` (requests), `.adviceHero` + `.tag--ink`, `.statTiles` + `.statTile` (the three numbers), `.infoNote`, `.tog` + `.tog__opt` (Advies / Alternatief, the subtitle is the computed waiting time), `.scene` with cars first: `.carCard` (departure once and big, `.carCard__cap`, `__why`, `__out`, `__rest`) and `.rider` rows (name, `.chip--ok/--warn/--bad` for the wait, her time), `.statTiles__sum`, `.sheetItem__more`, `.lnkRow`, `.btn.flowApply`.
+- Rules: no fixed claims about what a variant is; every number comes from `planStats`/`evaluateCars`. Tapping Doorvoeren is the only step that writes (`acceptDay`); steps 1 and 2 never change data.
+- Time vocabulary of step 2 (never mix): **haar tijd** = her own time (grey), **auto vertrekt** = the car's departure (big, mono), **wacht** = the difference (chip). One number has one meaning; a time appears once per car.
+
+## Heen and terug scenes (v171)
+- Each scene in step 2 has its own glow: **heen = morning mist** (slate blue, sun badge), **terug = evening red** (plum, moon badge). Tokens `--heen-*` / `--terug-*` (glow, edge, ink, badge) in `tokens.css`, both themes; classes `.scene--heen` / `.scene--terug`. Never use these colours for status.
+- Status stays explicit in every scene: green "Past in de bestaande auto’s: hier verandert niets." or an amber chip "N auto’s wijzigen". Amber/green mean status; slate/plum only mean direction.
+- Step 3 (Controleren) uses the same tint and badge on its summary groups (`.planSum__group.scene--heen/terug`, v172).
+- The wait tile is a button (`.statTile--btn`) that opens a sheet with the sum: per direction per person now against proposal (`.waitCalc__*`, v175); it is the last of the three tiles; any tap closes the sheet.
+- Car card in three blocks (v177): `.carBlock` with `.carBlock__h` (title + mono count). **Wijzigingen** lists who is new as `.chgLine` (name, time, wait chip; equal outcomes on one line; `.chgGroup__cap` "Komen uit X" once per origin car). **Bezetting** shows every passenger as a tappable `button.chip` (tap = choose another car) plus a dashed `chip--flex` "+ Passagier" while there is a seat free. **Niet meer in deze auto** has `chip--gone` chips only. No "auto vertrekt", no "Aanvraag" captions.
+- "Aanpassen" (`btn secondary small`, in the heen/terug header) turns into "Klaar" and puts the fields inside that direction's car cards (`.carCard--editing`, `.carEdit`): time and driver side by side in `.devFormTop` (as in Rooster), then Ophalen and Aankomst; "Auto toevoegen" follows the cars. There is no separate adjust sheet any more.
+- Passengers (v178): the sheet of a tapped passenger ends with "Uit deze auto halen" (`.sheetItem--remove`, accent colour) which always asks to confirm. "+ Passagier" lists girls of other cars; "Ook speelsters zonder rit tonen" (`.sheet__more`) adds the ones with no ride this way (flex players), asking her time first. Both are kept in `edits.off` / `edits.add` and stored as one-off times on the shift.
+- Entry card (v179): Rooster and Mijn week show the same `.entryCard` (warning icon, "N aanvragen voor {dag}", one line of advice, "Regel dit"); on Mijn week it is folded ("Actie nodig voor {dag}") and only open on the calendar day before the carpool day. A follow-up screen in a sheet (`.sheetPane--fromRight` / `--fromLeft`, inside `.sheetOverlay--still`) slides in from the right and has an arrow back (`.sheetHead` + `.roundBtn`); the menu item to it is a `.sheetItem--menu` card with a caret.
+- Core of the advice (v180): `essenceHtml` (ui-weekrooster-essence.js) gives `.essRows` with one `.essRow--heen` (sun, slate) / `.essRow--terug` (moon, plum) per direction that changes: who rides with whom, which car leaves at another time. It sits under the entry card line (`.entryCard--stack`, rows in `.entryCard__more`) and in step 2 between the Advies/Alternatief choice and the three tiles.
+
+## Rooster "Deze week" built like Mijn week (2026-10-31)
+
+- One list per day under a day head (`.dayHead`, with the date and the number of rides), in time order. No Heen/Terug titles and no "Aankomst bij…" block titles: each car is a `.rideRow` like in Mijn week, with the route (`.rideRow__route`) on every car, so an ATC arrival shows in the route of that car.
+- The direction is a tint and a mark: `.scene--heen` / `.scene--terug` on the card (the gradient of the Advies flow) only. No sun/moon marks (removed 2026-10-31). Under the day there is no "Zelf indelen" link for planners; "Toch zelf wijzigen" stays for other parents.
+- Green top edge and green time only on a car YOU drive (`.rideRow--mine`, also on a tinted card). "Jij" in green text in the Chauffeur place, no badge.
+- No yellow "Gewijzigd" label in Mijn week or Rooster: a changed departure says `was 07:30` under the time, and Mijn week keeps its amber line "Vertrektijd gewijzigd…".
+- In Mijn week the passengers of a car you drive carry their own time ("Anouk 08:15, Jahaimy 08:30"), earliest first.
+- Standaardrooster and the temporary rooster keep their Heen/Terug titles.
+
+## Mijn week: every ride its own card, labelled by whose it is (2026-10-31)
+
+- The label above the name (`.rideRow__lab`) says whose ride it is: "Jahaimy rijdt mee met" + the driver, "Jij rijdt, Jahaimy rijdt mee" when you drive her, "Chauffeur" when there is no ride yet.
+- A shift you drive while your daughter rides in another car is its own card (`.rideRow--mine`, green top edge, "Jij", route, Passagiers with their own time), in time order next to her card. The old line "Jouw rijbeurt om ..." and the amber "Vertrektijd gewijzigd" line are gone; a changed time says `was 07:30` under the time.
+- No line "Jij bent dagcoördinator ..." in Mijn week (others still see "Dagcoördinator morgen: naam").

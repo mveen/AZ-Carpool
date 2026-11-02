@@ -11,14 +11,16 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups, expectSnapshot } from './test-support.js';
+import { installFakeDom, useFakeDb, withFakeNow, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleFlexParentState, sampleParentState, sampleCoordinatorState, sampleGroups, expectSnapshot } from './test-support.js';
 import { S } from '../state.js';
+import { createOffer } from '../ritbeurs-data.js';
 import { renderDeviationTab } from '../ui-deviation.js';
 import { renderBeheer } from '../ui-beheer.js';
 import { updatePeriodBadge } from '../ui-period.js';
 import {
-  ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, ritbeursSegmentHtml, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
-  ritbeursCardHtml, wireRitbeursCard, offerRide, takeRide, saveMomentDraft, testNotificationsForView,
+  ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, syncVervangerNav, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
+  dismissNotification, resetDismissedNotifications, ritbeursCardHtml, wireRitbeursCard, takeRide, saveMomentDraft, testNotificationsForView,
+  myWeekNotificationsHtml, takeFromNotification, takeableOfferOf,
 } from '../ui-ritbeurs.js';
 
 const dom = installFakeDom();
@@ -32,7 +34,7 @@ const asF2 = (patch = {}, on = true) => sampleParentState({ groups: groups(), ri
 const view = () => withFakeNow(NOW, () => ritbeursViewHtml(Date.now()));
 
 console.log('=== the feature switch hides everything ===');
-test('off or missing: no segment, no badge, the Wijzigen tab is the normal one', () => {
+test('off or missing: no Vervanger, no badge, the tab is the normal day editor', () => {
   for (const on of [false, null]) {
     asF3({ offers: { o1: offerBy('f2') } }, on);
     assert.equal(ritbeursAvailable(), false);
@@ -40,19 +42,32 @@ test('off or missing: no segment, no badge, the Wijzigen tab is the normal one',
     S.rbView = 'ritbeurs';
     withFakeNow(NOW, () => renderDeviationTab());
     const html = dom.html('tab-deviation');
-    assert.doesNotMatch(html, /data-rbview|Ritbeurs|Ritten ruilen/);
-    assert.match(html, /id="wrForm"/);
-    assert.equal(S.rbView, 'wijzigen');
+    assert.doesNotMatch(html, /data-rbview|Ritbeurs|Ritten ruilen|Zoekt een vervanger/);
+    assert.match(html, /data-devday=|id="wrOpenFlow"/);   // legacy day editor, or (weekrooster family) the pointer to Tijden wijzigen
   }
 });
-test('on: the Wijzigen tab starts with the segment "Wijzigen | Ritbeurs (n)"', () => {
+test('on: the tab is Ruilen, with no segment: Zoekt een vervanger, Ik kan inspringen; no "Jouw ritten", no Meldingen card while there are none', () => {
   asF3({ offers: { o1: offerBy('f2') } });
   withFakeNow(NOW, () => renderDeviationTab());
-  const html = dom.html('tab-deviation');
-  assert.match(html, /class="segmented"/);
-  assert.match(text(html), /^Wijzigen Ritten ruilen \(1\)/);
-  assert.match(html, /data-rbview="wijzigen" aria-pressed="true"/);
-  assert.match(text(html), /Tijden deze week/);
+  const html = dom.html('tab-deviation'), s = text(html);
+  assert.doesNotMatch(html, /class="segmented"|data-rbview|id="wrForm"/);
+  assert.match(s, /Neem een rit over als het schikt\. Je eigen rit aanbieden doe je in Mijn week bij de rit\./);
+  const at = ['Zoekt een vervanger', 'Ik kan inspringen'].map(x => s.indexOf(x));
+  assert.ok(at.every(i => i >= 0) && at[1] > at[0], 'the two sections, in this order: ' + at.join(','));
+  assert.equal((html.match(/class="sectionHead"/g) || []).length, 2);
+  assert.doesNotMatch(html, /Jouw ritten|data-rboffer-open|id="rbNotifCard"|Meldingen|id="rbReadAll"|Stille uren|rbmFree/);
+});
+test('syncVervangerNav: on = name Vervanger, the teal class and the new icon; off for a family with a weekrooster = the tab is hidden; off for others = Wijzigen as it was', () => {
+  const classes = new Set(), attrs = {}, label = { textContent: 'Wijzigen', setAttribute: (k, v) => { attrs[k] = v; } }, icon = { innerHTML: 'OLD' };
+  const btn = { dataset: {}, style: {}, classList: { toggle: (c, on) => (on ? classes.add(c) : classes.delete(c)) }, querySelector: sel => (sel === '.navicon' ? icon : label) };
+  const keep = document.querySelector; document.querySelector = () => btn;
+  try {
+    asF3({}, true); syncVervangerNav();
+    assert.equal(label.textContent, 'Ruilen'); assert.equal(attrs['data-i18n'], 'nav.vervanger'); assert.ok(classes.has('navtab--ruil')); assert.match(icon.innerHTML, /ph-regular[\s\S]*ph-fill/); assert.equal(btn.style.display, '');
+    asF3({}, false); syncVervangerNav();
+    assert.equal(label.textContent, 'Wijzigen'); assert.ok(!classes.has('navtab--ruil')); assert.equal(icon.innerHTML, 'OLD'); assert.equal(btn.style.display, 'none', 'Tijden wijzigen opens from Mijn week: this family has no use for the old tab');
+    sampleFlexParentState({ ritbeurs: { on: false } }); syncVervangerNav(); assert.equal(btn.style.display, '', 'a Flex family still has the day editor here');
+  } finally { document.querySelector = keep; }
 });
 test('a user without a linked family does not get the Ritbeurs', () => {
   sampleParentState({ links: {}, ritbeurs: { on: true } });
@@ -63,9 +78,9 @@ console.log('=== open rides ===');
 test('the Ritbeurs view shows the open ride of another family: tag Open, when, time + route, by, note, chips, "Ik neem deze rit over"', () => {
   asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) } });
   const html = view(), s = text(html);
-  assert.match(s, /Aangeboden ritten Open Donderdag · heen .*16:15 Busstation → AFC (&#39;|')34 Aangeboden door Piet Pieters “Tandarts”/);
+  assert.match(s, /Zoekt een vervanger Open Donderdag · heen .*16:15 Busstation → AFC (&#39;|')34 Piet Pieters · “Tandarts”/);
   assert.match(s, /Ik neem deze rit over/);
-  assert.match(html, /<div class="rbNote">“Tandarts”<\/div>/);
+  assert.match(html, /<i>“Tandarts”<\/i>/);
   assert.match(html, /data-rbask="o1"/);
   assert.doesNotMatch(html, /Intrekken/);
 });
@@ -81,10 +96,10 @@ test('the own offer has Intrekken (trash icon) and no Neem over; rides that star
   assert.match(html, /data-rbwithdraw="o1"/); assert.match(text(html), /Jouw aanbod/);
   assert.doesNotMatch(html, /data-rbask|o2/);
 });
-test('tapping "Ik neem deze rit over" opens the confirmation: "Jij rijdt dan <dag> <richting> om <tijd>", two check lines, Bevestig / Annuleer', () => {
+test('tapping "Ik neem deze rit over" opens the confirmation: "Jij rijdt dan <dag> <richting> om <tijd>", only problems are shown, Bevestig / Annuleer', () => {
   asF3({ offers: { o1: offerBy('f2') }, rbConfirm: 'o1' });
   const html = view(), s = text(html);
-  assert.match(s, /Jij rijdt dan donderdag heen om 16:15 ✓ \d+ kinderen, jij hebt \d+ plekken ✓ Geen andere rit binnen 90 minuten Bevestig Annuleer/);
+  assert.match(s, /Jij rijdt dan donderdag heen om 16:15 Bevestig Annuleer/); assert.doesNotMatch(s, /✓|Geen andere rit|plekken/);
   assert.match(html, /data-rbtake="o1"/);
 });
 test('a conflict only warns: the button says "Toch overnemen" and the confirmation is still possible', () => {
@@ -97,33 +112,68 @@ test('a conflict only warns: the button says "Toch overnemen" and the confirmati
   assert.match(html, /data-rbtake="o1"/);
 });
 
-console.log('=== own rides and offering ===');
-test('own rides this week with Aanbieden; an open offer shows "Aangeboden" instead', () => {
-  asF2({});
-  let html = view();
-  assert.match(html, /data-rboffer-open="Do\|heen"/);
-  asF2({ offers: { o1: offerBy('f2') } });
-  html = view();
-  assert.doesNotMatch(html, /data-rboffer-open="Do\|heen"/);
-  assert.match(text(html), /Aangeboden/);
+console.log('=== offering is no longer in this tab ===');
+test('the tab has no own-rides list and no offer form (that happens in Mijn week)', () => {
+  asF2({}); const html = view();
+  assert.doesNotMatch(html, /data-rboffer-open|data-rboffergo|id="rbMessage"|Jouw ritten/);
 });
-test('the offer form: optional message of at most 60 characters and the explanation, without "alle chauffeurs"', () => {
-  asF2({ rbOffering: 'Do|heen' });
-  const html = view();
-  assert.match(html, /id="rbMessage" maxlength="60"/);
-  assert.match(text(html), /Eerst horen back-ups die op dat tijdstip kunnen inspringen het/);
-  assert.doesNotMatch(text(html), /alle chauffeurs/i);
-  assert.match(html, /data-rboffergo="Do\|heen"/);
-});
-await testAsync('offerRide writes the offer and closes the form; takeRide takes it over', async () => {
+await testAsync('a ride offered from Mijn week can be taken over in this tab', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'groups/Do_heen_1': groups().Do_heen_1, 'settings/ritbeurs': { on: true } });
-  asF2({ rbOffering: 'Do|heen' });
-  assert.equal(await withFakeNowAsync(NOW, () => offerRide('Do|heen')), true);
-  assert.equal(S.rbOffering, null);
+  asF2({});
+  assert.equal(await withFakeNowAsync(NOW, () => createOffer('Do', 'heen', 'Tandarts')), true);
   const id = [...fake.store.keys()].find(k => k.startsWith('offers/')).slice(7);
   asF3({ offers: { [id]: fake.get('offers/' + id) } });
+  assert.match(view(), new RegExp('data-rbask="' + id + '"'));
   assert.equal(await withFakeNowAsync(NOW, () => takeRide(id)), true);
   assert.equal(fake.get('deviations/Do_heen').cars[0].driverFamilyId, 'f3');
+});
+
+console.log('=== "Rit vrij": decide on the card ===');
+const vrij = (extra = {}) => ({ kind: 'offerBackup', toFamilyId: 'f3', sourceId: 'o1', fromFamilyId: 'f2', weekKey: WEEK_KEY, day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15', momentFrom: '', momentTo: '', createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false, ...extra });
+const mywk = () => withFakeNow(NOW, () => myWeekNotificationsHtml(Date.now()));
+await testAsync('v227: a "Rit vrij" card has Overnemen and Afwijzen (no Bekijk, no Sluiten), in Mijn week and in Ruilen; taking it over works at once and the card is gone', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'groups/Do_heen_1': groups().Do_heen_1, 'settings/ritbeurs': { on: true } });
+  asF2({}); await withFakeNowAsync(NOW, () => createOffer('Do', 'heen', 'Tandarts'));
+  const id = [...fake.store.keys()].find(k => k.startsWith('offers/')).slice(7);
+  asF3({ offers: { [id]: fake.get('offers/' + id) }, notifications: { a: vrij({ sourceId: id }) } });
+  for (const html of [mywk(), view()]) {
+    assert.match(text(html), /Rit vrij: donderdag 16:15/); assert.match(text(html), /Wil je hem overnemen\?/);
+    assert.match(html, new RegExp('data-rbnotiftake="' + id + '"')); assert.match(html, /data-rbnotifdismiss="a">Afwijzen</);
+    assert.doesNotMatch(html, />Bekijk<|>Sluiten<|Tik om over te nemen/);
+  }
+  assert.ok(takeableOfferOf({ ...vrij({ sourceId: id }), id: 'a' }, Date.now() - 1e9), 'the offer can be taken over by f3');
+  assert.equal(await withFakeNowAsync(NOW, () => takeFromNotification(id, null)), true);
+  assert.equal(fake.get('deviations/Do_heen').cars[0].driverFamilyId, 'f3', 'the ride is now f3\'s');
+  assert.equal(S.offers[id].status, 'taken');
+  assert.doesNotMatch(mywk(), /data-rbnotiftake|Rit vrij/); assert.doesNotMatch(view(), /data-rbnotiftake|Rit vrij/);
+});
+test('v229: no red "unread" dot on a notification card (it was confusing): no unread class, none in the stylesheet; the number on the tab still counts', () => {
+  resetDismissedNotifications();
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { rvk: vrij({ read: false }) } });
+  assert.doesNotMatch(mywk(), /unread/); assert.doesNotMatch(view(), /unread/);
+  assert.equal(ritbeursBadgeCount() >= 1, true);
+});
+test('v227: Afwijzen closes the card on this phone only; the offer stays open for the others', () => {
+  resetDismissedNotifications();
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { rvj: vrij() } });   // own id: a dismissal is kept in the (fake) phone storage for the rest of this file
+  assert.match(mywk(), /data-rbnotiftake="o1"/); assert.match(mywk(), /data-rbnotifdismiss="rvj">Afwijzen</);
+  dismissNotification('rvj');
+  assert.doesNotMatch(mywk(), /Rit vrij/); assert.match(view(), /data-rbask="o1"/, 'still open in the list for everybody');
+  resetDismissedNotifications();
+});
+test('v227: nothing to decide any more (taken by somebody else, withdrawn, own offer, gone, already started): no card at all', () => {
+  resetDismissedNotifications();
+  for (const offers of [{ o1: offerBy('f2', { status: 'taken' }) }, { o1: offerBy('f2', { status: 'withdrawn' }) }, { o1: offerBy('f3') }, {}, { o1: offerBy('f2', { date: '2026-09-29' }) }]) {
+    asF3({ offers, notifications: { a: vrij() } });
+    assert.doesNotMatch(mywk(), /Rit vrij|data-rbnotiftake/); assert.doesNotMatch(view(), /Rit vrij|data-rbnotiftake/);
+  }
+});
+test('v227: a seat or time problem is shown on the card up front and the button reads "Toch overnemen" (a warning, never a block)', () => {
+  resetDismissedNotifications();
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { a: vrij() }, groups: { ...groups(), Do_heen_2: { day: 'Do', direction: 'heen', girlIds: ['f1'], driverFamilyId: 'f3', reserveFamilyIds: [], departureTime: '16:00' } } });
+  const html = mywk();
+  assert.match(html, /class="rbChecks"/); assert.match(text(html), /Let op: je rijdt al donderdag heen om 16:00/);
+  assert.match(html, /data-rbnotiftake="o1">Toch overnemen</); assert.doesNotMatch(html, />Overnemen</);
 });
 
 console.log('=== Ik kan inspringen ===');
@@ -132,37 +182,52 @@ test('the form defaults to the first day that is not over, 15:00-18:30, only if 
   const d = withFakeNow(NOW, () => momentDraft());
   assert.deepEqual(d, { date: '2026-09-30', from: '15:00', to: '18:30', onlyIfFree: true });
 });
-test('own moments are listed with a trash icon; selected options are neutral (no red pill), days that are over are disabled', () => {
-  asF3({ moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 1 }, m2: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '09:00', onlyIfFree: true, createdAt: 1 } } });
+test('own moments are listed with a trash icon; the days are the same buttons as in Mijn week (selected = on, days that are over are disabled); Van/Tot sit side by side; no toggle', () => {
+  asF3({ rbMomentOpen: true, moments: { m1: { familyId: 'f3', date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true, createdAt: 1 }, m2: { familyId: 'f4', date: '2026-10-01', from: '08:00', to: '09:00', onlyIfFree: true, createdAt: 1 } } });
   const html = view(), s = text(html);
-  assert.match(s, /Donderdag 15:00–18:30 · alleen als ik niet rijd/);
+  assert.match(s, /Donderdag 15:00–18:30/);
   assert.match(html, /data-rbmomentdel="m1"/); assert.doesNotMatch(html, /data-rbmomentdel="m2"/);
   assert.match(html, /data-rbmomentdel="m1"[^>]*><svg/);
-  assert.match(html, /data-rbmday="2026-09-28" aria-pressed="false" disabled/);
-  assert.match(html, /class="rbOpt active" data-rbmday="2026-09-30"/);
-  assert.match(html, /id="rbmFree" checked|class="switch" id="rbmFree" checked/);
+  assert.match(html, /data-rbmday="2026-09-28" aria-pressed="false" aria-label="Maandag" disabled/);
+  assert.match(html, /class="dayPill on" data-rbmday="2026-09-30"/);
+  assert.equal((html.match(/class="dayPill[ "]/g) || []).length, 5);
+  assert.match(html, /class="rbTimes">\s*<label for="rbmFrom"><span>Van<\/span>[\s\S]*<label for="rbmTo"><span>Tot<\/span>/);
+  assert.doesNotMatch(html, /rbmFree|Alleen als ik niet al rijd|rbOpt/);
+});
+test('v213: closed, "Ik kan inspringen" is only the button (no form, no empty-text, no intro); a tap opens the form with the intro, the preview next to the save button', () => {
+  asF3({}); let html = view();
+  assert.match(html, /id="rbmOpen"[^>]*>[\s\S]*Tijdvak toevoegen/); assert.doesNotMatch(html, /id="rbmFrom"|id="rbmSave"|Je hebt geen tijdvak|Heb je tijd/);
+  S.rbMomentOpen = true; html = view();
+  assert.doesNotMatch(html, /id="rbmOpen"/); assert.match(html, /Heb je tijd en kun je een rit kunnen overnemen\?/);
+  assert.match(html, /class="rbSaveRow"><span class="muted" id="rbmPreview">[^<]*<\/span>\s*<button type="button" class="btn" id="rbmSave"/);
+  S.rbMomentOpen = false; S.rbMomentDraft = { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true };
+  assert.match(view(), /id="rbmFrom"/, 'a draft that is being typed keeps the form open');
+});
+test('v213: the offer card has one line with who offers it and the note (no separate "Aangeboden door" line)', () => {
+  asF3({ offers: { o1: offerBy('f2', { message: 'Tandarts' }) } });
+  const html = view(); assert.match(html, /class="rbBy"><b>[^<]+<\/b> · <i>“Tandarts”<\/i><\/div>/); assert.doesNotMatch(html, /Aangeboden door|rbNote/);
 });
 test('the preview says how many rides of other families the moment touches', () => {
   asF3({});
-  assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '15:00', to: '18:30' })), /raakt 1 ritten/);
+  assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '15:00', to: '18:30' })), /raakt 1 rit\./);
   assert.match(withFakeNow(NOW, () => momentPreview({ date: '2026-10-01', from: '06:00', to: '07:00' })), /raakt nu geen ritten/);
 });
 await testAsync('saveMomentDraft stores the moment and resets the draft', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'groups/Do_heen_1': groups().Do_heen_1, 'settings/ritbeurs': { on: true } });
-  asF3({ rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true } });
-  assert.equal(await withFakeNowAsync(NOW, () => saveMomentDraft()), true);
+  asF3({ rbMomentOpen: true, rbMomentDraft: { date: '2026-10-01', from: '15:00', to: '18:30', onlyIfFree: true } });
+  assert.equal(await withFakeNowAsync(NOW, () => saveMomentDraft()), true); assert.equal(S.rbMomentOpen, false, 'the form closes after saving');
   assert.equal([...fake.store.keys()].filter(k => k.startsWith('backupMoments/')).length, 1);
   assert.equal(S.rbMomentDraft, null);
 });
 
 console.log('=== notifications and the badge ===');
-test('Testweergave (coordinator): the made-up notifications of that family are in the inbox, marked "test", held back by quiet hours, never in the badge', () => {
+test('Testweergave (coordinator): the made-up notifications of that family are in the inbox, marked "test", never in the badge', () => {
   const mine = { kind: 'taken', toFamilyId: 'f2', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 5, deliverAt: 5, expiresAt: 9e12, read: false };
   sampleCoordinatorState({ impersonateFamilyId: 'f2', ritbeurs: { on: true }, groups: groups(), links: { coord: { familyId: 'f1' } },
-    push: { ...S.push, tests: { t1: mine, later: { ...mine, createdAt: 9, deliverAt: Date.now() + 3600e3 }, old: { ...mine, expiresAt: 5 }, other: { ...mine, toFamilyId: 'f3' } } } });
+    push: { ...S.push, tests: { t1: mine, old: { ...mine, expiresAt: 5 }, other: { ...mine, toFamilyId: 'f3' } } } });
   const html = view();
   assert.match(html, /Kees de Vries neemt je rit over <span class="noticeChip off">test<\/span>/);
-  assert.equal((html.match(/noticeChip off">test/g) || []).length, 1, 'only the delivered, unexpired one of this family');
+  assert.equal((html.match(/noticeChip off">test/g) || []).length, 1, 'only the unexpired one of this family');
   assert.doesNotMatch(html, /rbNotif unread/); assert.doesNotMatch(html, /id="rbReadAll"/);
   assert.equal(ritbeursBadgeCount(), 0); assert.deepEqual(Object.keys(testNotificationsForView(Date.now())), ['t1']);
   S.impersonateFamilyId = null; assert.deepEqual(testNotificationsForView(Date.now()), {}); assert.doesNotMatch(view(), /noticeChip off">test/);
@@ -194,11 +259,11 @@ test('notifications read in plain Dutch and never claim to know where someone is
   assert.match(s, /Er is een back-up voor je rit Kees de Vries kan donderdag tussen 15:00 en 18:30 inspringen/);
   assert.match(s, /Rit donderdag 16:15 nog niet gedekt Het is 18:00 en niemand heeft hem overgenomen/);
   assert.doesNotMatch(s, /in de buurt/i);
-  assert.match(s, /Alles gelezen/);
+  assert.doesNotMatch(s, /Alles gelezen/);
 });
-test('a notification held back by quiet hours or expired is not shown or counted', () => {
+test('an expired notification is not shown or counted, one with an old future deliverAt is shown at once', () => {
   asF2({ notifications: { a: { kind: 'taken', createdAt: 1, deliverAt: Date.now() + 3600e3, expiresAt: 9e12, read: false }, b: { kind: 'taken', createdAt: 1, deliverAt: 1, expiresAt: 5, read: false }, c: { kind: 'taken', createdAt: 1, deliverAt: 1, expiresAt: 9e12, read: false } } });
-  assert.deepEqual(Object.keys(visibleNotifications()), ['c']);
+  assert.deepEqual(Object.keys(visibleNotifications()).sort(), ['a', 'c']);
 });
 test('the number on the Wijzigen tab counts rides of others plus unread notifications, and is hidden when the switch is off', () => {
   asF3({ offers: { o1: offerBy('f2'), o2: offerBy('f3', { day: 'Vr' }) }, notifications: { c: { kind: 'taken', createdAt: 1, deliverAt: 1, expiresAt: 9e12, read: false } } });
@@ -209,17 +274,19 @@ test('the number on the Wijzigen tab counts rides of others plus unread notifica
   withFakeNow(NOW, () => updatePeriodBadge());
   assert.equal(dom.el('navDeviationBadge').textContent, '');
 });
-test('the quiet hours selects start at 22:00 – 06:00 and are instelbaar', () => {
-  asF3({});
-  const html = view();
-  assert.match(html, /id="rbqFrom"[^>]*>.*<option value="22:00" selected>/);
-  assert.match(html, /id="rbqTo"[^>]*>.*<option value="06:00" selected>/);
+test('notifications: no card at all when there are none; otherwise the latest five, no "Alles gelezen" button, no quiet-hours selects', () => {
+  asF3({}); assert.doesNotMatch(view(), /rbNotifCard|Meldingen/);
+  const notifications = {}; for(let i = 0; i < 7; i++) notifications['n' + i] = { kind: 'taken', fromFamilyId: 'f2', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: i + 1, deliverAt: 1, expiresAt: 9e12, read: false };
+  asF3({ notifications }); const html = view();
+  assert.match(html, /id="rbNotifCard"/); assert.equal((html.match(/class="entryCard entryCard--stack rbNotifCard/g) || []).length, 5);
+  assert.ok(html.indexOf('id="rbNotifCard"') < html.indexOf('class="infoLine"'), 'the notifications are on top, above the intro');
+  assert.doesNotMatch(html, /rbReadAll|Alles gelezen|rbqFrom|rbqTo|Stille uren/);
 });
 test('setRbView switches between the two views and closes open forms', () => {
-  asF3({ rbConfirm: 'o1', rbOffering: 'Do|heen' });
+  asF3({ rbConfirm: 'o1' });
   withFakeNow(NOW, () => setRbView('ritbeurs'));
-  assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null);
-  assert.match(dom.html('tab-deviation'), /Aangeboden ritten/);
+  assert.equal(S.rbView, 'ritbeurs'); assert.equal(S.rbConfirm, null);
+  assert.match(dom.html('tab-deviation'), /Zoekt een vervanger/);
   withFakeNow(NOW, () => setRbView('wijzigen'));
   assert.equal(S.rbView, 'wijzigen');
 });
@@ -233,7 +300,7 @@ test('the card is in Beheer for the coordinator, with a switch and a status chip
   sampleCoordinatorState({ ritbeurs: { on: false } });
   const html = ritbeursCardHtml();
   assert.match(html, /id="ritbeursOn"/); assert.doesNotMatch(html, /id="ritbeursOn" checked/);
-  assert.match(text(html), /Uit: Ritten ruilen is verborgen en er worden geen meldingen gemaakt/);
+  assert.match(text(html), /Uit: Ruilen is verborgen en er worden geen meldingen gemaakt/);
   assert.match(text(html), /stopt direct alle meldingen/);
   withFakeNow(NOW, () => renderBeheer());
   assert.match(dom.html('tab-beheer'), /id="ritbeursCard"/);
@@ -298,17 +365,40 @@ test('the offered ride shows its passengers as chips (your own daughter in red),
   const html = ritbeursViewHtml(); assert.doesNotMatch(html, /class="pill rbPill"/); assert.match(html, /class="chips rbPills"/);
 });
 test('the intro is an info line and the sections are labels, not amber boxes', () => {
-  const html = ritbeursViewHtml(); assert.match(html, /<div class="infoLine">/); assert.match(html, /<div class="sectionLabel">/); assert.doesNotMatch(html, /devAlert/);
+  const html = ritbeursViewHtml(); assert.match(html, /<div class="infoLine">/); assert.match(html, /<div class="sectionHead"><span class="sectionHead__title">Zoekt een vervanger<\/span>/); assert.doesNotMatch(html, /devAlert/);
 });
 
 test('a time list of "Nieuw tijdvak" that is open is not redrawn under the finger; after it is left it is', () => {
-  asF3({ offers: { o1: offerBy('f2') } }); S.rbView = 'ritbeurs';
+  asF3({ rbMomentOpen: true, offers: { o1: offerBy('f2') } }); S.rbView = 'ritbeurs';
   withFakeNow(NOW, () => renderDeviationTab());
   dom.el('tab-deviation').innerHTML = 'MARK';
   document.activeElement = { classList: { contains: c => c === 'rbSel' } };
   withFakeNow(NOW, () => renderDeviationTab()); assert.equal(dom.html('tab-deviation'), 'MARK');
   document.activeElement = null;
   withFakeNow(NOW, () => renderDeviationTab()); assert.match(dom.html('tab-deviation'), /id="rbmFrom"/);
+});
+test('v214: a back-up notification has the button "Bied mijn rit aan" for the own ride inside the back-up\'s slot; not for rides outside it or already on offer', () => {
+  const n = { kind: 'backupForRide', fromFamilyId: 'f3', momentFrom: '15:00', momentTo: '18:30', date: '2026-10-01', weekKey: WEEK_KEY, createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false };
+  asF2({ notifications: { a: n } });   // f2 drives Thursday 16:15 (heen)
+  let html = view();
+  assert.match(html, /data-rboffernow="Do\|heen" data-rbwho="[^"]*">Bied mijn rit aan</);
+  assert.match(html, /data-rbwho="[^"]+"/, 'v222: the back-up is passed on so the offer form can name them');
+  asF2({ notifications: { a: { ...n, momentFrom: '07:00', momentTo: '08:00' } } });
+  assert.doesNotMatch(view(), /data-rboffernow/);
+  asF2({ notifications: { a: n }, offers: { o1: offerBy('f2') } });
+  assert.doesNotMatch(view(), /data-rboffernow|rbNotifCard/, 'already on offer: nothing left to do, so no card either');
+});
+test('v216: every notification card has Negeren (back-up) or Sluiten; a dismissed notification is gone from the cards and the badge, the others stay', () => {
+  const n = { kind: 'backupForRide', fromFamilyId: 'f3', momentFrom: '15:00', momentTo: '18:30', date: '2026-10-01', weekKey: WEEK_KEY, createdAt: 5, deliverAt: 1, expiresAt: 9e12, read: false };
+  const taken = { kind: 'taken', fromFamilyId: 'f3', weekKey: WEEK_KEY, day: 'Do', time: '16:15', date: '2026-10-01', createdAt: 4, deliverAt: 1, expiresAt: 9e12, read: false };
+  resetDismissedNotifications(); asF2({ notifications: { a: n, b: taken } });
+  let html = view();
+  assert.match(html, /data-rbnotifdismiss="a">Negeren</); assert.match(html, /data-rbnotifdismiss="b">Sluiten</);
+  assert.equal(ritbeursBadgeCount(), 2);
+  dismissNotification('a');
+  html = view(); assert.doesNotMatch(html, /data-rbnotifdismiss="a"/); assert.match(html, /data-rbnotifdismiss="b"/);
+  assert.equal(ritbeursBadgeCount(), 1);
+  resetDismissedNotifications();
 });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

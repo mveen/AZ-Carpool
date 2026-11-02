@@ -9,7 +9,7 @@ import { clearAutoReset, resetSession, shouldAutoReset } from './session-reset.j
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
 import { APP_URL, DAYS, WA_ICON_SMALL } from './constants.js';
 import { waPhone } from './ui-schedule.js';
-import { db } from './data.js';
+import { db, syncListeners } from './data.js';
 import { goToWijzigen } from './ui-myweek.js';
 import { describeWeekschemaChange } from './ui-deviation.js';
 import { diffSchedules, diffWeekschema, mergePendingChanges } from './schedule-changes.js';
@@ -38,6 +38,7 @@ export function startImpersonate(familyId){
   const tab=currentTab();
   S.impersonateFamilyId=familyId;
   recomputeCanEdit();
+  syncListeners();   // the inbox (Ruilen) is the one of the family being viewed, never the one of the previous view
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display='none';
   showToast(t('profile.testweergave_gestart'));
   if(tab==='beheer') S.roosterMode='week';
@@ -48,6 +49,7 @@ export function startImpersonate(familyId){
 export function stopImpersonate(){
   S.impersonateFamilyId=null;
   recomputeCanEdit();
+  syncListeners();   // back to the own inbox
   const navB=document.getElementById('navBeheer'); if(navB) navB.style.display=S.canEdit?'':'none';
   showToast(t('profile.terug_naar_coordinatorweergave'));
   renderAll();   // the user stays on the tab they are on
@@ -71,7 +73,7 @@ export function weekschemaWarningInnerHtml(){
     <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_waarschuwing_tekst')}</p>
     <div class="rowflex" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button type="button" class="btn small" id="weekschemaConfirm">${t('profile.weekschema_bevestigen')}</button>
-      <button type="button" class="btn small secondary" id="weekschemaToWijzigen">${phIcon('lightning')} ${t('profile.weekschema_naar_wijzigen')}</button>
+      <button type="button" class="btn small secondary" id="weekschemaToWijzigen">${t('profile.weekschema_naar_wijzigen')}</button>
     </div>
     <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_eenmalig_uitleg')}</p>`;
 }

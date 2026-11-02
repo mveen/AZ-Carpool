@@ -28,7 +28,6 @@ const K = {
   reden: { ok: 'push.wie.reden.ok', 'niet-gedekt': 'push.wie.reden.niet-gedekt', 'eigen-rit': 'push.wie.reden.eigen-rit', bezig: 'push.wie.reden.bezig', dubbel: 'push.wie.reden.dubbel' },
   scen: { rijVrij: 'push.scen.rijVrij', overgenomen: 'push.scen.overgenomen', backup: 'push.scen.backup', nietGedekt: 'push.scen.nietGedekt', dagcoordinator: 'push.scen.dagcoordinator' },
 };
-const hhmm = ms => { const d = new Date(ms); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
 export function agoText(ms, nowMs = Date.now()){
   if(!ms) return '';
   const min = Math.max(0, Math.floor((nowMs - ms) / 60000));
@@ -88,20 +87,16 @@ function personaHtml(){
 
 function scenariosHtml(){
   const ready = !!S.push.personaId;
-  const time = S.push.timeChoice === 'nacht' ? 'nacht' : 'nu';
   return `<div class="sectionLabel">${t('push.scen.title')}</div>
-    <div class="rowflex pushTime"><label for="pushTime">${t('push.scen.tijd')}</label>
-      <select id="pushTime" class="rbSel pushSel"><option value="nu"${time === 'nu' ? ' selected' : ''}>${t('push.scen.tijd.nu')}</option>
-      <option value="nacht"${time === 'nacht' ? ' selected' : ''}>${t('push.scen.tijd.nacht')}</option></select></div>
     <div class="pushScen">${SCENARIOS.map(s => `<button type="button" class="btn small secondary" data-pushscen="${s.id}"${ready ? '' : ' disabled'}>${t(K.scen[s.id])}</button>`).join('')}</div>
     ${pushMode() === 'test' ? '' : `<p class="muted pushHint">${t('push.hint.testUit')}</p>`}`;
 }
 
 function itemHtml(it, nowMs){
-  const stateText = it.state === 'wacht' ? t('push.preview.state.wacht', { time: hhmm(it.n.deliverAt) }) : t(K.state[it.state]);
+  const stateText = t(K.state[it.state]);
   const pushText = t(K.push[it.push]);
   const canSend = pushMode() === 'test' && it.state !== 'verlopen';
-  return `<div class="pushNotif${it.state === 'wacht' ? ' is-wait' : ''}">
+  return `<div class="pushNotif">
       <div class="pushNotif__app"><span class="pushNotif__icon">${phIcon('car')}</span><span>${t('push.preview.app')}</span><span class="pushNotif__time">${esc(agoText(it.n.createdAt, nowMs))}</span></div>
       <b>${esc(it.text.title)}</b><span class="pushNotif__body">${esc(it.text.body)}</span>
       <div class="pushNotif__meta"><span class="noticeChip ${it.state === 'bezorgd' ? 'ok' : 'off'}">${esc(stateText)}</span>
@@ -163,16 +158,15 @@ export async function enableThisDevice(){
   return res;
 }
 export async function pickPersona(id){ setPersona(id); refreshPushCard(true); }
-export async function playScenario(id, choice){ const res = await runScenario(id, choice); refreshPushCard(true); return res; }
+export async function playScenario(id){ const res = await runScenario(id); refreshPushCard(true); return res; }
 
 export function wirePushCard(){
   const $ = id => document.getElementById(id);
   const sw = $('pushTestOn'); if(sw) sw.onchange = () => { hapticTap(); togglePushTest(!!sw.checked); };
   const en = $('pushEnable'); if(en) en.onclick = () => { hapticTap(); enableThisDevice(); };
   const per = $('pushPersona'); if(per) per.onchange = () => pickPersona(per.value);
-  const tm = $('pushTime'); if(tm) tm.onchange = () => { S.push.timeChoice = tm.value === 'nacht' ? 'nacht' : 'nu'; };
   const clr = $('pushClear'); if(clr) clr.onclick = () => { hapticTap(); clearTests(); };
-  document.querySelectorAll('[data-pushscen]').forEach(b => b.onclick = () => { hapticTap(); const tmv = $('pushTime'); playScenario(b.dataset.pushscen, tmv ? tmv.value : S.push.timeChoice); });
+  document.querySelectorAll('[data-pushscen]').forEach(b => b.onclick = () => { hapticTap(); playScenario(b.dataset.pushscen); });
   document.querySelectorAll('[data-pushsend]').forEach(b => b.onclick = () => { hapticTap(); sendToMyDevice(b.dataset.pushsend); });
   document.querySelectorAll('[data-pushcat]').forEach(c => c.onchange = () => setDeviceCategory(c.dataset.pushcat, 'ritbeurs', !!c.checked));
   document.querySelectorAll('[data-pushdevdel]').forEach(b => b.onclick = () => twoStepConfirm(b, t('push.toestel.zeker'), () => removeDevice(b.dataset.pushdevdel)));

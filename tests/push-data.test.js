@@ -15,7 +15,7 @@ import {
   runScenario, scenarioContext, sendToMyDevice, setDeviceCategory, setPersona, setPushMode, stopPushListeners, syncPushListeners,
 } from '../push-data.js';
 import { deviceDoc, deviceId } from '../push.js';
-import { notificationDoc, normalizeQuiet } from '../ritbeurs.js';
+import { notificationDoc } from '../ritbeurs.js';
 
 const dom = installFakeDom();
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -168,7 +168,7 @@ await test('loading the screen: the key, whether this browser is subscribed, and
 await test('while live is on, a real notification\'s push to a family phone is not shown as "to your device"; test copies still are', async () => {
   asCoordinator(); setPersona('f6'); await tick();
   S.pushSettings = { mode: 'test', live: true, liveSince: NOWMS - 10000 };
-  const mk = extra => notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() });
+  const mk = extra => notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS });
   S.push.personaNotifs = { r1: mk() }; S.push.tests = { t1: mk() };
   S.push.queue = {
     q1: { path: 'families/f6/notifications/r1', createdAt: NOWMS, test: false, sentTo: { phone: 5 } },
@@ -269,7 +269,7 @@ await test('choosing a family is remembered on this device and shown as "Ouder v
   setPersona('nobody'); assert.equal(S.push.personaId, ''); assert.equal(rememberedPersona(), '');
 });
 await test('the real notifications of the chosen family are followed, and dropped when another family is chosen', async () => {
-  const n = notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() });
+  const n = notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS });
   asCoordinator({ 'families/f6/notifications/n1': n });
   setPersona('f6'); await tick();
   assert.deepEqual(Object.keys(S.push.personaNotifs), ['n1']);
@@ -292,7 +292,7 @@ await test('a made-up notification that arrives while the coordinator is in Test
   const fake = asCoordinator({}, {}, { impersonateFamilyId: 'f6', ritbeurs: { on: true }, rbView: 'ritbeurs', links: { coord: { familyId: 'f1' } } });
   syncPushListeners(); await tick();
   assert.doesNotMatch(dom.html('tab-deviation'), /neemt je rit over/);
-  await fake.sdk.setDoc(fake.sdk.doc(null, 'testNotifications', 'x1'), { ...notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's', fromFamilyId: 'f2', nowMs: NOWMS - 1000, quiet: normalizeQuiet() }), expiresAt: NOWMS + 3600e3 });
+  await fake.sdk.setDoc(fake.sdk.doc(null, 'testNotifications', 'x1'), { ...notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's', fromFamilyId: 'f2', nowMs: NOWMS - 1000 }), expiresAt: NOWMS + 3600e3 });
   await tick(); await tick();
   assert.match(dom.html('tab-deviation'), /neemt je rit over/); stopPushListeners();
 });
@@ -307,27 +307,21 @@ const TESTMODE = { 'settings/push': { mode: 'test' } };
 await test('with the switch on uit a scenario only makes the made-up notification for the preview: nothing is queued', async () => {
   const fake = asCoordinator(); setPersona('f6');
   const before = realStore(fake);
-  const res = await withFakeNowAsync(NOW, () => runScenario('overgenomen', 'nu'));
+  const res = await withFakeNowAsync(NOW, () => runScenario('overgenomen'));
   assert.equal(res.rows.length, 1);
   assert.deepEqual(fake.collection('pushQueue'), []); assert.equal(fake.collection('testNotifications').length, 1);
   const [id, doc] = fake.collection('testNotifications')[0];
   assert.match(id, /^taken_test-overgenomen-\d+_f6$/); assert.equal(doc.toFamilyId, 'f6'); assert.equal(doc.kind, 'taken');
   assert.equal(realStore(fake), before); assert.match(toast(), /Situatie afgespeeld/);
 });
-await test('with the switch on test the chosen family\'s notification is also queued for the server, due when its quiet hours allow', async () => {
+await test('with the switch on test the chosen family\'s notification is also queued for the server, due at once', async () => {
   const fake = asCoordinator(TESTMODE); S.pushSettings = { mode: 'test' }; setPersona('f6');
-  await withFakeNowAsync(NOW, () => runScenario('overgenomen', 'nu'));
+  await withFakeNowAsync(NOW, () => runScenario('overgenomen'));
   const q = fake.collection('pushQueue');
   assert.equal(q.length, 1); const [key, entry] = q[0];
   assert.match(key, /^testNotifications__taken_test-overgenomen-\d+_f6$/);
   assert.equal(entry.test, true); assert.equal(entry.toFamilyId, 'f6'); assert.equal(entry.kind, 'taken'); assert.equal(entry.path, 'testNotifications/' + fake.collection('testNotifications')[0][0]);
   assert.equal(entry.deliverAt, NOWMS); assert.match(toast(), /binnen een paar minuten/);
-});
-await test('pretending it is night makes the notification wait for the quiet hours to end, also in the queue', async () => {
-  const fake = asCoordinator(TESTMODE); S.pushSettings = { mode: 'test' }; setPersona('f6');
-  await withFakeNowAsync(NOW, () => runScenario('overgenomen', 'nacht'));
-  const [, doc] = fake.collection('testNotifications')[0]; const [, entry] = fake.collection('pushQueue')[0];
-  assert.ok(doc.deliverAt > NOWMS); assert.equal(entry.deliverAt, doc.deliverAt); assert.equal(S.push.timeChoice, 'nacht');
 });
 await test('no scenario ever touches real data: offers, back-up moments, deviations, groups, families, links and a family\'s own notifications stay as they were', async () => {
   const fake = asCoordinator({ ...TESTMODE, 'offers/o1': { status: 'open' }, 'backupMoments/m1': { familyId: 'f2', date: '2026-10-01', from: '15:00', to: '17:00', onlyIfFree: true }, 'settings/ritbeurs': { on: true }, 'families/f6/notifications/real1': { kind: 'taken' } });
@@ -343,24 +337,24 @@ await test('what the last scenario did stays available for "Wie krijgt dit?"', a
 });
 await test('without a chosen family, with one family only, or as a parent: a clear message and nothing written', async () => {
   const fake = asCoordinator();
-  assert.equal(await runScenario('overgenomen', 'nu'), null); assert.match(toast(), /Kies eerst/); assert.deepEqual(fake.collection('testNotifications'), []);
+  assert.equal(await runScenario('overgenomen'), null); assert.match(toast(), /Kies eerst/); assert.deepEqual(fake.collection('testNotifications'), []);
   const one = useFakeDb({ 'config/coordinator': { uid: 'coord' }, 'families/f1': { parentName: 'A', girlName: 'B' } }); sampleCoordinatorState({ families: { f1: { parentName: 'A', girlName: 'B' } } }); setPersona('f1');
-  assert.equal(await runScenario('overgenomen', 'nu'), null); assert.match(toast(), /tweede gezin/); assert.deepEqual(one.collection('testNotifications'), []);
+  assert.equal(await runScenario('overgenomen'), null); assert.match(toast(), /tweede gezin/); assert.deepEqual(one.collection('testNotifications'), []);
   const p = useFakeDb(sampleDbSeed()); sampleParentState(); S.push.personaId = 'f6';
-  assert.equal(await runScenario('overgenomen', 'nu'), null); assert.deepEqual(p.collection('testNotifications'), []);
+  assert.equal(await runScenario('overgenomen'), null); assert.deepEqual(p.collection('testNotifications'), []);
 });
 await test('the context takes the next working day of the planning week for a ride that does not exist yet', () => {
-  asCoordinator(); const c = scenarioContext('f6', 'nu', NOWMS);
+  asCoordinator(); const c = scenarioContext('f6', NOWMS);
   assert.equal(c.fallbackRide.date, '2026-10-01'); assert.equal(c.fallbackRide.day, 'Do'); assert.equal(c.fallbackRide.time, '16:15');
   // Saturday: the planning week is the coming one, so its first day is used
   S.currentWeekKey = '2026-W42';
-  const sat = scenarioContext('f6', 'nu', new Date('2026-10-10T12:00:00+02:00').getTime());
+  const sat = scenarioContext('f6', new Date('2026-10-10T12:00:00+02:00').getTime());
   assert.equal(sat.fallbackRide.date, '2026-10-12'); assert.equal(sat.fallbackRide.day, 'Ma');
 });
 
 console.log('\n=== "stuur naar mijn toestel" and clearing ===');
 await test('a made-up or real notification is queued again for the server right now, as its own entry', async () => {
-  const n = notificationDoc({ kind: 'taken', to: 'f6', offer: {}, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() });
+  const n = notificationDoc({ kind: 'taken', to: 'f6', offer: {}, sourceId: 's1', fromFamilyId: 'f2', nowMs: NOWMS });
   const fake = asCoordinator(TESTMODE); S.pushSettings = { mode: 'test' }; setPersona('f6'); await tick();   // (the listener first reports the family's own notifications: none)
   S.push.tests = { t1: { ...n, deliverAt: NOWMS + 6 * 3600000 } }; S.push.personaNotifs = { r1: n };
   assert.equal(await withFakeNowAsync(NOW, () => sendToMyDevice('testNotifications/t1')), true);
@@ -384,13 +378,13 @@ await test('clearing removes the made-up notifications and their queue entries, 
 
 console.log('\n=== the preview ===');
 await test('shows the made-up and the real notifications of the chosen family, newest first, with their state and what was done with the push', async () => {
-  const mk = (extra = {}) => ({ ...notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's', fromFamilyId: 'f2', nowMs: NOWMS, quiet: normalizeQuiet() }), ...extra });
+  const mk = (extra = {}) => ({ ...notificationDoc({ kind: 'taken', to: 'f6', offer: { weekKey: '2026-W40', day: 'Do', direction: 'heen', date: '2026-10-01', time: '16:15' }, sourceId: 's', fromFamilyId: 'f2', nowMs: NOWMS }), ...extra });
   asCoordinator(); setPersona('f6');
-  S.push.tests = { t1: mk({ createdAt: NOWMS - 1000 }), t2: mk({ createdAt: NOWMS - 500, deliverAt: NOWMS + 3600000 }), other: { ...mk(), toFamilyId: 'f3' } };
+  S.push.tests = { t1: mk({ createdAt: NOWMS - 1000 }), t2: mk({ createdAt: NOWMS - 500 }), other: { ...mk(), toFamilyId: 'f3' } };
   S.push.personaNotifs = { r1: mk({ createdAt: NOWMS - 2000 }), junk: { kind: 'toekomst', toFamilyId: 'f6', createdAt: NOWMS } };
   S.push.queue = { q1: { path: 'testNotifications/t1', sentTo: { d1: 5 } }, q2: { path: 'families/f6/notifications/r1' } };
   const items = previewItems(NOWMS);
-  assert.deepEqual(items.map(i => [i.id, i.source, i.state, i.push]), [['t2', 'test', 'wacht', 'geen'], ['t1', 'test', 'bezorgd', 'verstuurd'], ['r1', 'echt', 'bezorgd', 'wachtrij']]);
+  assert.deepEqual(items.map(i => [i.id, i.source, i.state, i.push]), [['t2', 'test', 'bezorgd', 'geen'], ['t1', 'test', 'bezorgd', 'verstuurd'], ['r1', 'echt', 'bezorgd', 'wachtrij']]);
   assert.equal(items[0].text.title, 'Ouder Piet Pieters'.replace('Ouder ', '') + ' neemt je rit over');
   S.push.personaId = ''; assert.deepEqual(previewItems(NOWMS), []);
 });

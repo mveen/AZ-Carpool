@@ -998,6 +998,10 @@ await testAsync('Ritbeurs: the switch, the offers and the moments are read; the 
   stopDataListeners(); assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {});
   S.links = {}; syncListeners(); assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null); assert.deepEqual(S.notifications, {});
 });
+await testAsync('Ritbeurs: Mijn week is drawn again when the offers change (the tag "Vervanger gezocht" follows the offer)', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  assert.match(src, /collection\("offers"\)\.onSnapshot\([^\n]*renderMyWeek\(\)/);
+});
 await testAsync('Afwijkend weekrooster: the old switch document is no longer read, and the app starts no request listener by itself from the data listeners', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), 'settings/weekrooster': { mode: 'uit', updatedAt: 1 } }); sampleParentState({});
   startDataListeners(); await tick(); await tick();
@@ -1135,5 +1139,59 @@ await testAsync('writeDeviation stores the cars of a shift with the week, the ex
   assert.equal(d.weekKey, '2026-W40'); assert.ok(d.expiresAt); assert.equal(d.selfKind, 'chauffeur');
 });
 
+test('v211: leaving the data listeners no longer keeps a rbOffering field (offering lives in Mijn week)', () => {
+  assert.ok(!Object.prototype.hasOwnProperty.call(S, 'rbOffering'));
+});
+await testAsync('v212: the notifications listener also redraws Mijn week (the notification card sits there)', async () => {
+  assert.match((await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8'), /S\.notifications\[d\.id\]=d\.data\(\)\);\s*renderDeviationTab\(\); renderMyWeek\(\);/);
+});
+await testAsync('v218: every live listener in startDataListeners reports a refusal to the error log (path + code), so it is visible WHICH reading failed', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  const body = src.slice(src.indexOf('export function startDataListeners'));
+  const handlers = (body.slice(0, body.indexOf('\nexport function', 10)).match(/err=>\{/g) || []).length;
+  const reported = (body.slice(0, body.indexOf('\nexport function', 10)).match(/err=>\{ listenFailed\("/g) || []).length;
+  assert.ok(handlers > 10); assert.equal(reported, handlers);
+  assert.match(src, /settings\/ritbeurs"\)\.onSnapshot[^]*?listenFailed\("settings\/ritbeurs"/);
+});
+await testAsync('v218: listenFailed logs where=listen with the path and error code, and never throws', async () => {
+  const { listenFailed } = await import('../data.js');
+  assert.doesNotThrow(() => listenFailed('settings/dayCoordinators', { code: 'permission-denied', message: 'x' }));
+  assert.doesNotThrow(() => listenFailed('families', null));
+  assert.equal(db.authUid(), null, 'a fake database without a sign-in reports none');
+});
+await testAsync('v218: a refused listener restarts the live listeners (3 times at most, never two at once)', async () => {
+  const { restartListenersSoon, listenerRetry, LISTENER_RETRY_DELAYS_MS } = await import('../data.js');
+  listenerRetry.n = 0; listenerRetry.timer = null;
+  const fired = []; const fakeTimer = (fn, ms) => { fired.push({ fn, ms }); return 1; };
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({});
+  assert.equal(restartListenersSoon(fakeTimer), true);
+  assert.equal(restartListenersSoon(fakeTimer), false, 'a second refusal while one restart is waiting does nothing');
+  assert.equal(fired.length, 1); assert.equal(fired[0].ms, LISTENER_RETRY_DELAYS_MS[0]);
+  fired[0].fn(); await tick();
+  assert.equal(listenerRetry.timer, null); assert.ok(S.dataUnsubs.length > 0, 'the listeners run again');
+  assert.equal(restartListenersSoon(fakeTimer), true); fired[1].fn();
+  assert.equal(restartListenersSoon(fakeTimer), true); fired[2].fn();
+  assert.equal(restartListenersSoon(fakeTimer), false, 'after 3 restarts it stops');
+  stopDataListeners(); listenerRetry.n = 0;
+});
+await testAsync('v224: db.onAuthChange passes the SDK sign-in changes on (user ID or null) and is a no-op for adapters without it', async () => {
+  const seen = []; let push = null;
+  const auth = { currentUser: null, onAuthStateChanged: cb => { push = cb; return () => seen.push('unsub'); } };
+  const real = createFirestoreDb({ sdk: { collection(){}, doc(){}, signInAnonymously(){} }, firestoreDb: {}, auth, calendarApiKey: '' });
+  const off = real.onAuthChange(id => seen.push(id));
+  push({ uid: 'u1' }); push(null); off();
+  assert.deepEqual(seen, ['u1', null, 'unsub']);
+  assert.equal(typeof createFirestoreDb({ sdk: { collection(){}, doc(){}, signInAnonymously(){} }, firestoreDb: {}, auth: {}, calendarApiKey: '' }).onAuthChange(() => {}), 'function');
+});
+await testAsync('v225: storageProbe reports the sign-in database, the Firestore copy and localStorage by name only, and never throws', async () => {
+  const { storageProbe } = await import('../data.js');
+  const g = globalThis; const had = Object.getOwnPropertyDescriptor(g, 'indexedDB');
+  Object.defineProperty(g, 'indexedDB', { value: { databases: async () => [{ name: 'firebaseLocalStorageDb' }, { name: 'firestore/[DEFAULT]/x/main' }, {}] }, configurable: true });
+  try { assert.match(await storageProbe(), /^idbAuth:y idbFs:y ls:(ok|blocked)$/); }
+  finally { if (had) Object.defineProperty(g, 'indexedDB', had); else delete g.indexedDB; }
+  Object.defineProperty(g, 'indexedDB', { value: { databases: async () => { throw new Error('x'); } }, configurable: true });
+  try { assert.match(await storageProbe(), /^idb:err ls:/); }
+  finally { if (had) Object.defineProperty(g, 'indexedDB', had); else delete g.indexedDB; }
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

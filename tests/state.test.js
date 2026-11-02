@@ -93,13 +93,13 @@ test('there is no Afwijkend-weekrooster switch in the state any more', () => {
 test('the Ritbeurs state starts empty and the Ritbeurs is off until the switch is read', () => {
   assert.equal(S.ritbeurs, null); assert.deepEqual(S.offers, {}); assert.deepEqual(S.moments, {}); assert.deepEqual(S.notifications, {});
   assert.equal(S.notificationsFor, null); assert.equal(S.notificationsUnsub, null);
-  assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbOffering, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbBusy, false);
+  assert.equal(S.rbView, 'wijzigen'); assert.equal(S.rbConfirm, null); assert.equal(S.rbMomentDraft, null); assert.equal(S.rbMomentOpen, false); assert.equal(S.rbBusy, false);
 });
 
 test('the push state starts empty: the switches are off until read, nothing is listened to, no family chosen, nothing pending; a parent\'s own phone is unknown', () => {
   assert.equal(S.pushSettings, null);
   assert.deepEqual(S.pushMe, { status: 'idle', key: null, deviceId: '', on: false, pendingOpen: 0 });
-  assert.deepEqual(S.push, { unsubs: [], key: null, status: null, devices: {}, queue: {}, tests: {}, personaId: '', personaNotifs: {}, personaFor: null, personaUnsub: null, timeChoice: 'nu', last: null, thisDeviceId: '', pendingOpen: '', pendingView: false });
+  assert.deepEqual(S.push, { unsubs: [], key: null, status: null, devices: {}, queue: {}, tests: {}, personaId: '', personaNotifs: {}, personaFor: null, personaUnsub: null, last: null, thisDeviceId: '', pendingOpen: '', pendingView: false });
 });
 
 test('the coordinator view starts as "coordinator" (viewAsParent is off until chosen in Instellingen)', () => {
@@ -116,7 +116,7 @@ test('practice matches start empty', () => { assert.deepEqual(S.practiceMatches,
 
 test('Afwijkend weekrooster: no requests, no listeners and no form open at start; this week is shown', () => {
   assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, ''); assert.deepEqual(S.weekRequestsUnsubs, []);
-  assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrBusy, false); assert.equal(S.myWeekNextOpen, false, 'Volgende week in Mijn week starts closed');
+  assert.equal(S.wrWeek, 'this'); assert.equal(S.wrForm, null); assert.equal(S.wrFlow, false, 'Tijden wijzigen starts closed'); assert.equal(S.wrBusy, false); assert.equal(S.myWeekNextOpen, false, 'Volgende week in Mijn week starts closed');
 });
 
 test('Mijn week loading flags: all start false, so rideDataLoaded() is false until every listener has answered', async () => {
@@ -135,5 +135,10 @@ test('Afwijkend weekrooster (phase 4): no Advies view and no finished Overnemen 
 test('Afwijkend weekrooster (phase 5): no car editor open in Rooster at start', () => { assert.equal(S.wrEdit, null); });
 test('Beheer has not been opened at start, so the coordinator does not read the ride log, error log and back-ups yet (quota)', () => { assert.equal(S.beheerOpened, false); });test('Zelf indelen: the Dagbericht starts folded', () => { assert.equal(S.wrMsgOpen, false); });
 
+test('Mijn week starts on its default day (no day chosen under the day pills)', () => { assert.equal(S.myWeekDay, ''); });
+
+test('The day coordinator\'s flow starts closed, and "Auto\'s aanpassen" has no free-text place open', () => { assert.equal(S.wrAdvice, null); assert.equal(S.adjFree, null); });
+
+test('Vast rooster: no car is unfolded at the start', () => { assert.equal(S.stdEditGid, null); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

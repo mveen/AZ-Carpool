@@ -11,8 +11,8 @@ import { S } from '../state.js';
 import { startImpersonate } from '../ui-profile.js';
 import { phIcon } from '../ui-common.js';
 import fs from 'node:fs';
-import { APP_VERSION } from '../constants.js';
-import { initials, updateHeader, openSwitchParent, switchParentRows, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
+import { APP_VERSION, PH_PATHS } from '../constants.js';
+import { contextLine, initials, updateHeader, openSwitchParent, switchParentRows, openSettings, openAvatarPicker, initShell, setViewAs, shareWeek, syncAppHeight, TAB_TITLE_KEY } from '../ui-shell.js';
 
 const dom = installFakeDom();
 
@@ -30,10 +30,15 @@ test('Mijn week: title, week line, share button and the avatar letters of the pa
   sampleParentState(); updateHeader('myweek');
   assert.equal(dom.el('headerTitle').textContent, 'Mijn week'); assert.match(dom.el('headerContext').textContent, /^Week \d+ /);
   assert.equal(dom.el('shareToggle').hidden, false); assert.equal(dom.el('avatarInitials').innerHTML, 'PP');
+  assert.ok(dom.el('shareIcon').innerHTML.includes(PH_PATHS['share-network']), 'the share button shows the share-network icon (three connected dots)');
 });
 test('design v2 context lines: Rooster "Week N · iedereen", Wijzigen "Eenmalig, deze week", Wedstrijden "<team> · komende 4 weken", Beheer "Alleen voor de coördinator"', () => {
-  sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true); assert.equal(dom.el('headerContext').textContent, 'Week 40 · iedereen');
+  sampleParentState(); updateHeader('schedule'); assert.equal(dom.el('shareToggle').hidden, true);
+  assert.equal(dom.el('overviewBtn').hidden, false); assert.match(dom.el('overviewIcon').innerHTML, /<svg/); updateHeader('myweek'); assert.equal(dom.el('overviewBtn').hidden, true); updateHeader('schedule');   // Weekoverzicht sits in the header of Rooster only assert.equal(dom.el('headerContext').textContent, 'Week 40 · iedereen');
   updateHeader('deviation'); assert.equal(dom.el('headerContext').textContent, 'Eenmalig, deze week');
+  sampleParentState({ ritbeurs: { on: true } }); updateHeader('deviation');   // Ritbeurs on: the tab is Ruilen
+  assert.equal(dom.el('headerTitle').textContent, 'Ruilen'); assert.match(dom.el('headerContext').textContent, /^Week \d+ · ritten overnemen$/);
+  sampleParentState(); updateHeader('deviation'); assert.equal(dom.el('headerTitle').textContent, 'Wijzigen');
   updateHeader('matches'); assert.equal(dom.el('headerTitle').textContent, 'Wedstrijden'); assert.equal(dom.el('headerContext').textContent, 'Komende 4 weken');
   S.matchFeeds = [{ calendarId: 'c', label: 'AZ O15-1' }]; updateHeader('matches'); assert.equal(dom.el('headerContext').textContent, 'O15-1 · komende 4 weken');
   updateHeader('beheer'); assert.equal(dom.el('headerContext').textContent, 'Alleen voor de coördinator');
@@ -352,6 +357,12 @@ test('a coordinator whose family is the coordinator family (second phone) is a c
 
 import { assertNoUnusedImports } from './test-support.js';
 test('ui-shell.js imports nothing it does not use', () => assertNoUnusedImports('ui-shell.js'));
+
+test('the context line says where you are: Mijn week is "mijn gezin", Rooster is "iedereen"', () => {
+  sampleParentState({});
+  assert.equal(contextLine('myweek'), 'Week 40 · mijn gezin'); assert.equal(contextLine('schedule'), 'Week 40 · iedereen');
+  resetState({}); S.currentWeekKey = ''; assert.equal(contextLine('myweek'), 'AZ Carpool', 'no week known yet');
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
