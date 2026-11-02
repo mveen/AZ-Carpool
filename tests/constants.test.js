@@ -123,7 +123,7 @@ test('APP_VERSION is at least v168 (step 2 of the Advies flow: cars first, one m
 test('APP_VERSION is at least v169 (Mijn week: the same button as the flow, Advies bekijken en aanpassen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 169); });
 test('APP_VERSION is at least v190 (dagen van een ander, Weekoverzicht in de kop)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 188); });
 test('APP_VERSION is at least v158 (fewer Firestore reads)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 158); });
-test('APP_VERSION is at least v159 (wissel van ouder in de header)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 159); });
+test('APP_VERSION is at least v160 (test data: alleen de planning verversen)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
 
 test('APP_VERSION is at least v160 (own-daughter chip grey with a green dot, plain was-time)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 160); });
 
