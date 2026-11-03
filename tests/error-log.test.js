@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, useFakeDb } from './test-support.js';
 import { S } from '../state.js';
 import {
-  scrub, describeBrowser, buildEntry, staleLogIds, logError, flushErrorLog, loadQueuedErrors, installGlobalErrorLogging,
+  phoneTail, scrub, describeBrowser, buildEntry, staleLogIds, logError, flushErrorLog, loadQueuedErrors, installGlobalErrorLogging,
   purgeOldErrorLogs, clearErrorLog, LOG_SLOTS, LOG_KEEP_DAYS, _resetErrorLogForTests, _queuedForTests,
 } from '../error-log.js';
 
@@ -48,6 +48,24 @@ test('an entry has exactly the fields the Firestore rules allow, within their li
   assert.equal(typeof e.at, 'number'); assert.ok(e.where.length <= 40 && e.code.length <= 60 && e.msg.length <= 200 && e.v.length <= 20 && e.ua.length <= 60);
 });
 test('the number of slots is 10, as the rule "<uid>_[0-9]" assumes', () => assert.equal(LOG_SLOTS, 10));
+
+console.log('\n=== last 3 digits of the phone number ===');
+test('phoneTail gives only the last 3 digits, nothing for too short input', () => {
+  assert.equal(phoneTail('0621708024'), '024'); assert.equal(phoneTail('+31 6 21 70 80 24'), '024'); assert.equal(phoneTail('12'), ''); assert.equal(phoneTail(null), '');
+});
+test('an entry with a number carries "tel …024" and still fits 200 characters; never the whole number', () => {
+  const e = buildEntry({ where: 'gate', code: 'x', message: 'm'.repeat(900), phone: '0621708024' });
+  assert.ok(e.msg.endsWith(' | tel …024') && e.msg.length <= 200); assert.doesNotMatch(JSON.stringify(e), /0621708024|621708/);
+  assert.doesNotMatch(buildEntry({ where: 'a', code: 'b', message: 'm' }).msg, /tel/);
+});
+await testAsync('logError uses the typed number, else the number of the linked browser, else none', async () => {
+  let fake = fresh({}, { me: 'u1', links: { u1: { familyId: 'f1', phoneKey: '0612345678' } } });
+  logError({ where: 'listen', code: 'a', message: 'x' }); logError({ where: 'gate', code: 'b', message: 'x', phone: '0699999111' });
+  await settle(); const msgs = fake.collection('errorLog').map(r => r[1].msg);
+  assert.ok(msgs.includes('x | tel …678') && msgs.includes('x | tel …111')); assert.doesNotMatch(JSON.stringify(msgs), /0612345678|0699999111/);
+  fake = fresh(); logError({ where: 'listen', code: 'a', message: 'x' }); await settle();
+  assert.equal(fake.collection('errorLog')[0][1].msg, 'x');
+});
 
 console.log('\n=== writing ===');
 await testAsync('logError writes errorLog/<uid>_<slot> with a scrubbed message and no personal data', async () => {

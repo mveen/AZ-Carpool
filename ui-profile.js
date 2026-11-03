@@ -432,9 +432,9 @@ export function renderGate(){
 // Looking up the code only needs a session (the rules say: signedIn). If that is refused, the browser's session is broken, not the code or
 // the phone number: restart the app once by itself (new anonymous account, fresh files), and after that ask the parent to use the reset button.
 // Anything else (no network, a timeout) is a connection problem. The real "this number does not belong to this code" is decided below.
-async function gateLookupFailed(e, say){
+async function gateLookupFailed(e, say, phone){
   const code = (e && e.code) || 'error';
-  logError({ where:'gate', code:'lookup-'+code, message:e && e.message });
+  logError({ where:'gate', code:'lookup-'+code, message:e && e.message, phone });
   if(code==='permission-denied' || code==='unauthenticated'){
     let store=null; try{ store=sessionStorage; }catch(_){ }
     if(shouldAutoReset(store)){ say(t('profile.even_opnieuw_verbinden')); await resetSession(); return; }
@@ -454,7 +454,7 @@ export async function submitGate(){
   try{
     let inv;
     try{ inv = await db.doc("invites/"+code).get(); }
-    catch(e){ await gateLookupFailed(e, say); return; }
+    catch(e){ await gateLookupFailed(e, say, phone); return; }
     const familyId = inv.exists? inv.data().familyId : null;
     if(!familyId){ say(t('profile.code_klopt_niet_controleer_en')); return; }
     const link={familyId, code, phoneKey:normalizePhone(phone), linkedAt:Date.now()};
@@ -462,10 +462,10 @@ export async function submitGate(){
       await db.doc("links/"+S.me).set(link);
     }catch(e){
       if(e && e.code==='permission-denied'){
-        logError({ where:'gate', code:'link-denied', message:'phone digits '+link.phoneKey.length });   // never the number itself
+        logError({ where:'gate', code:'link-denied', message:'phone digits '+link.phoneKey.length, phone:link.phoneKey });   // only the last 3 digits are stored (error-log.js)
         say(t('profile.dit_telefoonnummer_hoort_niet_bij'));
       } else {
-        logError({ where:'gate', code:'link-'+((e&&e.code)||'error'), message:e && e.message });
+        logError({ where:'gate', code:'link-'+((e&&e.code)||'error'), message:e && e.message, phone:link.phoneKey });
         say(t('data.mislukt')+(e&&e.message||e));
       }
       return;

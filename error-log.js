@@ -1,6 +1,8 @@
 // error-log.js — a small, privacy-safe error log in the app's own database (errorLog/<uid>_<0-9>).
 // What goes in: when, where in the app, a short error code, a scrubbed message, the app version and a coarse browser name.
-// What never goes in: names, phone numbers, invite codes, e-mail addresses or links (scrub() removes them), nor the family.
+// What never goes in: names, whole phone numbers, invite codes, e-mail addresses or links (scrub() removes them), nor the family.
+// The one exception, so the coordinator can tell which parent a problem belongs to: the LAST 3 DIGITS of the phone number ("tel …024"),
+// added to the message (no new field, so the Firestore rules stay as they are).
 // Each browser has 10 slots (a ring: the 11th message replaces the oldest), so one browser can never fill the database.
 // Only the coordinator can read or delete the log (firestore.rules); the weekly purge job deletes entries after 30 days.
 // Logging must never break the app: every function here swallows its own errors.
@@ -30,6 +32,15 @@ export function scrub(text, max = 200) {
     .replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+// PURE. The last 3 digits of a phone number, "" when there are fewer than 3 digits. Never more than 3, whatever goes in.
+export function phoneTail(phone) {
+  const digits = String(phone == null ? '' : phone).normalize('NFKC').replace(/\D/g, '');
+  return digits.length >= 3 ? digits.slice(-3) : '';
+}
+
+// The number of the linked browser (links/<me>.phoneKey), if there is one. Used for every error that is logged after linking.
+function linkedPhone() { try { return (S.links && S.me && S.links[S.me] && S.links[S.me].phoneKey) || ''; } catch (e) { return ''; } }
+
 // PURE. "iOS Safari 17", "Android Chrome 126", "Mac Firefox 128": only family and major version, never the full user-agent string.
 export function describeBrowser(ua) {
   const s = String(ua || '');
@@ -41,12 +52,13 @@ export function describeBrowser(ua) {
 }
 
 // PURE. The entry as it is stored. `where` = screen or step ("gate", "start", "js"), `code` = short code ("link-denied", "permission-denied").
-export function buildEntry({ where, code, message, now = Date.now(), ua = '' }) {
+export function buildEntry({ where, code, message, now = Date.now(), ua = '', phone = '' }) {
+  const tail = phoneTail(phone);
   return {
     at: now,
     where: scrub(where, 40) || '?',
     code: scrub(code, 60) || '?',
-    msg: scrub(message, 200),
+    msg: tail ? scrub(message, 200 - 12) + ' | tel …' + tail : scrub(message, 200),
     v: String(APP_VERSION).slice(0, 20),
     ua: describeBrowser(ua).slice(0, 60),
   };
@@ -87,9 +99,10 @@ export async function flushErrorLog() {
 }
 
 // Records one problem. Safe to call anywhere, as often as you like.
-export function logError({ where, code, message } = {}) {
+// `phone`: the number typed at the gate (not linked yet); without it the number of the linked browser is used, when there is one.
+export function logError({ where, code, message, phone } = {}) {
   try {
-    const entry = buildEntry({ where, code, message, ua: browserUa() });
+    const entry = buildEntry({ where, code, message, ua: browserUa(), phone: phone || linkedPhone() });
     const key = entry.where + '|' + entry.code + '|' + entry.msg;
     const last = lastSeen.get(key);
     if (last && entry.at - last < DEDUPE_MS) return false;
