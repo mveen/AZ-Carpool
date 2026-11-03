@@ -58,7 +58,7 @@ export default {
   "deviation.eigen_ouder_laten": "Toch doorgaan",
   "deviation.eigen_ouder_titel": "Past niet bij de regel",
   "deviation.eigen_ouder_bewust": "Bewust ingedeeld tegen de regel: {p1} zit niet bij haar eigen ouder.",
-  "beheer.eigen_ouder_waarschuwing": "Let op: de eigen ouder rijdt, maar {p1} zit in een andere auto (regel Eigen ouder rijdt mee).",
+  "beheer.eigen_ouder_waarschuwing": "Let op: de eigen ouder rijdt, maar {p1} zit in een andere auto (regel over deze ouder-dochter-koppeling is vastgelegd in de planningsinstellingen).",
   "beheer.eigen_ouder_bestaat": "Voor {p1} staat deze regel er al.",
   "beheer.kies_een_meisje": "Kies een speelster.",
   "beheer.bij_voorkeur_met_kies_een": "Bij voorkeur met (kies één of meer)",

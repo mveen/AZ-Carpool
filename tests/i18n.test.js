@@ -32,7 +32,7 @@ test('Beheer has texts for the "Eigen ouder rijdt mee" rule (block title, explan
   assert.equal(t('beheer.eigen_ouder_regel', { p1: 'Eline' }), 'Eigen ouder rijdt mee (terug): Eline');
   assert.equal(t('beheer.eigen_ouder_bestaat', { p1: 'Eline' }), 'Voor Eline staat deze regel er al.');
   assert.equal(t('beheer.kies_een_meisje'), 'Kies een speelster.');
-  assert.equal(t('beheer.eigen_ouder_waarschuwing', { p1: 'Eline' }), 'Let op: de eigen ouder rijdt, maar Eline zit in een andere auto (regel Eigen ouder rijdt mee).');
+  assert.equal(t('beheer.eigen_ouder_waarschuwing', { p1: 'Eline' }), 'Let op: de eigen ouder rijdt, maar Eline zit in een andere auto (regel over deze ouder-dochter-koppeling is vastgelegd in de planningsinstellingen).');
 });
 test('Beheer has texts for the open-all / close-all button', () => { assert.equal(t('beheer.alles_open'), 'Alles openklappen'); assert.equal(t('beheer.alles_dicht'), 'Alles dichtklappen'); });
 test('Wijzigen has texts for deleting a car (button, toast, confirmation naming the passengers)', () => {

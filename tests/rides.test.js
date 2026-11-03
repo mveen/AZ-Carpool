@@ -513,7 +513,7 @@ test('ownCarBrokenNames gives the daughters of a broken rule, empty when it hold
 });
 test('ownCarWarning names the daughter who sits in another car than her driving parent; nothing when the rule holds', () => {
   const st = state({ prefs: { rules: [ownRule('f2')] } });
-  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), 'Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto (regel Eigen ouder rijdt mee).');
+  assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }], st), 'Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto (regel over deze ouder-dochter-koppeling is vastgelegd in de planningsinstellingen).');
   assert.equal(ownCarWarning('terug', [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'] }, { driverFamilyId: 'f3', girlIds: ['f1'] }], st), '');
 });
 test('ownCarWarning: no rule, a heen shift, an empty car, or a daughter in no car all give no warning; several names are joined', () => {
