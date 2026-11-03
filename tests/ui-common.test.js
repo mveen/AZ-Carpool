@@ -15,7 +15,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, sampleParentState, sampleCoordinatorState } from './test-support.js';
 import { S } from '../state.js';
 import {
-  foldHtml, phIcon, openSheet, closeSheet, hapticTap, esc, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
+  foldHtml, phIcon, openSheet, openChoiceSheet, closeSheet, hapticTap, esc, applyTheme, currentTheme, setTheme, isStandaloneDisplay,
   isIOSDevice, installCardHtml, setStatus, showToast, twoStepConfirm, showConnectionError, updateStatusLine, applyStaticTexts, closeOnEscape, sheetDragStart, sheetDragMove, sheetDragEnd,
 } from '../ui-common.js';
 
@@ -106,6 +106,19 @@ test('openSheet builds a dialog with one button per item, and closeSheet removes
   assert.equal((html.match(/data-sheetidx=/g) || []).length, 2); assert.match(html, /3 plekken/); assert.doesNotMatch(html, /Annuleren|sheetCancel/);   // design v2: tap outside or Escape closes it
   assert.match(html, /class="sheet__handle"/); assert.match(html, /sheetItem sheetItem--muted/); assert.match(html, /<svg[^>]*>.*<\/svg><span class="sheetItem__label">Auto 1/s);
   closeSheet(); assert.equal(removed, true);
+});
+test('openChoiceSheet: two buttons, no handle; only the choice closes it (not closeSheet, not Escape); the buttons call their action', () => {
+  const made = []; const real = dom.doc.createElement; let removed = 0;
+  dom.doc.createElement = () => { const btns = [{ dataset: { choice: 'back' } }, { dataset: { choice: 'go' } }]; const el = { innerHTML: '', remove() { removed++; }, querySelectorAll: () => btns, btns }; made.push(el); return el; };
+  const realGet = dom.doc.getElementById; dom.doc.getElementById = id => (id === 'sheetOverlay' ? made.at(-1) : null);
+  const calls = [];
+  try {
+    openChoiceSheet({ title: 'Titel', text: 'Tekst <b>', backLabel: 'Zet terug', goLabel: 'Toch doorgaan', onBack: () => calls.push('back'), onGo: () => calls.push('go') });
+    const ov = made.at(-1); assert.match(ov.innerHTML, /role="alertdialog"/); assert.match(ov.innerHTML, /Zet terug/); assert.match(ov.innerHTML, /Toch doorgaan/); assert.doesNotMatch(ov.innerHTML, /sheet__handle/); assert.match(ov.innerHTML, /Tekst &lt;b&gt;/);
+    removed = 0; closeSheet(); assert.equal(removed, 0, 'closeSheet() leaves it'); assert.equal(closeOnEscape({ key: 'Escape' }), true); assert.equal(removed, 0, 'Escape leaves it');
+    ov.btns[1].onclick(); assert.deepEqual(calls, ['go']); assert.equal(removed, 1, 'the choice closes it');
+    openChoiceSheet({ title: 'T', text: 'x', backLabel: 'a', goLabel: 'b', onBack: () => calls.push('back'), onGo: () => {} }); made.at(-1).btns[0].onclick(); assert.deepEqual(calls, ['go', 'back']);
+  } finally { dom.doc.createElement = real; dom.doc.getElementById = realGet; }
 });
 test('hapticTap never throws, with or without vibration support', () => { hapticTap(); });
 

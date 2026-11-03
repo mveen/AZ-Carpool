@@ -21,6 +21,21 @@ import {
 } from '../ui-deviation.js';
 
 const dom = installFakeDom();
+// A choice sheet (openChoiceSheet) made from its HTML, so a test can read it and tap its two buttons.
+let lastSheet = null;
+const withSheets = async fn => {
+  const real = dom.doc.createElement; lastSheet = null;
+  dom.doc.createElement = () => {
+    const cache = {};
+    const el = { className: '', id: '', innerHTML: '', children: [], addEventListener() {}, remove() {}, focus() {}, querySelector(sel) { return this.querySelectorAll(sel)[0]; },
+      querySelectorAll(sel) { if (cache[sel]) return cache[sel]; const name = sel.replace(/^\[|\]$/g, ''), out = [];
+        for (const m of this.innerHTML.matchAll(/<button\b([^>]*)>/g)) { if (!new RegExp('\\b' + name + '(=|\\s|$)').test(m[1])) continue; const dataset = {}; for (const a of m[1].matchAll(/data-([\w-]+)="([^"]*)"/g)) dataset[a[1]] = a[2]; out.push({ dataset, onclick: null, focus() {} }); }
+        return (cache[sel] = out); } };
+    lastSheet = el; return el;
+  };
+  try { await fn(); } finally { dom.doc.createElement = real; }
+};
+const choice = which => lastSheet.querySelectorAll('[data-choice]').find(b => b.dataset.choice === which);
 useFakeDb(sampleDbSeed());
 const text = h => h.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 const toastText = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -33,21 +48,19 @@ function render(state, patch) { withFakeNow(NOW, () => { state(patch); S.devOpen
 const ALL_KEYS = ['Ma', 'Di', 'Wo', 'Do', 'Vr'].flatMap(d => ['heen', 'terug'].flatMap(dir => [0, 1, 2, 3].map(i => `${d}|${dir}|${i}`)));
 function renderOpen(state, patch) { withFakeNow(NOW, () => { state(patch); S.devOpen = Object.fromEntries(ALL_KEYS.map(k => [k, true])); S.devKid = null; S.devUndo = null; S.devFree = {}; renderDeviationTab(); }); return dom.html('tab-deviation'); }
 
-console.log('=== Eigen ouder rijdt mee: the card after a change against the rule ===');
-test('the card has Zet terug and Toch zo laten until a choice is made; then a quiet line; nothing when the rule holds again', () => {
+console.log('=== Eigen ouder rijdt mee: the quiet line after Toch doorgaan ===');
+test('only after Toch doorgaan a quiet line stays (while the rule is still broken); before that and when the rule holds again nothing', () => {
   withFakeNow(NOW, () => {
     sampleCoordinatorState({ prefs: { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] } });
     const broken = [{ driverFamilyId: 'f2', girlIds: ['f6'] }, { driverFamilyId: 'f3', girlIds: ['f2'] }];
     S.devOwn = {};
-    assert.equal(ownCarCardHtml('Do', 'terug', broken), '', 'no card without a change that asked for it');
+    assert.equal(ownCarCardHtml('Do', 'terug', broken), '', 'no line without a change that asked for it');
     S.devOwn = { 'Do|terug': { prev: [], kept: false } };
-    const html = ownCarCardHtml('Do', 'terug', broken);
-    assert.match(html, /data-devownback="Do\|terug"/); assert.match(html, /data-devownkeep="Do\|terug"/);
-    assert.match(text(html), /Zet terug/); assert.match(text(html), /Toch zo laten/); assert.match(text(html), /Let op: de eigen ouder rijdt/);
-    assert.equal(ownCarCardHtml('Do', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'] }]), '', 'the card goes away when the rule holds again');
+    assert.equal(ownCarCardHtml('Do', 'terug', broken), '', 'the choice is asked in a sheet, not in the page');
     S.devOwn['Do|terug'].kept = true;
     const quiet = ownCarCardHtml('Do', 'terug', broken);
-    assert.doesNotMatch(quiet, /data-devownback|data-devownkeep/); assert.match(text(quiet), /Bewust ingedeeld tegen de regel: Jahaimy zit niet bij haar eigen ouder/);
+    assert.match(text(quiet), /Bewust ingedeeld tegen de regel: Jahaimy zit niet bij haar eigen ouder/);
+    assert.equal(ownCarCardHtml('Do', 'terug', [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'] }]), '', 'gone when the rule holds again');
     S.devOwn = {};
   });
 });
@@ -547,46 +560,46 @@ test('design v2: ui-deviation.js only uses variables from tokens.css in its inli
 });
 
 import { assertNoUnusedImports } from './test-support.js';
-await testAsync('Wijzigen: moving the daughter away from her driving parent on a terug ride saves, then warns softly ("Eigen ouder rijdt mee")', async () => {
+await testAsync('Wijzigen: moving the daughter away from her driving parent on a terug ride saves, then asks the choice in a sheet ("Eigen ouder rijdt mee")', () => withSheets(async () => {
   const cars = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'], departureTime: '17:30' }, { driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '17:00' }];
   const rules = { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] };
   const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_terug': dev1(cars, 'terug').Ma_terug });
   renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars, 'terug'), prefs: rules });
   await fire('[data-devmove]', { dataset: { day: 'Ma', direction: 'terug', caridx: '0', girl: 'f2', devmove: '1' } });
   assert.ok(fake.get('deviations/Ma_terug').cars[1].girlIds.includes('f2'), 'saved anyway');
-  syncDev(fake);
-  const html = text(dom.html('tab-deviation')); assert.match(html, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(html, /Zet terug/); assert.match(html, /Toch zo laten/);
+  assert.ok(lastSheet, 'a sheet asks the choice at once'); const sheet = text(lastSheet.innerHTML);
+  assert.match(sheet, /Past niet bij de regel/); assert.match(sheet, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(sheet, /Zet terug/); assert.match(sheet, /Toch doorgaan/); assert.doesNotMatch(lastSheet.innerHTML, /sheet__handle/, 'no handle: it cannot be dragged away');
   assert.ok(S.devOwn['Ma|terug'], 'the warning waits for a choice');
-  // Toch zo laten: the plan stays, a quiet line says it was on purpose
-  await fire('[data-devownkeep]', { dataset: { devownkeep: 'Ma|terug' } }); syncDev(fake);
-  assert.equal(S.devOwn['Ma|terug'].kept, true); assert.match(text(dom.html('tab-deviation')), /Bewust ingedeeld tegen de regel: Jahaimy zit niet bij haar eigen ouder/); assert.doesNotMatch(dom.html('tab-deviation'), /data-devownback/);
+  // Toch doorgaan: the plan stays, a quiet line says it was on purpose
+  choice('go').onclick(); syncDev(fake);
+  assert.equal(S.devOwn['Ma|terug'].kept, true); assert.match(text(dom.html('tab-deviation')), /Bewust ingedeeld tegen de regel: Jahaimy zit niet bij haar eigen ouder/);
   assert.ok(fake.get('deviations/Ma_terug').cars[1].girlIds.includes('f2'), 'nothing changed in the data');
-});
-await testAsync('Wijzigen: Zet terug puts the cars back as they were and the card is gone', async () => {
+}));
+await testAsync('Wijzigen: Zet terug puts the cars back as they were', () => withSheets(async () => {
   const cars = [{ driverFamilyId: 'f2', girlIds: ['f2', 'f6'], departureTime: '17:30' }, { driverFamilyId: 'f3', girlIds: ['f1'], departureTime: '17:00' }];
   const rules = { rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] };
   const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_terug': dev1(cars, 'terug').Ma_terug });
   renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars, 'terug'), prefs: rules });
   await fire('[data-devmove]', { dataset: { day: 'Ma', direction: 'terug', caridx: '0', girl: 'f2', devmove: '1' } });
   assert.ok(S.devOwn['Ma|terug']);
-  await fire('[data-devownback]', { dataset: { devownback: 'Ma|terug' } }); syncDev(fake);
+  await choice('back').onclick(); syncDev(fake);
   assert.deepEqual(fake.get('deviations/Ma_terug').cars.map(c => c.girlIds), [['f2', 'f6'], ['f1']], 'back as before');
-  assert.equal(S.devOwn['Ma|terug'], undefined); assert.doesNotMatch(dom.html('tab-deviation'), /data-devownback|Bewust ingedeeld/);
-});
-await testAsync('Wijzigen: choosing another driver that breaks the rule warns softly and keeps the "Ongedaan" button; the same change without the rule does not warn', async () => {
+  assert.equal(S.devOwn['Ma|terug'], undefined); assert.doesNotMatch(dom.html('tab-deviation'), /Bewust ingedeeld/);
+}));
+await testAsync('Wijzigen: choosing another driver that breaks the rule asks the choice and keeps the "Ongedaan" button; the same change without the rule asks nothing', () => withSheets(async () => {
   const cars = [{ driverFamilyId: 'f3', girlIds: ['f2'], departureTime: '17:00' }, { driverFamilyId: 'f1', girlIds: ['f6'], departureTime: '17:30' }];
   const run = async prefs => {
     const fake = useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_terug': dev1(cars, 'terug').Ma_terug });
     renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars, 'terug'), prefs });
     await fire('.devDriverSel', { value: 'f2', dataset: { day: 'Ma', direction: 'terug', caridx: '1' } }, 'onchange');
     const toast = toastText(); syncDev(fake);
-    return toast + ' || ' + text(dom.html('tab-deviation'));
+    return { toast, sheet: lastSheet ? text(lastSheet.innerHTML) : '' };
   };
   const warned = await run({ rules: [{ type: 'ownCar', girlId: 'f2', direction: 'terug' }] });
-  assert.match(warned, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(warned.split(' || ')[0], /Ongedaan/); assert.match(warned, /Zet terug/);
-  S.devOwn = {};
-  assert.doesNotMatch(await run({ rules: [] }), /Let op/);
-});
+  assert.match(warned.sheet, /Let op: de eigen ouder rijdt, maar Jahaimy zit in een andere auto/); assert.match(warned.toast, /Ongedaan/); assert.match(warned.sheet, /Zet terug/);
+  S.devOwn = {}; lastSheet = null;
+  assert.equal((await run({ rules: [] })).sheet, '', 'without the rule no sheet');
+}));
 test('Wijzigen: for a Flex family (no week form) an open Rooster editor (S.wrEdit) changes nothing, the day editor of Wijzigen is drawn', () => {
   const html = render(sampleFlexParentState, { wrEdit: { day: 'Ma', override: true } }); assert.match(html, /devDir|daysection/); S.wrEdit = null;
 });

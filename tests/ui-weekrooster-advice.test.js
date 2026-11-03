@@ -16,7 +16,7 @@ import { S } from '../state.js';
 import { t } from '../i18n.js';
 import { adviceForDay, syncWeekRequests } from '../weekrooster-data.js';
 import { sampleGroups } from './test-support.js';
-import { scheduleAdviceHtml, wireAdvice, wireAdviceEntry, renderFlowScreen } from '../ui-weekrooster-advice.js';
+import { scheduleAdviceHtml, wireAdvice, wireAdviceEntry, renderFlowScreen, ownCarSheetCheck } from '../ui-weekrooster-advice.js';
 import { renderSchedule } from '../ui-schedule.js';
 
 const dom = installFakeDom();
@@ -221,24 +221,29 @@ await testAsync('Alternatief shows the cars with the riders who move: where they
 const ASKS_TERUG = { 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '09:00', terug: '19:00' }) };   // a request for terug too, so the flow has a terug direction to change
 const OWN = { prefs: { rules: [{ type: 'ownCar', girlId: 'f1', direction: 'terug' }] } };
 const OWN_EDIT = { terug: [{ driverFamilyId: 'f1', girlIds: ['f3'], departureTime: '17:00' }, { driverFamilyId: 'f2', girlIds: ['f1', 'f4'], departureTime: '18:00' }] };
-await testAsync('Eigen ouder rijdt mee: a change by hand against the rule shows a card with Zet terug and Toch zo laten; the advice itself shows none', async () => {
+const ownSheet = () => { lastSheet = null; withFakeNow(NOW, () => ownCarSheetCheck()); return lastSheet; };
+const ownChoice = which => lastSheet.querySelectorAll('[data-choice]').find(b => b.dataset.choice === which);
+await testAsync('Eigen ouder rijdt mee: a change by hand against the rule opens a sheet that has to be answered (no handle); the advice itself asks nothing', async () => {
   await setup(ASKS_TERUG, OWN); S.wrAdvice = { day: 'Do', step: 'plan' };
-  assert.doesNotMatch(view(), /data-wrown=/, 'the advice keeps the rule');
+  assert.equal(ownSheet(), null, 'the advice keeps the rule');
   S.wrAdvice = { day: 'Do', step: 'plan', edits: OWN_EDIT };
-  const html = view(); assert.match(html, /data-wrown="terug"/); assert.match(text(html), /Let op: de eigen ouder rijdt, maar .* zit in een andere auto/); assert.match(text(html), /Zet terug/); assert.match(text(html), /Toch zo laten/);
-  assert.doesNotMatch(html, /data-wrown="heen"/);
+  const sheet = ownSheet(); assert.ok(sheet, 'the sheet opens as soon as the plan is drawn');
+  const s = text(sheet.innerHTML); assert.match(s, /Past niet bij de regel/); assert.match(s, /Let op: de eigen ouder rijdt, maar .* zit in een andere auto/); assert.match(s, /Zet terug/); assert.match(s, /Toch doorgaan/);
+  assert.doesNotMatch(sheet.innerHTML, /sheet__handle/); assert.doesNotMatch(view(), /data-wrown/, 'no card in the page any more');
+  assert.equal(sheet._must, true, 'closeSheet / Escape / tap outside do not close it');
 });
-await testAsync('Toch zo laten keeps the plan on purpose: a quiet line (and a chip in Controleren), no buttons', async () => {
+await testAsync('Toch doorgaan keeps the plan on purpose: a quiet line (and a chip in Controleren), the sheet does not come back', async () => {
   await setup(ASKS_TERUG, OWN); S.wrAdvice = { day: 'Do', step: 'plan', edits: OWN_EDIT };
-  wired(view()).querySelectorAll('[data-wrownkeep]')[0].onclick();
+  ownSheet(); ownChoice('go').onclick();
   assert.equal(S.wrAdvice.ownKept.terug, true); assert.deepEqual(S.wrAdvice.edits, OWN_EDIT, 'the plan is not touched');
-  const html = view(); assert.doesNotMatch(html, /data-wrownback|data-wrownkeep/); assert.match(text(html), /Bewust ingedeeld tegen de regel/);
+  assert.equal(ownSheet(), null, 'decided: no second question');
+  assert.match(text(view()), /Bewust ingedeeld tegen de regel/);
   S.wrAdvice.step = 'check'; assert.match(text(view()), /Tegen de regel: .* zit niet bij de eigen ouder/);
 });
-await testAsync('Zet terug takes the changes of that direction back to the advice, the card is gone', async () => {
+await testAsync('Zet terug takes the changes of that direction back to the advice, then nothing is asked', async () => {
   await setup(ASKS_TERUG, OWN); S.wrAdvice = { day: 'Do', step: 'plan', edits: OWN_EDIT };
-  wired(view()).querySelectorAll('[data-wrownback]')[0].onclick();
-  assert.equal(S.wrAdvice.edits.terug, undefined); assert.doesNotMatch(view(), /data-wrown=|Bewust ingedeeld/);
+  ownSheet(); ownChoice('back').onclick();
+  assert.equal(S.wrAdvice.edits.terug, undefined); assert.doesNotMatch(view(), /Bewust ingedeeld/); assert.equal(ownSheet(), null);
 });
 await testAsync('Aanpassen per richting: the fields come inside the car cards (time and driver side by side), Klaar closes them', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };

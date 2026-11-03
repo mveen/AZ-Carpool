@@ -87,7 +87,20 @@ export function openSheet(title, subtitle, items){
   const first=ov.querySelector('.sheetItem'); if(first) first.focus();
 }
 
-export function closeSheet(){ const ov=document.getElementById('sheetOverlay'); if(ov) ov.remove(); }
+// A sheet that asks a choice can be closed by the choice only: not by tapping outside, not by Escape, and not by another sheet (force=true is for the choice itself).
+export function closeSheet(force){ const ov=document.getElementById('sheetOverlay'); if(ov && (force===true || !ov._must)) ov.remove(); }
+// A choice that has to be made before anything else: a title, a text and two buttons (the first is the careful one). No handle, no tap outside, no Escape.
+export function openChoiceSheet({ title, text, backLabel, goLabel, onBack, onGo }){
+  closeSheet(true);
+  const ov=document.createElement('div'); ov.className='sheetOverlay'; ov.id='sheetOverlay'; ov._must=true;
+  ov.innerHTML = `<div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <h3 id="sheetTitle">${esc(title)}</h3><p class="sheet__sub">${esc(text)}</p>
+    <div class="sheet__actions"><button type="button" class="btn secondary" data-choice="back">${phIcon('arrow-counter-clockwise')} ${esc(backLabel)}</button><button type="button" class="btn" data-choice="go">${esc(goLabel)}</button></div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelectorAll('[data-choice]').forEach(b=>b.onclick=()=>{ hapticTap(); closeSheet(true); return (b.dataset.choice==='back'? onBack : onGo)(); });
+  const first=ov.querySelectorAll('[data-choice]')[0]; if(first && first.focus) first.focus();
+}
 // Drag the handle of a sheet (or Help panel) down to close it: the whole top strip is the touch zone, so no tiny target is needed.
 // A drag of more than 80 px, or a quick flick, closes it; a shorter one springs back.
 const DRAG_CLOSE_PX = 80, FLICK_PX_PER_MS = 0.5;
@@ -125,6 +138,7 @@ export function closeOnEscape(e){
   if(!e || e.key !== 'Escape') return false;
   const ov = document.getElementById('sheetOverlay') || document.getElementById('helpOverlay');
   if(!ov) return false;
+  if(ov._must) return true;   // a choice that must be made stays open
   ov.remove(); return true;
 }
 if(typeof document!=='undefined' && document.addEventListener) document.addEventListener('keydown', closeOnEscape);

@@ -9,7 +9,7 @@
 // are pure functions in weekrooster-plan.js. Planning a day without requests by hand is the editor (ui-weekrooster-edit.js).
 import { t } from './i18n.js';
 import { S } from './state.js';
-import { closeSheet, esc, hapticTap, locationsCfg, phIcon, showToast } from './ui-common.js';
+import { closeSheet, esc, hapticTap, locationsCfg, openChoiceSheet, phIcon, showToast } from './ui-common.js';
 import { driverNameHtml, effectiveCars, fam, girlName, isFlex, seats, sortGirlIds } from './rides.js';
 import { isoDayLabel, weekKeyDayIso } from './dates.js';
 import { ATC_NAME, FREE_TEXT_MAX, arrivalLabel, arrivalPlaces, carStdId, destinationFor, freeText, routeLabel } from './locations.js';
@@ -272,13 +272,22 @@ function quietSceneHtml(dir, cars) {
 // direction back to the advice, Toch zo laten keeps the plan on purpose (then a quiet line). Nothing blocks.
 export function ownCardHtml(dir, stats, f) {
   const p = stats.problems.find(x => x.key === 'own' && x.dir === dir);
-  if (!p) return '';
-  const names = sortGirlIds(p.ids).map(rawGirl).join(' & ');
-  if (f.ownKept && f.ownKept[dir]) return `<p class="noteLine">${phIcon('warning')}<span>${esc(t('deviation.eigen_ouder_bewust', { p1: names }))}</span></p>`;
-  return `<div class="alertCard alertCard--stack" role="alert" data-wrown="${dir}">
-    <div class="alertCard__top"><span class="alertCard__icon">${phIcon('warning')}</span><span class="alertCard__text">${esc(t('beheer.eigen_ouder_waarschuwing', { p1: names }))}</span></div>
-    <div class="actionBar"><button type="button" class="btn secondary" data-wrownback="${dir}">${phIcon('arrow-counter-clockwise')} ${esc(t('deviation.eigen_ouder_zet_terug'))}</button><button type="button" class="btn" data-wrownkeep="${dir}">${esc(t('deviation.eigen_ouder_laten'))}</button></div>
-  </div>`;
+  if (!p || !(f.ownKept && f.ownKept[dir])) return '';   // before the choice a sheet asks (ownCarSheetCheck); the quiet line is for after "Toch doorgaan"
+  return `<p class="noteLine">${phIcon('warning')}<span>${esc(t('deviation.eigen_ouder_bewust', { p1: sortGirlIds(p.ids).map(rawGirl).join(' & ') }))}</span></p>`;
+}
+// After every draw of the flow: a change by hand that breaks "Eigen ouder rijdt mee" and has not been decided yet opens a sheet that has to be answered first
+// (so "Naar controleren" and the arrows cannot be reached past it). Zet terug takes the changes of that direction back to the advice, Toch doorgaan keeps them.
+export function ownCarSheetCheck() {
+  const f = S.wrAdvice;
+  if (!f || S.wrDone || f.step !== 'plan' || !f.edits) return;
+  const open = document.getElementById('sheetOverlay'); if (open && open._must) return;
+  const adv = adviceOf(f), stats = planStats(adv, planOf(adv, f.variant, f.edits));
+  const p = stats.problems.find(x => x.key === 'own' && !(f.ownKept && f.ownKept[x.dir]));
+  if (!p) return;
+  const dir = p.dir, names = sortGirlIds(p.ids).map(rawGirl).join(' & ');
+  openChoiceSheet({ title: t('deviation.eigen_ouder_titel'), text: t('beheer.eigen_ouder_waarschuwing', { p1: names }), backLabel: t('deviation.eigen_ouder_zet_terug'), goLabel: t('deviation.eigen_ouder_laten'),
+    onBack: () => { const e = { ...f.edits }; delete e[dir]; e.off = { ...e.off, [dir]: [] }; e.add = { ...e.add, [dir]: {} }; f.edits = e; f.ownKept = { ...f.ownKept, [dir]: false }; renderSchedule(); },
+    onGo: () => { f.ownKept = { ...f.ownKept, [dir]: true }; renderSchedule(); } });
 }
 
 function planStep(adv, f, plan, stats) {
@@ -399,6 +408,7 @@ export function renderFlowScreen() {
   el.innerHTML = html;
   if (el.dataset) el.dataset.step = key;
   const nb = el.querySelector && el.querySelector('.flowScreen__body'); if (nb) nb.scrollTop = keep;
+  ownCarSheetCheck();
   if (document.body.classList) document.body.classList.add('flowOpen');
   wireAdvice(el);
 }
@@ -591,12 +601,7 @@ export function wireAdviceEntry(box) {
 }
 export function wireAdvice(box) {
   box.querySelectorAll('[data-wrvariant]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); f.variant = b.dataset.wrvariant; f.edits = {}; f.ownKept = {}; renderSchedule(); });
-  box.querySelectorAll('[data-wrownback]').forEach(b => b.onclick = () => {
-    hapticTap(); const f = flowState(), dir = b.dataset.wrownback, e = { ...f.edits };
-    delete e[dir]; e.off = { ...e.off, [dir]: [] }; e.add = { ...e.add, [dir]: {} };
-    f.edits = e; f.ownKept = { ...f.ownKept, [dir]: false }; renderSchedule();
-  });
-  box.querySelectorAll('[data-wrownkeep]').forEach(b => b.onclick = () => { hapticTap(); const f = flowState(); f.ownKept = { ...f.ownKept, [b.dataset.wrownkeep]: true }; renderSchedule(); });
+
   box.querySelectorAll('[data-wrgirl]').forEach(b => b.onclick = () => { hapticTap(); const [dir, id] = b.dataset.wrgirl.split('|'); openGirlSheet(dir, id); });
   const on = (id, fn) => { const el = document.getElementById(id); if (el) el.onclick = fn; };
   on('wrNav', () => { hapticTap(); navBack(); });
