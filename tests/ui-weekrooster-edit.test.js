@@ -173,8 +173,8 @@ await testAsync('a change by the planner himself is never marked', async () => {
 console.log('=== the one who decides: Zelf indelen ===');
 await testAsync('the day coordinator gets the link "Zelf indelen" under his day (no line at the top) and goes straight into the editor, without a warning', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } });
-  const html = rooster(); assert.doesNotMatch(html, /data-wredit|data-wroverride|coordLine|Zelf indelen/); assert.equal(mayPlanDay('Do'), true);
-  assert.equal(scheduleDayFootHtml('Do'), '', 'no "Zelf indelen" link at the bottom of the day any more');
+  const html = rooster(); assert.match(html, /data-wroverride="Do"/); assert.match(text(html), /Carpooldag aanpassen/); assert.doesNotMatch(html, /coordLine/); assert.equal(mayPlanDay('Do'), true);
+  assert.match(scheduleDayFootHtml('Do'), /data-wroverride="Do"/, 'the day coordinator sees the link "Carpooldag aanpassen" too (v231)');
   const before = dom.doc.body.children.length;
   openDayEditor('Do'); assert.deepEqual(S.wrEdit, { day: 'Do', override: false }); assert.equal(dom.doc.body.children.length, before, 'no sheet');
   assert.doesNotMatch(text(scheduleEditHtml()), /rechtstreeks aan/);
@@ -207,7 +207,7 @@ await testAsync('the old way in (Mijn week "Regelen", the Wijzigen link) lands i
 await testAsync('Terug closes the editor and the day is shown again', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };
   rooster(); wireEdit({ querySelectorAll: () => [] }); dom.doc.getElementById('wrEditBack').onclick();
-  assert.equal(S.wrEdit, null); assert.doesNotMatch(dom.html('tab-schedule'), /data-wredit="Do"/);
+  assert.equal(S.wrEdit, null); assert.doesNotMatch(dom.html('tab-schedule'), /id="wrEdit"/);
 });
 await testAsync('when the editor draws again through Wijzigen (its handlers do) and Rooster is on screen, Rooster is drawn', async () => {
   await setup({ dayCoordinators: { Do: 'f2' } }); S.wrEdit = { day: 'Do', override: false };

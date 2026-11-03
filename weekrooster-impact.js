@@ -1,7 +1,7 @@
 // weekrooster-impact.js — "Wie merkt dit": what a request would change for the other families IF the day coordinator agrees.
 // Pure: no DOM, no database. It plans the shift twice with the planning engine (planning.js): with everybody's fixed times, and with the
 // requested times, and compares when each family's car leaves. It is an expectation only: the day coordinator decides.
-import { planShift, computeDepartureTime, timeToMinutes, ownCarIds } from './planning.js';
+import { planShift, computeDepartureTime, timeToMinutes, ownCarIds, ownCarBroken } from './planning.js';
 
 const seatsOf = f => Math.max(0, ((f && f.capacity) || 0) - 1);
 const availOf = (f, day) => (f && f.availability && f.availability[day]) || {};
@@ -330,6 +330,9 @@ export function evaluateCars(ctx, cars) {
       waitOf[id] = w; if (w < 0) late.push(id); else total += w;
     });
   });
+  // "Eigen ouder rijdt mee" (terug): a soft problem for a plan changed by hand; the advice itself never breaks it
+  const ownBroken = ownCarBroken(keepCars.map(c => ({ driverId: c.driverFamilyId, girlIds: c.girlIds })), ownCarIds((ctx.prefs && ctx.prefs.rules) || [], direction));
+  if (ownBroken.length) problems.push({ key: 'own', ids: ownBroken });
   const riding = new Set(); keepCars.forEach(c => c.girlIds.forEach(id => riding.add(id)));
   const shouldRide = []; current.forEach(c => c.girlIds.forEach(id => { if (after(id) != null && !shouldRide.includes(id)) shouldRide.push(id); }));
   asking.forEach((r, id) => { if (r.rides && r.time && !shouldRide.includes(id)) shouldRide.push(id); });
