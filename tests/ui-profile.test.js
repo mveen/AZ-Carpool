@@ -158,7 +158,7 @@ await testAsync('a number that does not belong to the code is still told so, and
   await submitGate(); await settle();
   assert.match(dom.el('gateMsg').textContent, /hoort niet bij deze code/); assert.equal(fake.signOutCount(), 0);
   const e = logged(fake).find(x => x.code === 'link-denied'); assert.ok(e);
-  assert.match(e.msg, /phone digits 10/); assert.doesNotMatch(JSON.stringify(logged(fake)), /0621708024|CODE1234/);
+  assert.match(e.msg, /phone digits 10 \| tel …024$/); assert.doesNotMatch(JSON.stringify(logged(fake)), /0621708024|CODE1234/);
 });
 await testAsync('another write error shows the error and is logged with its code', async () => {
   const fake = gateSetup(); fake.failWrites('links/', 'quota exceeded', 'resource-exhausted'); fillGate('0611111111', 'CODE1234');
