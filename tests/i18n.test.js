@@ -436,6 +436,11 @@ test('Gezin rijdt mee: the texts exist and fill in their numbers', () => {
   assert.equal(t('matches.gezin_vrij', { n: 1, plekken: 'plek' }), '1 plek vrij voor speelsters');
 });
 
+test('Meerijders in een wedstrijdcarpool: title and subtitle say "anderen" (family and other spectators)', () => {
+  assert.equal(t('matches.gezin_titel'), 'Rijden er al anderen mee?');
+  assert.equal(t('matches.gezin_sub'), 'Gezinsleden en andere toeschouwers die ook plek innemen in de auto.');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

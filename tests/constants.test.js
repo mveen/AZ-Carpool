@@ -166,5 +166,7 @@ test('APP_VERSION is at least v223 (the Testweergave shows the inbox of the fami
 
 test('APP_VERSION is at least v236 (gezinsleden rijden mee in een wedstrijdcarpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 236); });
 
+test('APP_VERSION is at least v237 (tekst bij meerijders in een wedstrijdcarpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 237); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

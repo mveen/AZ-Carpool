@@ -456,8 +456,8 @@ const famPage = () => {
 const famBtn = (r, which) => r(`[data-${which}]`)[0];
 test('the form has a stepper "Rijden er gezinsleden mee?" at 0, plus a line with the free seats once a driver is known', () => {
   state(); render(); reg()('[data-addmatchcar]')[0].onclick();
-  assert.match(boxHtml, /class="panel panel--row stepperCard"/); assert.match(text(boxHtml), /Rijden er gezinsleden mee\? Toeschouwers die geen speelster zijn/);
-  assert.match(boxHtml, /id="matchCarFamily_ev_cal1__e1" value="0"/); assert.match(boxHtml, /data-famdown="ev_cal1__e1"[^>]*aria-label="Een gezinslid minder"/); assert.match(boxHtml, /data-famup="ev_cal1__e1"[^>]*aria-label="Een gezinslid meer"/);
+  assert.match(boxHtml, /class="panel panel--row stepperCard"/); assert.match(text(boxHtml), /Rijden er al anderen mee\? Gezinsleden en andere toeschouwers die ook plek innemen in de auto/);
+  assert.match(boxHtml, /id="matchCarFamily_ev_cal1__e1" value="0"/); assert.match(boxHtml, /data-famdown="ev_cal1__e1"[^>]*aria-label="Eén meerijder minder"/); assert.match(boxHtml, /data-famup="ev_cal1__e1"[^>]*aria-label="Eén meerijder meer"/);
   const stepper = boxHtml.slice(boxHtml.indexOf('stepperCard'), boxHtml.indexOf('matchCarFree_')).replace(/<svg[\s\S]*?<\/svg>/g, '');
   assert.ok(stepper.length > 200); assert.doesNotMatch(stepper, /style="/, 'no inline styles in the new stepper (the icon svg is the shared phIcon)');
 });
