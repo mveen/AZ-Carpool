@@ -164,5 +164,9 @@ test('APP_VERSION is at least v225 (listener log names the browser storage)', ()
 test('APP_VERSION is at least v224 (sign-in changes are reported)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 224); });
 test('APP_VERSION is at least v223 (the Testweergave shows the inbox of the family being viewed)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 223); });
 
+test('APP_VERSION is at least v236 (gezinsleden rijden mee in een wedstrijdcarpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 236); });
+
+test('APP_VERSION is at least v237 (tekst bij meerijders in een wedstrijdcarpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 237); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -106,6 +106,10 @@ export function fam(id, st=S){return st.families[id]||{parentName:"?",girlName:"
 // "capacity" as entered/stored is the TOTAL car capacity including the driver's own seat.
 // Every scheduling/display calculation needs the PASSENGER seat count, which is one less.
 export function seats(f){ return Math.max(0, (f.capacity||0) - 1); }
+// A car of a match carpool: the seats left for players = the seats next to the driver minus the family members riding along
+// (optional `familyCount` on the car; missing = 0, so every existing car behaves as before).
+export function familyRiding(familyCount){ return Math.max(0, Math.floor(+familyCount||0)); }
+export function playerSeats(f, familyCount){ return Math.max(0, seats(f) - familyRiding(familyCount)); }
 
 export function girlName(id, st=S){ return esc(fam(id, st).girlName||fam(id, st).parentName||id); }
 // Passengers are always listed A-Z. Drivers are NOT sorted with this: their order is the selection order.

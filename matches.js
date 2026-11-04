@@ -5,7 +5,7 @@ import { effectivePlanningDate, startOfWeek } from './dates.js';
 import { db } from './data.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderMatchesTab } from './ui-matches.js';
-import { fam, seats } from './rides.js';
+import { fam, playerSeats, familyRiding, seats } from './rides.js';
 import { ensureDistances, hasApiKey, fetchWithTimeout } from './distance.js';
 import { normalizeLocations } from './locations.js';
 import { isMemberNow } from './coordinator.js';
@@ -259,8 +259,10 @@ export function matchCarCapacityState(slug){
   const driverSel=document.getElementById('matchCarDriver_'+slug);
   const n=document.querySelectorAll('.matchCarGirlPick:checked').length;
   const driverId = driverSel && driverSel.value;
-  const cap = driverId? seats(fam(driverId)) : null;
-  return {n, cap, driverId, over: cap!=null && n>cap};
+  const famEl = document.getElementById('matchCarFamily_'+slug);
+  const family = familyRiding(famEl && famEl.value);
+  const cap = driverId? playerSeats(fam(driverId), family) : null;
+  return {n, cap, family, driverId, over: cap!=null && n>cap};
 }
 
 // US-21: calculates the projected distance of matches that do not have one yet (once per match, stored for everyone).

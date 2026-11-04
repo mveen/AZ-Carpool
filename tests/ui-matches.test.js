@@ -30,7 +30,7 @@ const state = (patch = {}) => sampleParentState({ matchFeeds: feeds, matches: [h
 let picks = [];
 function pageFrom(html) {
   const mk = attr => [...html.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map(m => ({ dataset: { [attr]: m[1] }, onclick: null, textContent: '' }));
-  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar'), '[data-addpractice]': mk('addpractice'), '[data-editpractice]': mk('editpractice'), '[data-delpractice]': mk('delpractice') };
+  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar'), '[data-addpractice]': mk('addpractice'), '[data-editpractice]': mk('editpractice'), '[data-delpractice]': mk('delpractice'), '[data-famdown]': mk('famdown'), '[data-famup]': mk('famup') };
   picks = [...html.matchAll(/class="matchCarGirlPick" value="([^"]+)"/g)].map(m => ({ value: m[1], checked: false, onchange: null }));
   reg['.matchCarGirlPick'] = picks;
   dom.doc.querySelectorAll = sel => (sel === '.matchCarGirlPick:checked' ? picks.filter(p => p.checked) : (reg[sel] || []));
@@ -444,6 +444,79 @@ await testAsync('the trash button removes it and says so (with Ongedaan)', async
   const fake = useFakeDb({ ...sampleDbSeed(), 'practiceMatches/p1': pdoc() }); state({ practiceMatches: { p1: pdoc() } }); render();
   await reg()('[data-delpractice]')[0].onclick();
   assert.deepEqual(fake.collection('practiceMatches'), []); assert.match(toast(), /Oefenwedstrijd verwijderd/);
+});
+
+console.log('\n=== gezinsleden rijden mee ===');
+const famPage = () => {
+  // The fake page has no real buttons: hand the stepper buttons to the wiring through querySelector.
+  const r = reg();
+  dom.doc.querySelector = sel => { const m = sel.match(/^\[data-(famdown|famup)=/); return m ? (r('[data-' + m[1] + ']') || [])[0] || null : null; };
+  return r;
+};
+const famBtn = (r, which) => r(`[data-${which}]`)[0];
+test('the form has a stepper "Rijden er gezinsleden mee?" at 0, plus a line with the free seats once a driver is known', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  assert.match(boxHtml, /class="panel panel--row stepperCard"/); assert.match(text(boxHtml), /Rijden er al anderen mee\? Gezinsleden en andere toeschouwers die ook plek innemen in de auto/);
+  assert.match(boxHtml, /id="matchCarFamily_ev_cal1__e1" value="0"/); assert.match(boxHtml, /data-famdown="ev_cal1__e1"[^>]*aria-label="Eén meerijder minder"/); assert.match(boxHtml, /data-famup="ev_cal1__e1"[^>]*aria-label="Eén meerijder meer"/);
+  const stepper = boxHtml.slice(boxHtml.indexOf('stepperCard'), boxHtml.indexOf('matchCarFree_')).replace(/<svg[\s\S]*?<\/svg>/g, '');
+  assert.ok(stepper.length > 200); assert.doesNotMatch(stepper, /style="/, 'no inline styles in the new stepper (the icon svg is the shared phIcon)');
+});
+test('+ and - change the number of family members; the free seats and the limit follow; never below 0, and one seat stays for a player', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  const r = famPage(); wireMatchCarpool();
+  dom.el('matchCarDriver_' + SLUG).value = 'f1';   // 3 passenger seats
+  famBtn(r, 'famdown').onclick(); assert.equal(dom.el('matchCarFamily_' + SLUG).value, '0');
+  famBtn(r, 'famup').onclick(); famBtn(r, 'famup').onclick();
+  assert.equal(dom.el('matchCarFamily_' + SLUG).value, '2'); assert.equal(dom.el('matchCarFamilyValue_' + SLUG).textContent, '2');
+  assert.equal(dom.el('matchCarFree_' + SLUG).textContent, '1 plek vrij voor speelsters');
+  famBtn(r, 'famup').onclick(); famBtn(r, 'famup').onclick();
+  assert.equal(dom.el('matchCarFamily_' + SLUG).value, '2', 'a 3-seat car keeps at least one seat for a player');
+  famBtn(r, 'famdown').onclick(); assert.equal(dom.el('matchCarFree_' + SLUG).textContent, '2 plekken vrij voor speelsters');
+});
+test('the capacity warning uses the seats left for players', () => {
+  state(); render(); reg()('[data-addmatchcar]')[0].onclick();
+  dom.el('matchCarDriver_' + SLUG).value = 'f1'; dom.el('matchCarFamily_' + SLUG).value = '2';
+  picks.slice(0, 2).forEach(p => { p.checked = true; });
+  updateMatchCarCapacityWarning(SLUG);
+  assert.equal(dom.el('matchCarCount_' + SLUG).textContent, '(2 gekozen / 1 plek)');
+  assert.match(text(dom.el('matchCarCapWarn_' + SLUG).innerHTML), /Jan Jansen heeft 1 passagiersplek, maar je hebt 2/);
+});
+test('a stored car shows "+2 gezin" and counts only the seats left for players; a car without family looks as before', () => {
+  state();
+  const withFam = { ...cars[0], familyCount: 2 };
+  const s = text(matchCarRowHtml(withFam, {}));
+  assert.match(s, /\+2 gezin/); assert.match(s, /2\/1/, 'two riders in a car with one player seat is flagged');
+  const one = text(matchCarRowHtml({ ...cars[0], girlIds: ['f2'], familyCount: 2 }, {}));
+  assert.match(one, /1\/1.*\+2 gezin/);
+  assert.doesNotMatch(text(matchCarRowHtml(cars[0], {})), /gezin/); assert.match(text(matchCarRowHtml(cars[0], {})), /2\/3/);
+});
+await testAsync('saving stores familyCount on the car only when family rides along; cars without family stay exactly as before', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); const save = openForm();
+  setForm('f1', '07:15', ['f2']); dom.el('matchCarFamily_' + SLUG).value = '2'; dom.el('matchCarFrom_' + SLUG).value = 'busstation'; dom.el('matchCarFromTxt_' + SLUG).value = '';
+  await withFakeNow(NOW, () => save.onclick());
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars, [{ driverFamilyId: 'f1', girlIds: ['f2'], familyCount: 2, departureTime: '07:15', fromId: 'busstation', fromText: '' }]);
+});
+await testAsync('too many riders for the seats left (family counted) asks for confirmation first', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); const save = openForm();
+  setForm('f1', '07:00', ['f2', 'f4']); dom.el('matchCarFamily_' + SLUG).value = '2';
+  await withFakeNow(NOW, () => save.onclick());
+  assert.equal(fake.get('matchCarpools/' + SLUG), undefined); assert.match(toast(), /Te veel passagiers \(2\/1\)/);
+});
+await testAsync('editing a car with family fills the stepper, and setting it back to 0 resets the field', async () => {
+  const withFam = { ...carpool, cars: [{ ...cars[0], girlIds: ['f2'], familyCount: 2 }] };
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: withFam }); state({ matchCarpools: { [SLUG]: withFam } }); render();
+  reg()('[data-editmatchcar]')[0].onclick();
+  assert.match(boxHtml, /id="matchCarFamily_ev_cal1__e1" value="2"/); assert.match(boxHtml, /id="matchCarFamilyValue_ev_cal1__e1">2</);
+  setForm('f1', '09:15', ['f2']); dom.el('matchCarFamily_' + SLUG).value = '0';
+  await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  assert.equal(fake.get('matchCarpools/' + SLUG).cars[0].familyCount, 0);
+});
+await testAsync('editing an old car without the field does not add it', async () => {
+  const one = { ...carpool, cars: [cars[0]] };
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: one }); state({ matchCarpools: { [SLUG]: one } }); render();
+  reg()('[data-editmatchcar]')[0].onclick();
+  setForm('f1', '09:30', ['f2']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  assert.equal('familyCount' in fake.get('matchCarpools/' + SLUG).cars[0], false);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

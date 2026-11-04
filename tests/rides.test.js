@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { sampleFamilies, sampleGroups, sampleDeviations, WEEK_KEY, resetState, oneP } from './test-support.js';
 import { S } from '../state.js';
 import {
-  fam, seats, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
+  fam, seats, playerSeats, familyRiding, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
   planOptions, ownCarWarning, ownCarBrokenNames, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
   baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
@@ -534,5 +534,11 @@ test('rideTime: a time agreed in a deviation (times) wins; an empty one means sh
   assert.equal(rideTime('f2', 'Do', 'heen', st), '07:05'); assert.equal(rideTime('f3', 'Do', 'heen', st), '');
   assert.equal(rideTime('f4', 'Do', 'heen', st), famTime('f4', 'Do', 'heen', st), 'nobody else is touched');
 });
+test('playerSeats(): the seats next to the driver minus the family riding along; missing or odd values count as none', () => {
+  assert.equal(playerSeats({ capacity: 4 }, 2), 1); assert.equal(playerSeats({ capacity: 4 }), 3); assert.equal(playerSeats({ capacity: 4 }, 0), 3);
+  assert.equal(playerSeats({ capacity: 4 }, 9), 0, 'never negative'); assert.equal(playerSeats({ capacity: 4 }, -2), 3); assert.equal(playerSeats({ capacity: 4 }, 'x'), 3);
+  assert.equal(familyRiding(undefined), 0); assert.equal(familyRiding(2.9), 2); assert.equal(familyRiding('2'), 2);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
