@@ -430,6 +430,12 @@ test('v222: the offer form is "Rit aanbieden"; the back-up variant has its own w
 test('v214: the offer buttons on a notification say what they do', () => { assert.equal(t('ritbeurs.notif.biedAan'), 'Bied mijn rit aan'); assert.equal(t('ritbeurs.notif.biedAanRit', { when: 'donderdag heen 16:15' }), 'Bied aan: donderdag heen 16:15'); });
 test('v227: the Rit vrij card says Overnemen / Afwijzen and asks the question', () => { assert.equal(t('ritbeurs.notif.neemOver'), 'Overnemen'); assert.equal(t('ritbeurs.notif.wijsAf'), 'Afwijzen'); assert.equal(t('ritbeurs.notif.offerBackupBody', { who: 'Ouder van Anouk' }), 'Ouder van Anouk biedt een rit aan. Je hebt je voor dit tijdvak beschikbaar gemeld. Wil je hem overnemen?'); });
 test('v216: Negeren and Sluiten exist', () => { assert.equal(t('ritbeurs.notif.negeer'), 'Negeren'); assert.equal(t('ritbeurs.notif.sluit'), 'Sluiten'); });
+test('Gezin rijdt mee: the texts exist and fill in their numbers', () => {
+  for (const k of ['matches.gezin_titel', 'matches.gezin_sub', 'matches.gezin_minder', 'matches.gezin_meer', 'matches.gezin_tag', 'matches.gezin_vrij']) assert.ok(hasKey(k), k);
+  assert.equal(t('matches.gezin_tag', { n: 2 }), '+2 gezin');
+  assert.equal(t('matches.gezin_vrij', { n: 1, plekken: 'plek' }), '1 plek vrij voor speelsters');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

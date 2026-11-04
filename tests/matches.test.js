@@ -118,7 +118,7 @@ test('matchCarCapacityState compares chosen passengers with the driver\'s seats 
   resetState({ families: sampleFamilies() });
   dom.doc.getElementById('matchCarDriver_x').value = 'f1'; // 4 seats total -> 3 passengers
   const s = matchCarCapacityState('x');
-  assert.deepEqual(s, { n: 0, cap: 3, driverId: 'f1', over: false });
+  assert.deepEqual(s, { n: 0, cap: 3, family: 0, driverId: 'f1', over: false });
 });
 
 console.log('\n=== Google Calendar fetching ===');
@@ -269,6 +269,15 @@ test('buildPracticeDoc: the date must exist and the kick-off must be in the futu
 test('buildPracticeDoc: very long texts are cut to their maximum', () => {
   const d = buildPracticeDoc(pin({ opponent: 'x'.repeat(200), location: 'y'.repeat(500) }), feeds, PNOW).doc;
   assert.equal(d.opponent.length, 60); assert.equal(d.location.length, 120);
+});
+
+test('matchCarCapacityState: family riding along takes seats away from the players', () => {
+  resetState({ families: sampleFamilies() });
+  dom.doc.getElementById('matchCarDriver_y').value = 'f1';   // 3 passenger seats
+  dom.doc.getElementById('matchCarFamily_y').value = '2';
+  assert.deepEqual(matchCarCapacityState('y'), { n: 0, cap: 1, family: 2, driverId: 'f1', over: false });
+  dom.doc.getElementById('matchCarFamily_y').value = '3';
+  assert.equal(matchCarCapacityState('y').cap, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

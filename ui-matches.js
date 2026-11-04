@@ -6,7 +6,7 @@ import { t, locale } from './i18n.js';
 import { closeSheet, esc, hapticTap, locationsCfg, phIcon, showToast } from './ui-common.js';
 import { buildPracticeDoc, carpoolFor, currentMatchList, isMatchPlannable, isPracticeMatch, matchCarCapacityState, matchLabel, matchSlug, matchesNext29Days, plannableFrom, practiceIdOf, practiceToMatch, suggestedMatchDeparture } from './matches.js';
 import { FREE_TEXT_MAX, MATCH_FROM_OTHER, matchFromChoice, matchFromFields, matchFromName, matchFromOptions } from './locations.js';
-import { fam, girlName, seats, sortFamEntriesFlexLast, sortGirlIds } from './rides.js';
+import { familyRiding, fam, girlName, playerSeats, seats, sortFamEntriesFlexLast, sortGirlIds } from './rides.js';
 import { S } from './state.js';
 import { db } from './data.js';
 import { matchInfoHtml } from './ui-myweek.js';
@@ -30,18 +30,20 @@ export function matchCarRowHtml(c, opts){
   opts = opts||{};
   const girlIds = c.girlIds||[];
   const driver = c.driverFamilyId? esc(fam(c.driverFamilyId).parentName) : t('deviation.nog_geen_chauffeur');
-  const cap = c.driverFamilyId? seats(fam(c.driverFamilyId)) : null;
+  const family = familyRiding(c.familyCount);
+  const cap = c.driverFamilyId? playerSeats(fam(c.driverFamilyId), family) : null;
   const over = cap!=null && girlIds.length>cap;
   const mine = !!opts.highlightId && (c.driverFamilyId===opts.highlightId || girlIds.includes(opts.highlightId));
   const overHtml = over? ` <span class="fitbad" title="${t('deviation.meer_passagiers_dan_plekken')}">${phIcon('warning')} ${girlIds.length}/${cap}</span>` : '';
   const seatHtml = cap!=null && !over? ` <span class="tag">${girlIds.length}/${cap}</span>` : '';
+  const familyHtml = family? ` <span class="tag tag--ok">${esc(t('matches.gezin_tag',{n:family}))}</span>` : '';
   const delHtml = opts.editable? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="${t('deviation.verwijder_carpool')}">${phIcon('trash')}</button>` : '';
   const editHtml = opts.editable? `<button type="button" class="iconbtn" data-editmatchcar="${opts.slug}|${opts.idx}" aria-label="${t('matches.auto_wijzigen',{driver})}" title="${t('matches.auto_wijzigen',{driver})}">${phIcon('pencil')}</button>` : '';
   const place = matchFromName(c, locationsCfg());
   const fromHtml = `<span class="matchCarFrom">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf',{place}))}</span>`;
   return `<div class="matchCarRow${mine?' mine':''}">
     <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
-    <span class="matchCarWho">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}${fromHtml}</span>
+    <span class="matchCarWho">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}${familyHtml}${fromHtml}</span>
     ${editHtml}${delHtml}
   </div>`;
 }
@@ -94,6 +96,19 @@ export function matchesCardHtml(){
       formHtml = `<div class="dayFormCard">
         <label>${t('deviation.chauffeur')}</label>
         <select id="matchCarDriver_${slug}"><option value="">${t('deviation.kies')}</option>${driverOptions}</select>
+        <div class="panel panel--row stepperCard">
+          <div class="stepperInfo">${phIcon('users')}<div>
+            <div class="stepperTitle">${t('matches.gezin_titel')}</div>
+            <div class="stepperSub">${t('matches.gezin_sub')}</div>
+          </div></div>
+          <div class="stepperControls">
+            <button type="button" class="stepperBtn" data-famdown="${slug}" aria-label="${esc(t('matches.gezin_minder'))}">−</button>
+            <span class="stepperValue" id="matchCarFamilyValue_${slug}">${familyRiding(editing && editing.familyCount)}</span>
+            <button type="button" class="stepperBtn" data-famup="${slug}" aria-label="${esc(t('matches.gezin_meer'))}">+</button>
+          </div>
+        </div>
+        <input type="hidden" id="matchCarFamily_${slug}" value="${familyRiding(editing && editing.familyCount)}">
+        <p class="noteLine" id="matchCarFree_${slug}" role="status" aria-live="polite"></p>
         <label>${t('deviation.welke_passagiers')} <span id="matchCarCount_${slug}"></span></label>
         <div>${girlOptions}</div>
         <div id="matchCarCapWarn_${slug}" class="matchCapWarn" role="status" aria-live="polite"></div>
@@ -126,6 +141,10 @@ export function updateMatchCarCapacityWarning(slug){
   const st = matchCarCapacityState(slug);
   const cnt=document.getElementById('matchCarCount_'+slug);
   if(cnt) cnt.textContent = st.n? '('+t('deviation.gekozen',{n:st.n})+(st.cap!=null?` / ${st.cap} ${st.cap===1?t('common.plek'):t('common.plekken')}`:'')+')' : '';
+  const free=document.getElementById('matchCarFree_'+slug);
+  if(free) free.textContent = st.cap!=null? t('matches.gezin_vrij',{n:st.cap, plekken:st.cap===1?t('common.plek'):t('common.plekken')}) : '';
+  const famVal=document.getElementById('matchCarFamilyValue_'+slug);
+  if(famVal) famVal.textContent = String(st.family);
   const warn=document.getElementById('matchCarCapWarn_'+slug);
   if(warn) warn.innerHTML = st.over
     ? t('deviation.heeft_maar_je_hebt_passagiers', { p1: phIcon('warning'), p2: esc(fam(st.driverId).parentName), p3: st.cap, p4: st.cap===1?'passagiersplek':'passagiersplekken', p5: st.n })
@@ -278,11 +297,25 @@ function wirePracticeSheet(editId){
 // finished, so without this a second tap on Opslaan / Ik rij ook would still see the old state and add the car again.
 let savingMatchCar = false;
 
+// The "gezinsleden" stepper: +1 / -1 / 0 (0 only re-checks the limit, e.g. after another driver was picked). At least one seat stays
+// for a player; with no driver chosen yet the limit is the biggest car.
+function stepMatchFamily(slug, delta){
+  const hidden = document.getElementById('matchCarFamily_'+slug);
+  if(!hidden) return;
+  const driverSel = document.getElementById('matchCarDriver_'+slug);
+  const max = driverSel && driverSel.value? Math.max(0, seats(fam(driverSel.value)) - 1) : 7;
+  hidden.value = String(Math.min(max, Math.max(0, familyRiding(hidden.value) + delta)));
+}
+
 export function wireMatchCarpool(){
   if(S.openMatchCarpoolForm){
     const slug=S.openMatchCarpoolForm;
     const driverSel=document.getElementById('matchCarDriver_'+slug);
-    if(driverSel) driverSel.onchange=()=>updateMatchCarCapacityWarning(slug);
+    if(driverSel) driverSel.onchange=()=>{ stepMatchFamily(slug, 0); updateMatchCarCapacityWarning(slug); };
+    const famDown=document.querySelector(`[data-famdown="${slug}"]`), famUp=document.querySelector(`[data-famup="${slug}"]`);
+    if(famDown) famDown.onclick=()=>{ hapticTap(); stepMatchFamily(slug, -1); updateMatchCarCapacityWarning(slug); };
+    if(famUp) famUp.onclick=()=>{ hapticTap(); stepMatchFamily(slug, 1); updateMatchCarCapacityWarning(slug); };
+    updateMatchCarCapacityWarning(slug);   // shows the free seats from the start
     document.querySelectorAll('.matchCarGirlPick').forEach(c=>c.onchange=()=>updateMatchCarCapacityWarning(slug));
     if(S.editMatchCarIdx!=null) updateMatchCarCapacityWarning(slug);   // an edit starts with riders already chosen
     // "Andere locatie" shows its text field.
@@ -325,10 +358,12 @@ export function wireMatchCarpool(){
     // Second safety net: never store a carpool for a match that is more than 8 days away.
     if(!m || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
     const cp = carpoolFor(m);
-    const newCar = {driverFamilyId:driverSel.value, girlIds, departureTime:timeInp.value, ...from};
     const editIdx = S.editMatchCarIdx;
     const oldCars = (cp.doc&&cp.doc.cars)||[];
     if(editIdx!=null && !oldCars[editIdx]){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }   // someone removed the car meanwhile
+    // familyCount is an optional extra field: only stored when family rides along, or to reset it on a car that had it (so cars without family stay exactly as before).
+    const familyField = capState.family>0 || (editIdx!=null && oldCars[editIdx].familyCount!=null)? {familyCount:capState.family} : {};
+    const newCar = {driverFamilyId:driverSel.value, girlIds, ...familyField, departureTime:timeInp.value, ...from};
     const cars = editIdx!=null? oldCars.map((c,i)=>i===editIdx? {...c, ...newCar} : c) : [...oldCars, newCar];
     savingMatchCar = true; b.disabled = true;
     try{
