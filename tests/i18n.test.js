@@ -178,7 +178,7 @@ test('the texts of the Weekoverzicht and of the Wijzigen Back-up / Stem af exist
 });
 
 test('the notice texts exist and the WhatsApp intro texts are still there', () => {
-  for (const k of ['notice.title', 'notice.save', 'notice.err.noText', 'profile.wa_intro_text', 'profile.tel_nr_1_wa', 'backup.title']) assert.ok(hasKey(k), k);
+  for (const k of ['notice.title', 'notice.save', 'notice.err.noText', 'dayNotice.title', 'dayNotice.text', 'dayNotice.err.time', 'profile.wa_intro_text', 'profile.tel_nr_1_wa', 'backup.title']) assert.ok(hasKey(k), k);
 });
 
 test('the period back-up texts exist and fill in their numbers', () => {

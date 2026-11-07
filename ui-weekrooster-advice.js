@@ -22,6 +22,7 @@ import { acceptDay, adviceForDay, overwrittenByPlan, planOf, planStats, withManu
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace, withoutGirl } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
 import { overDriversOf, overwriteBlockHtml, overwriteNoteHtml } from './ui-weekrooster-earlier.js';
+import { dayChangeNoticeHtml } from './ui-day-change-notice.js';
 
 const dayLabel = dayName;
 const adviceOf = f => withManual(adviceForDay(f.day), f.edits);   // the advice with the girls taken out / added by hand worked in
@@ -102,6 +103,7 @@ function requestsStep(adv, f, plan, stats) {
   const n = adv.requests.length;
   return {
     body: `<div class="flowStack">
+      ${dayChangeNoticeHtml(f.day)}
       <div class="sectionHead"><div class="sectionHead__title">${esc(t(n === 1 ? 'weekrooster.flow.reqTitle1' : 'weekrooster.flow.reqTitleN', { p1: n }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.youDecide'))}</div></div>
       <div class="reqPanel">${adv.requests.map(r => requestRowHtml(adv, r)).join('')}</div>
       ${heroHtml(adv, plan, stats)}

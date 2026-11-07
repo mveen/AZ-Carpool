@@ -99,7 +99,7 @@ test('the avatar library icons all exist in PH_PATHS', () => {
 });
 test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 153); });
 test('v238: this version is at least v238', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 238); });
-test('v239: this version is at least v239', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 239); });
+test('v240: this version is at least v240', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 240); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
@@ -169,6 +169,8 @@ test('APP_VERSION is at least v223 (the Testweergave shows the inbox of the fami
 test('APP_VERSION is at least v236 (gezinsleden rijden mee in een wedstrijdcarpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 236); });
 
 test('APP_VERSION is at least v237 (tekst bij meerijders in een wedstrijdcarpool)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 237); });
+
+test('APP_VERSION is at least v238 (Melding dagwijzigingen in het scherm Wijzigingen voor <dag>)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 238); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

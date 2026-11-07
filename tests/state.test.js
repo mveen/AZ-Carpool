@@ -67,6 +67,7 @@ test('collapsible sections start with nothing open', () => { assert.deepEqual(S.
 
 test('the maintenance state starts empty', () => { assert.equal(S.maintenance, null); assert.equal(S.maintenanceDraft, null); });
 test('the notice state starts empty', () => { assert.equal(S.notice, null); assert.equal(S.noticeDraft, null); });
+test('the Melding dagwijzigingen state starts empty (no document = on, 11:00)', () => { assert.equal(S.dayChangeNotice, null); assert.equal(S.dayChangeNoticeDraft, null); });
 
 test('the last-session map starts empty and has no listener', () => {
   assert.deepEqual(S.lastSeenByFamily, {}); assert.equal(S.sessionsUnsub, null); assert.deepEqual(S.sessionsByUid, {}); assert.equal(S.sessionsAllLoaded, false); assert.equal(S.linksAllLoaded, false);

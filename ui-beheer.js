@@ -5,6 +5,7 @@ import { DAYS } from './constants.js';
 import { dayUp, isoDayLabel, isoRangeLabel } from './dates.js';
 import { availableDrivers, driverNameHtml, isFlex, isStandaardDriver, fam, girlName, seats, sortByShiftPriority, sortFamEntriesByGirl } from './rides.js';
 import { noticeCardHtml, wireNoticeCard } from './ui-notice.js';
+import { dayChangeNoticeCardHtml, wireDayChangeNoticeCard } from './ui-day-change-notice.js';
 import { maintenanceCardHtml, wireMaintenanceCard } from './ui-maintenance.js';
 import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
 import { weekroosterActionCount } from './ui-weekrooster-rooster.js';
@@ -677,6 +678,7 @@ export function renderBeheer(){
       ic('car', ritbeursCardHtml()),
       ic('bell', pushCardHtml()),
       ic('info', noticeCardHtml()),
+      ic('info', dayChangeNoticeCardHtml()),
       ic('wrench', maintenanceCardHtml()),
       ic('bell', `<div class="card" id="notifCard">
         <h2>${t('beheer.meldingen_bij_gewijzigde_tijden')}</h2>
@@ -772,6 +774,7 @@ export function renderBeheer(){
     const setParentPrefWindowEl=document.getElementById('setParentPrefWindow'); if(setParentPrefWindowEl) setParentPrefWindowEl.onchange=saveSettingsAuto;
     document.querySelectorAll('.dayCoordSel').forEach(sel=>sel.onchange=()=>saveDayCoordinator(sel.dataset.coordday, sel.value));
     wireNoticeCard();
+    wireDayChangeNoticeCard();
     wireRideLogCard();
     wireMaintenanceCard();
     wireRitbeursCard();

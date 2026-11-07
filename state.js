@@ -55,6 +55,8 @@ export const S = {
   legacyPeriod: null,      // settings/period: the single period of the first version; the coordinator's app moves it into periods/
   notice: null,            // settings/notice: the notice for everyone { on, text, offDate, offTime } (null = none / not loaded)
   noticeDraft: null,       // Beheer: what is typed in the notice card, kept while other cards redraw (null = nothing typed)
+  dayChangeNotice: null,   // settings/dayChangeNotice: the hint in "Wijzigingen voor <dag>" { on, until } (null = none / not loaded = on, 11:00)
+  dayChangeNoticeDraft: null, // Beheer: what is filled in the card Melding dagwijzigingen, kept while other cards redraw (null = nothing)
   maintenance: null,       // settings/maintenance: onderhoudsmodus { on, text } (null = none / not loaded)
   maintenanceDraft: null,  // Beheer: what is typed in the maintenance card, kept while other cards redraw (null = nothing typed)
   ritbeurs: null,          // settings/ritbeurs: the Ritbeurs feature switch { on } (null = none / not loaded, which means off)

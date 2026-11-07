@@ -487,6 +487,15 @@ await testAsync('Doorvoeren saves only the direction that changed: nothing is wr
   await withFakeNowAsync(NOW, async () => { wired(view()); await dom.doc.getElementById('wrAccept').onclick(); });
   assert.ok(fake.get('deviations/Do_heen')); assert.equal(fake.get('deviations/Do_terug'), undefined);
 });
+console.log('=== Melding dagwijzigingen in step 1 ===');
+await testAsync('step 1 shows the hint before 11:00 on the day before, not in the other steps, not from 11:00, not when it is off', async () => {
+  await setup(); S.wrAdvice = { day: 'Do' };
+  assert.match(text(view()), /Het advies is te wachten tot de namiddag van vandaag/);
+  S.wrAdvice.step = 'plan'; assert.doesNotMatch(text(view()), /te wachten tot de namiddag/);
+  S.wrAdvice.step = 'requests'; assert.equal(S.wrAdvice.step, 'requests');
+  assert.doesNotMatch(text(withFakeNow('2026-09-30T11:00:00+02:00', () => scheduleAdviceHtml())), /te wachten tot de namiddag/);
+  S.dayChangeNotice = { on: false, until: '11:00' }; assert.doesNotMatch(text(view()), /te wachten tot de namiddag/);
+});
 console.log('=== way back: "nog niet klaar" instead of "komt te laat" ===');
 await testAsync('On the way back someone whose car leaves before she is done is "nog niet klaar" (not "komt te laat"); on the way there it stays "komt te laat"', async () => {
   await setup({ 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '08:30', terug: '18:30' }) });
