@@ -650,6 +650,7 @@ button.planRow{cursor:pointer}
 .statTile--ok b{color:var(--ok-ink)}
 .infoNote{display:flex;gap:var(--space-4);align-items:flex-start;background:var(--info-soft);border:1px solid var(--info);border-radius:var(--radius-alert);padding:var(--space-5) var(--space-6);font:var(--type-small)}
 .infoNote svg{width:18px;height:18px;fill:currentColor;flex:none;margin-top:1px}
+.infoNote--warn{background:var(--warn-soft);border-color:var(--warn-edge);color:var(--warn-ink)}
 .entryCard{display:flex;align-items:center;gap:var(--space-5);background:var(--surface-card);border:1px solid var(--warn-edge);border-radius:var(--radius-alert);padding:var(--space-5) var(--space-6);margin-top:var(--space-5)}
 .entryCard__icon{color:var(--warn-icon);font-size:20px;display:inline-flex}
 .entryCard__icon svg{width:20px;height:20px;fill:currentColor}
