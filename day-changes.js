@@ -64,5 +64,17 @@ export function overwrittenChanges(baseCars, nowCars, planCars, askerIds){
     .map(it => {
       const car = it.girlId ? plan.find(c => c.girlIds.includes(it.girlId)) : plan.find(c => c.driverFamilyId === it.driverId);
       return { item: it, after: car ? { driverId: car.driverFamilyId || null, time: car.departureTime || '' } : null };
-    });
+    })
+    .filter(o => takenBack(o.item, o.after));
+}
+// The items are matched with the standard cars by overlap, so an item can disappear from the plan while nothing really changed (the girl still sits in the
+// same car). Only what the plan really sets back counts: a girl in another car (or home) / back in a car, a car that is gone or leaves at another time.
+function takenBack(it, after){
+  switch (it.type) {
+    case 'moved': case 'extra': return !after || after.driverId !== it.driverId;
+    case 'out': return !!after;
+    case 'time': return !after || after.time !== it.time;
+    case 'driver': case 'newcar': return !after;
+    default: return true;   // place: decided by the item itself
+  }
 }

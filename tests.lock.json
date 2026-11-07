@@ -12,8 +12,8 @@
     "test": "bf01294630b9cd666fe0ec2fba7a83a58df683e35d39c3553579159b24ece5b8"
   },
   "constants.js": {
-    "module": "0919a75ee956f0e31cba14eccc612ed0cd2187eadbec6f8be794a306845bda73",
-    "test": "7a21e883d8f519a4c54e7b801058100af756b94ce9e277b6484a7265fb6c89c4"
+    "module": "a6fa139fb491916ceb10dd59a3bed514dabc75ecad65954ad769194328f46382",
+    "test": "830d722dc6ed227b64f26c4f240dd5f99f0691a5488c5b471211b9d8a8793a23"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -28,8 +28,8 @@
     "test": "c0e11b94332f0385fecec3ba1f184e64c90460a436a3fc11c62cad177c13398f"
   },
   "day-changes.js": {
-    "module": "0f63d9c201ab437c9b5a2b5f5ce52439d728e79c909bb671978d2dd224225ae8",
-    "test": "1558126f92ea16f9b99bcbddfc4885dc8ab89810f35d0f9e3eb8b4b5355c2fce"
+    "module": "c3b91d9c77e64545ca178e4bd5b474960fa87712b4616c6539bdd8032ffab9f9",
+    "test": "0f3329b25482f47c045ac33948dc900d7472f657cc45cd9d72df90722c3d9092"
   },
   "distance.js": {
     "module": "9705c36d96cb9f9b9d7734104cf8e1d157c490608e28be5c974e449805ec90ce",
@@ -260,8 +260,8 @@
     "test": "83eb6c47b6d35ab208673b3a7dbb0331599f71bbeabed24e53a707324d3fd864"
   },
   "ui-weekrooster-earlier.js": {
-    "module": "ffed5041f67924f62f75888e83c077027bbd34b0a19207a06f073707230afe2d",
-    "test": "94c831d8b7c475abe98cedd3bc77c56299638e4831106f7034ed7bd6e9e9027e"
+    "module": "123254924e2ff6bdd76ce25b31f2612828412112cd06d1510956a5e8a9cf1baa",
+    "test": "3eed08c75f4e8d25df425c6e947ac7adf8f1fe155ee8a3f8caba5c230550c900"
   },
   "ui-weekrooster-edit.js": {
     "module": "5e9195e87618cd4f0ccc3d1e7955c6fae26ecaf86b067fc984b6af6ee33de405",

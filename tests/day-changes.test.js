@@ -97,6 +97,20 @@ console.log('\n=== overwrittenChanges: earlier changes a plan takes back ===');
     const keep = [car('f1', ['f1', 'f3'], '17:00'), car('f9', ['f2', 'f4'], '19:00')];   // the driver swap stays, only the time moves: the swap is kept
     assert.deepEqual(overwrittenChanges(B, now, keep, []), []);
   });
+  test('a girl who stays in the same car is NOT overwritten, even when the matching of the cars with the standard rooster changes (v239)', () => {
+    const base = [car('c', ['jah', 'c2'], '08:00'), car('j', ['j1', 'j3'], '07:45')];
+    const now = [car('c', ['c2'], '08:00'), car('j', ['j1', 'j3', 'jah'], '07:45')];   // earlier: Jahaimy went to j's car
+    const plan = [car('j', ['jah', 'l', 's'], '07:45'), car('c', ['c2'], '08:00')];   // the plan matches j's car with c's standard car, so the item "moved" disappears; she still sits with j
+    assert.ok(dayChanges(base, now).some(i => i.type === 'moved' && i.girlId === 'jah' && i.driverId === 'j'));
+    assert.ok(!overwrittenChanges(base, now, plan, ['l', 's']).some(o => o.item.girlId === 'jah'), 'same car before and after: nothing was taken back');
+  });
+  test('a time change that stays the same in the plan, or a driver swap whose car is still there, is not overwritten', () => {
+    const base = [car('c', ['c1'], '08:00'), car('j', ['j1'], '07:45')];
+    const now = [car('c', ['c1'], '08:30'), car('x', ['j1'], '07:45')];   // earlier: c leaves 08:30, x drives j's girl
+    const plan = [car('x', ['j1', 'c1'], '08:30')];
+    const over = overwrittenChanges(base, now, plan, []);
+    assert.ok(!over.some(o => o.item.type === 'driver'), 'x still drives');
+  });
   test('missing input is treated as no cars; a girl out earlier who rides in the plan has her car as "after"', () => {
     assert.deepEqual(overwrittenChanges(undefined, undefined, undefined), []);
     const now = [car('f1', ['f1', 'f3'], '17:00'), car('f2', ['f2'], '18:00')];   // Evi (f4) out
