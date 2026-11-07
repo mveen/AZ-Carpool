@@ -15,6 +15,7 @@ import { renderSchedule } from './ui-schedule.js';
 import { actionCounts, pendingForDay, recentChanges, selfChanges } from './weekrooster.js';
 import { adviceForDay, dayEndMs, deciderFamilyOf, myDeciderDays, planOf, planStats, requestsForDeciding } from './weekrooster-data.js';
 import { dayName, deciderName, lower, summaryOf, weekroosterActive } from './ui-weekrooster-form.js';
+import { earlierFoldHtml, overwroteLog } from './ui-weekrooster-earlier.js';
 
 const wk = () => S.currentWeekKey;
 const counts = () => weekroosterActive() ? actionCounts(requestsForDeciding(), wk(), myDeciderDays(), Date.now(), day => dayEndMs(wk(), day)) : {};
@@ -34,9 +35,12 @@ const requestLine = r => `${girlName(r.familyId)}: ${summaryOf(r)}`;
 // Folded, because it is history.
 function logHtml(day) {
   const now = Date.now(), items = recentChanges(requestsForDeciding(), wk(), day, now, dayEndMs(wk(), day)).filter(r => r.state !== 'pending')
-    .concat(selfChanges(S.deviations, wk(), day, deciderFamilyOf(day))).sort((a, b) => b.updatedAt - a.updatedAt);
+    .concat(selfChanges(S.deviations, wk(), day, deciderFamilyOf(day)), overwroteLog(day)).sort((a, b) => b.updatedAt - a.updatedAt);
   if (!items.length) return '';
   const rows = items.map(r => {
+    if (r.state === 'over') return `<div class="logItem"><span class="logItem__dot" aria-hidden="true"></span>
+      <span class="logItem__main">${esc(r.text)}</span>
+      <span class="logItem__side"><span class="tag tag--warn">${esc(t('weekrooster.tag.overwritten'))}</span><span class="logItem__when">${esc(whenLabel(r.updatedAt))}</span></span></div>`;
     if (r.state === 'self') return `<div class="logItem"><span class="logItem__dot logItem__dot--ok" aria-hidden="true"></span>
       <span class="logItem__main">${esc(t(r.direction === 'heen' ? 'weekrooster.log.selfHeen' : 'weekrooster.log.selfTerug', { p1: girlName(r.familyId) }))}</span>
       <span class="logItem__side"><span class="tag">${esc(t('weekrooster.tag.self'))}</span><span class="logItem__when">${esc(whenLabel(r.updatedAt))}</span></span></div>`;
@@ -84,7 +88,7 @@ export function entryCardHtml(day, n, attr, extra = '', title = true, plain = fa
   if (!n) return '';
   const rows = requestRowsHtml(adviceForDay(day));
   const head = title ? `<div class="entryCard__head">${plain ? '' : `<span class="entryCard__icon">${phIcon('warning-circle-fill')}</span>`}<b>${esc(titleOf(n, day))}</b></div>` : '';
-  return `<div class="entryCard entryCard--stack${plain ? ' entryCard--plain' : ''}"${extra}>${head}${rows}
+  return `<div class="entryCard entryCard--stack${plain ? ' entryCard--plain' : ''}"${extra}>${head}${rows}${earlierFoldHtml(day)}
     <button type="button" class="btn entryCard__go" ${attr}="${day}">${esc(t('weekrooster.entry.go'))}</button></div>`;
 }
 

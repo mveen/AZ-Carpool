@@ -6,7 +6,8 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
 import { showToast } from './ui-common.js';
-import { effectiveCars, rideTime, famTime, computeRideDeparture, ovGirlsFor } from './rides.js';
+import { baseCars, effectiveCars, rideTime, famTime, computeRideDeparture, ovGirlsFor } from './rides.js';
+import { overwrittenChanges } from './day-changes.js';
 import { keepOv } from './ov.js';
 import { buildAdvice, buildKeepAdvice, evaluateCars } from './weekrooster-impact.js';
 import { deviationExpiryMs, deviationKey, weekKeyDayIso } from './dates.js';
@@ -327,9 +328,20 @@ export function planStats(advice, plan) {
   return out;
 }
 
+// The earlier changes of the day (differences with the standard rooster) that this plan does not keep, per direction: [{ dir, item, after }].
+// `advice` is the advice with the changes by hand worked in (withManual). Only the directions the plan changes can lose an earlier change.
+export function overwrittenByPlan(advice, plan) {
+  return Object.keys(plan.dirs).flatMap(dir => {
+    const d = advice.directions[dir]; if (!d) return [];
+    const askers = d.ctx.requests.map(r => r.familyId);
+    return overwrittenChanges(baseCars(d.ctx.day, dir), d.cars, plan.dirs[dir].cars, askers).map(o => ({ dir, ...o }));
+  });
+}
+
 // "Overnemen": the cars of the chosen variant become this week's one-off change (the same deviations as Wijzigen: cars + the one-off times
 // of the askers), and all pending requests of the day become 'accepted'. ONE batch: all or nothing, and the first decision wins (the rules
 // refuse a request that is no longer pending). Returns { ok, n, undo } where undo() puts everything back.
+const overField = (over, dir, at) => { const mine = over.filter(o => o.dir === dir).map(o => JSON.parse(JSON.stringify({ item: o.item, after: o.after }))); return mine.length ? { overwrote: mine, overwroteAt: at } : {}; };
 export async function acceptDay(day, variant, edits) {
   if (!db) { showToast(t('data.geen_verbinding_met_opslag')); return { ok: false }; }
   if (!myLinkedFamilyId() || S.wrBusy) return { ok: false };
@@ -337,6 +349,7 @@ export async function acceptDay(day, variant, edits) {
   if (!advice.requests.length) return { ok: false };
   const plan = planOf(advice, variant, edits);
   if (plan.blocked) { showToast(t('weekrooster.advice.noSolution')); return { ok: false }; }
+  const over = overwrittenByPlan(withManual(advice, edits), plan);   // earlier changes this plan takes back: kept on the deviation for "Recente wijzigingen"
   const wk = S.currentWeekKey, nowMs = Date.now(), me = myFamilyId();
   S.wrBusy = true;
   try {
@@ -345,7 +358,7 @@ export async function acceptDay(day, variant, edits) {
       const key = deviationKey(day, dir), prev = currentDeviationDoc(day, dir), v = plan.dirs[dir];
       prevDocs[key] = prev ? JSON.parse(JSON.stringify(prev)) : { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(advice.directions[dir].cars) };
       const cars = v.cars.filter(c => (c.girlIds || []).length);   // a car without girls is not stored
-      nextDocs[key] = { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(cars), ...keepOv(prev, cars), times: { ...((prev && prev.times) || {}), ...v.times } };
+      nextDocs[key] = { day, direction: dir, weekKey: wk, expiresAt: deviationExpiryMs(), cars: cleanCars(cars), ...keepOv(prev, cars), times: { ...((prev && prev.times) || {}), ...v.times }, ...overField(over, dir, nowMs) };
       batch.set('deviations/' + key, nextDocs[key]);
     });
     const agreed = advice.requests.map(r => ({ id: r.id, before: stripId(r), after: acceptRequest(stripId(r), me, nowMs) }));

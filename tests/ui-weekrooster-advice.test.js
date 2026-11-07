@@ -403,6 +403,54 @@ test('the texts of the flow say what the design says', () => {
   assert.equal(t('weekrooster.flow.noticeN', { p1: 2 }), '2 chauffeurs met impact');
   assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 2, p2: 'donderdag' }), '2 aanvragen voor donderdag');
 });
+console.log('=== earlier changes of the day that the proposal takes back ===');
+const dv = (dir, cars, e = {}) => ({ day: 'Do', direction: dir, weekKey: WK, expiresAt: 9e15, cars: cars.map(([d, g, tm]) => ({ driverFamilyId: d, girlIds: g, reserveFamilyIds: [], departureTime: tm })), ...e });
+const EVI_MOVED = { Do_heen: dv('heen', [['f1', ['f1', 'f3', 'f4'], '07:30'], ['f2', ['f2'], '09:15']]) };   // earlier: Evi sits in Jan's car; Lois asks 09:00, the proposal puts her back with Piet
+await testAsync('Indeling: an earlier change the proposal takes back is on top, with was and now, and a tag on the car', async () => {
+  await setup(); S.deviations = EVI_MOVED; S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = view(), s = text(html);
+  assert.match(s, /Dit voorstel past 1 eerdere wijziging aan/); assert.match(s, /Heen · Evi in auto van Jan Jansen · nu: in auto van Piet Pieters/);
+  assert.ok(html.indexOf('alertCard alertCard--stack') < html.indexOf('data-wrvariant'), 'the block is above the choice between advice and alternative');
+  assert.ok((html.match(/eerdere wijziging aangepast/g) || []).length >= 1, 'the car carries the tag'); assert.doesNotMatch(s, /Totaal: /, 'same number of cars: no total line');
+  assert.doesNotMatch(html.replace(/<svg[\s\S]*?<\/svg>/g, ''), /style=/);
+});
+await testAsync('Indeling: the proposal keeps earlier changes it does not need to touch: no block, no tag', async () => {
+  await setup(); S.deviations = { Do_terug: dv('terug', [['f1', ['f1', 'f3'], '17:00'], ['f2', ['f2', 'f4'], '18:30']]) }; S.wrAdvice = { day: 'Do', step: 'plan' };
+  const html = view(); assert.doesNotMatch(html, /alertCard|eerdere wijziging aangepast/);
+});
+await testAsync('Indeling: with the standard rooster (no earlier change) nothing is shown about it', async () => {
+  await setup(); S.wrAdvice = { day: 'Do', step: 'plan' }; assert.doesNotMatch(view(), /alertCard|eerdere wijziging/);
+});
+await testAsync('Controleren: the same block, and a reminder next to the button Doorvoeren', async () => {
+  await setup(); S.deviations = EVI_MOVED; S.wrAdvice = { day: 'Do', step: 'check' };
+  const html = view(), s = text(html);
+  assert.match(s, /Dit voorstel past 1 eerdere wijziging aan/); assert.match(s, /1 eerdere wijziging wordt overschreven/);
+  assert.ok(html.indexOf('wordt overschreven') > html.indexOf('flowScreen__foot') && html.indexOf('wordt overschreven') < html.indexOf('id="wrAccept"'), 'the reminder is in the foot, above the button');
+  await setup(); S.wrAdvice = { day: 'Do', step: 'check' }; assert.doesNotMatch(view(), /overschreven|eerdere wijziging/);
+});
+await testAsync('the changes by hand count too: setting Evi back by hand in the plan makes the block go away', async () => {
+  await setup(); S.deviations = EVI_MOVED; S.wrAdvice = { day: 'Do', step: 'plan' };
+  const before = text(view()); assert.match(before, /past 1 eerdere wijziging aan/);
+  S.wrAdvice.edits = { heen: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f3', 'f4'], departureTime: '07:30' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f5'], departureTime: '08:00' }] };
+  assert.doesNotMatch(text(view()), /past 1 eerdere wijziging aan/, 'the earlier change (Evi with Jan) is kept by this plan');
+});
+await testAsync('Doorvoeren stores what it took back on that direction; the other direction gets nothing; Alles terugdraaien removes it again', async () => {
+  const fake = await setup(); S.deviations = EVI_MOVED; S.wrAdvice = { day: 'Do', step: 'check' };
+  await withFakeNowAsync(NOW, async () => {
+    wired(view()); await dom.doc.getElementById('wrAccept').onclick();
+    const heen = fake.get('deviations/Do_heen');
+    assert.equal(heen.overwrote.length, 1); assert.deepEqual(heen.overwrote[0].item, { type: 'moved', girlId: 'f4', driverId: 'f1', time: '07:30' }); assert.deepEqual(heen.overwrote[0].after, { driverId: 'f2', time: '09:15' });
+    assert.equal(typeof heen.overwroteAt, 'number'); assert.equal(fake.get('deviations/Do_terug'), undefined);
+    wired(view()); dom.doc.getElementById('wrUndoAll').onclick(); await dom.doc.getElementById('wrUndoYes').onclick(); await tick(); await tick();
+    assert.equal(fake.get('deviations/Do_heen').overwrote, undefined); assert.deepEqual(fake.get('deviations/Do_heen').cars.find(c => c.driverFamilyId === 'f1').girlIds, ['f1', 'f3', 'f4']);
+  });
+});
+await testAsync('Doorvoeren without an overwritten change stores no extra fields', async () => {
+  const fake = await setup(); S.wrAdvice = { day: 'Do', step: 'check' };
+  await withFakeNowAsync(NOW, async () => { wired(view()); await dom.doc.getElementById('wrAccept').onclick(); });
+  assert.equal(fake.get('deviations/Do_heen').overwrote, undefined); assert.equal(fake.get('deviations/Do_heen').overwroteAt, undefined);
+});
+
 console.log('=== the direction nobody asked to change stays visible ===');
 await testAsync('Indeling shows the way back too when only the way there changes: "Geen wijzigingen nodig", the cars as they are, nothing to adjust', async () => {
   await setup(); S.wrAdvice = { day: 'Do', step: 'plan' };

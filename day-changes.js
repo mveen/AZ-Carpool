@@ -50,3 +50,31 @@ export function dayChanges(baseCars, effCars){
   base.forEach(b=>b.girlIds.forEach(g=>{ if(!effOfGirl.has(g)) items.push({ type:'out', girlId:g }); }));
   return items;
 }
+
+// An EARLIER change (a difference between the standard rooster and the cars as they are now) that a proposal does not keep: the same item is not in
+// dayChanges(base, plan) any more. Items about a girl who asked (or was set by hand) are the point of the proposal, so they never count.
+// Returns [{ item, after }]: `after` = where that girl (or that driver's car) is in the plan, { driverId, time }, or null when she / the car is gone.
+const itemKey = it => [it.type, it.girlId || '', it.driverId || '', it.fromDriverId || '', it.type === 'time' ? it.time || '' : '', it.type === 'place' ? it.place || '' : ''].join('|');
+export function overwrittenChanges(baseCars, nowCars, planCars, askerIds){
+  const asked = askerIds || [];
+  const kept = new Set(dayChanges(baseCars, planCars).map(itemKey));
+  const plan = (planCars || []).filter(c => (c.girlIds || []).length);
+  return dayChanges(baseCars, nowCars)
+    .filter(it => !(it.girlId && asked.includes(it.girlId)) && !kept.has(itemKey(it)))
+    .map(it => {
+      const car = it.girlId ? plan.find(c => c.girlIds.includes(it.girlId)) : plan.find(c => c.driverFamilyId === it.driverId);
+      return { item: it, after: car ? { driverId: car.driverFamilyId || null, time: car.departureTime || '' } : null };
+    })
+    .filter(o => takenBack(o.item, o.after));
+}
+// The items are matched with the standard cars by overlap, so an item can disappear from the plan while nothing really changed (the girl still sits in the
+// same car). Only what the plan really sets back counts: a girl in another car (or home) / back in a car, a car that is gone or leaves at another time.
+function takenBack(it, after){
+  switch (it.type) {
+    case 'moved': case 'extra': return !after || after.driverId !== it.driverId;
+    case 'out': return !!after;
+    case 'time': return !after || after.time !== it.time;
+    case 'driver': case 'newcar': return !after;
+    default: return true;   // place: decided by the item itself
+  }
+}

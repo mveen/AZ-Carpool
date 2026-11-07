@@ -349,6 +349,11 @@ test('the day coordinator article says the card in Mijn week is folded until the
   assert.match(JSON.stringify(findArticle('dagcoordinator-aanvragen')), /ingeklapt tot de dag voor de carpooldag/);
 });
 
+test('the day coordinator article explains Al aangepast and the block about earlier changes (v238)', () => {
+  const a = articles.find(x => x.id === 'dagcoordinator-aanvragen'), s = a.body.join(' ');
+  assert.match(s, /Al aangepast voor die dag/); assert.match(s, /Het totaal telt/); assert.match(s, /Dit voorstel past eerdere wijzigingen aan/); assert.match(s, /Recente wijzigingen, met het label Aangepast/);
+  assert.match(a.keywords, /eerdere wijzigingen/);
+});
 test('the day coordinator article explains the flow: Verzoeken verwerken, the three steps, Advies/Alternatief, Doorvoeren, terugdraaien, Dagbericht', () => {
   const s = JSON.stringify(findArticle('dagcoordinator-aanvragen'));
   assert.match(s, /in Mijn week: Advies bekijken en aanpassen/); assert.match(s, /waar niets verandert staat er ook bij, met Geen wijzigingen nodig/); assert.match(s, /Verzoeken verwerken/); assert.match(s, /Aanvragen/); assert.match(s, /Alternatief/); assert.match(s, /Controleren/); assert.match(s, /Doorvoeren/); assert.match(s, /terugdraaien/); assert.match(s, /Dagbericht/); assert.doesNotMatch(s, /Zelf indelen onder aan stap 1/); assert.match(s, /stap 2 bij Heen of Terug op Aanpassen/); assert.doesNotMatch(s, /Zuinigst|Minste gedoe|Overnemen/);

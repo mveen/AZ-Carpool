@@ -540,3 +540,7 @@ test('v224: the signed-out message exists', () => { assert.match(t('app.uitgelog
 test('Eigen ouder rijdt mee: the sheet has a title and the button says Toch doorgaan', () => { assert.equal(nl['deviation.eigen_ouder_laten'], 'Toch doorgaan'); assert.ok(nl['deviation.eigen_ouder_titel']); });
 test('Eigen ouder rijdt mee in the Advies flow: the chip text exists', () => { assert.ok(nl['weekrooster.flow.chipOwn']); });
 test('Eigen ouder rijdt mee: the card has its three texts', () => { for (const k of ['deviation.eigen_ouder_zet_terug', 'deviation.eigen_ouder_laten', 'deviation.eigen_ouder_bewust']) assert.ok(nl[k], k); });
+test('v238: the texts about earlier changes exist (Al aangepast, Dit voorstel past ... aan, the tag, the log tag)', () => {
+  for (const k of ['weekrooster.earlier.title', 'weekrooster.earlier.out', 'weekrooster.earlier.moved', 'weekrooster.earlier.extra', 'weekrooster.earlier.driver', 'weekrooster.earlier.newcar', 'weekrooster.earlier.time', 'weekrooster.earlier.place', 'weekrooster.over.title1', 'weekrooster.over.titleN', 'weekrooster.over.nowGirl', 'weekrooster.over.nowGirlOff', 'weekrooster.over.nowCar', 'weekrooster.over.nowCarOff', 'weekrooster.over.totalOne', 'weekrooster.over.totalMany', 'weekrooster.over.tag', 'weekrooster.over.foot1', 'weekrooster.over.footN', 'weekrooster.tag.overwritten']) assert.ok(nl[k], k);
+  assert.equal(t('weekrooster.over.titleN', { p1: 3 }), 'Dit voorstel past 3 eerdere wijzigingen aan'); assert.equal(t('weekrooster.earlier.title', { p1: 'donderdag' }), 'Al aangepast voor donderdag');
+});

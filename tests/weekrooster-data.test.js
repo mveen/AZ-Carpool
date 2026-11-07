@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, useFakeDb, withFakeNowAsync, NOW, sampleDbSeed, sampleParentState, sampleCoordinatorState, sampleGroups } from './test-support.js';
 import { S } from '../state.js';
 import { rideTime, ovGirlsFor } from '../rides.js';
-import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, pendingOfDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, releaseNotRidingRequest, currentMarks, planOf, planStats, withManual } from '../weekrooster-data.js';
+import { weekKeyFor, isDayPast, dayEndMs, standardTimes, deciderFamilyOf, syncWeekRequests, stopWeekRequests, submitWeekRequests, withdrawWeekRequests, myDeciderDays, requestsForDeciding, adviceForDay, pendingOfDay, acceptDay, closeDayRequests, purgeStaleWeekRequests, releaseNotRidingRequest, currentMarks, planOf, planStats, withManual, overwrittenByPlan } from '../weekrooster-data.js';
 
 const dom = installFakeDom();
 const toast = () => dom.doc.getElementById('toast').innerHTML.replace(/<[^>]+>/g, ' ').replace(/&#39;/g, "'").replace(/\s+/g, ' ').trim();
@@ -155,6 +155,19 @@ await testAsync('a parent who decides no day also reads the others (for the note
   sampleParentState({ dayCoordinators: { Do: 'f2' } }); syncWeekRequests();
   assert.equal(S.dayRequestsUnsubs.length, 1); stopWeekRequests();
   assert.equal(S.dayRequestsUnsubs.length, 0); assert.deepEqual(S.dayRequests, {}); assert.equal(S.dayRequestsKey, '');
+});
+
+console.log('=== earlier changes of the day that a plan takes back ===');
+await testAsync('overwrittenByPlan: the earlier change (Evi in Jan\'s car) is taken back by the proposal for Lois; the girl who asked and the other direction never count', async () => {
+  const car = (dir, n, driver, girls, dep) => ({ ['Do_' + dir + '_' + n]: { day: 'Do', direction: dir, girlIds: girls, driverFamilyId: driver, reserveFamilyIds: [], departureTime: dep } });
+  const CARS = { ...sampleGroups(), ...car('heen', 1, 'f1', ['f1', 'f3'], '07:30'), ...car('heen', 2, 'f2', ['f2', 'f4'], '09:15'), ...car('terug', 1, 'f1', ['f1', 'f3'], '17:00'), ...car('terug', 2, 'f2', ['f2', 'f4'], '18:00') };
+  useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f5': reqDoc('Do', 'f5', { heen: '09:00', terug: '17:00' }) });
+  sampleParentState({ dayCoordinators: { Do: 'f2' }, groups: CARS }); syncWeekRequests(); await new Promise(r => setImmediate(r));
+  const none = withManual(adviceForDay('Do'), {}); assert.deepEqual(overwrittenByPlan(none, planOf(none, 'best')), [], 'the standard rooster: nothing earlier to take back');
+  S.deviations = { Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f3', 'f4'], reserveFamilyIds: [], departureTime: '07:30' }, { driverFamilyId: 'f2', girlIds: ['f2'], reserveFamilyIds: [], departureTime: '09:15' }] } };
+  const adv = withManual(adviceForDay('Do'), {}), over = overwrittenByPlan(adv, planOf(adv, 'best'));
+  assert.deepEqual(over.map(o => o.dir), ['heen']); assert.deepEqual(over[0].item, { type: 'moved', girlId: 'f4', driverId: 'f1', time: '07:30' }); assert.equal(over[0].after.driverId, 'f2');
+  const byHand = withManual(adv, { add: { heen: { f4: '09:15' } } }); assert.ok(!overwrittenByPlan(byHand, planOf(byHand, 'best', { add: { heen: { f4: '09:15' } } })).some(o => o.item.girlId === 'f4'), 'a girl who was set by hand is the point of the plan, not a casualty');
 });
 
 import { assertNoUnusedImports } from './test-support.js';
