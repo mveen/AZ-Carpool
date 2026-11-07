@@ -169,7 +169,7 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 19);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen"
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 20);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
   assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
@@ -214,7 +214,7 @@ test('the menus inside each Beheer section are in the order the coordinator chos
   };
   assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard']);
   assert.deepEqual(order('periodes'), ['locationsCard', 'planningCard', 'periodCard']);
-  assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'maintenanceCard', 'notifCard']);
+  assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'dayNoticeCard', 'maintenanceCard', 'notifCard']);
   assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'impactCard', 'errorLogCard']);
 });
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
@@ -610,6 +610,14 @@ test('Beheer shows the notice card, and the WhatsApp intro icon wiring is still 
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
   assert.match(text(dom.html('tab-beheer')), /Melding voor iedereen/);
+});
+
+test('Beheer shows the Melding dagwijzigingen card below the notice card', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  assert.match(text(html), /Melding dagwijzigingen/);
+  assert.ok(html.indexOf('id="dayNoticeCard"') > html.indexOf('id="noticeCard"'));
 });
 
 test('Beheer shows the onderhoudsmodus card below the notice card', () => {

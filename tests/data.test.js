@@ -955,6 +955,15 @@ await testAsync('the maintenance mode is loaded live, shows the page for a paren
   stopDataListeners(); assert.equal(S.maintenance, null);
   assert.equal(dom.el('maintenanceOverlay').style.display, 'none');
 });
+await testAsync('the Melding dagwijzigingen settings are loaded live (a missing document stays null = on, 11:00) and cleared when listeners stop', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/dayChangeNotice': { on: false, until: '09:30' } }); sampleParentState({ families: {}, groups: {}, dayChangeNotice: null });
+  startDataListeners(); await tick(); await tick();
+  assert.deepEqual(S.dayChangeNotice, { on: false, until: '09:30' });
+  stopDataListeners(); assert.equal(S.dayChangeNotice, null); assert.equal(S.dayChangeNoticeDraft, null);
+  useFakeDb(sampleDbSeed()); sampleParentState({ families: {}, groups: {}, dayChangeNotice: null });
+  startDataListeners(); await tick(); await tick(); assert.equal(S.dayChangeNotice, null);
+  stopDataListeners();
+});
 await testAsync('the notice for everyone is loaded live and cleared when listeners stop', async () => {
   useFakeDb({ ...sampleDbSeed(), 'settings/notice': { on: true, text: 'Geen training' } }); sampleParentState({ families: {}, groups: {}, notice: null });
   startDataListeners(); await tick(); await tick();

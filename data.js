@@ -7,6 +7,7 @@ import { notifyCoordinatorOfNewTimeChanges, renderBeheer } from './ui-beheer.js'
 import { renderAll } from './app.js';
 import { renderNoticeBanner } from './ui-notice.js';
 import { normalizeNotice } from './notice.js';
+import { normalizeDayChangeNotice } from './day-change-notice.js';
 import { renderMaintenance } from './ui-maintenance.js';
 import { normalizeMaintenance } from './maintenance.js';
 import { normalizeRitbeurs } from './ritbeurs.js';
@@ -629,6 +630,8 @@ export function startDataListeners(){
       err=>{ listenFailed("settings/dayCoordinators", err); S.periodCarsLoaded=true; renderMyWeek(); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/notice").onSnapshot(snap=>{ S.notice = snap.exists? normalizeNotice(snap.data()) : null; renderNoticeBanner(); renderBeheer(); },
       err=>{ listenFailed("settings/notice", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
+    db.doc("settings/dayChangeNotice").onSnapshot(snap=>{ S.dayChangeNotice = snap.exists? normalizeDayChangeNotice(snap.data()) : null; renderBeheer(); renderSchedule(); },
+      err=>{ listenFailed("settings/dayChangeNotice", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     db.doc("settings/maintenance").onSnapshot(snap=>{ S.maintenance = snap.exists? normalizeMaintenance(snap.data()) : null; renderMaintenance(); renderBeheer(); },
       err=>{ listenFailed("settings/maintenance", err); setStatus(t('data.fout_bij_laden_instellingen')+(err&&err.message||err), true); });
     // Ritbeurs: the feature switch, the rides on offer and the "Ik kan inspringen" moments. Everyone reads them; the switch decides what is shown.
@@ -716,7 +719,7 @@ export function stopDataListeners(){
   S.dataUnsubs.forEach(u=>{ try{ u(); }catch(e){} });
   S.dataUnsubs = [];
   stopWeekRequests();
-  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
+  S.familiesLoaded=false; S.groupsLoaded=false; S.deviationsLoaded=false; S.periodsLoaded=false; S.periodCarsLoaded=false; S.families={}; S.serverSchedules={}; S.groups={}; S.deviations={}; S.matchCarpools={}; S.practiceMatches={}; S.dayCoordinators={}; S.notice=null; S.noticeDraft=null; S.dayChangeNotice=null; S.dayChangeNoticeDraft=null; S.maintenance=null; S.maintenanceDraft=null; S.ritbeurs=null; S.pushSettings=null; S.offers={}; S.moments={}; S.rbConfirm=null; S.rbMomentDraft=null; S.periods={}; S.periodsColl={}; S.legacyPeriod=null; S.periodDraft=null; S.periodSel=null; S.periodEntries={}; S.periodEntriesLoaded=false; S.periodForm=null; S.periodView=null; S.periodCars={}; S.periodDay=null; S.locationsDoc=null; S.matchDistances={}; S.matchDistancesLoaded=false; S.matchCacheLoaded=false; S.orsApiKey='';
   S.lastPendingChangeCount = null;
   stopPushListeners();
   renderNoticeBanner();
