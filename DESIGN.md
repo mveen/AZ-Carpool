@@ -165,3 +165,8 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 - The label above the name (`.rideRow__lab`) says whose ride it is: "Jahaimy rijdt mee met" + the driver, "Jij rijdt, Jahaimy rijdt mee" when you drive her, "Chauffeur" when there is no ride yet.
 - A shift you drive while your daughter rides in another car is its own card (`.rideRow--mine`, green top edge, "Jij", route, Passagiers with their own time), in time order next to her card. The old line "Jouw rijbeurt om ..." and the amber "Vertrektijd gewijzigd" line are gone; a changed time says `was 07:30` under the time.
 - No line "Jij bent dagcoördinator ..." in Mijn week (others still see "Dagcoördinator morgen: naam").
+
+## Earlier changes of the day (v238)
+
+- **Fold line "Al aangepast voor {dag}"** `details.fold.fold--earlier`: one quiet 44 px line inside the amber `.entryCard` (Rooster and Mijn week), the list of `.logItem`s when opened. Only when the day deviates from the standard rooster.
+- **Overwrite block** `.alertCard.alertCard--stack` with `.alertCard__head` (icon + bold title), one `.alertCard__row` per earlier change that the proposal takes back ("was · nu") and an optional `.alertCard__sub` (total in cars). On top of step 2 and in step 3, plus a `.noteLine` next to Doorvoeren. The cars involved carry a `.tag.tag--warn` ("eerdere wijziging aangepast"). Log lines in "Recente wijzigingen" carry `.tag.tag--warn` "Aangepast".

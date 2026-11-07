@@ -173,6 +173,22 @@ await testAsync('a hand change by a parent ("Toch zelf wijzigen") shows in the l
   await asDecider(); S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], selfBy: 'f4', selfAt: new Date('2026-09-30T09:00:00+02:00').getTime() } };
   const s = text(rooster()); assert.match(s, /Zelf gewijzigd/); assert.match(s, /heen zelf aangepast/);
 });
+await testAsync('the amber card has the folded line "Al aangepast voor donderdag" when the day deviates from the standard rooster, and not when it does not', async () => {
+  await asDecider({ groups: CARS });
+  assert.doesNotMatch(text(rooster()), /Al aangepast/);
+  S.deviations = { ...S.deviations, Do_terug: { day: 'Do', direction: 'terug', weekKey: WK, expiresAt: 9e15, cars: [{ driverFamilyId: 'f1', girlIds: ['f1', 'f3'], reserveFamilyIds: [], departureTime: '17:00' }, { driverFamilyId: 'f2', girlIds: ['f2', 'f4'], reserveFamilyIds: [], departureTime: '18:30' }] } };
+  const html = rooster(), s = text(html);
+  assert.match(s, /Al aangepast voor donderdag 1/); assert.match(s, /Terug · Auto van Piet Pieters vertrekt 18:30/);
+  assert.match(html, /<details class="fold fold--earlier"/); assert.doesNotMatch(html, /<details class="fold fold--earlier"[^>]*\bopen\b/);
+  assert.ok(html.indexOf('fold--earlier') < html.indexOf('data-wradvice'), 'the line sits above the button Verzoeken verwerken');
+  assert.match(text(mijnWeek()), /Al aangepast voor donderdag 1/);   // Mijn week uses the same card
+});
+await testAsync('"Recente wijzigingen" shows what a plan took back, with the tag Aangepast', async () => {
+  await asDecider({ groups: CARS });
+  S.deviations = { ...S.deviations, Do_heen: { day: 'Do', direction: 'heen', weekKey: WK, expiresAt: 9e15, cars: [], overwroteAt: new Date('2026-09-30T09:30:00+02:00').getTime(), overwrote: [{ item: { type: 'time', driverId: 'f2', time: '08:00' }, after: { driverId: 'f2', time: '09:15' } }] } };
+  const html = rooster(), s = text(html);
+  assert.match(s, /Heen · Auto van Piet Pieters vertrekt 08:00 · nu: vertrek 09:15/); assert.match(html, /tag tag--warn[^>]*>Aangepast</);
+});
 await testAsync('the requests are listed per direction, per girl in alphabetical order, with the asked time and the time it was', async () => {
   useFakeDb({ ...seed(), 'weekRequests/2026-W40_Do_f5': doc('Do', 'f5', { heen: '10:00', terug: '16:00' }) });
   sampleParentState({ dayCoordinators: { Do: 'f2' }, scheduleDay: 'Do', roosterMode: 'week', groups: CARS }); syncWeekRequests(); await tick();

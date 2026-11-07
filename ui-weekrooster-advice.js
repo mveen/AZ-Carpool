@@ -18,9 +18,10 @@ import { buildConclusieMessage } from './message-texts.js';
 import { renderSchedule } from './ui-schedule.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { evaluateCars } from './weekrooster-impact.js';
-import { acceptDay, adviceForDay, planOf, planStats, withManual } from './weekrooster-data.js';
+import { acceptDay, adviceForDay, overwrittenByPlan, planOf, planStats, withManual } from './weekrooster-data.js';
 import { timeAfter, withDeparture, withDestination, withDriver, withGirlIn, withNewCar, withPlace, withoutGirl } from './weekrooster-plan.js';
 import { dayName, weekroosterActive } from './ui-weekrooster-form.js';
+import { overDriversOf, overwriteBlockHtml, overwriteNoteHtml } from './ui-weekrooster-earlier.js';
 
 const dayLabel = dayName;
 const adviceOf = f => withManual(adviceForDay(f.day), f.edits);   // the advice with the girls taken out / added by hand worked in
@@ -168,12 +169,12 @@ function carFormHtml(dir, d, c, all) {
 
 // A car of the shift, in three blocks: Wijzigingen (who is new, with her time and wait), Bezetting (everybody in the car: a tap = another car, + Passagier = add one),
 // Niet meer in deze auto. In "Aanpassen" the fields of the car come first. `old` = the same driver's car now (null: a new car); plain = nothing changes in it.
-function carCardHtml(dir, d, ev, c, old, plain, askedBy, edit, all) {
+function carCardHtml(dir, d, ev, c, old, plain, askedBy, edit, all, flag) {
   const cfg = locationsCfg(), max = seats(fam(c.driverFamilyId)), was = old ? old.girlIds || [] : [];
   const route = esc(routeLabel(c, dir, cfg, S.wrAdvice.day));
   const timeChanged = old && (old.departureTime || '') !== (c.departureTime || '');
   const time = `<div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span>${timeChanged ? `<span class="carCard__was">${esc(t('weekrooster.flow.girlWas', { p1: old.departureTime || '--:--' }))}</span>` : ''}</div>`;
-  const head = (sub, tag) => `<div class="carCard__head">${time}<div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${old || plain ? '' : `<span class="tag tag--warn">${esc(t('weekrooster.advice.new'))}</span>`}<div class="carCard__route">${sub}</div></div>${tag}</div>`;
+  const head = (sub, tag) => `<div class="carCard__head">${time}<div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${old || plain ? '' : `<span class="tag tag--warn">${esc(t('weekrooster.advice.new'))}</span>`}${flag ? `<span class="tag tag--warn">${esc(t('weekrooster.over.tag'))}</span>` : ''}<div class="carCard__route">${sub}</div></div>${tag}</div>`;
   const tag = `<span class="tag">${c.girlIds.length}/${max}</span>`;
   if (plain && !edit) return `<div class="carCard carCard--plain">${head(`${sortGirlIds(c.girlIds).map(rawGirl).map(esc).join(', ')} · ${route}`, tag)}</div>`;
   const key = id => askedBy.has(id) || !old || !was.includes(id);
@@ -193,10 +194,11 @@ function carCardHtml(dir, d, ev, c, old, plain, askedBy, edit, all) {
     ${carBlock(t('weekrooster.flow.blockSeats'), `${c.girlIds.length}/${max}`, `<div class="chips">${all2.map(chip).join('')}${addBtn}</div>`)}
     ${left.length ? carBlock(t('weekrooster.flow.blockOut'), '', `<div class="chips">${left.map(id => `<span class="chip chip--gone">${esc(rawGirl(id))}</span>`).join('')}</div>`) : ''}</div>`;
 }
-const goneCardHtml = c => `<div class="carCard carCard--gone"><div class="carCard__head"><div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span></div>
-  <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span></div><span class="tag">${esc(t('weekrooster.advice.gone'))}</span></div></div>`;
+const goneCardHtml = (c, flag) => `<div class="carCard carCard--gone"><div class="carCard__head"><div class="carCard__t"><span class="carCard__time">${esc(c.departureTime || '--:--')}</span></div>
+  <div class="carCard__who"><span class="carCard__driver">${driverNameHtml(c.driverFamilyId)}</span>${flag ? `<span class="tag tag--warn">${esc(t('weekrooster.over.tag'))}</span>` : ''}</div><span class="tag">${esc(t('weekrooster.advice.gone'))}</span></div></div>`;
 
-function sceneHtml(dir, adv, plan, stats, editDir) {
+function sceneHtml(dir, adv, plan, stats, editDir, over) {
+  const flagged = overDriversOf(over || [], dir);
   const d = adv.directions[dir], p = plan.dirs[dir], ev = stats.perDir[dir], now = d.cars.filter(c => (c.girlIds || []).length);
   const askedBy = new Map(d.ctx.requests.filter(r => !r.manual).map(r => [r.familyId, r]));
   const off = d.ctx.requests.filter(r => r.manual && !r.rides).map(r => r.familyId);
@@ -221,7 +223,7 @@ function sceneHtml(dir, adv, plan, stats, editDir) {
     <div class="scene__head"><span class="scene__badge">${phIcon(heen ? 'sun' : 'moon')}</span><div class="scene__headText"><span>${esc(t(heen ? 'dir.heenShort' : 'dir.terugShort'))}</span><b>${esc(sceneTitle(dir, d.ctx))}</b></div>${editBtn}</div>
     ${quiet ? `<p class="scene__ok">${phIcon('check')}<span>${esc(t('weekrooster.flow.sceneNoChange'))}</span></p>` : `<p class="scene__chg"><span class="chip chip--warn">${esc(t(nChanged === 1 ? 'weekrooster.flow.sceneChanges1' : 'weekrooster.flow.sceneChangesN', { p1: nChanged }))}</span></p>`}
     <div class="scene__cars"><div class="scene__label">${esc(t(heen ? 'weekrooster.flow.carsHeen' : 'weekrooster.flow.carsTerug', { p1: arrivalText(dir, p.cars) }))}</div>
-      ${changed.map(x => carCardHtml(dir, d, ev, x.c, x.old, false, askedBy, edit, p.cars)).join('')}${gone.map(goneCardHtml).join('')}${plain.map(x => carCardHtml(dir, d, ev, x.c, edit ? x.old : null, true, askedBy, edit, p.cars)).join('')}${addCar}
+      ${changed.map(x => carCardHtml(dir, d, ev, x.c, x.old, false, askedBy, edit, p.cars, flagged.has(x.c.driverFamilyId))).join('')}${gone.map(c => goneCardHtml(c, flagged.has(c.driverFamilyId))).join('')}${plain.map(x => carCardHtml(dir, d, ev, x.c, edit ? x.old : null, true, askedBy, edit, p.cars, flagged.has(x.c.driverFamilyId))).join('')}${addCar}
       ${notRiding.map(id => `<div class="rider rider--off"><b class="rider__name">${girlName(id)}</b><span class="chip chip--muted">${esc(t('weekrooster.flow.capHome'))}</span></div>`).join('')}</div>
     <div class="scene__note">${phIcon('info')}<span>${names.length ? t('weekrooster.flow.notice', { p1: names.join(', ') }) : esc(t('weekrooster.flow.notice0'))}</span></div></section>`;
 }
@@ -299,9 +301,10 @@ function planStep(adv, f, plan, stats) {
   const n = stats.familiesChanged.length, m = stats.moved.length;
   const tiles = plan.fallback ? '' : `<div class="statTiles statTiles--3">${tile(String(m), movedLabel(m), false)}${tile(String(n), noticeLabel(n), false)}${waitTile(stats)}</div>`;
   const unplaced = stats.problems.filter(p => p.key === 'unplaced').flatMap(p => p.ids);
+  const over = overwrittenByPlan(adv, plan);   // earlier changes of the day this proposal takes back: on top, so the day coordinator cannot miss them
   return {
-    body: `<div class="flowStack">${seg}${plan.fallback ? '' : whyLine()}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
-      ${dayDirs(f, plan).map(x => (x.changed ? sceneHtml(x.dir, adv, plan, stats, f.editDir) + ownCardHtml(x.dir, stats, f) : quietSceneHtml(x.dir, x.cars))).join('')}
+    body: `<div class="flowStack">${overwriteBlockHtml(over, adv, plan)}${seg}${plan.fallback ? '' : whyLine()}${plan.fallback ? `<p class="noteCard">${phIcon('info')}<span>${esc(t('weekrooster.flow.notFit'))}</span></p>` : ''}${tiles}
+      ${dayDirs(f, plan).map(x => (x.changed ? sceneHtml(x.dir, adv, plan, stats, f.editDir, over) + ownCardHtml(x.dir, stats, f) : quietSceneHtml(x.dir, x.cars))).join('')}
       ${plan.blocked ? `<div class="noteLine">${esc(t('weekrooster.advice.noSolution'))}</div>` : ''}
       ${unplaced.length ? `<div class="noteLine">${esc(t('weekrooster.flow.unplaced', { p1: sortGirlIds(unplaced).map(rawGirl).join(', ') }))}</div>` : ''}</div>`,
     foot: `<button type="button" class="btn" id="wrToCheck"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.toCheck'))}${phIcon('arrow-right')}</button>
@@ -330,6 +333,7 @@ function checkStep(adv, f, plan, stats) {
     ...stats.problems.filter(x => x.key === 'own').map(x => chip(false, t('weekrooster.flow.chipOwn', { p1: sortGirlIds(x.ids).map(rawGirl).join(' & ') }))),
     ...DIRS.filter(dir => stats.problems.some(p => p.key === 'late' && p.dir === dir)).map(dir => chip(false, t(lateKey(dir, 'weekrooster.flow.chipLate')))),
   ].join('');
+  const over = overwrittenByPlan(adv, plan);
   const notice = stats.familiesChanged.length ? `<div class="infoNote">${phIcon('info')}<span>${esc(t('weekrooster.flow.noticeSee', { p1: stats.familiesChanged.map(rawParent).join(', ') }))}</span></div>` : '';
   const lines = dayDirs(f, plan).map(({ dir, changed, cars }) => {
     const rows = (changed ? plan.dirs[dir].cars.filter(c => c.girlIds.length) : cars).map(quietRowHtml).join('');
@@ -337,10 +341,10 @@ function checkStep(adv, f, plan, stats) {
     return `<div class="planSum__group scene--${dir}"><div class="planSum__dir"><span class="scene__badge">${phIcon(dir === 'heen' ? 'sun' : 'moon')}</span>${esc(t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort'))}${tag}</div>${rows}</div>`;
   }).join('');
   return {
-    body: `<div class="flowStack"><div class="chips">${chips}</div>${notice}
+    body: `<div class="flowStack"><div class="chips">${chips}</div>${overwriteBlockHtml(over, adv, plan)}${notice}
       <div class="sectionHead"><div class="sectionHead__title">${esc(t('weekrooster.flow.summary', { p1: dayLabel(day).toLowerCase() }))}</div><div class="sectionHead__sub">${esc(t('weekrooster.flow.afterApply'))}</div></div>
       <div class="planSum">${lines}</div></div>`,
-    foot: `<div class="flowScreen__row"><button type="button" class="roundBtn" id="wrBackToPlan" aria-label="${esc(t('weekrooster.flow.backToPlan'))}">${phIcon('arrow-left')}</button>
+    foot: `${overwriteNoteHtml(over)}<div class="flowScreen__row"><button type="button" class="roundBtn" id="wrBackToPlan" aria-label="${esc(t('weekrooster.flow.backToPlan'))}">${phIcon('arrow-left')}</button>
       <button type="button" class="btn" id="wrAccept"${plan.blocked ? ' disabled' : ''}>${esc(t('weekrooster.flow.apply', { p1: dayLabel(day).toLowerCase() }))}</button></div>
       <p class="flowScreen__note">${esc(t('weekrooster.flow.applySub'))}</p>`,
   };

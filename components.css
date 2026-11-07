@@ -411,6 +411,8 @@ button.chip{cursor:pointer;font-family:inherit}
 .alertCard__text{flex:1;font:var(--type-small);color:var(--text-1)}
 .alertCard .btn{margin:0;height:40px;min-height:40px;border-radius:var(--radius-pill);font-size:13px;padding:0 var(--space-6)}
 .alertCard--stack{flex-direction:column;align-items:stretch}
+.alertCard__head{display:flex;align-items:center;gap:var(--space-4)}
+.alertCard__sub{font:var(--type-caption);color:var(--text-2);margin:var(--space-2) 0 0}
 
 /* ---------- Ride card: the heart of Mijn week. One ride = one white card with a border (--edge, no grey fill). The card you drive has a green top edge. ---------- */
 .dayHead{display:flex;align-items:baseline;gap:var(--space-3);margin:var(--space-6) var(--space-1) var(--space-4);font:var(--type-section)}
@@ -516,6 +518,11 @@ details.fold--quiet{margin:calc(var(--space-3) * -1) 0 var(--space-7);padding:0 
 details.fold--quiet>summary{justify-content:flex-start;gap:var(--space-3);font:var(--type-caption);font-weight:600;color:var(--text-2);min-height:var(--hit-min)}
 details.fold--quiet>summary b{color:var(--text-1)}
 details.fold--quiet>summary::after{margin-left:auto}
+details.fold--earlier{margin:var(--space-2) 0 0;border-top:1px solid var(--warn-edge)}   /* "Al aangepast" inside the amber card: one quiet line */
+details.fold--earlier>summary{justify-content:flex-start;gap:var(--space-3);font:var(--type-small);font-weight:600;color:var(--text-2);min-height:var(--hit-min)}
+details.fold--earlier>summary b{color:var(--text-1)}
+details.fold--earlier>summary::after{margin-left:auto}
+details.fold--earlier>.foldBody{padding-bottom:var(--space-3)}
 details.fold--quiet .sep{color:var(--text-muted)}
 details.fold--quiet .foldLabel{margin:var(--space-3) 0 var(--space-2);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--text-muted)}
 details.fold--quiet .foldLabel:first-child{margin-top:0}

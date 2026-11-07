@@ -69,6 +69,41 @@ test('a new car only lists as "extra" the girls who have no standard ride at all
   assert.deepEqual(items, [{ type: 'newcar', driverId: 'f9', girlIds: ['f9', 'f2'], time: '08:00', extraGirlIds: ['f9'] }]);
 });
 
+import { overwrittenChanges } from '../day-changes.js';
+console.log('\n=== overwrittenChanges: earlier changes a plan takes back ===');
+{
+  const B = [car('f1', ['f1', 'f3'], '17:00'), car('f2', ['f2', 'f4'], '18:00')];
+  test('a plan that keeps the earlier changes overwrites nothing', () => {
+    const now = [car('f1', ['f1', 'f3'], '17:00'), car('f2', ['f2', 'f4'], '18:30')];
+    assert.deepEqual(overwrittenChanges(B, now, now, []), []);
+    assert.deepEqual(overwrittenChanges(B, B, B, []), [], 'no earlier changes: nothing to take back');
+  });
+  test('an earlier time change that the plan sets back is overwritten, with the car in the plan', () => {
+    const now = [car('f1', ['f1', 'f3'], '17:00'), car('f2', ['f2', 'f4'], '18:30')];
+    assert.deepEqual(overwrittenChanges(B, now, B, []), [{ item: { type: 'time', driverId: 'f2', time: '18:30' }, after: { driverId: 'f2', time: '18:00' } }]);
+  });
+  test('a girl who moved earlier and is moved again: overwritten, "after" is her car in the plan', () => {
+    const now = [car('f1', ['f1'], '17:00'), car('f2', ['f2', 'f4', 'f3'], '18:00')];
+    assert.deepEqual(overwrittenChanges(B, now, B, []), [{ item: { type: 'moved', girlId: 'f3', driverId: 'f2', time: '18:00' }, after: { driverId: 'f1', time: '17:00' } }]);
+  });
+  test('changes about a girl who asked (or was set by hand) never count', () => {
+    const now = [car('f1', ['f1'], '17:00'), car('f2', ['f2', 'f4', 'f3'], '18:00')];
+    assert.deepEqual(overwrittenChanges(B, now, B, ['f3']), []);
+  });
+  test('a car that is gone in the plan has no "after"; the same item kept at another moment is not overwritten', () => {
+    const now = [car('f1', ['f1', 'f3'], '17:00'), car('f9', ['f2', 'f4'], '18:00')];
+    const plan = [car('f1', ['f1', 'f3', 'f2', 'f4'], '17:00')];
+    assert.deepEqual(overwrittenChanges(B, now, plan, []), [{ item: { type: 'driver', driverId: 'f9', fromDriverId: 'f2', time: '18:00' }, after: null }]);
+    const keep = [car('f1', ['f1', 'f3'], '17:00'), car('f9', ['f2', 'f4'], '19:00')];   // the driver swap stays, only the time moves: the swap is kept
+    assert.deepEqual(overwrittenChanges(B, now, keep, []), []);
+  });
+  test('missing input is treated as no cars; a girl out earlier who rides in the plan has her car as "after"', () => {
+    assert.deepEqual(overwrittenChanges(undefined, undefined, undefined), []);
+    const now = [car('f1', ['f1', 'f3'], '17:00'), car('f2', ['f2'], '18:00')];   // Evi (f4) out
+    assert.deepEqual(overwrittenChanges(B, now, B, []), [{ item: { type: 'out', girlId: 'f4' }, after: { driverId: 'f2', time: '18:00' } }]);
+  });
+}
+
 import { assertNoUnusedImports } from './test-support.js';
 test('day-changes.js imports nothing it does not use', () => assertNoUnusedImports('day-changes.js'));
 
