@@ -242,7 +242,7 @@ export default [
       '2. Kies de chauffeur, de meiden die meerijden, de plek waar de auto vertrekt en de vertrektijd.',
       '3. Sla op. Iedereen kan een wedstrijdcarpool opzetten en aanpassen.',
       'Vertrek vanaf staat standaard op het busstation. Je kunt ook een andere vaste plek kiezen (zoals AFC \'34 of ATC) of Andere locatie en zelf een plek of adres invullen. Bij elke auto staat waar hij vertrekt.',
-      'Rijd je zelf ook en wil je het snel regelen? Tik bij de wedstrijd op Ik rij ook. Je auto staat dan in de carpool, vertrekkend vanaf het busstation. Met Mijn auto weghalen haal je hem er weer uit.',
+      'Rijd je zelf ook en wil je het snel regelen? Tik bij de wedstrijd op Ik rijd. Je auto staat dan in de carpool, vertrekkend vanaf het busstation. Met Mijn auto weghalen haal je hem er weer uit.',
       'Onder de wedstrijd staat de afstand (enkele reis) en de carpoolkosten. Bij wedstrijden op AFC \'34 of het AZ Trainingscomplex is de afstand vast. Bij andere plekken is het een schatting en staat er een ± voor.',
       'De wedstrijden komen uit de agenda\'s van de teams. Ze worden elke ochtend vroeg automatisch bijgewerkt. Klopt er iets niet, laat het de coördinator weten.',
     ],
