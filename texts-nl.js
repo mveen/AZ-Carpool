@@ -1073,7 +1073,7 @@ export default {
   "deviation.ongedaan": "Ongedaan",
   "beheer.gekoppeld": "Gekoppeld",
   "beheer.coordinator_tag": "Coördinator",
-  "matches.ik_rij_ook": "Ik rij ook",
+  "matches.ik_rij_ook": "Ik rijd",
   "matches.auto_wijzigen": "Carpool van {driver} wijzigen",
   "matches.auto_bijgewerkt": "Carpool bijgewerkt ✓",
   "matches.ik_rij_toegevoegd": "Je auto staat erbij",

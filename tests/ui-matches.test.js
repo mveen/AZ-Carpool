@@ -63,7 +63,7 @@ test('a match within 8 days can get a carpool; the "set up a carpool" sentence s
   state({ matches: [home] });
   const s = text(render());
   assert.match(s, /za 3 okt.*aftrap 10:30.*AZ O15-1 \(Thuis\) vs Hoorn O15-2.*Sportpark Hoorn/);
-  assert.match(s, /Een carpool kun je in de komende 8 dagen regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rij ook Auto toevoegen/);
+  assert.match(s, /Een carpool kun je in de komende 8 dagen regelen/); assert.match(s, /Nog geen carpool ingesteld\. Ik rijd Auto toevoegen/);
   state({ matches: [far] });
   assert.doesNotMatch(text(render()), /in de komende 8 dagen regelen/);
   assert.doesNotMatch(render(), /data-iride/);
@@ -205,7 +205,7 @@ test('every match is its own card (matchCard) under an info line; no nested grou
   assert.doesNotMatch(html, /matchGroup|matchesCard/);
 });
 
-await testAsync('Ik rij ook adds the own car with the own daughter; Mijn auto weghalen removes it again', async () => {
+await testAsync('Ik rijd adds the own car with the own daughter; Mijn auto weghalen removes it again', async () => {
   const fake = useFakeDb(sampleDbSeed());
   state({ me: 'u1', links: { u1: { familyId: 'f2' } } });
   render();
@@ -258,7 +258,7 @@ await testAsync('saving an edit closes the form, and tapping Opslaan twice never
   assert.doesNotMatch(boxHtml, /matchCarDriver_/);                                                                // form is gone
   assert.equal(S.openMatchCarpoolForm, null);
 });
-await testAsync('a quick double tap on "Ik rij ook" adds the car once', async () => {
+await testAsync('a quick double tap on "Ik rijd" adds the car once', async () => {
   const fake = useFakeDb(sampleDbSeed()); state(); render();
   const btn = reg()('[data-iride]')[0];
   await Promise.all([withFakeNow(NOW, () => btn.onclick()), withFakeNow(NOW, () => btn.onclick())]);
@@ -285,10 +285,10 @@ test('riders are listed regular players A-Z first, then Flex players A-Z', () =>
 });
 
 console.log('\n=== one row of buttons, "vertrek vanaf" ===');
-test('"Ik rij ook" and "Auto toevoegen" sit together in one .matchActions row; Ik rij ook only while the own car is not in', () => {
+test('"Ik rijd" and "Auto toevoegen" sit together in one .matchActions row; Ik rijd only while the own car is not in', () => {
   state(); const html = render();
   assert.match(html, /<div class="matchActions"><button[^>]*data-iride="[^"]+"[^>]*>[\s\S]*?<\/button><button[^>]*data-addmatchcar="[^"]+"[^>]*>[\s\S]*?<\/button><\/div>/);
-  assert.match(text(html), /Ik rij ook Auto toevoegen/);
+  assert.match(text(html), /Ik rijd Auto toevoegen/);
   state({ matchCarpools: { [SLUG]: { ...carpool, cars: [{ driverFamilyId: 'f2', girlIds: ['f2'], departureTime: '09:15' }] } } });
   const h2 = render(); assert.doesNotMatch(h2, /data-iride/); assert.match(h2, /<div class="matchActions"><button[^>]*data-addmatchcar/);
 });
@@ -332,7 +332,7 @@ test('editing a car starts with its place; a free input opens the text field', (
   assert.match(boxHtml, /<option value="__other" selected>/); assert.match(boxHtml, /id="matchCarFromTxt_ev_cal1__e1"[^>]*value="Zwaag"(?![^>]* hidden)/);
   reg()('[data-editmatchcar]')[1].onclick(); assert.match(boxHtml, /<option value="ATC" selected>/);
 });
-await testAsync('Ik rij ook leaves from Busstation', async () => {
+await testAsync('Ik rijd leaves from Busstation', async () => {
   const fake = useFakeDb(sampleDbSeed()); state(); render();
   await withFakeNow(NOW, () => reg()('[data-iride]')[0].onclick());
   const c = fake.get('matchCarpools/' + SLUG).cars[0]; assert.equal(c.fromId, 'busstation'); assert.equal(c.fromText, ''); assert.equal(c.driverFamilyId, 'f2');

@@ -100,6 +100,7 @@ test('the avatar library icons all exist in PH_PATHS', () => {
 test('APP_VERSION looks like v<number>', () => { assert.match(APP_VERSION, /^v\d+$/); assert.ok(Number(APP_VERSION.slice(1)) >= 153); });
 test('v238: this version is at least v238', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 238); });
 test('v240: this version is at least v240', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 240); });
+test('v241: this version is at least v241', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 241); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
