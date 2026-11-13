@@ -1791,6 +1791,9 @@ export default {
   'beheer.bus_niet_ph': 'Bijv. Ajax',
   'beheer.bus_niet_hint': 'Staat de naam in de tegenstander, dan staat de bus uit. Per wedstrijd kun je dit altijd nog aanpassen.',
   'myweek.bus_tijden': 'Bus vertrekt {depart} · terug ± {back}',
+  'myweek.terug_ca': 'Terug (±)',
+  'myweek.jij_haalt_op': 'Jij haalt op',
+  'myweek.match_ook_terug': 'rijdt ook terug, ± {time} (na afloop)',
   'myweek.ophalen': 'ophalen',
   'myweek.ophalen_bij': 'Ophalen bij {place}',
 };

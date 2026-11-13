@@ -182,5 +182,7 @@ test('v246: heen / terug per car of a match', () => { assert.ok(Number(APP_VERSI
 
 test('v247: terug without the bus shows the opponent and a rough time', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 247); });
 
+test('v248: match rides in Mijn week are weekday-style cards (violet), without a switch', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 248); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

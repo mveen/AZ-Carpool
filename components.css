@@ -419,7 +419,10 @@ button.chip{cursor:pointer;font-family:inherit}
 .dayHead small{font:var(--type-caption);color:var(--text-muted)}
 .rideRow{display:block;background:var(--surface-card);border:1px solid var(--edge);border-radius:var(--radius-card);padding:var(--space-6);margin-bottom:var(--space-4)}
 .rideRow--mine{border-top:3px solid var(--ok)}
-.rideRow--match{border-color:var(--match-ink)}
+.rideRow--match{border-top:3px solid var(--match-ink)}
+.rideRow--match.rideRow--glow{background:linear-gradient(180deg,var(--match-soft) 0%,var(--surface-card) calc(var(--space-6) + var(--hit-min) + var(--space-3)))}
+.rideRow--match .rideRow__dep,.rideRow--match .rideRow__lab.rideRow__lab--me{color:var(--match-ink)}
+.rideRow--match .rideRow__title{margin-top:var(--space-2)}
 .rideRow__head{display:flex;align-items:flex-start;gap:var(--space-5)}
 .rideRow__time{width:64px;flex:none}
 .rideRow__dep{font:var(--type-time-md);letter-spacing:var(--track-time)}

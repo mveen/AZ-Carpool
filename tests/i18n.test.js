@@ -471,6 +471,10 @@ test('v247: the legs name the opponent and the rough return time reads ± time (
   assert.equal(t('matches.leg_naar', { opponent: 'Hoorn O15-2' }), 'naar Hoorn O15-2'); assert.equal(t('matches.leg_van', { opponent: 'Hoorn O15-2' }), 'bij Hoorn O15-2'); assert.equal(t('matches.leg_ongeveer_na_afloop', { time: '18:45' }), '± 18:45 (na afloop)');
 });
 
+test('v248: the Mijn week match card texts exist', () => {
+  assert.equal(t('myweek.terug_ca'), 'Terug (±)'); assert.equal(t('myweek.jij_haalt_op'), 'Jij haalt op'); assert.equal(t('myweek.match_ook_terug', { time: '12:00' }), 'rijdt ook terug, ± 12:00 (na afloop)');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {
