@@ -17,7 +17,7 @@ import { installFakeDom, resetState, useFakeDb, withFakeNow, withFakeNowAsync, N
 import { S } from '../state.js';
 import {
   activeMatchFeeds, matchLabel, analyzeMatch, matchSlug, carpoolFor, matchesThisWeek, matchesNext8Days,
-  loadAllMatches, currentMatchList, docToMatch, myMatchRides, suggestedMatchDeparture, matchCarCapacityState,
+  loadAllMatches, currentMatchList, docToMatch, myMatchRides, supersededMatchSlugs, suggestedMatchDeparture, matchCarCapacityState,
 } from '../matches.js';
 
 const dom = installFakeDom();
@@ -109,6 +109,25 @@ test('myMatchRides: cars where my family drives or my daughter rides, this plann
     const rides = myMatchRides('f2');
     assert.equal(rides.length, 2);
     assert.deepEqual(rides.map(r => [r.driving, r.daughter]), [[true, false], [false, true]]);
+  });
+});
+test('myMatchRides: an old copy of a match (same day and title, other kick-off) is shown once, not twice', () => {
+  const cal = 'cal1@group.calendar.google.com', summary = 'AZ O15-1-Hoorn O15-2';
+  const car = { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:00' };
+  const cur = m({ eventId: 'e1', summary, start: new Date(kick) });
+  const docOf = (eventId, startMs) => ({ calendarId: cal, eventId, summary, startMs, cars: [car] });
+  withFakeNow(NOW, () => {
+    // current match has its own document + an old copy with another kick-off (and another ID): only the real one counts
+    resetState({ matchFeeds: feeds, matches: [cur], matchesSource: 'live', matchCarpools: { [matchSlug(cur)]: docOf('e1', kick), old: docOf('e0', kick + 90 * 60000) } });
+    assert.deepEqual([...supersededMatchSlugs()], ['old']);
+    assert.equal(myMatchRides('f2').length, 1);
+    assert.equal(myMatchRides('f2')[0].doc.startMs, kick);
+    // the match has NO document of its own: the old one is the only record of the planned cars and stays visible
+    resetState({ matchFeeds: feeds, matches: [cur], matchesSource: 'live', matchCarpools: { old: docOf('e0', kick + 90 * 60000) } });
+    assert.equal(myMatchRides('f2').length, 1);
+    // another match on the same day with a different title is not a copy
+    resetState({ matchFeeds: feeds, matches: [cur], matchesSource: 'live', matchCarpools: { [matchSlug(cur)]: docOf('e1', kick), other: { ...docOf('e9', kick + 90 * 60000), summary: 'AZ O15-1-Alkmaar O15-3' } } });
+    assert.equal(myMatchRides('f2').length, 2);
   });
 });
 test('suggestedMatchDeparture: three and a half hours before kick-off', () => {
