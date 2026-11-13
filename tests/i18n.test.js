@@ -441,6 +441,11 @@ test('Meerijders in een wedstrijdcarpool: title and subtitle say "anderen" (fami
   assert.equal(t('matches.gezin_sub'), 'Gezinsleden en andere toeschouwers die ook plek innemen in de auto.');
 });
 
+test('v242: the texts of the match carpool log and of the refused change exist', () => {
+  for (const k of ['matches.auto_intussen_gewijzigd', 'matches.log_titel', 'matches.log_iemand', 'matches.log_auto', 'matches.log_add', 'matches.log_edit', 'matches.log_del', 'matches.log_undo']) assert.ok(nl[k], k);
+  assert.equal(t('matches.log_edit', { who: 'Jan', car: 'A 10:00 (X)', to: 'A 11:00 (X)' }), 'Jan wijzigde een auto van A 10:00 (X) naar A 11:00 (X)');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

@@ -173,5 +173,7 @@ test('APP_VERSION is at least v237 (tekst bij meerijders in een wedstrijdcarpool
 
 test('APP_VERSION is at least v238 (Melding dagwijzigingen in het scherm Wijzigingen voor <dag>)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 238); });
 
+test('APP_VERSION is at least v242 (veilig opslaan van wedstrijdritten + wijzigingslog)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 242); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

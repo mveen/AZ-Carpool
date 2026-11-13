@@ -10,7 +10,8 @@ import { familyRiding, fam, girlName, playerSeats, seats, sortFamEntriesFlexLast
 import { S } from './state.js';
 import { db } from './data.js';
 import { matchInfoHtml } from './ui-myweek.js';
-import { myLinkedFamilyId } from './coordinator.js';
+import { isRealCoordinator, myLinkedFamilyId } from './coordinator.js';
+import { changeMatchCar, logEntries } from './match-cars.js';
 
 // ---------- "Vertrek vanaf" (every car of a match carpool) ----------
 // The select (all known places + "Andere locatie") and, for a free input, a text field. `car` is the car being edited, or null.
@@ -89,7 +90,7 @@ export function matchesCardHtml(){
     const actionsHtml = isOpen? '' : `<div class="matchActions">${quickHtml}<button type="button" class="btn small secondary" data-addmatchcar="${slug}">${phIcon('car')}${t('matches.auto_toevoegen')}</button></div>`;
     let formHtml = '';
     if(isOpen){
-      const editing = S.editMatchCarIdx!=null && cars[S.editMatchCarIdx] || null;   // the car being edited, or null when adding
+      const editing = S.editMatchCarBefore || null;   // the car being edited (as it was when the pencil was tapped), or null when adding
       const suggestedDep = (editing && editing.departureTime) || suggestedMatchDeparture(m.start);
       const girlOptions = sortFamEntriesFlexLast(allFamilies).map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}"${editing && (editing.girlIds||[]).includes(id)?' checked':''}>${esc(f.girlName||f.parentName||id)}</label>`).join('');
       const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}"${editing && editing.driverFamilyId===id?' selected':''}>${esc(f.parentName)} (${seats(f)} ${seats(f)===1?t('common.plek'):t('common.plekken')})</option>`).join('');
@@ -121,7 +122,7 @@ export function matchesCardHtml(){
         </div>
       </div>`;
     }
-    return matchCardHtml(m, `${carsHtml || t('deviation.p_class_muted_style_font')}${actionsHtml}${formHtml}`);
+    return matchCardHtml(m, `${carsHtml || t('deviation.p_class_muted_style_font')}${actionsHtml}${formHtml}${matchLogHtml(cp.doc)}`);
   }).join('');
   return `<div id="matchCarpoolCard">
     <div class="infoLine"><span class="infoLine__text">${t('matches.titel')} ${anyPlannable? t('deviation.zet_een_carpool_op_voor') : ''}</span>${addPracticeBtn()}</div>
@@ -155,17 +156,24 @@ export function updateMatchCarCapacityWarning(slug){
 }
 
 // What is stored for one match carpool: the match itself (denormalized, so Mijn week and the agenda need no calendar) plus the cars.
-function carpoolDoc(m, slug, cars){
-  return {matchSlug:slug, calendarId:m.calendarId||'', eventId:m.eventId||'', teamLabel:matchLabel(m), summary:m.summary, location:m.location||'', startMs:m.start.getTime(), cars};
+function carpoolInfo(m, slug){
+  return {matchSlug:slug, calendarId:m.calendarId||'', eventId:m.eventId||'', teamLabel:matchLabel(m), summary:m.summary, location:m.location||'', startMs:m.start.getTime()};
 }
+function carpoolDoc(m, slug, cars){ return {...carpoolInfo(m, slug), cars}; }
 
-// Writes the cars of one match carpool (shared by the full form and the quick "Ik rij ook" button).
-// An old name-keyed document is moved over to the ID-keyed one.
-async function writeMatchCars(m, cp, slug, cars){
-  if(cars.length){
-    await db.doc("matchCarpools/"+slug).set(carpoolDoc(m, slug, cars));
-  } else if(cp.doc){ await db.doc("matchCarpools/"+cp.id).delete(); }
-  if(cars.length && cp.doc && cp.id!==slug){ try{ await db.doc("matchCarpools/"+cp.id).delete(); }catch(e){} }
+// The log of a match carpool, for the coordinator only: who added, changed or removed which car (newest first, see match-cars.js).
+function logLineText(e){
+  const who = e.by && S.families[e.by]? S.families[e.by].parentName : t('matches.log_iemand');
+  const car = c => t('matches.log_auto', { driver: c.driverFamilyId && S.families[c.driverFamilyId]? S.families[c.driverFamilyId].parentName : '?', time: c.departureTime||'--:--', girls: sortGirlIds(c.girlIds||[]).map(id=>girlName(id)).join(', ') });
+  const when = new Date(e.at).toLocaleString(locale(), {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
+  const key = {add:'matches.log_add', edit:'matches.log_edit', del:'matches.log_del', undo:'matches.log_undo'}[e.act] || 'matches.log_add';
+  return `${when} · ` + t(key, { who, car: car(e.car), to: e.to? car(e.to) : '' });
+}
+function matchLogHtml(doc){
+  if(!isRealCoordinator()) return '';
+  const list = logEntries(doc);
+  if(!list.length) return '';
+  return `<div class="matchLog"><p class="matchNote"><strong>${esc(t('matches.log_titel'))}</strong></p>${list.map(e=>`<p class="matchNote">${esc(logLineText(e))}</p>`).join('')}</div>`;
 }
 
 // ---------- Practice matches ----------
@@ -182,7 +190,13 @@ export async function savePractice(input, editId){
   await db.doc('practiceMatches/'+id).set(doc);
   const m = practiceToMatch(id, doc), slug = matchSlug(m);
   const oldCarpool = S.matchCarpools[slug] || null;
-  if(old && oldCarpool) await db.doc('matchCarpools/'+slug).set({...oldCarpool, ...carpoolDoc(m, slug, oldCarpool.cars||[])});
+  if(old && oldCarpool){
+    // On the fresh document, so a car that somebody added a moment ago is not lost (only the match info, not the cars, follows the change).
+    await db.transact(async tx=>{
+      const snap = await tx.get('matchCarpools/'+slug);
+      if(snap.exists) tx.set('matchCarpools/'+slug, {...snap.data(), ...carpoolInfo(m, slug)});
+    });
+  }
   return {ok:true, id, slug, old, oldCarpool, beyond: matchesNext29Days([m]).length===0};
 }
 
@@ -330,13 +344,16 @@ export function wireMatchCarpool(){
       showToast(t('matches.oefen_verwijderd'), {action:{label:t('deviation.ongedaan'), run:()=>restorePractice(r)}});
     }catch(e){ showToast(t('beheer.verwijderen_mislukt')+(e&&e.message||e)); }
   });
-  document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=b.dataset.addmatchcar; S.editMatchCarIdx=null; hapticTap(); renderMatchesTab(); });
+  document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=b.dataset.addmatchcar; S.editMatchCarIdx=null; S.editMatchCarBefore=null; hapticTap(); renderMatchesTab(); });
   // Pencil on a car: the same form, filled in with that car. Anyone may change any car.
   document.querySelectorAll('[data-editmatchcar]').forEach(b=>b.onclick=()=>{
     const [slug,idxStr]=b.dataset.editmatchcar.split('|');
-    S.openMatchCarpoolForm=slug; S.editMatchCarIdx=+idxStr; hapticTap(); renderMatchesTab();
+    // The car as it is now: the save is matched on this, so a car that moved or changed meanwhile is never mixed up with another one.
+    const car = ((S.matchCarpools[slug]||{}).cars||[])[+idxStr];
+    if(!car){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
+    S.openMatchCarpoolForm=slug; S.editMatchCarIdx=+idxStr; S.editMatchCarBefore=JSON.parse(JSON.stringify(car)); hapticTap(); renderMatchesTab();
   });
-  document.querySelectorAll('[data-cancelmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=null; S.editMatchCarIdx=null; renderMatchesTab(); });
+  document.querySelectorAll('[data-cancelmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=null; S.editMatchCarIdx=null; S.editMatchCarBefore=null; renderMatchesTab(); });
   document.querySelectorAll('[data-savematchcar]').forEach(b=>b.onclick=async ()=>{
     if(savingMatchCar) return;
     const slug=b.dataset.savematchcar;
@@ -358,22 +375,19 @@ export function wireMatchCarpool(){
     // Second safety net: never store a carpool for a match that is more than 8 days away.
     if(!m || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
     const cp = carpoolFor(m);
-    const editIdx = S.editMatchCarIdx;
-    const oldCars = (cp.doc&&cp.doc.cars)||[];
-    if(editIdx!=null && !oldCars[editIdx]){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }   // someone removed the car meanwhile
+    const before = S.editMatchCarBefore;   // the car being edited as it was shown, or null when adding
+    if(S.editMatchCarIdx!=null && !before){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
     // familyCount is an optional extra field: only stored when family rides along, or to reset it on a car that had it (so cars without family stay exactly as before).
-    const familyField = capState.family>0 || (editIdx!=null && oldCars[editIdx].familyCount!=null)? {familyCount:capState.family} : {};
+    const familyField = capState.family>0 || (before && before.familyCount!=null)? {familyCount:capState.family} : {};
     const newCar = {driverFamilyId:driverSel.value, girlIds, ...familyField, departureTime:timeInp.value, ...from};
-    const cars = editIdx!=null? oldCars.map((c,i)=>i===editIdx? {...c, ...newCar} : c) : [...oldCars, newCar];
     savingMatchCar = true; b.disabled = true;
     try{
-      await db.doc("matchCarpools/"+slug).set(carpoolDoc(m, slug, cars));
-      // An old name-keyed document is moved over to the ID-keyed one.
-      if(cp.doc && cp.id!==slug){ try{ await db.doc("matchCarpools/"+cp.id).delete(); }catch(e){} }
-      S.openMatchCarpoolForm=null; S.editMatchCarIdx=null;
+      // One change on the fresh document (match-cars.js): somebody else's car added a moment ago stays, and a car that was changed or removed meanwhile is refused.
+      const r = await changeMatchCar({ info:carpoolInfo(m, slug), slug, fromId:cp.id, change: before? {act:'edit', before, car:newCar} : {act:'add', car:newCar}, by:myLinkedFamilyId()||'' });
+      S.openMatchCarpoolForm=null; S.editMatchCarIdx=null; S.editMatchCarBefore=null;
       savingMatchCar = false;
       renderMatchesTab();   // the echo of our own write was drawn while the form was still open: close it now
-      showToast(t(editIdx!=null? 'matches.auto_bijgewerkt' : 'deviation.carpool_toegevoegd'));
+      showToast(!r.ok? t('matches.auto_intussen_gewijzigd') : t(before? 'matches.auto_bijgewerkt' : 'deviation.carpool_toegevoegd'));
     }catch(e){ savingMatchCar = false; b.disabled = false; showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
   });
   // Quick "Ik rij ook": own car with the own daughter, unless she already sits in another car of this match. Leaves from Busstation.
@@ -386,18 +400,19 @@ export function wireMatchCarpool(){
     const newCar={driverFamilyId:own, girlIds:taken?[]:[own], departureTime:suggestedMatchDeparture(m.start), ...matchFromFields('busstation','',locationsCfg())};
     if(cars.some(c=>c.driverFamilyId===own && (c.girlIds||[]).length===newCar.girlIds.length && newCar.girlIds.every(g=>(c.girlIds||[]).includes(g)) && c.departureTime===newCar.departureTime)) return;   // already in
     savingMatchCar = true;
-    try{ await writeMatchCars(m,cp,slug,[...cars,newCar]); showToast(t('matches.ik_rij_toegevoegd')); }
+    try{ await changeMatchCar({ info:carpoolInfo(m, slug), slug, fromId:cp.id, change:{act:'add', car:newCar}, by:own }); showToast(t('matches.ik_rij_toegevoegd')); }
     catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
     finally{ savingMatchCar = false; }
   });
   document.querySelectorAll('[data-delmatchcar]').forEach(b=>b.onclick=async ()=>{
     const [slug,idxStr]=b.dataset.delmatchcar.split('|'); const idx=+idxStr;
-    const existing=S.matchCarpools[slug]; if(!existing) return;
-    const cars = existing.cars.filter((_,i)=>i!==idx);
+    const existing=S.matchCarpools[slug]; const car=existing && (existing.cars||[])[idx]; if(!car) return;
+    const before = JSON.parse(JSON.stringify(car)), by = myLinkedFamilyId()||'';
+    const { cars:_c, log:_l, ...info } = existing;   // the match fields, to put the document back if it is gone when "Ongedaan" is tapped
     try{
-      if(cars.length) await db.doc("matchCarpools/"+slug).set({...existing, cars});
-      else await db.doc("matchCarpools/"+slug).delete();
-      showToast(t('matches.auto_weggehaald'), {action:{label:t('deviation.ongedaan'), run:()=>db.doc("matchCarpools/"+slug).set(existing)}});
+      // Removes exactly this car from the fresh document (and logs it). The document stays, with cars [] when it was the last one, so the log is kept.
+      await changeMatchCar({ slug, fromId:slug, change:{act:'del', before}, by });
+      showToast(t('matches.auto_weggehaald'), {action:{label:t('deviation.ongedaan'), run:()=>changeMatchCar({ info, slug, fromId:slug, change:{act:'add', car:before, undo:true}, by }).catch(e=>showToast(t('data.opslaan_mislukt')+(e&&e.message||e)))}});
     }catch(e){ showToast(t('beheer.verwijderen_mislukt')+(e&&e.message||e)); }
   });
 }
