@@ -233,12 +233,34 @@ export function docToMatch(d){ return {calendarId:d.calendarId||'', eventId:d.ev
 
 // Every match-carpool car this family is involved in (as driver and/or via the daughter),
 // from the start of today up to the end of the current planning week.
+// Stored carpool documents that are an old copy of a match whose real document is another one: same team calendar,
+// same day and same title, but a different kick-off (the time was changed, or the calendar re-issued the event). Only
+// a doc that no current match picks, while the current match has its own document, counts: nothing is hidden when
+// the match has no document of its own (then the old one is the only record of the planned cars). Display only; the
+// documents themselves stay as they are.
+export function supersededMatchSlugs(){
+  const claimed = new Set(), ownDocOf = [];
+  currentMatchList().forEach(m=>{
+    const c = carpoolFor(m);
+    if(c.doc){ claimed.add(c.id); ownDocOf.push({m, id:c.id}); }
+  });
+  const out = new Set();
+  Object.entries(S.matchCarpools).forEach(([slug,d])=>{
+    if(!d || !d.startMs || !d.calendarId || !d.summary || claimed.has(slug)) return;
+    const day = new Date(d.startMs).toDateString();
+    if(ownDocOf.some(({m})=>m.calendarId===d.calendarId && m.summary===d.summary && m.start.toDateString()===day)) out.add(slug);
+  });
+  return out;
+}
+
 export function myMatchRides(myId){
   const from = new Date(); from.setHours(0,0,0,0);
   const to = startOfWeek(effectivePlanningDate()); to.setDate(to.getDate()+7);
   const out = [];
+  const superseded = supersededMatchSlugs();
   Object.entries(S.matchCarpools).forEach(([slug,d])=>{
     if(!d || !d.startMs || d.startMs<from.getTime() || d.startMs>=to.getTime()) return;
+    if(superseded.has(slug)) return;   // an old copy of a match that has its own document: shown once
     (d.cars||[]).forEach(c=>{
       const driving = c.driverFamilyId===myId;
       const daughter = (c.girlIds||[]).includes(myId);
