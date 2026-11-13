@@ -104,6 +104,7 @@ test('v241: this version is at least v241', () => { assert.ok(Number(APP_VERSION
 test('v243: this version is at least v243', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 243); });
 test('v249: this version is at least v249', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 249); });
 test('v250: this version is at least v250', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 250); });
+test('v251: this version is at least v251', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 251); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });

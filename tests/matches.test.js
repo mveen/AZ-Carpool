@@ -68,6 +68,25 @@ test('an old name-keyed document is found by team name and time, and flagged leg
   resetState({ matchFeeds: feeds, matchCarpools: { [legacyId]: { startMs: m().start.getTime(), cars: [] } } });
   const r = carpoolFor(m()); assert.equal(r.id, legacyId); assert.equal(r.legacy, true);
 });
+test('kick-off time changed in the calendar (other event id too): same calendar, title and day still finds the carpool', () => {
+  const old = { calendarId: m().calendarId, eventId: 'e0', summary: m().summary, startMs: m().start.getTime() + 90 * 60000, cars: [{ driverFamilyId: 'f1' }] };
+  withFakeNow(NOW, () => {
+    resetState({ matchFeeds: feeds, matches: [m()], matchesSource: 'live', matchCarpools: { old } });
+    assert.equal(carpoolFor(m()).id, 'old');
+    assert.equal(carpoolFor(m()).doc, old);
+    // another title on the same day: not the same match
+    resetState({ matchFeeds: feeds, matches: [m()], matchesSource: 'live', matchCarpools: { old: { ...old, summary: 'AZ O15-1-Alkmaar O15-3' } } });
+    assert.equal(carpoolFor(m()).doc, null);
+    // two matches with the same title that day: ambiguous, so nothing is guessed
+    const m2 = m({ eventId: 'e2', start: new Date(m().start.getTime() + 5 * 3600000) });
+    resetState({ matchFeeds: feeds, matches: [m(), m2], matchesSource: 'live', matchCarpools: { old } });
+    assert.equal(carpoolFor(m()).doc, null);
+    // a document that belongs to another match by its exact id is not taken over
+    const other = m({ eventId: 'e3', summary: m().summary, start: new Date(m().start.getTime() + 6 * 3600000) });
+    resetState({ matchFeeds: feeds, matches: [m(), other], matchesSource: 'live', matchCarpools: { [matchSlug(other)]: { ...old, eventId: 'e3' } } });
+    assert.equal(carpoolFor(m()).doc, null);
+  });
+});
 test('nothing stored: doc is null, id is where it will be saved', () => {
   resetState({}); assert.deepEqual(carpoolFor(m()), { id: matchSlug(m()), doc: null });
 });

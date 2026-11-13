@@ -66,6 +66,18 @@ export function carpoolFor(m){
     const sameCal = Object.entries(S.matchCarpools).find(([,d])=>d && d.calendarId===m.calendarId && d.startMs===m.start.getTime());
     if(sameCal) return {id:sameCal[0], doc:sameCal[1]};
   }
+  // The kick-off time was changed in the calendar (and the event ID is not the one the document was saved under): same
+  // calendar, same title, same day is still the same match, but only when that is unambiguous (one such document, one
+  // such match today) and no other match owns the document by its exact ID.
+  if(m.calendarId && m.summary){
+    const day = m.start.toDateString();
+    const same = x=>x && x.calendarId===m.calendarId && x.summary===m.summary;
+    const list = currentMatchList();
+    const rivals = list.filter(o=>same(o) && o.start.toDateString()===day).length;
+    const ownedByOther = new Set(list.filter(o=>o!==m).map(matchSlug));
+    const sameDay = Object.entries(S.matchCarpools).filter(([slug,d])=>same(d) && d.startMs && new Date(d.startMs).toDateString()===day && !ownedByOther.has(slug));
+    if(rivals===1 && sameDay.length===1) return {id:sameDay[0][0], doc:sameDay[0][1]};
+  }
   const candidates = [matchLabel(m), m.teamLabel].filter(Boolean);
   for(const label of candidates){
     const lid = legacyMatchSlug(m, label);
