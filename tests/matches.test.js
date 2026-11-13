@@ -299,5 +299,19 @@ test('matchCarCapacityState: family riding along takes seats away from the playe
   assert.equal(matchCarCapacityState('y').cap, 0);
 });
 
+
+console.log('\n=== busStateOf ===');
+import { busStateOf } from '../matches.js';
+test('busStateOf: team default, per-match override, and not for a home match', () => {
+  const away = { calendarId: 'cal1', eventId: 'b1', summary: 'Volendam O15-1-AZ O15-1', start: new Date('2026-10-03T10:30:00+02:00') };
+  const ajax = { ...away, eventId: 'b2', summary: 'Jong Ajax-AZ O15-1' };
+  const home = { ...away, eventId: 'b3', summary: 'AZ O15-1-Volendam O15-1' };
+  resetState({ matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1', bus: true, busNot: 'Ajax' }], matchCarpools: {} });
+  assert.equal(busStateOf(away).on, true); assert.equal(busStateOf(ajax).on, false); assert.equal(busStateOf(home).applies, false);
+  assert.equal(busStateOf(ajax, { bus: true, busDepart: '09:00' }).on, true); assert.equal(busStateOf(ajax, { bus: true, busDepart: '09:00' }).depart, '09:00');
+  resetState({ matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], matchCarpools: {} });
+  assert.equal(busStateOf(away).on, false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

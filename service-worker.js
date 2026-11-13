@@ -86,6 +86,7 @@ const ASSETS = [
   './ui-install-prompt.js',
   './error-log.js',
   './match-cars.js',
+  './match-bus.js',
   './session-reset.js',
   './calendar-feed.js',
   './schedule-changes.js',

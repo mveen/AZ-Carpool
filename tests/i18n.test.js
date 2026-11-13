@@ -446,6 +446,13 @@ test('v242: the texts of the match carpool log and of the refused change exist',
   assert.equal(t('matches.log_edit', { who: 'Jan', car: 'A 10:00 (X)', to: 'A 11:00 (X)' }), 'Jan wijzigde een auto van A 10:00 (X) naar A 11:00 (X)');
 });
 
+
+test('v243: the bus texts exist and fill in their values', () => {
+  for (const k of ['matches.bus_aria', 'matches.bus_aan', 'matches.bus_carpool', 'matches.bus_sheet_titel', 'matches.bus_auto_aankomst', 'beheer.bus_team', 'beheer.bus_niet', 'myweek.bus_tijden']) assert.ok(hasKey(k), k);
+  assert.equal(t('myweek.bus_tijden', { depart: '09:00', back: '14:30' }), 'Bus vertrekt 09:00 · terug ± 14:30');
+  assert.equal(t('matches.bus_carpool', { venue: "AFC '34", text: '36 km' }), "Carpool naar AFC '34 · 36 km");
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

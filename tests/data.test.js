@@ -1213,5 +1213,13 @@ await testAsync('transact(): reads then writes in one go; runs again on the new 
   const s2 = await db.transact(async tx => tx.get('x/none')); assert.equal(s2.exists, false);
 });
 
+
+import fs from 'node:fs';
+test('the matchFeeds snapshot redraws the Wedstrijden tab too (the bus default of a team changes its cards)', () => {
+  const src = fs.readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  const block = src.slice(src.indexOf('db.doc("settings/matchFeeds").onSnapshot'), src.indexOf('db.doc("settings/locations")'));
+  assert.match(block, /renderMatchesTab\(\)/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

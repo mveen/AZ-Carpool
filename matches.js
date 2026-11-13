@@ -9,6 +9,7 @@ import { fam, playerSeats, familyRiding, seats } from './rides.js';
 import { ensureDistances, hasApiKey, fetchWithTimeout } from './distance.js';
 import { normalizeLocations } from './locations.js';
 import { isMemberNow } from './coordinator.js';
+import { busState } from './match-bus.js';
 
 export function activeMatchFeeds(){ return S.matchFeeds; }
 
@@ -17,6 +18,12 @@ export function activeMatchFeeds(){ return S.matchFeeds; }
 function feedLabel(calendarId){
   const f = calendarId && S.matchFeeds.find(x=>x.calendarId===calendarId);
   return f? (f.label||'') : '';
+}
+
+// Does this match go by bus, and when? (match-bus.js) `doc` = its carpool document; left out it is looked up.
+export function busStateOf(m, doc){
+  const feed = (S.matchFeeds||[]).find(f=>f.calendarId===(m && m.calendarId));
+  return busState(analyzeMatch((m && m.summary)||''), feed, doc===undefined? carpoolFor(m).doc : doc);
 }
 
 export function matchLabel(m){ return feedLabel(m && m.calendarId) || (m && m.teamLabel) || ''; }

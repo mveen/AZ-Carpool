@@ -428,5 +428,11 @@ test('help describes the Rooster list with sun and moon, and no yellow Gewijzigd
   assert.doesNotMatch(all, /gele pil|meiden erin|in een eigen blok/); assert.match(all, /Een blauwgrijze kaart is een heenrit/);
 });
 
+
+test('the article about away matches by bus exists, belongs to the Wedstrijden tab and is found by "bus"', () => {
+  const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.ok(a); assert.equal(a.tab, 'matches'); assert.match(allText(a), /AFC '34/);
+  assert.ok(ids('bus').includes('wedstrijd-bus')); assert.ok(ids('busrit uitwedstrijd').includes('wedstrijd-bus'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

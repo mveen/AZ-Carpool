@@ -555,5 +555,18 @@ test('v214: a READ back-up notification stays on Mijn week while a ride in its s
   assert.doesNotMatch(renderDayAt(MON, { ...base, offers: { o1: offer } }), /rbNotifCard/);
   assert.match(html, /data-rbnotifdismiss="a">Negeren</, 'the card can be ignored, not only left to disappear');
 });
+
+console.log('\n=== a match by bus ===');
+test('an away match by bus shows the carpool to AFC \'34, the arrival and pick-up of the car and the bus times', () => {
+  const doc = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'Hoorn O15-2-AZ O15-1', location: 'Sportpark Hoorn', startMs: kick, bus: true, busDepart: '09:00', busBack: '14:30', cars: [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '08:10' }] };
+  const s = text(render({ matchCarpools: { ev_cal1__e1: doc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], locationsDoc: { fixedKm: { AFC: 36 } } }));
+  assert.match(s, /Carpool naar AFC &#39;34.*36 km/); assert.match(s, /Aankomst 08:50 · terug ophalen 14:30/); assert.match(s, /Bus vertrekt 09:00 · terug ± 14:30/);
+});
+test('the same match without the bus shows none of the bus lines', () => {
+  const doc = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'Hoorn O15-2-AZ O15-1', location: 'Sportpark Hoorn', startMs: kick, bus: false, busDepart: '09:00', busBack: '14:30', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '08:10' }] };
+  const s = text(render({ matchCarpools: { ev_cal1__e1: doc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
+  assert.doesNotMatch(s, /Bus vertrekt|Carpool naar/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

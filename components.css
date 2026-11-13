@@ -1161,3 +1161,21 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .navtab.active[data-tab="deviation"].navtab--ruil{color:var(--ruil)}
 .navtab--ruil .navbadge{background:var(--ruil)}
 .tag--ruil{background:var(--ruil-soft);color:var(--ruil-ink)}
+
+/* ---------- Wedstrijden: away match by team bus (match-bus.js). The bus switch sits at the right of the match head; the two bus times
+   are one tap target each (Heen/Terug tints as in Rooster); a car says when it is at AFC '34 and when it picks up. ---------- */
+.matchHead .swWrap{margin-left:auto}
+.matchHead .switch{margin:calc(var(--space-3) * -1) 0}
+.busTimes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-3);margin-top:var(--space-5)}
+.busTimes__cell{appearance:none;font:inherit;color:var(--text-1);text-align:left;cursor:pointer;min-height:var(--hit-min);border:1px solid var(--edge);border-radius:var(--radius-car);padding:var(--space-4) var(--space-5)}
+.busTimes__cap{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--scene-ink)}
+.busTimes__time{font:var(--type-time-lg);margin-top:var(--space-1)}
+.busTimes__sub{font:var(--type-caption);color:var(--text-2)}
+.busTimes__cell--empty{grid-column:1 / -1;background:var(--surface-card);border:2px dashed var(--warn-icon);color:var(--warn-ink)}
+.busTimes__cell--empty .busTimes__time{font:var(--type-body);font-weight:700}
+.matchCarSub{display:block;color:var(--text-muted)}
+.matchCarSub--bad{color:var(--warn-ink);font-weight:700}
+.feedBus{border-top:1px solid var(--line);margin-top:var(--space-4);padding-top:var(--space-3)}
+.feedBus__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.feedBus__title{font:var(--type-body)}
+.feedBus__sub{font:var(--type-caption);color:var(--text-muted)}

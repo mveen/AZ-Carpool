@@ -176,5 +176,7 @@ test('APP_VERSION is at least v238 (Melding dagwijzigingen in het scherm Wijzigi
 
 test('APP_VERSION is at least v242 (veilig opslaan van wedstrijdritten + wijzigingslog)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 242); });
 
+test('v243: the bus icon exists', () => { assert.match(PH_PATHS.bus, /^<path/); assert.ok(Number(APP_VERSION.slice(1)) >= 243); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

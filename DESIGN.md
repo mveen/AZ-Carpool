@@ -170,3 +170,10 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 - **Fold line "Al aangepast voor {dag}"** `details.fold.fold--earlier`: one quiet 44 px line inside the amber `.entryCard` (Rooster and Mijn week), the list of `.logItem`s when opened. Only when the day deviates from the standard rooster.
 - **Overwrite block** `.alertCard.alertCard--stack` with `.alertCard__head` (icon + bold title), one `.alertCard__row` per earlier change that the proposal takes back ("was · nu") and an optional `.alertCard__sub` (total in cars). On top of step 2 and in step 3, plus a `.noteLine` next to Doorvoeren. The cars involved carry a `.tag.tag--warn` ("eerdere wijziging aangepast"). Log lines in "Recente wijzigingen" carry `.tag.tag--warn` "Aangepast".
+
+## Uitwedstrijd met de bus (v243)
+
+- **Switch in the match head:** the `.switch.switch--sm` of Mijn week (knob icon `bus`) at the right of `.matchHead` with `.swCap` ("met de bus" / "zonder bus"); a `.tag.tag--warn` "Aangepast" when the match differs from the team default (Beheer). Only on away matches in the plannable window; further out just a neutral `.tag` "met de bus".
+- **Bus times** `.busTimes` (`__cell`, `__cap`, `__time`, `__sub`): two buttons, Heen = `.scene--heen` (bus leaves), Terug = `.scene--terug` (bus back, with ±); one tap opens a `.sheet` with two time fields. Not known yet: one `.busTimes__cell--empty` (dashed amber, like `.dashBox`).
+- **Car line:** `.matchCarSub` under the pick-up place ("Aankomst 08:25 · terug ophalen 15:15"); `.matchCarSub--bad` (amber, bold, warning icon) when the car arrives after the bus left.
+- **Beheer (Wedstrijdkalenders):** per team `.feedBus` with a switch (saves at once) and, when on, the field "Niet met de bus tegen".
