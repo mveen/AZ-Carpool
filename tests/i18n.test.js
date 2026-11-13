@@ -447,7 +447,7 @@ test('v242: the texts of the match carpool log and of the refused change exist',
 });
 
 
-test('v243: the bus texts exist and fill in their values', () => {
+test('v244: the bus texts exist and fill in their values', () => {
   for (const k of ['matches.bus_aria', 'matches.bus_aan', 'matches.bus_carpool', 'matches.bus_sheet_titel', 'matches.bus_auto_aankomst', 'beheer.bus_team', 'beheer.bus_niet', 'myweek.bus_tijden']) assert.ok(hasKey(k), k);
   assert.equal(t('myweek.bus_tijden', { depart: '09:00', back: '14:30' }), 'Bus vertrekt 09:00 · terug ± 14:30');
   assert.equal(t('matches.bus_carpool', { venue: "AFC '34", text: '36 km' }), "Carpool naar AFC '34 · 36 km");
