@@ -7,7 +7,7 @@
 //   matchCarpools/<slug>.bus              true / false = this match differs from, or confirms, the default; missing = the default of the team
 //   matchCarpools/<slug>.busDepart        "HH:MM" the bus leaves AFC '34 ("" = not known yet)
 //   matchCarpools/<slug>.busBack          "HH:MM" the bus is back at AFC '34, about ("" = not known yet)
-//   matchCarpools/<slug>.cars[i].pickupTime  "HH:MM" this car picks the players up at AFC '34 after the match (optional)
+//   (which leg a car drives, heen or terug, is `cars[i].leg`: see match-legs.js)
 // The functions here are PURE (no screen, no database) except setMatchBus, which stores in one transaction.
 import { db } from './data.js';
 
@@ -62,10 +62,6 @@ export function carArrival(departureTime) {
 export function carMissesBus(departureTime, depart) {
   const arr = carArrival(departureTime);
   return !!arr && validTime(depart) && toMin(arr) > toMin(depart);
-}
-// When this car picks up after the match: its own time, else the time of the bus.
-export function pickupOf(car, state) {
-  return (car && validTime(car.pickupTime) ? car.pickupTime : '') || (state && state.back) || '';
 }
 
 // Where the bus leaves (and brings the team back): AFC '34 unless the doc says otherwise. Stored as `busAt` ('ATC') or a free `busAtText`;

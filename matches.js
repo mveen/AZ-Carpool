@@ -284,6 +284,12 @@ export function suggestedMatchDeparture(matchDate){
   return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
 }
 
+// A car that picks the players up after the match (the return leg): about 1,5 hours after kick-off, as a starting point.
+export function suggestedMatchPickup(matchDate){
+  const t = new Date(matchDate.getTime() + 90*60000);
+  return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+}
+
 // Capacity check for the "add car" form: compares the chosen passengers with the driver's
 // passenger seats (capacity minus the driver). Only a warning — saving stays possible.
 export function matchCarCapacityState(slug){

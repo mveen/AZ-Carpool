@@ -1169,11 +1169,21 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .matchHead .switch{margin:calc(var(--space-3) * -1) 0}
 .busTimes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-3);margin-top:var(--space-5)}
 .busTimes__cell{appearance:none;font:inherit;color:var(--text-1);text-align:left;cursor:pointer;min-height:var(--hit-min);border:1px solid var(--edge);border-radius:var(--radius-car);padding:var(--space-4) var(--space-5)}
-.busTimes__cap{display:flex;align-items:center;justify-content:space-between;gap:var(--space-2);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;color:var(--scene-ink)}
 .busTimes__time{font:var(--type-time-lg);margin-top:var(--space-1)}
 .busTimes__sub{font:var(--type-caption);color:var(--text-2)}
 .busTimes__cell--empty{grid-column:1 / -1;background:var(--surface-card);border:2px dashed var(--warn-icon);color:var(--warn-ink)}
 .busTimes__cell--empty .busTimes__time{font:var(--type-body);font-weight:700}
+.matchLeg{margin-top:var(--space-5)}
+.matchLeg__head{display:flex;align-items:center;justify-content:space-between;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
+.matchLeg__edit{appearance:none;border:0;background:none;padding:0;min-height:var(--hit-min);display:inline-flex;align-items:center;gap:var(--space-2);font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer}
+.matchLeg__time{font:var(--type-time-lg);margin-top:var(--space-1)}
+.matchLeg__sub{font:var(--type-caption);color:var(--text-2)}
+.matchLeg__cars{margin-top:var(--space-4);padding-top:var(--space-4);border-top:1px solid var(--line)}
+.matchLeg__cars .matchCarRow:first-child{border-top:0;padding-top:0}
+.matchLeg__empty{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-4) 0 0;padding:var(--space-4) var(--space-5);border:2px dashed var(--warn-icon);border-radius:var(--radius-card);background:var(--surface-card);color:var(--warn-ink);font:var(--type-caption);font-weight:700}
+.matchLegQuiet{display:flex;align-items:center;gap:var(--space-4);margin-top:var(--space-5);padding:var(--space-4) var(--space-5);border:1px dashed var(--edge);border-radius:var(--radius-card);font:var(--type-caption);color:var(--text-2)}
+.matchLegQuiet span{flex:1;min-width:0}
+.matchLegQuiet .btn{flex:none}
 .matchCarSub{display:block;color:var(--text-muted)}
 .matchCarSub--bad{color:var(--warn-ink);font-weight:700}
 .feedBus{border-top:1px solid var(--line);margin-top:var(--space-4);padding-top:var(--space-3)}

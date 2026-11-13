@@ -459,6 +459,14 @@ test('v244: the bus place texts exist, the tag text is gone, the car label names
   assert.equal(t('matches.bus_form_ophalen', { place: 'ATC' }), 'Terug ophalen bij ATC'); assert.equal(t('matches.bus_carpool_kort', { venue: 'Sporthal' }), 'Carpool naar Sporthal');
 });
 
+
+test('v246: the heen / terug texts exist, fill in their values and the pickup text of the old design is gone', () => {
+  for (const k of ['matches.leg_heen', 'matches.leg_terug', 'matches.leg_kies', 'matches.leg_opt_beide', 'matches.leg_opt_bus_terug', 'matches.leg_terug_regelen', 'matches.ik_rij_terug', 'myweek.ophalen', 'agenda.ophalen_na', 'wa.my.match_terug']) assert.ok(hasKey(k), k);
+  assert.ok(!hasKey('matches.bus_auto_terug'));
+  assert.equal(t('matches.leg_bus_terug_sub', { place: "AFC '34" }), "bus weer terug bij AFC '34"); assert.equal(t('matches.leg_ophalen_bij', { place: 'Sportpark' }), 'Ophalen bij Sportpark');
+  assert.equal(t('wa.my.match_terug', { day: 'ZA 3', team: 'A', opponent: 'B', time: '16:15', driver: 'Jan' }), 'ZA 3 — wedstrijd A vs B: ophalen 16:15 met Jan');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

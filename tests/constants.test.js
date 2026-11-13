@@ -178,5 +178,7 @@ test('APP_VERSION is at least v242 (veilig opslaan van wedstrijdritten + wijzigi
 
 test('v244: the bus icon exists', () => { assert.match(PH_PATHS.bus, /^<path/); assert.ok(Number(APP_VERSION.slice(1)) >= 243); });
 
+test('v246: heen / terug per car of a match', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 246); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -290,5 +290,14 @@ test('a match ride says where the car leaves from (with the place settings; with
   assert.equal(lastLine({}), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: vertrek 09:15 met Jan');
 });
 
+
+test('a match ride of a car that picks up (leg terug) says "ophalen", without a place', () => {
+  const kick = new Date(2026, 9, 3, 10, 30).getTime();
+  const rides = [{ doc: { startMs: kick, summary: 'AZ O15-1-Hoorn O15-2', teamLabel: 'AZ O15-1' }, car: { departureTime: '16:15', driverFamilyId: 'f1', leg: 'terug' } }];
+  const line = over => buildMyWeekMessageFrom(ctx({ myId: 'f2', myFam, cars: () => [], matchRides: rides, ...over })).split('\n').slice(-1)[0];
+  assert.equal(line({}), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: ophalen 16:15 met Jan');
+  assert.equal(line({ locCfg: normalizeLocations(null) }), 'ZA 3 — wedstrijd AZ O15-1 vs Hoorn O15-2: ophalen 16:15 met Jan');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

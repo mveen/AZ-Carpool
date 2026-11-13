@@ -301,7 +301,7 @@ test('matchCarCapacityState: family riding along takes seats away from the playe
 
 
 console.log('\n=== busStateOf ===');
-import { busPlaceOfMatch, busStateOf } from '../matches.js';
+import { busPlaceOfMatch, busStateOf, suggestedMatchPickup } from '../matches.js';
 test('busStateOf: team default, per-match override, and not for a home match', () => {
   const away = { calendarId: 'cal1', eventId: 'b1', summary: 'Volendam O15-1-AZ O15-1', start: new Date('2026-10-03T10:30:00+02:00') };
   const ajax = { ...away, eventId: 'b2', summary: 'Jong Ajax-AZ O15-1' };
@@ -319,6 +319,11 @@ test('busPlaceOfMatch: AFC \'34 unless the carpool of the match says ATC or a fr
   resetState({ matchCarpools: {} }); assert.deepEqual(busPlaceOfMatch(m), { key: 'AFC', text: '' });
   resetState({ matchCarpools: { [matchSlug(m)]: { cars: [], busAt: 'ATC' } } }); assert.equal(busPlaceOfMatch(m).key, 'ATC');
   resetState({ matchCarpools: { [matchSlug(m)]: { cars: [], busAtText: 'Sporthal' } } }); assert.deepEqual(busPlaceOfMatch(m), { key: 'OTHER', text: 'Sporthal' });
+});
+
+
+test('suggestedMatchPickup: about 1,5 hours after kick-off (the return leg has no end time of its own)', () => {
+  assert.equal(suggestedMatchPickup(new Date(2026, 9, 3, 10, 30)), '12:00'); assert.equal(suggestedMatchPickup(new Date(2026, 9, 3, 22, 45)), '00:15');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

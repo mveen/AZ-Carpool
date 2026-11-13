@@ -439,5 +439,9 @@ test('the bus article says where the bus leaves (AFC \'34 by default, changeable
   const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.match(allText(a), /standaard AFC '34/); assert.match(allText(a), /andere locatie/); assert.doesNotMatch(allText(a), /Aangepast/);
 });
 
+test('the bus article explains Heen and Terug (one leg per car by bus; without the bus the return is usually not needed)', () => {
+  const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.match(allText(a), /Heen en Terug/); assert.match(allText(a), /niet allebei/); assert.match(allText(a), /Terugrit regelen/); assert.match(allText(a), /Ik rij terug/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

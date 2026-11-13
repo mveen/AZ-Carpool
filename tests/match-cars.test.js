@@ -111,5 +111,22 @@ await testAsync('a refused write (rules) throws, so the screen can say that savi
   await assert.rejects(() => changeMatchCar({ info: INFO, slug: SLUG, fromId: SLUG, change: { act: 'add', car: A } }), /permission-denied/);
 });
 
+
+console.log('\n=== the leg of a car ===');
+test('the leg is part of the identity of a car (a heen car is not the terug car of the same driver, riders and time), and a missing leg equals ""', () => {
+  const base = { driverFamilyId: 'f1', departureTime: '09:15', girlIds: ['f2'] };
+  assert.equal(sameCar(base, { ...base, leg: 'terug' }), false); assert.equal(sameCar({ ...base, leg: 'heen' }, { ...base, leg: 'terug' }), false);
+  assert.equal(sameCar(base, { ...base, leg: '' }), true); assert.equal(sameCar({ ...base, leg: 'terug' }, { ...base, leg: 'terug' }), true);
+});
+test('the log keeps the leg of a heen or terug car, and nothing extra for a car that drives both', () => {
+  assert.deepEqual(carBrief({ driverFamilyId: 'f1', departureTime: '15:45', girlIds: ['f2'], leg: 'terug' }), { driverFamilyId: 'f1', departureTime: '15:45', girlIds: ['f2'], leg: 'terug' });
+  assert.deepEqual(carBrief({ driverFamilyId: 'f1', departureTime: '09:15', girlIds: ['f2'], leg: '' }), { driverFamilyId: 'f1', departureTime: '09:15', girlIds: ['f2'] });
+});
+test('editing a terug car back to both ways takes the leg off (the new car carries leg "")', () => {
+  const before = { driverFamilyId: 'f1', departureTime: '15:45', girlIds: ['f2'], leg: 'terug' };
+  const r = applyCarChange([before], { act: 'edit', before, car: { driverFamilyId: 'f1', departureTime: '09:15', girlIds: ['f2'], leg: '' } }, { by: 'f1', now: 1 });
+  assert.equal(r.ok, true); assert.equal(r.cars[0].leg, ''); assert.equal(r.cars[0].departureTime, '09:15');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

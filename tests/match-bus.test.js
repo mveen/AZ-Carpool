@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { useFakeDb } from './test-support.js';
-import { BUS_DRIVE_MIN, BUS_MARGIN_MIN, busDefaultFor, busNotList, busPatch, busPlaceOf, busState, carArrival, carMissesBus, pickupOf, setMatchBus, suggestedBusCarDeparture, validTime } from '../match-bus.js';
+import { BUS_DRIVE_MIN, BUS_MARGIN_MIN, busDefaultFor, busNotList, busPatch, busPlaceOf, busState, carArrival, carMissesBus, setMatchBus, suggestedBusCarDeparture, validTime } from '../match-bus.js';
 
 const away = { isHome: false, opponent: 'FC Volendam' };
 const awayAjax = { isHome: false, opponent: 'Jong Ajax' };
@@ -83,10 +83,8 @@ test('a car misses the bus only when it arrives after the bus leaves (on time is
   assert.equal(carMissesBus('07:45', '08:45'), false);
   assert.equal(carMissesBus('08:10', ''), false); assert.equal(carMissesBus('', '08:45'), false);
 });
-test('the pick-up time of a car is its own time, else the time of the bus, else nothing', () => {
-  const st = { back: '15:15' };
-  assert.equal(pickupOf({ pickupTime: '15:45' }, st), '15:45'); assert.equal(pickupOf({}, st), '15:15'); assert.equal(pickupOf({ pickupTime: 'x' }, st), '15:15');
-  assert.equal(pickupOf({}, { back: '' }), ''); assert.equal(pickupOf(null, null), '');
+await testAsync('pickupOf is gone: a terug car carries its own time (leg terug, see match-legs.js)', async () => {
+  const mod = await import('../match-bus.js'); assert.equal(mod.pickupOf, undefined);
 });
 
 console.log('\n=== storing ===');

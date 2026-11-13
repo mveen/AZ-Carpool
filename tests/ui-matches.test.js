@@ -30,7 +30,7 @@ const state = (patch = {}) => sampleParentState({ matchFeeds: feeds, matches: [h
 let picks = [];
 function pageFrom(html) {
   const mk = attr => [...html.matchAll(new RegExp(`data-${attr}="([^"]+)"`, 'g'))].map(m => ({ dataset: { [attr]: m[1] }, onclick: null, textContent: '' }));
-  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar'), '[data-addpractice]': mk('addpractice'), '[data-editpractice]': mk('editpractice'), '[data-delpractice]': mk('delpractice'), '[data-famdown]': mk('famdown'), '[data-famup]': mk('famup'), '[data-busswitch]': mk('busswitch'), '[data-busedit]': mk('busedit') };
+  const reg = { '[data-addmatchcar]': mk('addmatchcar'), '[data-matchleg]': [...html.matchAll(/data-matchleg="([^"]+)" data-slug="([^"]+)"/g)].map(m => ({ dataset: { matchleg: m[1], slug: m[2] }, onclick: null, classList: { toggle() {} }, setAttribute() {} })), '[data-cancelmatchcar]': mk('cancelmatchcar'), '[data-savematchcar]': mk('savematchcar'), '[data-delmatchcar]': mk('delmatchcar'), '[data-iride]': mk('iride'), '[data-editmatchcar]': mk('editmatchcar'), '[data-addpractice]': mk('addpractice'), '[data-editpractice]': mk('editpractice'), '[data-delpractice]': mk('delpractice'), '[data-famdown]': mk('famdown'), '[data-famup]': mk('famup'), '[data-busswitch]': mk('busswitch'), '[data-busedit]': mk('busedit') };
   picks = [...html.matchAll(/class="matchCarGirlPick" value="([^"]+)"/g)].map(m => ({ value: m[1], checked: false, onchange: null }));
   reg['.matchCarGirlPick'] = picks;
   dom.doc.querySelectorAll = sel => (sel === '.matchCarGirlPick:checked' ? picks.filter(p => p.checked) : (reg[sel] || []));
@@ -353,7 +353,7 @@ test('a practice match is listed with the Oefen tag, a pencil and a trash button
   state({ practiceMatches: { p1: pdoc() } }); const html = render();
   assert.match(text(html), /vr 2 okt Oefen aftrap 19:00 AZ O15-1 \(Thuis\) vs FC Volendam O15 AFC '34, Alkmaar/);
   assert.match(html, /data-editpractice="p1"/); assert.match(html, /data-delpractice="p1"/);
-  assert.equal((html.match(/data-delpractice/g) || []).length, 1); assert.equal((html.match(/data-addmatchcar/g) || []).length, 2);
+  assert.equal((html.match(/data-delpractice/g) || []).length, 1); assert.equal((html.match(/data-addmatchcar="[^"]*\|heen"/g) || []).length, 2);   // one Heen button per match
   assert.match(html, /<div class="matchCard__top">[\s\S]*?class="matchTools"/);
 });
 test('practice and calendar matches are listed together in order of date', () => {
@@ -635,12 +635,32 @@ test('an opponent in the "niet met de bus tegen" list means no bus by default; s
   busState_({ matches: [bmAjax], matchCarpools: { [slug]: { ...bdoc({ eventId: 'e5', matchSlug: slug, summary: bmAjax.summary }), bus: true } } });
   const html = render(); assert.match(html, /aria-checked="true"[^>]*data-busswitch/); assert.doesNotMatch(text(html), /Aangepast/); assert.doesNotMatch(html, /tag tag--warn/);
 });
-test('both bus times show as tiles (Heen, Terug with ±), and every car says when it arrives and when it picks up', () => {
-  const c1 = { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:45' };
-  busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [c1, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '07:50', pickupTime: '15:45' }] }) } });
+test('by bus the card has a Heen and a Terug part: the bus times in each, every car in its own leg (a car without leg counts as heen)', () => {
+  const c1 = { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:45', leg: 'heen' }, c3 = { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '07:50' };
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [c1, c3, { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '15:45', leg: 'terug' }] }) } });
+  const html = render(), s = text(html), terug = html.indexOf('scene--terug'), heenS = text(html.slice(0, terug)), terugS = text(html.slice(terug));
+  assert.match(heenS, /Heen 08:45 bus vertrekt bij AFC '34, Alkmaar/); assert.match(terugS, /Terug ± 15:15 bus weer terug bij AFC '34, Alkmaar/); assert.doesNotMatch(s, /Bustijden nog niet bekend/);
+  assert.match(heenS, /07:45 Jan Jansen/); assert.match(heenS, /Aankomst 08:25/); assert.match(heenS, /07:50 Kees de Vries/); assert.match(heenS, /Aankomst 08:30/);
+  assert.match(terugS, /15:45 Jan Jansen/); assert.match(terugS, /Ophalen bij AFC '34, Alkmaar/); assert.doesNotMatch(terugS, /Aankomst|Vertrek vanaf/); assert.doesNotMatch(heenS, /15:45/);
+  assert.match(html, /aria-label="Bustijden invullen of wijzigen"/);   // the pencil in the head of each leg opens the bus sheet
+});
+test('by bus a leg without a car says so (Terug: a warning), and each leg has its own buttons: Ik rij heen / Ik rij terug', () => {
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:45', leg: 'heen' }] }) }, me: 'f9', links: { f9: { familyId: 'f3' } } });
+  const html = render(), terug = html.indexOf('scene--terug'), s = text(html.slice(terug));
+  assert.match(s, /Nog geen auto om op te halen/); assert.match(text(html.slice(0, terug)), /Ik rij heen/); assert.match(s, /Ik rij terug/);
+  assert.match(html, /data-addmatchcar="ev_cal1__e4\|heen"/); assert.match(html, /data-addmatchcar="ev_cal1__e4\|terug"/); assert.match(html, /data-iride="ev_cal1__e4\|terug"/);
+});
+test('without the bus only Heen is a full part; Terug is one quiet line with a button, and a car that drives both is just "rijdt ook terug"', () => {
+  state({ matchCarpools: { [SLUG]: { ...carpool, cars } } });
   const html = render(), s = text(html);
-  assert.match(s, /Heen 08:45 bus vertrekt/); assert.match(s, /Terug ± 15:15 bus weer terug/); assert.doesNotMatch(s, /Bustijden nog niet bekend/);
-  assert.match(s, /Aankomst 08:25 · terug ophalen 15:15/); assert.match(s, /Aankomst 08:30 · terug ophalen 15:45/);   // the own pick-up time wins over the bus
+  assert.doesNotMatch(html, /scene--terug/); assert.match(s, /Heen aftrap 10:30 naar Sportpark Hoorn/); assert.match(s, /Terug: ouders nemen de speelster mee Terugrit regelen/); assert.match(s, /rijdt ook terug/);
+  assert.match(html, /data-addmatchcar="ev_cal1__e1\|terug"/); assert.doesNotMatch(s, /Nog geen auto om op te halen/);
+});
+test('without the bus a car that drives only Terug gets its own Terug part, and a car that drives both shows there as "zelfde auto als heen" (no buttons)', () => {
+  state({ matchCarpools: { [SLUG]: { ...carpool, cars: [...cars, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '14:45', leg: 'terug' }] } } });
+  const html = render(), terug = html.indexOf('scene--terug'), s = text(html.slice(terug));
+  assert.ok(terug > -1); assert.doesNotMatch(html, /matchLegQuiet/); assert.match(s, /Terug na afloop bij Sportpark Hoorn/); assert.match(s, /zelfde auto als heen/); assert.match(s, /14:45 Kees de Vries/); assert.match(s, /Ophalen bij Sportpark Hoorn/);
+  const terugHtml = html.slice(terug); assert.equal((terugHtml.match(/data-editmatchcar/g) || []).length, 1); assert.equal((terugHtml.match(/data-delmatchcar/g) || []).length, 1);   // only the terug car has buttons here
 });
 test('a car that arrives after the bus has left gets a warning in words (and is still shown, not blocked)', () => {
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '08:10' }] }) } });
@@ -716,32 +736,81 @@ test('the card and the car form name the place of the bus: AFC \'34 by default, 
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busAtText: 'Sporthal Zuid', busDepart: '08:45', busBack: '15:15' }) } }); s = text(render());
   assert.match(s, /Carpool naar Sporthal Zuid(?! ·)/); assert.doesNotMatch(s, /Sporthal Zuid · \d+ km/);
 });
-test('the car form of a bus match suggests the departure from the bus time and fills the pick-up time with the time of the bus', () => {
+test('the car form of a bus match asks heen or terug, shows ONE time per choice and suggests it from the bus', () => {
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) }, openMatchCarpoolForm: BSLUG });
-  const html = render();
-  assert.match(html, /id="matchCarTime_ev_cal1__e4" value="07:45"/); assert.match(html, /id="matchCarPickup_ev_cal1__e4" value="15:15"/);
-  assert.match(text(html), /Voorgesteld: de bus vertrekt om 08:45\. Reken op ± 40 minuten rijden en 20 minuten marge/);
-  busState_({ matches: [bm], matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], openMatchCarpoolForm: BSLUG });   // no bus: the old form
-  assert.doesNotMatch(render(), /matchCarPickup_/);
+  let html = render(), t_ = text(html);
+  assert.match(t_, /Deze auto rijdt Heen, naar de bus Terug, ophalen/); assert.doesNotMatch(t_, /Alleen heen|Heen en terug/);
+  assert.match(html, /id="matchCarLeg_ev_cal1__e4" value="heen"/); assert.match(html, /id="matchCarTime_ev_cal1__e4" value="07:45"/); assert.match(html, /id="matchCarPickup_ev_cal1__e4" value="15:15"/);
+  assert.match(html, /id="matchTerugWrap_ev_cal1__e4" hidden/); assert.doesNotMatch(html, /id="matchHeenWrap_ev_cal1__e4" hidden/); assert.doesNotMatch(html, /id="matchFromWrap_ev_cal1__e4" hidden/);
+  assert.match(t_, /Voorgesteld: de bus vertrekt om 08:45\. Reken op ± 40 minuten rijden en 20 minuten marge/); assert.match(t_, /Terug ophalen bij AFC '34, Alkmaar/); assert.match(t_, /De bus is er ± 15:15/);
+  S.openMatchCarpoolLeg = 'terug'; html = render();   // opened from the Terug button
+  assert.match(html, /id="matchCarLeg_ev_cal1__e4" value="terug"/); assert.match(html, /id="matchHeenWrap_ev_cal1__e4" hidden/); assert.match(html, /id="matchFromWrap_ev_cal1__e4" hidden/); assert.doesNotMatch(html, /id="matchTerugWrap_ev_cal1__e4" hidden/);
 });
-await testAsync('saving a car by bus stores its pick-up time only when it differs from the time of the bus (otherwise it follows the bus)', async () => {
+test('the car form without the bus offers heen en terug (default), alleen heen and alleen terug; the pick-up time is suggested 1,5 hours after kick-off', () => {
+  state({ openMatchCarpoolForm: SLUG }); const html = render(), t_ = text(html);
+  assert.match(t_, /Deze auto rijdt Heen en terug Alleen heen Alleen terug/); assert.match(html, /id="matchCarLeg_ev_cal1__e1" value="beide"/);
+  assert.match(html, /id="matchCarPickup_ev_cal1__e1" value="12:00"/); assert.match(t_, /Ophaaltijd bij Sportpark Hoorn/); assert.match(t_, /Voorgesteld: ongeveer 1,5 uur na aftrap\./);   // kick-off 10:30
+  assert.match(html, /id="matchTerugWrap_ev_cal1__e1" hidden/);
+});
+test('the segmented choice in the form switches the time fields and "Vertrek vanaf"; the choice goes into the hidden field', () => {
+  state({ openMatchCarpoolForm: SLUG }); render();
+  const seg = reg()('[data-matchleg]'); assert.equal(seg.length, 3);
+  seg[2].onclick();   // alleen terug
+  assert.equal(dom.el('matchCarLeg_' + SLUG).value, 'terug'); assert.equal(dom.el('matchTerugWrap_' + SLUG).hidden, false); assert.equal(dom.el('matchHeenWrap_' + SLUG).hidden, true); assert.equal(dom.el('matchFromWrap_' + SLUG).hidden, true);
+  seg[0].onclick();
+  assert.equal(dom.el('matchCarLeg_' + SLUG).value, 'beide'); assert.equal(dom.el('matchTerugWrap_' + SLUG).hidden, true); assert.equal(dom.el('matchFromWrap_' + SLUG).hidden, false);
+});
+await testAsync('saving a car: "heen en terug" stays exactly as before (no leg field); alleen terug stores the pick-up time as its time, with no place; by bus a car is heen or terug', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) });
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) } }); render();
-  reg()('[data-addmatchcar]')[0].onclick(); const save = reg()('[data-savematchcar]')[0];
-  dom.el('matchCarDriver_' + BSLUG).value = 'f1'; dom.el('matchCarTime_' + BSLUG).value = '07:45'; dom.el('matchCarPickup_' + BSLUG).value = '15:15'; picks.forEach(p => { p.checked = p.value === 'f2'; });
+  reg()('[data-addmatchcar]')[0].onclick(); let save = reg()('[data-savematchcar]')[0];
+  dom.el('matchCarLeg_' + BSLUG).value = 'heen'; dom.el('matchCarDriver_' + BSLUG).value = 'f1'; dom.el('matchCarTime_' + BSLUG).value = '07:45'; picks.forEach(p => { p.checked = p.value === 'f2'; });
   await withFakeNow(NOW, () => save.onclick());
-  let d = fake.get('matchCarpools/' + BSLUG); assert.equal(d.cars.length, 1); assert.equal(d.cars[0].pickupTime, ''); assert.equal(d.busDepart, '08:45'); assert.equal(d.bus, undefined);   // the bus fields are not touched by a car
+  let d = fake.get('matchCarpools/' + BSLUG); assert.equal(d.cars.length, 1); assert.equal(d.cars[0].leg, 'heen'); assert.equal(d.cars[0].departureTime, '07:45'); assert.equal(d.cars[0].pickupTime, undefined); assert.equal(d.busDepart, '08:45'); assert.equal(d.bus, undefined);
   S.openMatchCarpoolForm = null; busState_({ matchCarpools: { [BSLUG]: d } }); render();
-  reg()('[data-addmatchcar]')[0].onclick(); const save2 = reg()('[data-savematchcar]')[0];
-  dom.el('matchCarDriver_' + BSLUG).value = 'f3'; dom.el('matchCarTime_' + BSLUG).value = '07:50'; dom.el('matchCarPickup_' + BSLUG).value = '15:45'; picks.forEach(p => { p.checked = p.value === 'f5'; });
-  await withFakeNow(NOW, () => save2.onclick());
-  d = fake.get('matchCarpools/' + BSLUG); assert.equal(d.cars[1].pickupTime, '15:45');
+  reg()('[data-addmatchcar]')[0].onclick(); save = reg()('[data-savematchcar]')[0];
+  dom.el('matchCarLeg_' + BSLUG).value = 'terug'; dom.el('matchCarDriver_' + BSLUG).value = 'f3'; dom.el('matchCarPickup_' + BSLUG).value = '15:45'; dom.el('matchCarTime_' + BSLUG).value = '07:00'; picks.forEach(p => { p.checked = p.value === 'f5'; });
+  await withFakeNow(NOW, () => save.onclick());
+  d = fake.get('matchCarpools/' + BSLUG); assert.equal(d.cars[1].leg, 'terug'); assert.equal(d.cars[1].departureTime, '15:45'); assert.equal(d.cars[1].fromId, undefined); assert.equal(d.cars[1].fromText, undefined);
+  S.openMatchCarpoolForm = null; busState_({ matchCarpools: { [BSLUG]: d } }); render();
+  reg()('[data-addmatchcar]')[0].onclick(); save = reg()('[data-savematchcar]')[0];
+  dom.el('matchCarLeg_' + BSLUG).value = 'terug'; dom.el('matchCarDriver_' + BSLUG).value = 'f1'; dom.el('matchCarPickup_' + BSLUG).value = ''; picks.forEach(p => { p.checked = p.value === 'f4'; });
+  await withFakeNow(NOW, () => save.onclick());
+  assert.equal(fake.get('matchCarpools/' + BSLUG).cars.length, 2); assert.match(toast(), /Vul een geldige tijd in/);   // a pick-up car needs a time
+});
+await testAsync('without the bus: both ways keeps the car as it was; alleen terug is its own car; editing a terug car back to both ways resets the leg', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: { ...carpool, cars: [] } }); state({ matchCarpools: { [SLUG]: { ...carpool, cars: [] } } }); render();
+  reg()('[data-addmatchcar]')[0].onclick(); let save = reg()('[data-savematchcar]')[0];
+  setForm('f1', '07:00', ['f2']); await withFakeNow(NOW, () => save.onclick());
+  assert.equal('leg' in fake.get('matchCarpools/' + SLUG).cars[0], false);
+  S.openMatchCarpoolForm = null; state({ matchCarpools: { [SLUG]: fake.get('matchCarpools/' + SLUG) } }); render();
+  reg()('[data-addmatchcar]')[0].onclick(); save = reg()('[data-savematchcar]')[0];
+  setForm('f3', '07:00', ['f5']); dom.el('matchCarLeg_' + SLUG).value = 'terug'; dom.el('matchCarPickup_' + SLUG).value = '14:45'; await withFakeNow(NOW, () => save.onclick());
+  const car = fake.get('matchCarpools/' + SLUG).cars[1]; assert.equal(car.leg, 'terug'); assert.equal(car.departureTime, '14:45');
+  S.openMatchCarpoolForm = null; state({ matchCarpools: { [SLUG]: fake.get('matchCarpools/' + SLUG) } }); render();
+  reg()('[data-editmatchcar]')[1].onclick(); assert.match(boxHtml, /id="matchCarLeg_ev_cal1__e1" value="terug"/); assert.match(boxHtml, /id="matchCarPickup_ev_cal1__e1" value="14:45"/);
+  save = reg()('[data-savematchcar]')[0]; dom.el('matchCarDriver_' + SLUG).value = 'f3'; picks.forEach(p => { p.checked = p.value === 'f5'; }); dom.el('matchCarLeg_' + SLUG).value = 'beide'; dom.el('matchCarTime_' + SLUG).value = '07:30'; await withFakeNow(NOW, () => save.onclick());
+  const back = fake.get('matchCarpools/' + SLUG).cars[1]; assert.equal(back.leg, ''); assert.equal(back.departureTime, '07:30');
 });
 await testAsync('"Ik rij ook" at a bus match leaves in time for the bus', async () => {
   const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) });
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) } }); render();
   await withFakeNow(NOW, () => reg()('[data-iride]')[0].onclick());
-  assert.equal(fake.get('matchCarpools/' + BSLUG).cars[0].departureTime, '07:45');
+  assert.equal(fake.get('matchCarpools/' + BSLUG).cars[0].departureTime, '07:45'); assert.equal(fake.get('matchCarpools/' + BSLUG).cars[0].leg, 'heen');
+});
+await testAsync('"Ik rij terug" by bus: own car, leg terug, the time of the bus; without the bus: "Ik rij" is both ways (no leg), "Ik rij terug" 1,5 hours after kick-off', async () => {
+  let fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) });
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) } }); render();
+  const terug = reg()('[data-iride]').find(b => b.dataset.iride.endsWith('|terug')); assert.ok(terug);
+  await withFakeNow(NOW, () => terug.onclick());
+  const c = fake.get('matchCarpools/' + BSLUG).cars[0]; assert.equal(c.leg, 'terug'); assert.equal(c.departureTime, '15:15'); assert.deepEqual(c.girlIds, ['f2']); assert.equal(c.fromId, undefined);
+  fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: { ...carpool, cars: [] } }); state({ matchCarpools: { [SLUG]: { ...carpool, cars: [] } } }); render();
+  await withFakeNow(NOW, () => reg()('[data-iride]')[0].onclick());
+  assert.equal('leg' in fake.get('matchCarpools/' + SLUG).cars[0], false); assert.equal(fake.get('matchCarpools/' + SLUG).cars[0].departureTime, '07:00');
+});
+test('the change log names the leg of a heen or terug car', () => {
+  const log = [{ at: new Date('2026-10-01T19:41:00+02:00').getTime(), by: 'f3', act: 'add', car: { driverFamilyId: 'f3', departureTime: '15:45', girlIds: ['f5'], leg: 'terug' } }];
+  coordState({ matchCarpools: { [SLUG]: { ...carpool, cars, log } } }); assert.match(text(render()), /voegde een auto toe: Kees de Vries terug 15:45 \(Lois\)/);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

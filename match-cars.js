@@ -16,18 +16,19 @@ export const LOG_MAX = 20;
 
 const girlKey = ids => [...(ids || [])].sort().join(',');
 
-// PURE. Same car? Driver, departure time, riders and family members must all match (the pick-up place is not part of the identity).
+// PURE. Same car? Driver, time, leg (heen / terug / both), riders and family members must all match (the pick-up place is not part of the identity).
 export function sameCar(a, b) {
   return !!a && !!b
     && (a.driverFamilyId || '') === (b.driverFamilyId || '')
     && (a.departureTime || '') === (b.departureTime || '')
+    && (a.leg || '') === (b.leg || '')
     && girlKey(a.girlIds) === girlKey(b.girlIds)
     && (a.familyCount || 0) === (b.familyCount || 0);
 }
 
 // PURE. What the log keeps of a car: who drives, when, and who rides. No undefined values (Firestore refuses them).
 export function carBrief(c) {
-  return { driverFamilyId: (c && c.driverFamilyId) || '', departureTime: (c && c.departureTime) || '', girlIds: [...((c && c.girlIds) || [])] };
+  return { driverFamilyId: (c && c.driverFamilyId) || '', departureTime: (c && c.departureTime) || '', girlIds: [...((c && c.girlIds) || [])], ...(c && (c.leg === 'heen' || c.leg === 'terug') ? { leg: c.leg } : {}) };
 }
 
 // PURE. Applies one change to a list of cars.

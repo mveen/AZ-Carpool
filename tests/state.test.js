@@ -143,6 +143,8 @@ test('The day coordinator\'s flow starts closed, and "Auto\'s aanpassen" has no 
 test('Vast rooster: no car is unfolded at the start', () => { assert.equal(S.stdEditGid, null); });
 test('match carpool form: no car-before at start (the edit is matched on the car as it was tapped)', () => { assert.equal(S.editMatchCarBefore, null); });
 
+test('openMatchCarpoolLeg starts empty (the open match car form then starts on the default choice)', () => { assert.equal(S.openMatchCarpoolLeg, null); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 
