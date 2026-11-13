@@ -262,7 +262,8 @@ await testAsync('the match of this week is a folded line under its own day (Satu
 test('US-22: the location of a stored match ride is a link too', () => {
   const html = withUserAgent(ANDROID, () => render({ matchCarpools, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
   const card = html.slice(html.indexOf('rideRow rideRow--match'), html.indexOf('rideRow__pass', html.indexOf('rideRow rideRow--match')));
-  assert.doesNotMatch(card, /geoLink|Sportpark Hoorn.*Sportpark Hoorn/s);   // the venue is not repeated in the ride card any more (the route line has it once)
+  assert.match(card, /<div class="rideRow__route">[^]*?<a class="geoLink" href="geo:0,0\?q=Sportpark%20Hoorn"[^>]*>Sportpark Hoorn<\/a>/);   // v250: the venue is in the route line, once, and is the link to the route app
+  assert.equal((text(card).match(/Sportpark Hoorn/g) || []).length, 1);
   assert.match(text(matchInfoHtml({ calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', start: new Date(kick) }, { geo: true })), /Sportpark Hoorn/);
   assert.match(withUserAgent(ANDROID, () => matchInfoHtml({ calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: 'Sportpark Hoorn', start: new Date(kick) }, { geo: true })), /<a class="geoLink" href="geo:0,0\?q=Sportpark%20Hoorn"/);
 });
@@ -564,6 +565,21 @@ test('an away match by bus shows the carpool to AFC \'34, the arrival and pick-u
   const doc = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'Hoorn O15-2-AZ O15-1', location: 'Sportpark Hoorn', startMs: kick, bus: true, busDepart: '09:00', busBack: '14:30', cars: [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '08:10', leg: 'heen' }] };
   const s = text(render({ matchCarpools: { ev_cal1__e1: doc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], locationsDoc: { fixedKm: { AFC: 36 } } }));
   assert.match(s, /08:10 Heen[\s\S]*Busstation → AFC &#39;34/); assert.match(s, /Aankomst 08:50/); assert.doesNotMatch(s, /terug ophalen|Aftrap 10:30 · rijdt ook terug/); assert.match(s, /Bus vertrekt 09:00 · terug ± 14:30/);
+});
+test('v250: by bus the bus place in the route and the venue of the match are both links to the route app; the terug card links the venue too', () => {
+  const doc = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'Hoorn O15-2-AZ O15-1', location: 'Sportpark Hoorn', startMs: kick, bus: true, busDepart: '09:00', busBack: '14:30', cars: [{ driverFamilyId: 'f1', girlIds: ['f2', 'f4'], departureTime: '08:10', leg: 'heen' }] };
+  const html = withUserAgent(ANDROID, () => render({ matchCarpools: { ev_cal1__e1: doc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], locationsDoc: { fixedKm: { AFC: 36 } } }));
+  assert.match(html, /<div class="rideRow__route">[^]*?<a class="geoLink" href="geo:0,0\?q=AFC[^"]*"[^>]*>AFC &#39;34/);   // the bus place
+  assert.match(html, /<div class="rideRow__pass">[^]*?<a class="geoLink" href="geo:0,0\?q=Sportpark%20Hoorn"[^>]*>Sportpark Hoorn<\/a>/);   // the venue has its own line by bus
+  const terugDoc = { ...doc, bus: false, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '12:30', leg: 'terug' }] };
+  const t2 = withUserAgent(ANDROID, () => render({ matchCarpools: { ev_cal1__e1: terugDoc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] }));
+  assert.match(t2, /<div class="rideRow__route">[^]*?<a class="geoLink" href="geo:0,0\?q=Sportpark%20Hoorn"[^>]*>Sportpark Hoorn<\/a> → /);   // terug: venue first, as a link
+});
+test('v250: without a venue the route line has no link and nothing breaks', () => {
+  const doc = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'AZ O15-1-Hoorn O15-2', location: '', startMs: kick, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '09:15' }] };
+  const html = render({ matchCarpools: { ev_cal1__e1: doc }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }] });
+  const card = html.slice(html.indexOf('rideRow rideRow--match'), html.indexOf('rideRow rideRow--match') + 1500);
+  assert.doesNotMatch(card, /geoLink/);
 });
 test('the same match without the bus shows none of the bus lines', () => {
   const doc = { calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'Hoorn O15-2-AZ O15-1', location: 'Sportpark Hoorn', startMs: kick, bus: false, busDepart: '09:00', busBack: '14:30', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '08:10' }] };

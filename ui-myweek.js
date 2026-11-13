@@ -204,7 +204,11 @@ export function renderMyWeek(){
     // Same card as a weekday ride (time + direction, label, route, passengers); violet edge, and the soft violet glow only when you drive.
     const place = bus.on? busPlaceName(busPlaceOfMatch(docToMatch(r.doc))) : (r.doc.location||'');
     const own = matchFromName(r.car, cfg);
-    const route = back? `${place} → ${own}` : `${own} → ${place}`;
+    // The place of the route (the match venue, or by bus the bus place) is a link: it opens the route app, also when the carpool is arranged.
+    const placeHtml = locationLinkHtml(place);
+    const routeHtml = back? `${placeHtml} → ${esc(own)}` : `${esc(own)} → ${placeHtml}`;
+    // By bus the route ends at the bus place, so the venue of the match gets its own line, again as a link.
+    const venueLine = bus.on && r.doc.location? `<div class="rideRow__pass">${phIcon('soccer')} ${locationLinkHtml(r.doc.location)}</div>` : '';
     const lab = r.driving? t(back? 'myweek.jij_haalt_op' : 'myweek.jij_rijdt_lab') : t('myweek.daughter_rijdt_mee_met', { name: plainGirlName(myId) });
     const who = r.driving? '' : driverButtonHtml(r.car.driverFamilyId);
     const pass = r.driving && passengers? `<div class="rideRow__pass"><span class="rideRow__lab">${esc(t('myweek.passagiers'))}</span>${passengers}</div>` : '';
@@ -218,8 +222,8 @@ export function renderMyWeek(){
           <div class="rideRow__title"><span class="tag tag--match">${phIcon('soccer')} ${esc(t(isPracticeMatch(r.doc)? 'myweek.oefenwedstrijd' : 'myweek.wedstrijd_2'))}</span> ${esc(matchLabel(r.doc))}${homeAway} ${t('myweek.vs')} ${esc(a.opponent)}</div>
         </div>
       </div>
-      <div class="rideRow__route">${phIcon('map-pin')}<span>${esc(route)}</span></div>
-      ${pass}${busLines}${kickLine}
+      <div class="rideRow__route">${phIcon('map-pin')}<span>${routeHtml}</span></div>
+      ${pass}${busLines}${venueLine}${kickLine}
     </div>`;
   }
   const matchRowsFor = date => (matchRidesByDate[date.toDateString()]||[]).map(matchRideRow).join('');
