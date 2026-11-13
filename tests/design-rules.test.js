@@ -14,7 +14,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = f => readFileSync(path.join(root, f), 'utf8');
 const html = read('index.html'), tokens = read('tokens.css'), components = read('components.css'), print = read('print.css');
 const uiFiles = readdirSync(root).filter(f => /^(ui-.*|app)\.js$/.test(f));
-const INLINE_STYLE_BASELINE = 220;   // the count today; it may only ever be lowered
+const INLINE_STYLE_BASELINE = 179;   // the count today; it may only ever be lowered
 const SCALE = new Set([10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24]);   // the px values behind the --type-* tokens, plus the 18/22 icon sizes
 const sizes = css => [...css.matchAll(/font-size:\s*(\d+(?:\.\d+)?)px/g)].map(m => +m[1]);
 

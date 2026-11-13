@@ -143,7 +143,8 @@ test('The day coordinator\'s flow starts closed, and "Auto\'s aanpassen" has no 
 test('Vast rooster: no car is unfolded at the start', () => { assert.equal(S.stdEditGid, null); });
 test('match carpool form: no car-before at start (the edit is matched on the car as it was tapped)', () => { assert.equal(S.editMatchCarBefore, null); });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
 
 test('devOwn starts empty (the warning Eigen ouder rijdt mee waits for a choice per shift)', () => { assert.deepEqual(S.devOwn, {}); });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

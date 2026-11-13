@@ -69,7 +69,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `firebase-config.js` | Firebase config + Google Calendar API key (fill in once). **No secret keys**: the OpenRouteService key is in the database (Beheer → *API-sleutels*) | never overwrite |
 | `firebase/firestore.rules` | Firestore security rules | paste into Firebase console → Rules |
 | `manifest.json`, `service-worker.js`, `icon-*.png`, `apple-touch-icon.png`, `favicon-32.png`, `icon.svg` (AZ Carpool logo) | PWA (install on home screen) | once; `service-worker.js` changes when modules are added |
-| `backups/` | Older versions for rollback | not needed on the site |
+| `backups/` | Only on the owner's computer, never in git (`.gitignore`): database back-ups and the test key for `npm run seed:test` | never on the site |
 
 All `*.test.js` files live in `tests/`; the site does not use that folder. Every other file stays in the repo root because the live site loads it from there.
 
@@ -238,11 +238,15 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {placeholders}'`. Code calls `t('key', { name: 'x' })`. Static texts in `index.html` use `data-i18n="key"` attributes. To add a language, copy `texts-nl.js` to `texts-<lang>.js`, translate the values (keep keys and `{placeholders}`), and switch the dictionary in `i18n.js`. Many texts use generic placeholders such as `{p1}`. Look at the Dutch sentence to see what each one is.
 
 ## Deploy
-1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `family-backup.js`; earlier: `period.js`; earlier: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
-2. GitHub Pages redeploys in about 60 seconds.
-3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v16`) then replaces the old cache.
-5. **Always bump `CACHE_NAME` in `service-worker.js` on every deploy.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
+Live is `https://azcarpool.nl/` on mijn.host. Nobody uploads files by hand any more.
+1. Work on a branch and open a pull request. `.github/workflows/tests.yml` runs `npm test` and checks that `CACHE_NAME` in `service-worker.js` was raised (`.github/scripts/check-cache-bump.sh`).
+2. The owner merges the pull request into `main`. Nothing reaches `main` without the owner.
+3. `.github/workflows/deploy.yml` then runs by itself: *tests -> upload to `test.azcarpool.nl` -> robot smoke test there -> upload to live -> upload the cron jobs and their self-test*. If a step fails, everything after it is skipped and live stays as it was. The workflow checks that the site serves the new `CACHE_NAME`.
+4. **Database rules are the one step still done by hand:** if `firebase/firestore.rules` changed, paste the file into the Firebase console (Firestore -> Rules -> Publish), for the live project and for the test project `az-carpool-test`.
+5. **Always bump `CACHE_NAME` in `service-worker.js` (and `APP_VERSION` in `constants.js`) on every change to app files.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
+6. Secrets (API keys, service account keys, the deploy key) are never in the repo: the OpenRouteService key is in the database (Beheer -> *API-sleutels*), the cron keys are on the host, the deploy key and smoke-test codes are GitHub secrets.
+
+The old address `https://mveen.github.io/AZ-Carpool/` (GitHub Pages) is still published from `main` by GitHub itself; it is not part of this pipeline.
 
 ### Test environment (`test.azcarpool.nl`)
 A second copy of the app with its own database, so trying things never touches live data.
@@ -317,9 +321,9 @@ Automated tests cover logic and page output, but not a real phone, real Firebase
 4. Press "Deel update via WhatsApp". WhatsApp opens with the message ready. Do not send it if this is only a test.
 
 ## Rollback
-1. Upload `backups/index.before-modularisation.html` to GitHub as `index.html`.
-2. Upload `backups/service-worker.before-modularisation.js` as `service-worker.js`.
-3. Wait about 60 seconds. The old single-file app is back. The new module files can stay in the repo; the old page does not load them.
+1. On GitHub open the pull request that caused the problem and press *Revert*; merge the revert pull request. The deploy workflow puts the previous version live (tests, test site and smoke test included). Raise `CACHE_NAME` in the revert, otherwise phones keep the broken version.
+2. In an emergency: Actions -> *Deploy azcarpool.nl* -> *Run workflow* with *skip_smoke* ticked goes live without the robot test.
+3. The tag `v1-stable` is the app before the v2 redesign (last resort).
 
 ## Access model (since the Sept 2026 security fix)
 - Only **members** can read or write data: the coordinator, or a browser linked to a family through the gate.

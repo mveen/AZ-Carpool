@@ -428,5 +428,6 @@ test('help describes the Rooster list with sun and moon, and no yellow Gewijzigd
   assert.doesNotMatch(all, /gele pil|meiden erin|in een eigen blok/); assert.match(all, /Een blauwgrijze kaart is een heenrit/);
 });
 
+test('the Help never says "meisje", "meid" or "meiden": it is speelster or dochter', () => { assert.doesNotMatch(JSON.stringify(articles), /\b(meisjes?|meid|meiden)\b/i); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

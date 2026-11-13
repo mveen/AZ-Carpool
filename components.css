@@ -2,7 +2,7 @@
    Built ONLY from the variables in tokens.css (no hex colours, no loose px font sizes: see DESIGN.md).
    A screen composes these classes; it does not restyle them. Need something new? Add it HERE and
    document it in DESIGN.md, so the next screen can reuse it.
-   Load order: tokens.css, legacy.css, components.css (so these rules win over the legacy ones). */
+   Load order: tokens.css, components.css, print.css. */
 
 /* ============================================================
    Screens migrated from the old stylesheet (phase 4): Beheer, Mijn gezin, Help, period cards, banners, forms.
@@ -112,17 +112,9 @@ input.switch:focus-visible{outline:2px solid var(--info);outline-offset:2px}
 .iconbtn{display:inline-flex;align-items:center;justify-content:center}
 .iconbtn:disabled{opacity:.35;cursor:default}
 /* Neutral direction label: "Heen · Aalsmeer → Alkmaar" */
-.dirLabel{display:inline-flex;align-items:center;gap:6px;background:var(--surface-soft);color:var(--text-2);font-size:12px;font-weight:700;padding:3px 10px;border-radius:var(--radius-pill)}
 .addrHint{margin:4px 0 0;font-size:12px;color:var(--text-muted)}
 a.geoLink{color:inherit;text-decoration:underline;text-underline-offset:2px}
-.daypill.active{background:var(--accent);border-color:var(--accent)}
-.daypill.active .daypillTop{color:var(--on-accent)}
-.daypill.active .daypillSub{color:var(--on-accent)}
-.daypill .daypillToday{position:absolute;top:5px;left:7px;width:6px;height:6px;border-radius:50%;background:var(--ok)}
-.daypill.active .daypillToday{background:var(--on-accent)}
 /* Mon–Fri pills: 5 equal columns, always fit the screen (period pills keep wrapping) */
-.daypills:not(.periodPills){display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;overflow:visible;padding-right:6px}
-.daypills:not(.periodPills) .daypill{min-width:0;padding:6px 2px}
 .daysection>h3{font-size:14px;color:var(--text-1);border-bottom:2px solid var(--accent);padding-bottom:4px;font-weight:800}
 .group .dir{font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;font-weight:700}
 .group .time{font-size:18px;font-weight:800;font-family:var(--font-mono)}
@@ -136,12 +128,9 @@ button.pill:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .timeBig{font-size:18px!important;font-weight:800;font-family:var(--font-mono);width:auto!important;min-height:44px!important;padding:4px 8px!important}
 .tripReserve{font-size:12px;color:var(--text-muted);margin:2px 0 10px 2px}
 /* Tap-to-WhatsApp names (Rooster "Deze week": chauffeur + reserve) */
-a.waLink{color:inherit;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px;display:inline-flex;align-items:center;gap:3px;min-height:24px}
-a.waLink:hover{text-decoration-style:solid}
 a.waIntro{display:inline-flex;flex-shrink:0;min-width:32px;min-height:32px;align-items:center;justify-content:center}
 a.waIntro[hidden]{display:none}
 a.waIntro svg{width:26px;height:26px}
-a.waLink svg{width:13px;height:13px;flex-shrink:0}
 .reserve{font-size:12px;color:var(--text-muted);margin-top:4px}
 .girlchk{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--line);font-size:14px}
 .muted{color:var(--text-muted);font-size:12px}
@@ -464,9 +453,6 @@ button.chip{cursor:pointer;font-family:inherit}
 .matchTile__more{color:var(--text-muted);display:inline-flex}
 .matchTile__more svg{width:16px;height:16px;fill:currentColor}
 .coordLine{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-3);margin:var(--space-7) var(--space-1) 0;font:var(--type-caption);color:var(--text-muted)}
-.coordLine--act{flex-wrap:nowrap}
-.coordLine--act>span{flex:1;min-width:0}
-.coordLine--act .btn{flex:none;text-decoration:none}
 .coordLine button{border:0;background:none;padding:0;font:700 12px/1.4 var(--font-sans);color:var(--text-1);cursor:pointer;text-decoration:underline;text-underline-offset:3px;min-height:var(--hit-min)}
 .nameLink{border:0;background:none;padding:0;font:inherit;color:inherit;cursor:pointer;text-decoration:underline;text-decoration-style:dotted;text-underline-offset:3px}
 
@@ -499,7 +485,6 @@ button.chip{cursor:pointer;font-family:inherit}
 .carCard__note{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
 .carCard__note--warn{color:var(--warn-ink);display:flex;align-items:center;gap:var(--space-2)}
 /* Rooster "Deze week" (compact): own time per chip, "was" under the departure, one quiet fold for Rijdt niet mee + Back-up. */
-.timeCol{display:flex;flex-direction:column;gap:var(--space-1)}
 .wasTime{font:var(--type-caption);color:var(--warn-ink)}
 .chipTime{font-family:var(--font-mono);font-weight:600;color:var(--text-muted)}
 .chip--muted{background:var(--surface-soft);color:var(--text-muted)}
@@ -558,7 +543,6 @@ details.fold--quiet .chips{gap:var(--space-2)}
 .flowSteps__step--done .flowSteps__bar{background:var(--ok)}
 .flowSteps__name{font:var(--type-caption);color:var(--text-muted)}
 .flowSteps__step--current .flowSteps__name{color:var(--text-1);font-weight:800}
-.flowStats{margin:0}
 .flowDone{align-items:stretch;text-align:center}
 .flowDone__badge{align-self:center;display:flex;align-items:center;justify-content:center;width:calc(var(--space-9) * 3.5);height:calc(var(--space-9) * 3.5);border-radius:var(--radius-pill);background:var(--ok);color:var(--on-accent);font-size:calc(var(--space-9) * 2);margin-top:var(--space-5)}
 .flowDone__badge svg{width:1em;height:1em;fill:currentColor}
@@ -580,10 +564,7 @@ details.fold--quiet .chips{gap:var(--space-2)}
 button.planRow{cursor:pointer}
 .planRow svg{width:16px;height:16px;fill:currentColor;color:var(--text-muted);flex:none}
 .planRow__who{display:flex;flex-direction:column;flex:1;min-width:0}
-.planRow__name{font:var(--type-card-title)}
 .planRow__sub{font:var(--type-caption);color:var(--text-muted)}
-.planRow__car{display:flex;flex-direction:column;align-items:flex-end;font:var(--type-card-title)}
-.planRow__car .diffLabel{margin-top:0}
 .planRow--quiet{border-color:transparent;background:var(--surface-soft);padding:var(--space-3) var(--space-6);min-height:0;gap:var(--space-4)}
 .planRow--quiet .planRow__who{flex:none;flex-direction:row}
 .planRow__time{font:var(--type-time-md);flex:none}
@@ -591,9 +572,6 @@ button.planRow{cursor:pointer}
 .planSum__group{display:flex;flex-direction:column;gap:var(--space-2);border:1px solid;border-radius:var(--radius-card);padding:var(--space-4)}
 .planSum__dir{display:flex;gap:var(--space-3);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
 .planSum__same{margin-left:auto;font:var(--type-caption);letter-spacing:0;text-transform:none;font-weight:500;color:var(--text-muted)}
-.applyBox{display:flex;flex-direction:column;align-items:center;gap:var(--space-3)}
-.applyBox .btn{width:100%}
-.applyBox__sub{margin:0;font:var(--type-caption);color:var(--text-muted);text-align:center}
 .adjDir{display:flex;flex-direction:column;gap:var(--space-3);border:1px solid;border-radius:var(--radius-card);padding:var(--space-5);margin-top:var(--space-4)}
 .adjDir__head{display:flex;gap:var(--space-3);align-items:center;font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--scene-ink)}
 .diffLabel{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-3)}
@@ -768,7 +746,7 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 
 /* ---------- Old "group" cards (suggestions, pickers, Wijzigen, matches): same card look until their screens are rebuilt ---------- */
 .group{border:0;border-radius:var(--radius-car);box-shadow:var(--shadow-card);padding:var(--space-6);margin:var(--space-4) 0;background:var(--surface-card)}
-.group.suggestion,.group.warning,.group.mineDriving,.group.matchGroup{border-left:0}
+.group.suggestion,.group.warning,.group.matchGroup{border-left:0}
 .group.suggestion{box-shadow:var(--shadow-card)}
 .group.suggestion.primary{background:var(--ok-soft)}
 .group.warning{border:2px solid var(--warn-edge)}
@@ -835,14 +813,10 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .rbHeadline{display:flex;align-items:center;gap:var(--space-3)}
 .rbWhen{font:var(--type-caption);color:var(--text-muted)}
 .rbRideLine{display:flex;align-items:baseline;gap:var(--space-4);margin-top:var(--space-3)}
-.rbNote{margin-top:var(--space-2);font:var(--type-small);color:var(--text-muted);font-style:italic}
 .rbTime{font:var(--type-time-lg);letter-spacing:var(--track-time);color:var(--text-1)}
 .rbRoute{font:var(--type-card-title);margin:var(--space-2) 0 var(--space-1);color:var(--text-1)}
 .rbPills{margin:var(--space-3) 0 var(--space-2)}
 .rbBy{margin:var(--space-2) 0 var(--space-3);font:var(--type-small);color:var(--text-2)}
-.rbChip{display:inline-block;font:var(--type-micro);padding:var(--space-1) var(--space-3);border-radius:var(--radius-pill);background:var(--surface-soft);color:var(--text-2)}
-.rbChip-late{background:var(--warn-soft);color:var(--warn-ink)}
-.rbChip-soon{background:var(--warn-soft);color:var(--warn-ink)}
 .rbOffer>.btn,.rbConfirm .btn{width:100%;height:46px;border-radius:var(--radius-panel)}
 .rbConfirm{border-top:1px solid var(--line);margin-top:var(--space-5);padding-top:var(--space-5)}
 .rbConfirm .rowflex{display:flex;gap:var(--space-3)}
@@ -850,7 +824,6 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .rbConfirm h4,.rbForm h4{margin:0 0 var(--space-3);font:var(--type-card-title);font-weight:800}
 .rbChecks{list-style:none;margin:0;padding:0;font:var(--type-small);line-height:1.6;color:var(--text-2)}
 .rbChecks li{margin:var(--space-2) 0}
-.rbWarn{margin:var(--space-4) 0 0;font:var(--type-small);font-weight:700;color:var(--warn-ink)}
 .rbMoment{display:flex;align-items:center;justify-content:space-between;gap:var(--space-3);padding:var(--space-4) 0;border-top:1px solid var(--line)}
 .rbMoment:first-child{border-top:0}
 .rideRow__mid>.tag{margin-top:var(--space-2)}
@@ -980,12 +953,6 @@ div.settingsRow{cursor:default}
 .devPickRow__sub{font:var(--type-caption);color:var(--text-muted)}
 .conclusieCard .btn{width:100%;height:48px;border-radius:var(--radius-panel);font-size:14px}
 
-.rbRide__row{display:flex;align-items:center;gap:var(--space-5)}
-.rbRide__time{font:var(--type-time-md);letter-spacing:var(--track-time)}
-.rbRide__what{flex:1;min-width:0}
-.rbRide__when{font:var(--type-card-title);font-weight:700}
-.rbRide__sub{font:var(--type-caption);color:var(--text-muted)}
-.rbRide .btn.pill.small{height:40px;padding:0 var(--space-6);font-size:13px}
 
 .sheetItem>svg{flex:none;fill:currentColor}
 .sheetItem__label{flex:1;min-width:0;font:var(--type-card-title);font-weight:600}
@@ -1073,7 +1040,6 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .dayPill--cars{height:64px}
 .dayPill__cars{display:inline-flex;align-items:center;gap:2px;font:var(--type-micro);font-family:var(--font-mono);color:var(--text-muted)}
 .dayPill__cars svg{width:11px;height:11px;fill:currentColor}
-.sectionHead--dir{align-items:center}
 .sectionHead__note{margin-left:var(--space-3);font:var(--type-caption);font-weight:500;color:var(--text-muted)}
 .seats{display:inline-flex;align-items:center;gap:var(--space-2);flex:none;color:var(--text-2)}
 .seats svg{width:18px;height:18px;fill:currentColor}
