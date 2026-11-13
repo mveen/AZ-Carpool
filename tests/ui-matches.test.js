@@ -190,14 +190,16 @@ await testAsync('a refused write is reported', async () => {
 });
 
 console.log('\n=== removing a car ===');
-await testAsync('the trash button removes that car; removing the last car deletes the match document', async () => {
+await testAsync('the trash button removes that car; removing the last car keeps the match document (cars [], so its log stays)', async () => {
   const two = { ...carpool, cars: [cars[0], { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '07:30' }] };
   const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: two }); state({ matchCarpools: { [SLUG]: two } });
   render(); await reg()('[data-delmatchcar]')[0].onclick();
   assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars.map(c => c.driverFamilyId), ['f3']);
   S.matchCarpools = { [SLUG]: fake.get('matchCarpools/' + SLUG) };
   render(); await reg()('[data-delmatchcar]')[0].onclick();
-  assert.equal(fake.get('matchCarpools/' + SLUG), undefined);
+  const d = fake.get('matchCarpools/' + SLUG);
+  assert.deepEqual(d.cars, []); assert.deepEqual(d.log.map(e => [e.act, e.car.driverFamilyId]), [['del', 'f1'], ['del', 'f3']]);
+  assert.equal(d.startMs, home.start.getTime());   // the match info is still there
 });
 
 test('every match is its own card (matchCard) under an info line; no nested group cards any more', () => {
@@ -217,7 +219,7 @@ await testAsync('Ik rijd adds the own car with the own daughter; Mijn auto wegha
   const html = render();
   assert.doesNotMatch(html, /data-iride/); assert.doesNotMatch(text(html), /Mijn auto weghalen/);   // the trash button is the way to remove it
   await reg()('[data-delmatchcar]')[0].onclick();
-  assert.equal(fake.get('matchCarpools/' + SLUG), undefined); assert.equal(toast(), 'Auto weggehaald Ongedaan');
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars, []); assert.equal(toast(), 'Auto weggehaald Ongedaan');
 });
 
 console.log('\n=== editing a car ===');
@@ -517,6 +519,89 @@ await testAsync('editing an old car without the field does not add it', async ()
   reg()('[data-editmatchcar]')[0].onclick();
   setForm('f1', '09:30', ['f2']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
   assert.equal('familyCount' in fake.get('matchCarpools/' + SLUG).cars[0], false);
+});
+
+console.log('\n=== safe storing and the change log (match-cars.js) ===');
+const coordState = (patch = {}) => state({ me: 'coord', coordinatorConfig: { uid: 'coord' }, links: { coord: { familyId: 'f1' } }, ...patch });
+await testAsync('two parents saving at the same time: both cars end up in the document (the second save runs again on the fresh state)', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state(); const save = openForm();
+  setForm('f1', '07:00', ['f2']);
+  // while this save is under way somebody else stores a car of their own
+  const other = { ...carpool, matchSlug: SLUG, cars: [{ driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '08:00' }] };
+  fake.interfereNextTransaction('matchCarpools/' + SLUG, other);
+  await withFakeNow(NOW, () => save.onclick());
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars.map(c => c.driverFamilyId).sort(), ['f1', 'f3']);
+});
+await testAsync('an edit is matched on the car as it was shown: when somebody removed it meanwhile, nothing is stored and the person is told', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: twoCars }); state({ matchCarpools: { [SLUG]: twoCars } }); render();
+  reg()('[data-editmatchcar]')[1].onclick();   // the car of f3
+  const gone = { ...twoCars, cars: [twoCars.cars[0]] };
+  fake.interfereNextTransaction('matchCarpools/' + SLUG, gone);   // somebody removes it while we save
+  setForm('f3', '06:45', ['f5']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars.map(c => c.driverFamilyId), ['f1']);
+  assert.match(toast(), /intussen door iemand anders gewijzigd of weggehaald/);
+  assert.equal(S.editMatchCarBefore, null);
+});
+await testAsync('the form edits the car that was tapped, even when the list changes position while it is open', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: twoCars }); state({ matchCarpools: { [SLUG]: twoCars } }); render();
+  reg()('[data-editmatchcar]')[1].onclick();   // f3, second in the list
+  S.matchCarpools = { [SLUG]: { ...twoCars, cars: [twoCars.cars[1], twoCars.cars[0]] } };   // somebody else's change reorders the list
+  fake.store.set('matchCarpools/' + SLUG, JSON.parse(JSON.stringify(S.matchCarpools[SLUG])));
+  const html = render(); assert.match(html, /value="f3" selected/);   // still the car of f3 in the form
+  setForm('f3', '06:15', ['f5']); await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  const d = fake.get('matchCarpools/' + SLUG);
+  assert.deepEqual(d.cars.map(c => [c.driverFamilyId, c.departureTime]).sort(), [['f1', '09:15'], ['f3', '06:15']]);
+});
+await testAsync('add, edit and remove each leave a log entry with the family that did it', async () => {
+  const fake = useFakeDb(sampleDbSeed()); state({ me: 'u1', links: { u1: { familyId: 'f2' } } });
+  render(); await withFakeNow(NOW, () => reg()('[data-iride]')[0].onclick());
+  S.matchCarpools = { [SLUG]: fake.get('matchCarpools/' + SLUG) }; render();
+  reg()('[data-editmatchcar]')[0].onclick(); setForm('f2', '08:15', ['f2']);
+  await withFakeNow(NOW, () => reg()('[data-savematchcar]')[0].onclick());
+  S.matchCarpools = { [SLUG]: fake.get('matchCarpools/' + SLUG) }; render();
+  await reg()('[data-delmatchcar]')[0].onclick();
+  const log = fake.get('matchCarpools/' + SLUG).log;
+  assert.deepEqual(log.map(e => [e.act, e.by]), [['add', 'f2'], ['edit', 'f2'], ['del', 'f2']]);
+  assert.equal(log[1].to.departureTime, '08:15'); assert.equal(typeof log[0].at, 'number');
+});
+await testAsync('Ongedaan puts the removed car back (as one more change) and logs it', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), ['matchCarpools/' + SLUG]: twoCars }); state({ matchCarpools: { [SLUG]: twoCars } }); render();
+  await reg()('[data-delmatchcar]')[1].onclick();
+  assert.deepEqual(fake.get('matchCarpools/' + SLUG).cars.map(c => c.driverFamilyId), ['f1']);
+  // meanwhile somebody adds another car: undoing must not wipe it
+  const mid = fake.get('matchCarpools/' + SLUG); mid.cars.push({ driverFamilyId: 'f4', girlIds: ['f4'], departureTime: '10:00' }); fake.store.set('matchCarpools/' + SLUG, mid);
+  assert.equal(toast(), 'Auto weggehaald Ongedaan');
+  // what the Ongedaan button does: one more change on the fresh document (the car of f4 added meanwhile stays)
+  const { changeMatchCar } = await import('../match-cars.js');
+  await changeMatchCar({ info: { startMs: 1 }, slug: SLUG, fromId: SLUG, change: { act: 'add', car: twoCars.cars[1], undo: true }, by: 'f1' });
+  const d = fake.get('matchCarpools/' + SLUG);
+  assert.deepEqual(d.cars.map(c => c.driverFamilyId).sort(), ['f1', 'f3', 'f4']); assert.deepEqual(d.log.map(e => e.act), ['del', 'undo']);
+});
+test('only the coordinator sees the log, newest first, with names and times', () => {
+  const log = [{ at: new Date('2026-10-01T19:41:00+02:00').getTime(), by: 'f3', act: 'add', car: { driverFamilyId: 'f3', departureTime: '22:00', girlIds: ['f5'] } },
+    { at: new Date('2026-10-01T20:05:00+02:00').getTime(), by: 'f1', act: 'del', car: { driverFamilyId: 'f3', departureTime: '22:00', girlIds: ['f5'] } }];
+  const doc = { ...carpool, cars, log };
+  state({ matchCarpools: { [SLUG]: doc } }); assert.doesNotMatch(render(), /matchLog/);   // a parent
+  coordState({ matchCarpools: { [SLUG]: doc } });
+  const s = text(render());
+  assert.match(s, /Wijzigingen aan deze carpool/);
+  assert.match(s, /Jan Jansen haalde een auto weg: Kees de Vries 22:00 \(Lois\)/);
+  assert.ok(s.indexOf('haalde een auto weg') < s.indexOf('voegde een auto toe'));   // newest first
+  coordState({ matchCarpools: { [SLUG]: { ...carpool, log: [null, { at: 'x' }, { at: 1 }] } } }); assert.doesNotMatch(render(), /matchLog/);   // malformed entries are ignored
+});
+await testAsync('changing a practice match leaves the cars alone (the match info follows on the fresh document)', async () => {
+  const slugP = 'x';
+  const fake = useFakeDb(sampleDbSeed());
+  state({ matches: [] });
+  const input = { calendarId: 'cal1', opponent: 'Test FC', isHome: true, location: 'afc34', date: '2026-10-04', time: '11:00' };
+  const r = await withFakeNowAsync(NOW, () => savePractice(input, null));
+  assert.ok(r.ok, JSON.stringify(r));
+  const k = 'matchCarpools/' + r.slug;
+  fake.store.set(k, { matchSlug: r.slug, startMs: 1, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '09:00' }] });
+  S.practiceMatches = { [r.id]: fake.get('practiceMatches/' + r.id) }; S.matchCarpools = { [r.slug]: fake.get(k) };
+  fake.interfereNextTransaction(k, { matchSlug: r.slug, startMs: 1, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '09:00' }, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '09:30' }] });
+  await withFakeNowAsync(NOW, () => savePractice({ ...input, time: '12:00' }, r.id));
+  assert.equal(fake.get(k).cars.length, 2); assert.notEqual(fake.get(k).startMs, 1);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

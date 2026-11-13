@@ -43,7 +43,7 @@ import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, p
 // The OpenRouteService key is NOT here: it lives in the database (settings/apiKeys, members only) -> S.orsApiKey.
 // ============================================================
 export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
-  const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, deleteField, signInAnonymously, query, where } = sdk;
+  const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, runTransaction, deleteField, signInAnonymously, query, where } = sdk;
   function wrapDocSnap(s){ return { id:s.id, exists:s.exists(), data:()=>s.data(), pending:!!(s.metadata&&s.metadata.hasPendingWrites) }; }
   // While startDataListeners() runs, every onSnapshot() made through this adapter drops its
   // unsubscribe function in here, so all member-only listeners can be stopped together.
@@ -74,6 +74,12 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
     doc: docRef, collection: collRef,
     batch: ()=>{ const b=writeBatch(firestoreDb); const r=p=>doc(firestoreDb, ...p.split('/'));
       return { set:(p,d,o)=>b.set(r(p),d,o), update:(p,d)=>b.update(r(p),d), delete:(p)=>b.delete(r(p)), commit:()=>b.commit() }; },
+    // One read-then-write that Firestore repeats when somebody else wrote the same documents in between: fn gets {get(path), set(path,data), delete(path)}
+    // (all reads before the first write). Needs a connection (a transaction cannot wait offline); the caller shows the failure.
+    transact: (fn)=>runTransaction(firestoreDb, async tx=>{
+      const r=p=>doc(firestoreDb, ...p.split('/'));
+      return fn({ get: async p=>wrapDocSnap(await tx.get(r(p))), set:(p,d,o)=>{ tx.set(r(p),d,o); }, delete:p=>{ tx.delete(r(p)); } });
+    }),
     deleteField: ()=>deleteField(),
     signIn: ()=>signInAnonymously(auth),
     authUid: ()=> (auth && auth.currentUser && auth.currentUser.uid) || null,
@@ -90,6 +96,7 @@ export const db = {
   doc: (p)=>dbImpl.doc(p),
   collection: (p)=>dbImpl.collection(p),
   batch: ()=>dbImpl.batch(),
+  transact: (fn)=>dbImpl.transact(fn),
   deleteField: ()=>dbImpl.deleteField(),
   signIn: ()=>dbImpl.signIn(),
   authUid: ()=> (dbImpl && dbImpl.authUid)? dbImpl.authUid() : null,

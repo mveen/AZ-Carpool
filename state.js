@@ -47,6 +47,7 @@ export const S = {
   practiceMatches: {},             // practiceMatches/<id>: practice matches added by the parents (see matches.js practiceToMatch)
   weekendMatchBySlug: {},
   openMatchCarpoolForm: null,
+  editMatchCarBefore: null,   // the car being edited as it was when the pencil was tapped (a change is matched on this, not on its position)
   editMatchCarIdx: null,   // index of the car being edited in the open match form (null = adding a new car)
   currentWeekKey: null,
   dayCoordinators: {},

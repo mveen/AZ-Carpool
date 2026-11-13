@@ -1202,5 +1202,16 @@ await testAsync('v225: storageProbe reports the sign-in database, the Firestore 
   try { assert.match(await storageProbe(), /^idb:err ls:/); }
   finally { if (had) Object.defineProperty(g, 'indexedDB', had); else delete g.indexedDB; }
 });
+await testAsync('transact(): reads then writes in one go; runs again on the new state when somebody wrote in between; refuses a read after a write', async () => {
+  const fake = useFakeDb({ 'x/a': { n: 1 } });
+  let runs = 0;
+  fake.interfereNextTransaction('x/a', { n: 10 });
+  const out = await db.transact(async tx => { runs++; const s = await tx.get('x/a'); tx.set('x/a', { n: s.data().n + 1 }); tx.delete('x/gone'); return s.exists; });
+  assert.equal(runs, 2); assert.equal(out, true); assert.deepEqual(fake.get('x/a'), { n: 11 });   // 10 (the other writer) + 1, not 1 + 1
+  await assert.rejects(() => db.transact(async tx => { tx.set('x/b', {}); await tx.get('x/a'); }), /reads to be executed before all writes/);
+  assert.equal(fake.get('x/b'), undefined);
+  const s2 = await db.transact(async tx => tx.get('x/none')); assert.equal(s2.exists, false);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
