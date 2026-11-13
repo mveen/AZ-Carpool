@@ -180,5 +180,7 @@ test('v244: the bus icon exists', () => { assert.match(PH_PATHS.bus, /^<path/); 
 
 test('v246: heen / terug per car of a match', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 246); });
 
+test('v247: terug without the bus shows the opponent and a rough time', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 247); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -653,13 +653,13 @@ test('by bus a leg without a car says so (Terug: a warning), and each leg has it
 test('without the bus only Heen is a full part; Terug is one quiet line with a button, and a car that drives both is just "rijdt ook terug"', () => {
   state({ matchCarpools: { [SLUG]: { ...carpool, cars } } });
   const html = render(), s = text(html);
-  assert.doesNotMatch(html, /scene--terug/); assert.match(s, /Heen aftrap 10:30 naar Sportpark Hoorn/); assert.match(s, /Terug: ouders nemen de speelster mee Terugrit regelen/); assert.match(s, /rijdt ook terug/);
+  assert.doesNotMatch(html, /scene--terug/); assert.match(s, /Heen aftrap 10:30 naar Hoorn O15-2/); assert.match(s, /Terug: ouders nemen de speelster mee Terugrit regelen/); assert.match(s, /rijdt ook terug/);
   assert.match(html, /data-addmatchcar="ev_cal1__e1\|terug"/); assert.doesNotMatch(s, /Nog geen auto om op te halen/);
 });
 test('without the bus a car that drives only Terug gets its own Terug part, and a car that drives both shows there as "zelfde auto als heen" (no buttons)', () => {
   state({ matchCarpools: { [SLUG]: { ...carpool, cars: [...cars, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '14:45', leg: 'terug' }] } } });
   const html = render(), terug = html.indexOf('scene--terug'), s = text(html.slice(terug));
-  assert.ok(terug > -1); assert.doesNotMatch(html, /matchLegQuiet/); assert.match(s, /Terug na afloop bij Sportpark Hoorn/); assert.match(s, /zelfde auto als heen/); assert.match(s, /14:45 Kees de Vries/); assert.match(s, /Ophalen bij Sportpark Hoorn/);
+  assert.ok(terug > -1); assert.doesNotMatch(html, /matchLegQuiet/); assert.match(s, /Terug na afloop bij Hoorn O15-2/); assert.match(s, /zelfde auto als heen/); assert.match(s, /± 14:45 Kees de Vries/); assert.match(s, /Ophalen bij Hoorn O15-2/); assert.doesNotMatch(s, /Sportpark Hoorn/);
   const terugHtml = html.slice(terug); assert.equal((terugHtml.match(/data-editmatchcar/g) || []).length, 1); assert.equal((terugHtml.match(/data-delmatchcar/g) || []).length, 1);   // only the terug car has buttons here
 });
 test('a car that arrives after the bus has left gets a warning in words (and is still shown, not blocked)', () => {
@@ -749,7 +749,7 @@ test('the car form of a bus match asks heen or terug, shows ONE time per choice 
 test('the car form without the bus offers heen en terug (default), alleen heen and alleen terug; the pick-up time is suggested 1,5 hours after kick-off', () => {
   state({ openMatchCarpoolForm: SLUG }); const html = render(), t_ = text(html);
   assert.match(t_, /Deze auto rijdt Heen en terug Alleen heen Alleen terug/); assert.match(html, /id="matchCarLeg_ev_cal1__e1" value="beide"/);
-  assert.match(html, /id="matchCarPickup_ev_cal1__e1" value="12:00"/); assert.match(t_, /Ophaaltijd bij Sportpark Hoorn/); assert.match(t_, /Voorgesteld: ongeveer 1,5 uur na aftrap\./);   // kick-off 10:30
+  assert.match(html, /id="matchCarPickup_ev_cal1__e1" value="12:00"/); assert.doesNotMatch(t_, /Ophaaltijd/); assert.match(html, /<input type="hidden" id="matchCarPickup_ev_cal1__e1"/); assert.match(t_, /± 12:00 \(na afloop\)/);   // kick-off 10:30
   assert.match(html, /id="matchTerugWrap_ev_cal1__e1" hidden/);
 });
 test('the segmented choice in the form switches the time fields and "Vertrek vanaf"; the choice goes into the hidden field', () => {

@@ -467,6 +467,10 @@ test('v246: the heen / terug texts exist, fill in their values and the pickup te
   assert.equal(t('wa.my.match_terug', { day: 'ZA 3', team: 'A', opponent: 'B', time: '16:15', driver: 'Jan' }), 'ZA 3 — wedstrijd A vs B: ophalen 16:15 met Jan');
 });
 
+test('v247: the legs name the opponent and the rough return time reads ± time (na afloop)', () => {
+  assert.equal(t('matches.leg_naar', { opponent: 'Hoorn O15-2' }), 'naar Hoorn O15-2'); assert.equal(t('matches.leg_van', { opponent: 'Hoorn O15-2' }), 'bij Hoorn O15-2'); assert.equal(t('matches.leg_ongeveer_na_afloop', { time: '18:45' }), '± 18:45 (na afloop)');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

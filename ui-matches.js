@@ -69,7 +69,7 @@ export function matchCarRowHtml(c, opts){
     lines = `<span class="matchCarFrom">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf',{place}))}</span>${subHtml}${alsoBack}`;
   }
   return `<div class="matchCarRow${mine?' mine':''}">
-    <span class="matchCarDep">${echo? '' : esc(c.departureTime||'--:--')}</span>
+    <span class="matchCarDep">${echo? '' : esc((opts.leg==='terug' && !busOn && c.departureTime? '± ' : '')+(c.departureTime||'--:--'))}</span>
     <span class="matchCarWho">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}${familyHtml}${lines}</span>
     ${editHtml}${delHtml}
   </div>`;
@@ -154,13 +154,14 @@ export function matchesCardHtml(){
       const quick = !own || ownDrives? '' : `<button type="button" class="btn small" data-iride="${slug}|${leg}">${phIcon('plus-circle')}${t(leg==='terug'? 'matches.ik_rij_terug' : busOn? 'matches.ik_rij_heen' : 'matches.ik_rij_ook')}</button>`;
       return `<div class="matchActions">${quick}<button type="button" class="btn small secondary" data-addmatchcar="${slug}|${leg}">${phIcon('car')}${t('matches.auto_toevoegen')}</button></div>`;
     };
+    const opponent = analyzeMatch(m.summary).opponent;   // the venue is already in the card header: the legs name the opponent instead
     const kick = m.start.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
     const legHtml = leg => {
       const rows = cars.map((c,idx)=>({c,idx})).filter(x=>coversLeg(x.c, leg, busOn))
-        .map(x=>matchCarRowHtml(x.c,{editable:true, slug:cp.id, idx:x.idx, bus, leg, pickupPlace: busOn? place : (m.location||'')})).join('');
+        .map(x=>matchCarRowHtml(x.c,{editable:true, slug:cp.id, idx:x.idx, bus, leg, pickupPlace: busOn? place : opponent})).join('');
       const head = busOn? `<button type="button" class="matchLeg__edit" data-busedit="${slug}" aria-label="${esc(t('matches.bus_tijden_aria'))}">${esc(legName(leg))} ${phIcon('pencil')}</button>` : `<span>${esc(legName(leg))}</span>`;
       const time = busOn? (leg==='heen'? (bus.depart||'--:--') : (bus.back? '± '+bus.back : '--:--')) : (leg==='heen'? t('matches.leg_aftrap',{time:kick}) : t('matches.leg_na_afloop'));
-      const sub = busOn? t(leg==='heen'? 'matches.leg_bus_heen_sub' : 'matches.leg_bus_terug_sub',{place}) : t(leg==='heen'? 'matches.leg_naar' : 'matches.leg_van',{venue:m.location||''});
+      const sub = busOn? t(leg==='heen'? 'matches.leg_bus_heen_sub' : 'matches.leg_bus_terug_sub',{place}) : t(leg==='heen'? 'matches.leg_naar' : 'matches.leg_van',{opponent});
       const empty = rows? '' : busOn && leg==='terug'? `<p class="matchLeg__empty">${phIcon('warning')} ${esc(t('matches.leg_geen_auto_terug'))}</p>` : `<p class="matchNote">${t('deviation.p_class_muted_style_font')}</p>`;
       return `<div class="scene scene--${leg} matchLeg"><div class="matchLeg__head">${head}</div><div class="matchLeg__time">${esc(time)}</div><div class="matchLeg__sub">${esc(sub)}</div>${rows? `<div class="matchLeg__cars">${rows}</div>` : empty}${buttonsFor(leg)}</div>`;
     };
@@ -207,9 +208,10 @@ export function matchesCardHtml(){
           ${busOn && bus.depart? `<p class="noteLine">${esc(t('matches.bus_form_hint', { depart: bus.depart, drive: BUS_DRIVE_MIN, margin: BUS_MARGIN_MIN }))}</p>` : ''}
         </div>
         <div id="matchTerugWrap_${slug}"${terug?'':' hidden'}>
-          <label for="matchCarPickup_${slug}">${esc(busOn? t('matches.bus_form_ophalen', { place }) : t('matches.leg_ophaal_venue', { venue: m.location||'' }))}</label>
+          ${busOn? `<label for="matchCarPickup_${slug}">${esc(t('matches.bus_form_ophalen', { place }))}</label>
           <input type="time" id="matchCarPickup_${slug}" value="${esc(suggestedBack)}">
-          <p class="noteLine">${esc(busOn? t('matches.leg_hint_bus_terug', { back: bus.back||'--:--' }) : t('matches.leg_hint_terug'))}</p>
+          <p class="noteLine">${esc(t('matches.leg_hint_bus_terug', { back: bus.back||'--:--' }))}</p>`
+          : `<input type="hidden" id="matchCarPickup_${slug}" value="${esc(suggestedBack)}"><p class="noteLine">${esc(t('matches.leg_ongeveer_na_afloop', { time: suggestedBack }))}</p>`}
         </div>
         <div class="formActions">
           <button type="button" class="btn small" data-savematchcar="${slug}">${t('deviation.opslaan')}</button>
