@@ -9,7 +9,7 @@ import { fam, playerSeats, familyRiding, seats } from './rides.js';
 import { ensureDistances, hasApiKey, fetchWithTimeout } from './distance.js';
 import { normalizeLocations } from './locations.js';
 import { isMemberNow } from './coordinator.js';
-import { busState } from './match-bus.js';
+import { busPlaceOf, busState } from './match-bus.js';
 
 export function activeMatchFeeds(){ return S.matchFeeds; }
 
@@ -25,6 +25,8 @@ export function busStateOf(m, doc){
   const feed = (S.matchFeeds||[]).find(f=>f.calendarId===(m && m.calendarId));
   return busState(analyzeMatch((m && m.summary)||''), feed, doc===undefined? carpoolFor(m).doc : doc);
 }
+// Where the bus of a match leaves: { key: 'AFC'|'ATC'|'OTHER', text } (AFC '34 unless changed).
+export function busPlaceOfMatch(m){ return busPlaceOf(carpoolFor(m).doc); }
 
 export function matchLabel(m){ return feedLabel(m && m.calendarId) || (m && m.teamLabel) || ''; }
 

@@ -453,6 +453,12 @@ test('v244: the bus texts exist and fill in their values', () => {
   assert.equal(t('matches.bus_carpool', { venue: "AFC '34", text: '36 km' }), "Carpool naar AFC '34 · 36 km");
 });
 
+
+test('v244: the bus place texts exist, the tag text is gone, the car label names the place', () => {
+  for (const k of ['matches.bus_plek_label', 'matches.bus_carpool_kort']) assert.ok(hasKey(k), k); assert.ok(!hasKey('matches.bus_aangepast'));
+  assert.equal(t('matches.bus_form_ophalen', { place: 'ATC' }), 'Terug ophalen bij ATC'); assert.equal(t('matches.bus_carpool_kort', { venue: 'Sporthal' }), 'Carpool naar Sporthal');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
 test('the removed shift map-button texts are gone', () => {

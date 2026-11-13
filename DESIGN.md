@@ -173,7 +173,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 ## Uitwedstrijd met de bus (v244)
 
-- **Switch in the match head:** the `.switch.switch--sm` of Mijn week (knob icon `bus`) at the right of `.matchHead` with `.swCap` ("met de bus" / "zonder bus"); a `.tag.tag--warn` "Aangepast" when the match differs from the team default (Beheer). Only on away matches in the plannable window; further out just a neutral `.tag` "met de bus".
+- **Switch in the match head:** the `.switch.switch--sm` of Mijn week (knob icon `bus`) at the right edge of `.matchHead`, with the caption `.swCap` ("met de bus" / "zonder bus") in front of it (the wrap is `flex-direction:row-reverse`). No "Aangepast" tag. Only on away matches in the plannable window; further out just a neutral `.tag` "met de bus".
 - **Bus times** `.busTimes` (`__cell`, `__cap`, `__time`, `__sub`): two buttons, Heen = `.scene--heen` (bus leaves), Terug = `.scene--terug` (bus back, with ±); one tap opens a `.sheet` with two time fields. Not known yet: one `.busTimes__cell--empty` (dashed amber, like `.dashBox`).
 - **Car line:** `.matchCarSub` under the pick-up place ("Aankomst 08:25 · terug ophalen 15:15"); `.matchCarSub--bad` (amber, bold, warning icon) when the car arrives after the bus left.
 - **Beheer (Wedstrijdkalenders):** per team `.feedBus` with a switch (saves at once) and, when on, the field "Niet met de bus tegen".

@@ -34,7 +34,6 @@ export function busDefaultFor(feed, opponent) {
 // The bus state of one match. `a` = analyzeMatch(summary) of the match, `feed` = the team's calendar entry (or undefined), `doc` = matchCarpools/<slug> (or null).
 //   applies  only an away match can go by bus (a home match never shows the bus)
 //   on       the bus is used for this match
-//   changed  the match differs from the default of the team (shown as "Aangepast")
 //   depart / back  the two bus times, '' when not filled in (or not a time)
 export function busState(a, feed, doc) {
   const applies = !!a && a.isHome === false;
@@ -42,7 +41,7 @@ export function busState(a, feed, doc) {
   const set = applies && doc && typeof doc.bus === 'boolean';
   const on = applies && (set ? doc.bus : def);
   return {
-    applies, on, changed: !!set && doc.bus !== def,
+    applies, on,
     depart: on && doc && validTime(doc.busDepart) ? doc.busDepart : '',
     back: on && doc && validTime(doc.busBack) ? doc.busBack : '',
   };
@@ -69,11 +68,20 @@ export function pickupOf(car, state) {
   return (car && validTime(car.pickupTime) ? car.pickupTime : '') || (state && state.back) || '';
 }
 
+// Where the bus leaves (and brings the team back): AFC '34 unless the doc says otherwise. Stored as `busAt` ('ATC') or a free `busAtText`;
+// nothing stored = AFC '34, so every carpool keeps working. Returns { key: 'AFC'|'ATC'|'OTHER', text }.
+export function busPlaceOf(doc) {
+  const text = String((doc && doc.busAtText) || '').trim();
+  if (text) return { key: 'OTHER', text };
+  return { key: doc && doc.busAt === 'ATC' ? 'ATC' : 'AFC', text: '' };
+}
+
 // What is stored for the bus times (no undefined: Firestore refuses it). Returns {ok:false} when a time is filled in wrongly.
-export function busPatch({ on, depart, back }) {
-  const d = String(depart || '').trim(), b = String(back || '').trim();
+export function busPatch({ on, depart, back, place, placeText }) {
+  const d = String(depart || '').trim(), b = String(back || '').trim(), txt = String(placeText || '').trim().slice(0, 80);
   if ((d && !validTime(d)) || (b && !validTime(b))) return { ok: false };
-  return { ok: true, patch: { bus: !!on, busDepart: d, busBack: b } };
+  if (place === 'OTHER' && !txt) return { ok: false };
+  return { ok: true, patch: { bus: !!on, busDepart: d, busBack: b, busAt: place === 'ATC' ? 'ATC' : '', busAtText: place === 'OTHER' ? txt : '' } };
 }
 
 // Stores bus fields on the carpool document of a match, in one transaction on the fresh document (a car that somebody added a moment ago stays).

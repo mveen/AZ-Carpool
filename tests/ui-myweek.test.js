@@ -568,5 +568,13 @@ test('the same match without the bus shows none of the bus lines', () => {
   assert.doesNotMatch(s, /Bus vertrekt|Carpool naar/);
 });
 
+
+test('by bus the Mijn week line names the place of the bus: ATC with its fixed distance, a free place without km', () => {
+  const doc = extra => ({ calendarId: 'cal1', eventId: 'e1', teamLabel: 'AZ O15-1', summary: 'Hoorn O15-2-AZ O15-1', location: 'Sportpark Hoorn', startMs: kick, bus: true, cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '08:10' }], ...extra });
+  const go = d => text(render({ matchCarpools: { ev_cal1__e1: d }, matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], locationsDoc: { fixedKm: { AFC: 36, ATC: 30 } } }));
+  assert.match(go(doc({ busAt: 'ATC' })), /Carpool naar AZ Trainingscomplex, Wijdewormer · 30 km/);
+  const s = go(doc({ busAtText: 'Sporthal Zuid' })); assert.match(s, /Carpool naar Sporthal Zuid/); assert.doesNotMatch(s, /Sporthal Zuid · \d+ km/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

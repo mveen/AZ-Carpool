@@ -11,7 +11,7 @@ async function testAsync(name, fn) {
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
 import { useFakeDb } from './test-support.js';
-import { BUS_DRIVE_MIN, BUS_MARGIN_MIN, busDefaultFor, busNotList, busPatch, busState, carArrival, carMissesBus, pickupOf, setMatchBus, suggestedBusCarDeparture, validTime } from '../match-bus.js';
+import { BUS_DRIVE_MIN, BUS_MARGIN_MIN, busDefaultFor, busNotList, busPatch, busPlaceOf, busState, carArrival, carMissesBus, pickupOf, setMatchBus, suggestedBusCarDeparture, validTime } from '../match-bus.js';
 
 const away = { isHome: false, opponent: 'FC Volendam' };
 const awayAjax = { isHome: false, opponent: 'Jong Ajax' };
@@ -33,24 +33,36 @@ test('a team goes by bus only when its switch is on; an opponent with one of the
 
 console.log('\n=== the state of one match ===');
 test('a home match never has the bus, whatever is stored', () => {
-  assert.deepEqual(busState(home, jong, { bus: true, busDepart: '08:45' }), { applies: false, on: false, changed: false, depart: '', back: '' });
+  assert.deepEqual(busState(home, jong, { bus: true, busDepart: '08:45' }), { applies: false, on: false, depart: '', back: '' });
   assert.equal(busState(null, jong, null).applies, false); assert.equal(busState({ isHome: null, opponent: '' }, jong, null).applies, false);
 });
 test('without anything stored the team default decides', () => {
-  assert.deepEqual(busState(away, jong, null), { applies: true, on: true, changed: false, depart: '', back: '' });
+  assert.deepEqual(busState(away, jong, null), { applies: true, on: true, depart: '', back: '' });
   assert.equal(busState(awayAjax, jong, null).on, false); assert.equal(busState(away, o17, null).on, false);
   assert.equal(busState(away, undefined, {}).on, false);   // a match of a calendar that is gone from Beheer: no bus
 });
-test('a stored true/false overrides the default and says "changed" only when it differs from it', () => {
-  assert.deepEqual(busState(awayAjax, jong, { bus: true }), { applies: true, on: true, changed: true, depart: '', back: '' });
-  assert.deepEqual(busState(away, jong, { bus: false }), { applies: true, on: false, changed: true, depart: '', back: '' });
-  assert.equal(busState(away, jong, { bus: true }).changed, false); assert.equal(busState(away, o17, { bus: false }).changed, false);
-  assert.deepEqual(busState(away, o17, { bus: true }), { applies: true, on: true, changed: true, depart: '', back: '' });
+test('a stored true/false overrides the default', () => {
+  assert.deepEqual(busState(awayAjax, jong, { bus: true }), { applies: true, on: true, depart: '', back: '' });
+  assert.deepEqual(busState(away, jong, { bus: false }), { applies: true, on: false, depart: '', back: '' });
+  assert.deepEqual(busState(away, o17, { bus: true }), { applies: true, on: true, depart: '', back: '' });
 });
 test('the bus times only count while the bus is on, and only when they are real times', () => {
-  assert.deepEqual(busState(away, jong, { busDepart: '08:45', busBack: '15:15' }), { applies: true, on: true, changed: false, depart: '08:45', back: '15:15' });
-  assert.deepEqual(busState(away, jong, { bus: false, busDepart: '08:45', busBack: '15:15' }), { applies: true, on: false, changed: true, depart: '', back: '' });
+  assert.deepEqual(busState(away, jong, { busDepart: '08:45', busBack: '15:15' }), { applies: true, on: true, depart: '08:45', back: '15:15' });
+  assert.deepEqual(busState(away, jong, { bus: false, busDepart: '08:45', busBack: '15:15' }), { applies: true, on: false, depart: '', back: '' });
   assert.equal(busState(away, jong, { busDepart: '8:45', busBack: '25:00' }).depart, ''); assert.equal(busState(away, jong, { busBack: 'laat' }).back, '');
+});
+
+console.log('\n=== where the bus leaves ===');
+test('AFC \'34 is the default; ATC and a free place can be chosen; the free text wins', () => {
+  assert.deepEqual(busPlaceOf(null), { key: 'AFC', text: '' }); assert.deepEqual(busPlaceOf({}), { key: 'AFC', text: '' });
+  assert.deepEqual(busPlaceOf({ busAt: 'ATC' }), { key: 'ATC', text: '' }); assert.deepEqual(busPlaceOf({ busAt: 'rubbish' }), { key: 'AFC', text: '' });
+  assert.deepEqual(busPlaceOf({ busAt: 'ATC', busAtText: '  Sporthal Zuid ' }), { key: 'OTHER', text: 'Sporthal Zuid' }); assert.deepEqual(busPlaceOf({ busAtText: '   ' }), { key: 'AFC', text: '' });
+});
+test('busPatch stores the place: ATC, a free place (needs text, trimmed) or the default (both fields empty)', () => {
+  assert.deepEqual(busPatch({ on: true, place: 'ATC', placeText: 'ignored' }).patch, { bus: true, busDepart: '', busBack: '', busAt: 'ATC', busAtText: '' });
+  assert.deepEqual(busPatch({ on: true, place: 'OTHER', placeText: ' Sporthal Zuid ' }).patch, { bus: true, busDepart: '', busBack: '', busAt: '', busAtText: 'Sporthal Zuid' });
+  assert.equal(busPatch({ on: true, place: 'OTHER', placeText: '  ' }).ok, false);
+  assert.deepEqual(busPatch({ on: true, place: 'AFC', placeText: 'x' }).patch, { bus: true, busDepart: '', busBack: '', busAt: '', busAtText: '' });
 });
 
 console.log('\n=== times of a car ===');
@@ -79,9 +91,9 @@ test('the pick-up time of a car is its own time, else the time of the bus, else 
 
 console.log('\n=== storing ===');
 test('busPatch stores the switch and both times without undefined values, empty times allowed, wrong times refused', () => {
-  assert.deepEqual(busPatch({ on: true, depart: '08:45', back: '15:15' }), { ok: true, patch: { bus: true, busDepart: '08:45', busBack: '15:15' } });
-  assert.deepEqual(busPatch({ on: false }), { ok: true, patch: { bus: false, busDepart: '', busBack: '' } });
-  assert.deepEqual(busPatch({ on: true, depart: ' 08:45 ', back: '' }).patch, { bus: true, busDepart: '08:45', busBack: '' });
+  assert.deepEqual(busPatch({ on: true, depart: '08:45', back: '15:15' }), { ok: true, patch: { bus: true, busDepart: '08:45', busBack: '15:15', busAt: '', busAtText: '' } });
+  assert.deepEqual(busPatch({ on: false }), { ok: true, patch: { bus: false, busDepart: '', busBack: '', busAt: '', busAtText: '' } });
+  assert.deepEqual(busPatch({ on: true, depart: ' 08:45 ', back: '' }).patch, { bus: true, busDepart: '08:45', busBack: '', busAt: '', busAtText: '' });
   assert.equal(busPatch({ on: true, depart: '8.45', back: '' }).ok, false); assert.equal(busPatch({ on: true, depart: '', back: '99:00' }).ok, false);
 });
 const SLUG = 'ev_cal1__e9';

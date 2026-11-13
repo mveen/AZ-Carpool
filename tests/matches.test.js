@@ -301,7 +301,7 @@ test('matchCarCapacityState: family riding along takes seats away from the playe
 
 
 console.log('\n=== busStateOf ===');
-import { busStateOf } from '../matches.js';
+import { busPlaceOfMatch, busStateOf } from '../matches.js';
 test('busStateOf: team default, per-match override, and not for a home match', () => {
   const away = { calendarId: 'cal1', eventId: 'b1', summary: 'Volendam O15-1-AZ O15-1', start: new Date('2026-10-03T10:30:00+02:00') };
   const ajax = { ...away, eventId: 'b2', summary: 'Jong Ajax-AZ O15-1' };
@@ -311,6 +311,14 @@ test('busStateOf: team default, per-match override, and not for a home match', (
   assert.equal(busStateOf(ajax, { bus: true, busDepart: '09:00' }).on, true); assert.equal(busStateOf(ajax, { bus: true, busDepart: '09:00' }).depart, '09:00');
   resetState({ matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], matchCarpools: {} });
   assert.equal(busStateOf(away).on, false);
+});
+
+
+test('busPlaceOfMatch: AFC \'34 unless the carpool of the match says ATC or a free place', () => {
+  const m = { calendarId: 'cal1', eventId: 'p1', summary: 'Volendam O15-1-AZ O15-1', start: new Date('2026-10-03T10:30:00+02:00') };
+  resetState({ matchCarpools: {} }); assert.deepEqual(busPlaceOfMatch(m), { key: 'AFC', text: '' });
+  resetState({ matchCarpools: { [matchSlug(m)]: { cars: [], busAt: 'ATC' } } }); assert.equal(busPlaceOfMatch(m).key, 'ATC');
+  resetState({ matchCarpools: { [matchSlug(m)]: { cars: [], busAtText: 'Sporthal' } } }); assert.deepEqual(busPlaceOfMatch(m), { key: 'OTHER', text: 'Sporthal' });
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

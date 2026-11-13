@@ -582,6 +582,7 @@ test('only the coordinator sees the log, newest first, with names and times', ()
     { at: new Date('2026-10-01T20:05:00+02:00').getTime(), by: 'f1', act: 'del', car: { driverFamilyId: 'f3', departureTime: '22:00', girlIds: ['f5'] } }];
   const doc = { ...carpool, cars, log };
   state({ matchCarpools: { [SLUG]: doc } }); assert.doesNotMatch(render(), /matchLog/);   // a parent
+  coordState({ viewAsParent: true, matchCarpools: { [SLUG]: doc } }); assert.doesNotMatch(render(), /matchLog/);   // the coordinator looking as a parent (Bekijk als ouder)
   coordState({ matchCarpools: { [SLUG]: doc } });
   const s = text(render());
   assert.match(s, /Wijzigingen aan deze carpool/);
@@ -627,12 +628,12 @@ test('a home match has no bus switch and no bus text, and a match without the bu
   const html = render();
   assert.match(html, /aria-checked="false"[^>]*data-busswitch/); assert.match(text(html), /zonder bus/); assert.doesNotMatch(html, /busTimes|Aangepast/);
 });
-test('an opponent in the "niet met de bus tegen" list means no bus by default; switching it on shows "Aangepast"', () => {
+test('an opponent in the "niet met de bus tegen" list means no bus by default; switching it on there is no "Aangepast" tag', () => {
   busState_({ matches: [bmAjax] });
   assert.match(render(), /aria-checked="false"[^>]*data-busswitch/);
   const slug = 'ev_cal1__e5';
   busState_({ matches: [bmAjax], matchCarpools: { [slug]: { ...bdoc({ eventId: 'e5', matchSlug: slug, summary: bmAjax.summary }), bus: true } } });
-  const html = render(); assert.match(html, /aria-checked="true"[^>]*data-busswitch/); assert.match(text(html), /Aangepast/); assert.match(html, /tag tag--warn/);
+  const html = render(); assert.match(html, /aria-checked="true"[^>]*data-busswitch/); assert.doesNotMatch(text(html), /Aangepast/); assert.doesNotMatch(html, /tag tag--warn/);
 });
 test('both bus times show as tiles (Heen, Terug with ±), and every car says when it arrives and when it picks up', () => {
   const c1 = { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:45' };
@@ -688,6 +689,32 @@ await testAsync('saving the sheet stores both times; an empty field means "not k
   assert.equal(d.bus, true); assert.equal(d.busDepart, '08:45'); assert.equal(d.busBack, '15:15'); assert.equal(toast(), 'Bustijden opgeslagen ✓ Ongedaan');
   await dom.el('toast').onclick({ target: { id: 'toastAction' } });   // Ongedaan: back to "not known"
   assert.equal(fake.get('matchCarpools/' + BSLUG).busDepart, ''); assert.equal(fake.get('matchCarpools/' + BSLUG).busBack, '');
+});
+test('the bus sheet has a "Waar vertrekt de bus?" select with AFC \'34 as default, ATC and Andere locatie (text field hidden until chosen)', () => {
+  busState_({ matchCarpools: { [BSLUG]: bdoc({}) } }); render();
+  const h = busSheetHtml(BSLUG);
+  assert.match(text(h), /Waar vertrekt de bus\?/); assert.match(h, /<option value="AFC" selected>/); assert.match(h, /<option value="ATC">/); assert.match(h, /<option value="OTHER">/); assert.match(h, /id="busPlaceTxt"[^>]*hidden/);
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busAt: 'ATC' }) } }); render(); assert.match(busSheetHtml(BSLUG), /<option value="ATC" selected>/);
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busAtText: 'Sporthal Zuid' }) } }); render();
+  const o = busSheetHtml(BSLUG); assert.match(o, /<option value="OTHER" selected>/); assert.match(o, /id="busPlaceTxt"[^>]*value="Sporthal Zuid"/); assert.doesNotMatch(o, /id="busPlaceTxt"[^>]*hidden/);
+});
+await testAsync('saving the sheet stores the place (ATC or a free place; a free place needs a name) and undo brings the old one back', async () => {
+  const fake = useFakeDb(sampleDbSeed()); busState_(); render();
+  openBusSheet(BSLUG);
+  dom.el('busPlaceSel').value = 'OTHER'; dom.el('busPlaceTxt').value = '  '; await dom.el('busSave').onclick();
+  assert.equal(fake.get('matchCarpools/' + BSLUG), undefined); assert.equal(dom.el('busErr').hidden, false);
+  dom.el('busPlaceSel').value = 'ATC'; await withFakeNow(NOW, () => dom.el('busSave').onclick());
+  assert.equal(fake.get('matchCarpools/' + BSLUG).busAt, 'ATC'); assert.equal(fake.get('matchCarpools/' + BSLUG).busAtText, '');
+  await dom.el('toast').onclick({ target: { id: 'toastAction' } });
+  assert.equal(fake.get('matchCarpools/' + BSLUG).busAt, '');
+});
+test('the card and the car form name the place of the bus: AFC \'34 by default, ATC with its fixed distance, a free place without km', () => {
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) }, openMatchCarpoolForm: BSLUG }); let s = text(render());
+  assert.match(s, /Carpool naar AFC '34, Alkmaar · 36 km/); assert.match(s, /Terug ophalen bij AFC '34, Alkmaar/);
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busAt: 'ATC', busDepart: '08:45', busBack: '15:15' }) }, openMatchCarpoolForm: BSLUG }); s = text(render());
+  assert.match(s, /Carpool naar AZ Trainingscomplex, Wijdewormer · 30 km/); assert.match(s, /Terug ophalen bij AZ Trainingscomplex, Wijdewormer/);
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busAtText: 'Sporthal Zuid', busDepart: '08:45', busBack: '15:15' }) } }); s = text(render());
+  assert.match(s, /Carpool naar Sporthal Zuid(?! ·)/); assert.doesNotMatch(s, /Sporthal Zuid · \d+ km/);
 });
 test('the car form of a bus match suggests the departure from the bus time and fills the pick-up time with the time of the bus', () => {
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15' }) }, openMatchCarpoolForm: BSLUG });

@@ -434,5 +434,10 @@ test('the article about away matches by bus exists, belongs to the Wedstrijden t
   assert.ok(ids('bus').includes('wedstrijd-bus')); assert.ok(ids('busrit uitwedstrijd').includes('wedstrijd-bus'));
 });
 
+
+test('the bus article says where the bus leaves (AFC \'34 by default, changeable) and no longer mentions the tag Aangepast', () => {
+  const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.match(allText(a), /standaard AFC '34/); assert.match(allText(a), /andere locatie/); assert.doesNotMatch(allText(a), /Aangepast/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

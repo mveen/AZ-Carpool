@@ -1164,7 +1164,8 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 
 /* ---------- Wedstrijden: away match by team bus (match-bus.js). The bus switch sits at the right of the match head; the two bus times
    are one tap target each (Heen/Terug tints as in Rooster); a car says when it is at AFC '34 and when it picks up. ---------- */
-.matchHead .swWrap{margin-left:auto}
+.matchHead .swWrap{margin-left:auto;flex-direction:row-reverse;gap:var(--space-3)}   /* caption in front of the switch, switch at the right edge */
+.matchHead .swCap{margin-top:0}
 .matchHead .switch{margin:calc(var(--space-3) * -1) 0}
 .busTimes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-3);margin-top:var(--space-5)}
 .busTimes__cell{appearance:none;font:inherit;color:var(--text-1);text-align:left;cursor:pointer;min-height:var(--hit-min);border:1px solid var(--edge);border-radius:var(--radius-car);padding:var(--space-4) var(--space-5)}
