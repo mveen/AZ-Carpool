@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "67e053778a0fd24d7332c4461bd387014581a76ab20f3248bf25c15f9bd708dc",
-    "test": "6c2ef252415cbf21d113819185de2f93f9b87aece282376f9c25508c09949e1e"
+    "module": "4701affab62e8a2d6150d9ab3066cee8ddad60bd5f4d3a9e73845f226f99b0b9",
+    "test": "c2e6c915687ae3e49746624c9e9cca37a93502fd0164befb52cdc047bb9fa70d"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -73,7 +73,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "320a45243e118827d16cae699bd08f7ccf96c668d4c90fd641b01c2b2ca6848f"
+    "test": "2d6e14606e72c87298a00982ea4a7381f263bec2d60833d3438ce4bd95773e6d"
   },
   "impact.js": {
     "module": "3331fff22946674b641a3917ade2b484ad0ae1021f3c24d3f00f65bf5c483939",
@@ -180,8 +180,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "626cf184ca948306444ac8dfef7254303dc568db064bd73157fc7e6769a373e7",
-    "test": "320a45243e118827d16cae699bd08f7ccf96c668d4c90fd641b01c2b2ca6848f"
+    "module": "bf83275bee45b0f142e5451566f61a7137bd6b4c4e91a19ef0c7439546cd7513",
+    "test": "2d6e14606e72c87298a00982ea4a7381f263bec2d60833d3438ce4bd95773e6d"
   },
   "ui-agenda.js": {
     "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
@@ -224,8 +224,8 @@
     "test": "8f030fa18a1071da21144733234d50cb6eeddc646cc4c7903658ba24bc7c356f"
   },
   "ui-matches.js": {
-    "module": "39c51fadb279374c63f89f170cc338f37216fe7d119d4cd6bc43a9a3fb16dde1",
-    "test": "3d0cbb5ed012be68e546f183ee7b550273aa1e203d1e618841b91e0268a0a05b"
+    "module": "9822bc614f7c24895e17c0a5b374cf008e2780adb36114af1577646d16cd79b8",
+    "test": "69dfa4a5d6d2efe78687f7cef1caeef9bfd9fd47ce8018b51cebde11bba86acd"
   },
   "ui-myweek.js": {
     "module": "cc9b6e66ef904c6bbd5e5388f009ff8dec8593d37aa52400269500b6e3b5e1bd",

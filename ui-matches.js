@@ -68,8 +68,11 @@ export function matchCarRowHtml(c, opts){
     const alsoBack = opts.leg==='heen' && !busOn && own==='beide'? `<span class="matchCarSub">${esc(t('matches.leg_ook_terug'))}</span>` : '';
     lines = `<span class="matchCarFrom">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf',{place}))}</span>${subHtml}${alsoBack}`;
   }
+  // In a leg the time is the one the car leaves (heen) or picks up (terug), big and with its meaning under it. Outside a leg: the time alone.
+  const depTime = esc(c.departureTime||'--:--');
+  const depHtml = opts.leg? `<b>${depTime}</b><small>${esc(t(opts.leg==='terug'? (busOn? 'matches.car_ophalen' : 'matches.car_ca_ophalen') : 'matches.car_vertrek'))}</small>` : depTime;
   return `<div class="matchCarRow${mine?' mine':''}">
-    <span class="matchCarDep">${echo? '' : esc((opts.leg==='terug' && !busOn && c.departureTime? '± ' : '')+(c.departureTime||'--:--'))}</span>
+    <span class="matchCarDep">${echo? '' : depHtml}</span>
     <span class="matchCarWho">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}${familyHtml}${lines}</span>
     ${editHtml}${delHtml}
   </div>`;
@@ -78,13 +81,15 @@ export function matchCarRowHtml(c, opts){
 // A match card. A practice match gets a pencil and a trash button next to its title (anyone may change or remove it).
 function matchCardHtml(m, bodyHtml, info){
   const infoOpts = {geo:true, ...(info||{})};
-  if(!isPracticeMatch(m)) return `<div class="card matchCard">${matchInfoHtml(m,infoOpts)}${bodyHtml}</div>`;
+  // One framed whole per match: the head (date, title, place, kick-off) on a violet glow, under it the legs and cars.
+  const frame = head => `<div class="card matchCard matchFrame"><div class="matchFrame__head">${head}</div><div class="matchFrame__body">${bodyHtml}</div></div>`;
+  if(!isPracticeMatch(m)) return frame(matchInfoHtml(m,infoOpts));
   const id = esc(practiceIdOf(m));
   const tools = `<div class="matchTools">
     <button type="button" class="iconbtn" data-editpractice="${id}" aria-label="${esc(t('matches.oefen_wijzig_aria'))}" title="${esc(t('matches.oefen_wijzig_aria'))}">${phIcon('pencil')}</button>
     <button type="button" class="iconbtn danger" data-delpractice="${id}" aria-label="${esc(t('matches.oefen_verwijder_aria'))}" title="${esc(t('matches.oefen_verwijder_aria'))}">${phIcon('trash')}</button>
   </div>`;
-  return `<div class="card matchCard"><div class="matchCard__top">${matchInfoHtml(m,infoOpts)}${tools}</div>${bodyHtml}</div>`;
+  return frame(`<div class="matchCard__top">${matchInfoHtml(m,infoOpts)}${tools}</div>`);
 }
 
 // ---------- Met de bus (match-bus.js) ----------
@@ -160,10 +165,10 @@ export function matchesCardHtml(){
       const rows = cars.map((c,idx)=>({c,idx})).filter(x=>coversLeg(x.c, leg, busOn))
         .map(x=>matchCarRowHtml(x.c,{editable:true, slug:cp.id, idx:x.idx, bus, leg, pickupPlace: busOn? place : opponent})).join('');
       const head = busOn? `<button type="button" class="matchLeg__edit" data-busedit="${slug}" aria-label="${esc(t('matches.bus_tijden_aria'))}">${esc(legName(leg))} ${phIcon('pencil')}</button>` : `<span>${esc(legName(leg))}</span>`;
-      const time = busOn? (leg==='heen'? (bus.depart||'--:--') : (bus.back? '± '+bus.back : '--:--')) : (leg==='heen'? t('matches.leg_aftrap',{time:kick}) : t('matches.leg_na_afloop'));
-      const sub = busOn? t(leg==='heen'? 'matches.leg_bus_heen_sub' : 'matches.leg_bus_terug_sub',{place}) : t(leg==='heen'? 'matches.leg_naar' : 'matches.leg_van',{opponent});
+      const when = busOn? (leg==='heen'? (bus.depart||'--:--') : (bus.back? '± '+bus.back : '--:--')) : (leg==='heen'? t('matches.leg_aftrap',{time:kick}) : t('matches.leg_na_afloop'));
+      const sub = busOn? t(leg==='heen'? 'matches.leg_bus_heen_sub' : 'matches.leg_bus_terug_sub',{place}) : '';   // without the bus the opponent is already in the header
       const empty = rows? '' : busOn && leg==='terug'? `<p class="matchLeg__empty">${phIcon('warning')} ${esc(t('matches.leg_geen_auto_terug'))}</p>` : `<p class="matchNote">${t('deviation.p_class_muted_style_font')}</p>`;
-      return `<div class="scene scene--${leg} matchLeg"><div class="matchLeg__head">${head}</div><div class="matchLeg__time">${esc(time)}</div><div class="matchLeg__sub">${esc(sub)}</div>${rows? `<div class="matchLeg__cars">${rows}</div>` : empty}${buttonsFor(leg)}</div>`;
+      return `<div class="matchLeg matchLeg--${leg}"><div class="matchLeg__head">${head}<span class="matchLeg__when">${esc(when)}</span></div>${sub? `<div class="matchLeg__sub">${esc(sub)}</div>` : ''}${rows? `<div class="matchLeg__cars">${rows}</div>` : empty}${buttonsFor(leg)}</div>`;
     };
     const hasTerugCar = cars.some(c=>legOf(c, busOn)==='terug');
     const quietBack = busOn || hasTerugCar || isOpen? '' : `<div class="matchLegQuiet">${phIcon('users')}<span>${esc(t('matches.leg_terug_stil'))}</span><button type="button" class="btn small secondary" data-addmatchcar="${slug}|terug">${esc(t('matches.leg_terug_regelen'))}</button></div>`;

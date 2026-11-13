@@ -638,29 +638,46 @@ test('an opponent in the "niet met de bus tegen" list means no bus by default; s
 test('by bus the card has a Heen and a Terug part: the bus times in each, every car in its own leg (a car without leg counts as heen)', () => {
   const c1 = { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:45', leg: 'heen' }, c3 = { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '07:50' };
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [c1, c3, { driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '15:45', leg: 'terug' }] }) } });
-  const html = render(), s = text(html), terug = html.indexOf('scene--terug'), heenS = text(html.slice(0, terug)), terugS = text(html.slice(terug));
+  const html = render(), s = text(html), terug = html.indexOf('matchLeg--terug'), heenS = text(html.slice(0, terug)), terugS = text(html.slice(terug));
   assert.match(heenS, /Heen 08:45 bus vertrekt bij AFC '34, Alkmaar/); assert.match(terugS, /Terug ± 15:15 bus weer terug bij AFC '34, Alkmaar/); assert.doesNotMatch(s, /Bustijden nog niet bekend/);
-  assert.match(heenS, /07:45 Jan Jansen/); assert.match(heenS, /Aankomst 08:25/); assert.match(heenS, /07:50 Kees de Vries/); assert.match(heenS, /Aankomst 08:30/);
-  assert.match(terugS, /15:45 Jan Jansen/); assert.match(terugS, /Ophalen bij AFC '34, Alkmaar/); assert.doesNotMatch(terugS, /Aankomst|Vertrek vanaf/); assert.doesNotMatch(heenS, /15:45/);
+  assert.match(heenS, /07:45 vertrek Jan Jansen/); assert.match(heenS, /Aankomst 08:25/); assert.match(heenS, /07:50 vertrek Kees de Vries/); assert.match(heenS, /Aankomst 08:30/);
+  assert.match(terugS, /15:45 ophalen Jan Jansen/); assert.match(terugS, /Ophalen bij AFC '34, Alkmaar/); assert.doesNotMatch(terugS, /Aankomst|Vertrek vanaf/); assert.doesNotMatch(heenS, /15:45/);
   assert.match(html, /aria-label="Bustijden invullen of wijzigen"/);   // the pencil in the head of each leg opens the bus sheet
 });
 test('by bus a leg without a car says so (Terug: a warning), and each leg has its own buttons: Ik rij heen / Ik rij terug', () => {
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '07:45', leg: 'heen' }] }) }, me: 'f9', links: { f9: { familyId: 'f3' } } });
-  const html = render(), terug = html.indexOf('scene--terug'), s = text(html.slice(terug));
+  const html = render(), terug = html.indexOf('matchLeg--terug'), s = text(html.slice(terug));
   assert.match(s, /Nog geen auto om op te halen/); assert.match(text(html.slice(0, terug)), /Ik rij heen/); assert.match(s, /Ik rij terug/);
   assert.match(html, /data-addmatchcar="ev_cal1__e4\|heen"/); assert.match(html, /data-addmatchcar="ev_cal1__e4\|terug"/); assert.match(html, /data-iride="ev_cal1__e4\|terug"/);
 });
 test('without the bus only Heen is a full part; Terug is one quiet line with a button, and a car that drives both is just "rijdt ook terug"', () => {
   state({ matchCarpools: { [SLUG]: { ...carpool, cars } } });
   const html = render(), s = text(html);
-  assert.doesNotMatch(html, /scene--terug/); assert.match(s, /Heen aftrap 10:30 naar Hoorn O15-2/); assert.match(s, /Terug: ouders nemen de speelster mee Terugrit regelen/); assert.match(s, /rijdt ook terug/);
+  assert.doesNotMatch(html, /matchLeg--terug/); assert.match(s, /Heen aftrap 10:30/); assert.doesNotMatch(s, /naar Hoorn O15-2/); assert.match(s, /Terug: ouders nemen de speelster mee Terugrit regelen/); assert.match(s, /rijdt ook terug/);
   assert.match(html, /data-addmatchcar="ev_cal1__e1\|terug"/); assert.doesNotMatch(s, /Nog geen auto om op te halen/);
 });
 test('without the bus a car that drives only Terug gets its own Terug part, and a car that drives both shows there as "zelfde auto als heen" (no buttons)', () => {
   state({ matchCarpools: { [SLUG]: { ...carpool, cars: [...cars, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '14:45', leg: 'terug' }] } } });
-  const html = render(), terug = html.indexOf('scene--terug'), s = text(html.slice(terug));
-  assert.ok(terug > -1); assert.doesNotMatch(html, /matchLegQuiet/); assert.match(s, /Terug na afloop bij Hoorn O15-2/); assert.match(s, /zelfde auto als heen/); assert.match(s, /± 14:45 Kees de Vries/); assert.match(s, /Ophalen bij Hoorn O15-2/); assert.doesNotMatch(s, /Sportpark Hoorn/);
+  const html = render(), terug = html.indexOf('matchLeg--terug'), s = text(html.slice(terug));
+  assert.ok(terug > -1); assert.doesNotMatch(html, /matchLegQuiet/); assert.match(s, /Terug na afloop/); assert.match(s, /zelfde auto als heen/); assert.match(s, /14:45 ca\. ophalen Kees de Vries/); assert.match(s, /Ophalen bij Hoorn O15-2/); assert.doesNotMatch(s, /Sportpark Hoorn/);
   const terugHtml = html.slice(terug); assert.equal((terugHtml.match(/data-editmatchcar/g) || []).length, 1); assert.equal((terugHtml.match(/data-delmatchcar/g) || []).length, 1);   // only the terug car has buttons here
+});
+test('v249: a match is one framed whole: head with the violet glow, then the legs; the big time of a car is its departure, with its meaning under it', () => {
+  state({ matchCarpools: { [SLUG]: { ...carpool, cars: [...cars, { driverFamilyId: 'f3', girlIds: ['f5'], departureTime: '14:45', leg: 'terug' }] } } });
+  const html = render();
+  assert.match(html, /<div class="card matchCard matchFrame"><div class="matchFrame__head">[\s\S]*<\/div><div class="matchFrame__body">/);
+  assert.equal((html.match(/class="card matchCard matchFrame"/g) || []).length, 1);   // one frame for this one match
+  assert.match(html, /<span class="matchCarDep"><b>[0-9:]+<\/b><small>vertrek<\/small><\/span>/);   // heen: the car leaves
+  assert.match(html, /<span class="matchCarDep"><b>14:45<\/b><small>ca\. ophalen<\/small><\/span>/);   // terug without the bus: about when it picks up
+  assert.doesNotMatch(html, /matchLeg__time|scene--heen|scene--terug/);   // no more big block with the match time in each leg
+  assert.doesNotMatch(matchCarRowHtml(cars[0], {}), /<small>/);   // outside a leg the time stays alone, no label
+});
+test('v249: by bus the leg head has the bus time on the right and the bus line under it, and a car picks up "ophalen"', () => {
+  busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '15:45', leg: 'terug' }] }) } });
+  const html = render();
+  assert.match(html, /<span class="matchLeg__when">08:45<\/span><\/div><div class="matchLeg__sub">bus vertrekt bij AFC (?:'|&#39;)34, Alkmaar<\/div>/);
+  assert.match(html, /<span class="matchLeg__when">± 15:15<\/span><\/div><div class="matchLeg__sub">bus weer terug bij AFC (?:'|&#39;)34, Alkmaar<\/div>/);
+  assert.match(html, /<b>15:45<\/b><small>ophalen<\/small>/);
 });
 test('a car that arrives after the bus has left gets a warning in words (and is still shown, not blocked)', () => {
   busState_({ matchCarpools: { [BSLUG]: bdoc({ busDepart: '08:45', busBack: '15:15', cars: [{ driverFamilyId: 'f1', girlIds: ['f2'], departureTime: '08:10' }] }) } });

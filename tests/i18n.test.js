@@ -34,6 +34,7 @@ test('Beheer has texts for the "Eigen ouder rijdt mee" rule (block title, explan
   assert.equal(t('beheer.kies_een_meisje'), 'Kies een speelster.');
   assert.equal(t('beheer.eigen_ouder_waarschuwing', { p1: 'Eline' }), 'Let op: de eigen ouder rijdt, maar Eline zit in een andere auto (regel over deze ouder-dochter-koppeling is vastgelegd in de planningsinstellingen).');
 });
+test('v249: the car rows of a match say what their big time is (vertrek, ophalen, ca. ophalen)', () => { assert.equal(t('matches.car_vertrek'), 'vertrek'); assert.equal(t('matches.car_ophalen'), 'ophalen'); assert.equal(t('matches.car_ca_ophalen'), 'ca. ophalen'); });
 test('Beheer has texts for the open-all / close-all button', () => { assert.equal(t('beheer.alles_open'), 'Alles openklappen'); assert.equal(t('beheer.alles_dicht'), 'Alles dichtklappen'); });
 test('Wijzigen has texts for deleting a car (button, toast, confirmation naming the passengers)', () => {
   assert.equal(t('deviation.verwijder_auto'), 'Verwijder auto');
