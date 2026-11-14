@@ -17,7 +17,7 @@ import {
   fam, seats, playerSeats, familyRiding, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
   planOptions, ownCarWarning, ownCarBrokenNames, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
-  baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
+  baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture,
   shownTime, setAskedTimeOf, periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
 
@@ -419,13 +419,6 @@ test('unplacedFor "week": uses the riders of the temporary rooster; "standard" i
   assert.deepEqual(ids(unplacedFor('Do', 'terug', 'week', st)).includes('f2'), false);       // out that day
   assert.deepEqual(ids(unplacedFor('Do', 'terug', 'standard', st)).includes('f2'), true);
   assert.deepEqual(ids(unplacedFor('Di', 'terug', 'week', st)), ['f1', 'f2', 'f5', 'f6']);   // XCARS has only f4
-});
-test('shiftFamilies: the planning sees the handed-in time for that shift only; nothing else changes and the input is not touched', () => {
-  const st = pst(), before = JSON.stringify(st.families);
-  const fs = shiftFamilies('Di', 'terug', st);
-  assert.equal(fs.f2.schedule.Di.terug, '12:30'); assert.equal(fs.f2.schedule.Di.heen, '10:15'); assert.equal(fs.f2.schedule.Ma.terug, '17:30');
-  assert.equal(fs.f1.schedule.Di.terug, '17:30'); assert.equal(JSON.stringify(st.families), before);
-  assert.equal(shiftFamilies('Ma', 'heen', st), st.families, 'no temporary rooster for this shift: the families themselves');
 });
 test('the temporary rooster by date: riders, cars, unplaced, departure', () => {
   const st = pst();

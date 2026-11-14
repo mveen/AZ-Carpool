@@ -289,12 +289,11 @@ test('the push messages: a parent article (how to switch on, per phone, iPhone),
   assert.match(privacy, /op één uitzondering na: het push-adres/); assert.match(services, /Push-meldingen: alleen bij Ruilen en alleen als je ze zelf aanzet/);
   assert.doesNotMatch([a, findArticle('ritbeurs'), findArticle('beheer-ritbeurs', { canEdit: true })].map(x => allText(x)).join(' '), /Ritbeurs/, 'the screen name is Ruilen everywhere');
 });
-test('help explains the avatar choice, Ik rijd, Gereden shifts and the impact preview', () => {
+test('help explains the avatar choice, Ik rijd, and Gereden shifts', () => {
   assert.equal(top('avatar kiezen'), 'avatar'); assert.ok(!findArticle('avatar').coordinatorOnly);
   assert.match(allText(findArticle('wedstrijden')), /Ik rijd[\s\S]*Mijn auto weghalen/);
   ['Alle shifts bekijken', 'Verwijder shift', 'Terugzetten', 'Export'].forEach(w => assert.ok(allText(findArticle('beheer-gereden-shifts', { canEdit: true })).includes(w), w));
-  assert.equal(findArticle('beheer-gereden-shifts', { canEdit: false }), null); assert.equal(findArticle('beheer-impact', { canEdit: false }), null);
-  assert.match(allText(findArticle('beheer-impact', { canEdit: true })), /Impact-preview \(pilot\)/);
+  assert.equal(findArticle('beheer-gereden-shifts', { canEdit: false }), null);
   assert.match(allText(findArticle('wat-is')), /Instellingen/);
 });
 test('the avatar article quotes names that exist in the app', () => {

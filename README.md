@@ -42,7 +42,6 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `locations.js` | Pickup/drop-off places per shift, one-off override, map links (Android `geo:`, otherwise Google Maps), AFC/ATC fixed venues (pure functions) | `locations.test.js` |
 | `ov.js` | "Terug met OV": take a daughter out of a terug ride and back (pure functions) | `ov.test.js` |
 | `distance.js` | Projected distance of away matches: OpenRouteService calls, calculate once, store per match | `distance.test.js` |
-| `impact.js` | Impact preview on a deviation (pilot, removable): analysis, on/off switch, save gate | `impact.test.js` |
 | `period.js` | "Periode met andere tijden" (holiday, exam week): validation of the Beheer form, the phases waiting/open/closed/over, and the times a family hands in (pure functions) | `period.test.js` |
 | `period-backup.js` | Back-ups of one period (settings + handed-in times + temporary rooster): build, check, what changed since, plan the restore (pure functions) | `period-backup.test.js` |
 | `family-backup.js` | Back-up / restore of the families as one CSV file: build, read, check, plan the overwrite (pure functions) | `family-backup.test.js` |
@@ -114,7 +113,7 @@ The detailed notes per feature live in `docs/functies/`, moved there unchanged f
 | Periode met andere tijden | [`docs/functies/periode-andere-tijden.md`](docs/functies/periode-andere-tijden.md) | *Periode met andere tijden (holiday, exam week)* |
 | Melding voor iedereen en onderhoudsmodus | [`docs/functies/melding-en-onderhoud.md`](docs/functies/melding-en-onderhoud.md) | *Melding voor iedereen (notice bar)* · *Onderhoudsmodus (app temporarily closed)* |
 | Wedstrijden-tab | [`docs/functies/wedstrijden.md`](docs/functies/wedstrijden.md) | *Wedstrijden tab* |
-| Ritplekken, Terug met OV, afstand, impact, route | [`docs/functies/ritplekken-afstand-route.md`](docs/functies/ritplekken-afstand-route.md) | *Ritplekken, Terug met OV, afstand, impact-preview, route (US-15, 06, 21, 07, 22)* |
+| Ritplekken, Terug met OV, afstand, route | [`docs/functies/ritplekken-afstand-route.md`](docs/functies/ritplekken-afstand-route.md) | *Ritplekken, Terug met OV, afstand, route (US-15, 06, 21, 22)* |
 | Help | [`docs/functies/help.md`](docs/functies/help.md) | *Help ("?" in the header)* |
 | Push-meldingen (test en live) | [`docs/functies/push-meldingen.md`](docs/functies/push-meldingen.md) | *Push-meldingen (test en live)* |
 | Inloggen (gate) en het foutlogboek | [`docs/functies/inloggen-en-foutlogboek.md`](docs/functies/inloggen-en-foutlogboek.md) | *Inloggen (gate) and the error log (v88)* |

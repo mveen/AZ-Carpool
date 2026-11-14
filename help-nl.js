@@ -556,18 +556,6 @@ export default [
     tab: 'beheer',
   },
   {
-    id: 'beheer-impact',
-    title: 'Beheer: de impact-preview aan- of uitzetten (pilot)',
-    keywords: 'impact preview effect wijziging scheelt een auto geen oplossing extra plek voorstel pilot dagcoordinatoren proef',
-    coordinatorOnly: true,
-    body: [
-      'Onder Koppelingen, bij Impact-preview (pilot), staat een schakelaar. Het is een proef van een paar weken met de dagcoördinatoren.',
-      'Aan betekent dat Wijzigen vóór het opslaan van een wijziging laat zien wat het effect is op het rooster. Bijvoorbeeld: "Scheelt een auto", "Geen effect", "Extra plek nodig" met een voorstel voor een chauffeur, of "Geen oplossing" met een back-up. Daarna sla je de wijziging op of niet.',
-      'De preview zelf wordt niet bewaard. Uit betekent dat alles werkt zoals altijd.',
-    ],
-    tab: 'beheer',
-  },
-  {
     id: 'beheer-kalenders',
     title: 'Beheer: wedstrijdkalenders en afstanden',
     keywords: 'beheer wedstrijdkalender kalender agenda google openbaar verversen afstand kilometers wedstrijden ontbreken',

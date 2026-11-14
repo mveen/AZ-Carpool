@@ -13,7 +13,6 @@ import { pushCardHtml, wirePushCard } from './ui-push.js';
 import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
 import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
-import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
 import { createPeriodBackup, db, deletePeriodBackup, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodBackupList, periodHasData, restorePeriodBackup, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
@@ -719,7 +718,6 @@ export function renderBeheer(){
       </div>`),
       ic('key', apiKeysCardHtml()),
       ic('download', familyBackupCardHtml()),
-      ic('chart', impactCardHtml()),
       ic('warning', errorLogCardHtml()),
     ]],
   ];
@@ -803,7 +801,6 @@ export function renderBeheer(){
     const orsClear=document.getElementById('apiKeyOrsClear'); if(orsClear) orsClear.onclick=()=>twoStepConfirm(orsClear, t('beheer.zeker_nogmaals_klikken'), ()=>saveOrsApiKey(''));
     const locAdd=document.getElementById('locAdd'); if(locAdd) locAdd.onclick=()=>{ hapticTap(); addLocationPlace(); };
     document.querySelectorAll('[data-locremove]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn, t('beheer.zeker_nogmaals_klikken'), ()=>removeLocationPlace(btn.dataset.locremove)));
-    wireImpactCard(renderBeheer);
     wireFamilyBackupCard();
     wireErrorLogCard();
     const atp=document.getElementById('addTogetherPref');
