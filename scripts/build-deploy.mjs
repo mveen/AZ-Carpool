@@ -84,6 +84,9 @@ export function markAsTest(rel, text) {
   return text;
 }
 
+// Does the text of a built file still name this address? A plain text search in our own files, not a check of a web address someone typed.
+const names = (text, address) => text.split(address).length > 1;
+
 export function buildDeploy({ rootDir = root, out = join(root, 'dist'), env = 'live', site = env === 'test' ? TEST_SITE : DEFAULT_SITE, testConfigFile = join(rootDir, 'deploy/test/firebase-config.js') } = {}) {
   if (env !== 'live' && env !== 'test') throw new Error(`env must be live or test (got ${env})`);
   if (!/^https:\/\/[^/\s]+\/$/.test(site)) throw new Error(`site must look like https://example.nl/ (got ${site})`);
@@ -136,8 +139,8 @@ export function buildDeploy({ rootDir = root, out = join(root, 'dist'), env = 'l
   for (const rel of written) {
     if (!TEXT_TYPES.has(extname(rel))) continue;
     const text = readFileSync(join(out, rel), 'utf8');
-    if (text.includes(OLD_SITE)) problems.push(`${rel} still contains the old address ${OLD_SITE}`);
-    if (site !== DEFAULT_SITE && text.includes(DEFAULT_SITE)) problems.push(`${rel} still contains the live address ${DEFAULT_SITE}`);
+    if (names(text, OLD_SITE)) problems.push(`${rel} still contains the old address ${OLD_SITE}`);
+    if (site !== DEFAULT_SITE && names(text, DEFAULT_SITE)) problems.push(`${rel} still contains the live address ${DEFAULT_SITE}`);
     if (env === 'test' && /"projectId":\s*"az-carpool"|projectId:\s*"az-carpool"/.test(text)) problems.push(`${rel} still contains the live Firebase project`);
     for (const ref of relativeReferences(rel, text)) {
       const target = join(dirname(join(out, rel)), ref);
