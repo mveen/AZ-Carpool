@@ -631,8 +631,6 @@ test('no lightning icon in this screen (owner, 2026-10-31)', () => {
   assert.doesNotMatch(readSrcFile(new URL('../ui-deviation.js', import.meta.url), 'utf8'), /lightning/);
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
 
 test('a child shows the time shownTime gives: an open request counts at once', () => {
   setAskedTimeOf(() => '08:08');
@@ -656,3 +654,6 @@ test('with three cars the ··· menu stays (several cars to move to), with the 
   const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars) });
   assert.match(html, /devKidMore/); assert.match(html, /devKidTime/);
 });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

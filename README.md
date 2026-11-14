@@ -54,7 +54,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ui-agenda.js` | Instellingen → Agenda: the family's two calendar links, parents' (rides the family drives) and daughter's (make once, copy, share, add to calendar) | `ui-agenda.test.js` |
 | `ui-install-prompt.js` | One-time "put the app on your home screen" sheet, behind a feature toggle that is off at deployment (remove the toggle after the rollout, see the top of the file) | `ui-install-prompt.test.js` |
 | `calendar-feed.js` | The rides of one family for the next 3 weeks as calendar events and as an `.ics` file: `feedEvents` (the rides the daughter sits in) and `driverFeedEvents` (the rides the family drives; also used by `cron/agenda.mjs`) | `calendar-feed.test.js` |
-| `push-access.js` | **Push-meldingen testen, temporary:** who sees the push test screens (`COORDINATOR_ONLY`, one flag). Not the parents' own switch | `push-access.test.js` |
+| `push-access.js` | **Push-meldingen testen:** who sees the push test screens (`COORDINATOR_ONLY`, one flag). Not the parents' own switch | `push-access.test.js` |
 | `push.js` | Push-meldingen, pure rules: the two switches (test `uit` / `test`, live `false` / `true`), which devices are accepted, the queue, who an entry goes to (`routeEntry`, `devicesFor`), what is still to send, what a message says | `push.test.js` |
 | `notif-text.js` | The words of a Ritten-ruilen notification (inbox, preview and push server share them) | `notif-text.test.js` |
 | `push-scenarios.js` | Push-meldingen testen: the five made-up situations, built with the same functions as the real notifications | `push-scenarios.test.js` |
@@ -70,7 +70,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `firebase-config.js` | Firebase config + Google Calendar API key (fill in once). **No secret keys**: the OpenRouteService key is in the database (Beheer → *API-sleutels*) | never overwrite |
 | `firebase/firestore.rules` | Firestore security rules | paste into Firebase console → Rules |
 | `manifest.json`, `service-worker.js`, `icon-*.png`, `apple-touch-icon.png`, `favicon-32.png`, `icon.svg` (AZ Carpool logo) | PWA (install on home screen) | once; `service-worker.js` changes when modules are added |
-| `backups/` | Older versions for rollback | not needed on the site |
+| `backups/` | Only on the owner's computer, never in git (`.gitignore`): database back-ups and the test key for `npm run seed:test` | never on the site |
 
 All `*.test.js` files live in `tests/`; the site does not use that folder. Every other file stays in the repo root because the live site loads it from there.
 
@@ -241,11 +241,15 @@ Design: "Ontwerp: andere tijden doorgeven voor vakantie en proefwerkweek". It is
 Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {placeholders}'`. Code calls `t('key', { name: 'x' })`. Static texts in `index.html` use `data-i18n="key"` attributes. To add a language, copy `texts-nl.js` to `texts-<lang>.js`, translate the values (keep keys and `{placeholders}`), and switch the dictionary in `i18n.js`. Many texts use generic placeholders such as `{p1}`. Look at the Dutch sentence to see what each one is.
 
 ## Deploy
-1. Upload all changed files to the GitHub repo (`main`). Upload `index.html`, `service-worker.js`, and every new or changed `.js` file (new in this release: `family-backup.js`; earlier: `period.js`; earlier: `locations.js`, `ov.js`, `distance.js`, `impact.js`; and publish `firestore.rules`; then enter the OpenRouteService key in Beheer → *API-sleutels* and remove the `openRouteServiceApiKey` line from your live `firebase-config.js`, and revoke the old key at openrouteservice.org: it was in the public folder). Test files are optional (the site does not use them).
-2. GitHub Pages redeploys in about 60 seconds. Since v253 the old address `https://mveen.github.io/AZ-Carpool/` only forwards to `https://azcarpool.nl/` (first line of `index.html`); live is deployed by `.github/workflows/deploy.yml`.
-3. If `firestore.rules` changed, paste it into the Firebase console (Firestore → Rules → Publish).
-4. Open the app once online. The service worker (cache `az-carpool-v16`) then replaces the old cache.
-5. **Always bump `CACHE_NAME` in `service-worker.js` on every deploy.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
+Live is `https://azcarpool.nl/` on mijn.host. Nobody uploads files by hand any more.
+1. Work on a branch and open a pull request. `.github/workflows/tests.yml` runs `npm test` and checks that `CACHE_NAME` in `service-worker.js` was raised (`.github/scripts/check-cache-bump.sh`).
+2. The owner merges the pull request into `main`. Nothing reaches `main` without the owner.
+3. `.github/workflows/deploy.yml` then runs by itself: *tests -> upload to `test.azcarpool.nl` -> robot smoke test there -> upload to live -> upload the cron jobs and their self-test*. If a step fails, everything after it is skipped and live stays as it was. The workflow checks that the site serves the new `CACHE_NAME`.
+4. **Database rules are the one step still done by hand:** if `firebase/firestore.rules` changed, paste the file into the Firebase console (Firestore -> Rules -> Publish), for the live project and for the test project `az-carpool-test`.
+5. **Always bump `CACHE_NAME` in `service-worker.js` (and `APP_VERSION` in `constants.js`) on every change to app files.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
+6. Secrets (API keys, service account keys, the deploy key) are never in the repo: the OpenRouteService key is in the database (Beheer -> *API-sleutels*), the cron keys are on the host, the deploy key and smoke-test codes are GitHub secrets.
+
+The old address `https://mveen.github.io/AZ-Carpool/` (GitHub Pages) is still published from `main` by GitHub itself, but since v253 it only forwards to `https://azcarpool.nl/` (first line of `index.html`).
 
 ### Test environment (`test.azcarpool.nl`)
 A second copy of the app with its own database, so trying things never touches live data.
@@ -262,7 +266,7 @@ A second copy of the app with its own database, so trying things never touches l
   - By hand: `SMOKE_PHONE=... SMOKE_CODE_COORD=... SMOKE_CODE_PARENT=... node scripts/smoke-test.mjs` (needs `npm i --no-save playwright` and `npx playwright install chromium`).
 
 ### Cron jobs on the host (`cron/`)
-Five jobs run on the mijn.host account (the code is outside the web folder; only the calendar files of the agenda job are written inside it). The fifth, the push job, is only for the test phase: see *Meldingen (testfase)* above. The deploy workflow uploads `cron/` (plus a generated `config.json` with the public project id and Calendar key) to `~/azcarpool-cron/` and runs `run.sh selftest` there; it fails when the host has no Node.js 20+ or an uploaded key does not log in.
+Five jobs run on the mijn.host account (the code is outside the web folder; only the calendar files of the agenda job are written inside it). The fifth is the push job: see *Meldingen (testfase)* above. The deploy workflow uploads `cron/` (plus a generated `config.json` with the public project id and Calendar key) to `~/azcarpool-cron/` and runs `run.sh selftest` there; it fails when the host has no Node.js 20+ or an uploaded key does not log in.
 - **Back-up** (`bash ~/azcarpool-cron/run.sh backup`, nightly): reads the whole database and writes `~/azcarpool-data/backups/firestore-YYYY-MM-DD.jsonl.gz` (Firestore's own format, one document per line, mode 600). Keeps the last 30 and the 1st of each month for a year. Needs the key `~/azcarpool-secrets/backup-key.json` of a service account with the role *Cloud Datastore Viewer* (read only).
 - **Match calendars** (`bash ~/azcarpool-cron/run.sh matches`, daily early morning): does what the first member of the day does in the app (`loadAllMatches` in `matches.js`) and writes `settings/matchCache`. The app then finds a cache from today and fetches nothing itself; if the job is down, the app still fetches by itself. A calendar that fails keeps its earlier matches and the cache is marked partial. Needs `~/azcarpool-secrets/calendar-key.json` (role *Cloud Datastore User*). A test compares its output with the app's.
 - **Purge** (`bash ~/azcarpool-cron/run.sh purge`, Friday 19:05): the weekly clean-up that the app used to do by itself when the first member opened it after the week had ended. **The week ends on Friday at 19:00** (`WEEK_END_HOUR` in `constants.js`): from then on the whole app (Rooster, Wijzigen, Mijn week, the calendar feed) shows the coming week, and a new one-off change expires at 19:00 on the Friday of its week (`deviationExpiryMs` in `dates.js`). (1) It logs the rides that were driven (`rideLog/`) with the same app code as the Beheer overview (`rides.js` + `ride-log.js`, copied by the build to `~/azcarpool-cron/app/`; it only holds what those need, no screens), so a ride that ran on a one-off change is counted even if the coordinator never opened the app. (0, first and on its own) It deletes error-log entries (`errorLog/`) older than 30 days. (2) It deletes the changes (`deviations/`) of an older week whose own `expiresAt` has passed, each one only in the version it read (a change that was edited in the meantime stays). If logging fails nothing is deleted. It always counts in Amsterdam time, whatever time zone the host is in, and it is safe to run again at any time. The app keeps its own purge as a safety net, so nothing breaks when this job is down. Uses the same key as the match calendars (`calendar-key.json`, role *Cloud Datastore User*). In DirectAdmin: `5 19 * * 5  bash ~/azcarpool-cron/run.sh purge > /dev/null`. **Keep the old line `5 0 * * 6` as well** (Saturday 00:05, a catch-up): changes made before v90 still carry the old expiry (Saturday 00:00), and the job is safe to run twice. The cron time is the time zone of the host; the job itself always counts in Amsterdam time, so check with `date` over SSH that the host is on Amsterdam time, or the job runs at the wrong hour (it then still works, just later or earlier).
@@ -320,9 +324,9 @@ Automated tests cover logic and page output, but not a real phone, real Firebase
 4. Press "Deel update via WhatsApp". WhatsApp opens with the message ready. Do not send it if this is only a test.
 
 ## Rollback
-1. Upload `backups/index.before-modularisation.html` to GitHub as `index.html`.
-2. Upload `backups/service-worker.before-modularisation.js` as `service-worker.js`.
-3. Wait about 60 seconds. The old single-file app is back. The new module files can stay in the repo; the old page does not load them.
+1. On GitHub open the pull request that caused the problem and press *Revert*; merge the revert pull request. The deploy workflow puts the previous version live (tests, test site and smoke test included). Raise `CACHE_NAME` in the revert, otherwise phones keep the broken version.
+2. In an emergency: Actions -> *Deploy azcarpool.nl* -> *Run workflow* with *skip_smoke* ticked goes live without the robot test.
+3. The tag `v1-stable` is the app before the v2 redesign (last resort).
 
 ## Access model (since the Sept 2026 security fix)
 - Only **members** can read or write data: the coordinator, or a browser linked to a family through the gate.

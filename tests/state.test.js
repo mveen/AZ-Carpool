@@ -145,7 +145,7 @@ test('match carpool form: no car-before at start (the edit is matched on the car
 
 test('openMatchCarpoolLeg starts empty (the open match car form then starts on the default choice)', () => { assert.equal(S.openMatchCarpoolLeg, null); });
 
+test('devOwn starts empty (the warning Eigen ouder rijdt mee waits for a choice per shift)', () => { assert.deepEqual(S.devOwn, {}); });
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
-
-test('devOwn starts empty (the warning Eigen ouder rijdt mee waits for a choice per shift)', () => { assert.deepEqual(S.devOwn, {}); });

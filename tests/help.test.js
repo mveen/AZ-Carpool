@@ -443,5 +443,6 @@ test('the bus article explains Heen and Terug (one leg per car by bus; without t
   const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.match(allText(a), /Heen en Terug/); assert.match(allText(a), /niet allebei/); assert.match(allText(a), /Terugrit regelen/); assert.match(allText(a), /Ik rij terug/);
 });
 
+test('the Help never says "meisje", "meid" or "meiden": it is speelster or dochter', () => { assert.doesNotMatch(JSON.stringify(articles), /\b(meisjes?|meid|meiden)\b/i); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -179,7 +179,7 @@ test('removed rides are listed apart with a restore button and are not in the co
 test('names stay escaped on the shift lists', () => {
   sampleCoordinatorState({ rideLog: { x: { date: '2026-09-02', direction: 'heen', cars: [{ familyId: 'gone', name: '<img src=x>', girls: 1 }] } }, rideLogView: viewOf('all') });
   const h = rideLogCardHtml(NOW);
-  assert.ok(!h.includes('<img src=x>')); assert.match(h, /&lt;img src=x&gt;/); assert.match(text(h), /1 meid/);
+  assert.ok(!h.includes('<img src=x>')); assert.match(h, /&lt;img src=x&gt;/); assert.match(text(h), /1 speelster/);
 });
 test('stepping keeps the screen; showRideLogScreen goes to a family, to all, and back', () => {
   sampleCoordinatorState({ rideLog: {}, rideLogView: viewOf('family', { familyKey: 'f1' }) });
