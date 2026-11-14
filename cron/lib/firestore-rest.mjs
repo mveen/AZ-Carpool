@@ -105,6 +105,13 @@ export function createFirestore({ projectId, getToken, fetchFn = fetch, sleep = 
         writes: [{ update: { name: `${root}/${path}`, fields: encodeFields(data) } }],
       });
     },
+    // Replaces the whole document with fields that are ALREADY in Firestore's own format (as in a back-up file), so every value
+    // goes back exactly as it was (timestamps stay timestamps, whole numbers stay whole numbers).
+    async setDocumentRaw(path, fields) {
+      await call('POST', `${HOST}/projects/${projectId}/databases/(default)/documents:commit`, {
+        writes: [{ update: { name: `${root}/${path}`, fields: fields || {} } }],
+      });
+    },
     // Deletes one document. With `updateTime` (the version that was read) it only deletes THAT version: when the document was changed
     // or already deleted in the meantime nothing is deleted. Returns true when it deleted, false when it did not because of that.
     async deleteDocument(path, { updateTime } = {}) {

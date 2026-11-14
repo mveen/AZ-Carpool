@@ -92,5 +92,12 @@ await test('the success line says how many documents', async () => {
   assert.deepEqual(out, ['Back-up firestore-2026-10-12.jsonl.gz: 3 documents in 2 collections']);
 });
 
+await test('keep: another place can keep fewer back-ups (the copy on the owner\'s computer keeps only the newest)', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'az-bk-'));
+  for (const n of names([[2026, 10, 1], [2026, 10, 10], [2026, 10, 11]])) writeFileSync(join(dir, n), 'old');
+  const r = await runBackup({ firestore: fakeDb(docs), dir, now: NOW, keep: { daily: 1, monthlyDays: 0 }, ...silent });
+  assert.deepEqual(readdirSync(dir), ['firestore-2026-10-12.jsonl.gz']); assert.equal(r.pruned.length, 3);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
