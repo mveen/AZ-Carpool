@@ -16,7 +16,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, resetState, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleFamilies } from './test-support.js';
 import { S } from '../state.js';
 import {
-  activeMatchFeeds, matchLabel, analyzeMatch, matchSlug, carpoolFor, matchesThisWeek, matchesNext8Days,
+  activeMatchFeeds, matchLabel, analyzeMatch, matchSlug, carpoolFor, matchesThisWeek, matchesNext8Days, matchesNext29Days, isMatchPlannable,
   loadAllMatches, currentMatchList, docToMatch, myMatchRides, supersededMatchSlugs, suggestedMatchDeparture, matchCarCapacityState,
 } from '../matches.js';
 
@@ -108,6 +108,18 @@ test('matchesNext8Days: a rolling window that always shows next Saturday', () =>
   withFakeNow('2026-10-04T09:00:00+02:00', () => { // Sunday
     const list = [m({ start: new Date('2026-10-10T10:30:00+02:00') }), m({ start: new Date('2026-10-13T10:30:00+02:00') }), m({ start: new Date('2026-10-03T10:30:00+02:00') })];
     assert.deepEqual(matchesNext8Days(list).map(x => x.start.toISOString()), ['2026-10-10T08:30:00.000Z']);
+  });
+});
+test('matches of today stay visible and plannable after kick-off (return ride still to arrange); yesterday is gone', () => {
+  withFakeNow('2026-11-14T15:00:00+01:00', () => { // Saturday afternoon
+    const started = m({ start: new Date('2026-11-14T10:45:00+01:00') });
+    const later = m({ start: new Date('2026-11-14T17:30:00+01:00') });
+    const yesterday = m({ start: new Date('2026-11-13T18:00:00+01:00') });
+    const list = [later, yesterday, started];
+    assert.deepEqual(matchesNext29Days(list).map(x => x.start.toISOString()), ['2026-11-14T09:45:00.000Z', '2026-11-14T16:30:00.000Z']);
+    assert.deepEqual(matchesNext8Days(list).length, 2);
+    assert.equal(isMatchPlannable(started), true);
+    assert.equal(isMatchPlannable(yesterday), false);
   });
 });
 
