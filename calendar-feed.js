@@ -137,7 +137,7 @@ function matchEvents(familyId, st, fromMs, toMs, cfg, role = 'girl') {
         uid: `match-${slug}-${i}-${role === 'driver' ? 'drive-' : ''}${familyId}@azcarpool.nl`,
         startMs, endMs: d.startMs > startMs ? d.startMs : startMs + 2 * 3600000,
         summary: t(role === 'driver' ? 'agenda.titel_wedstrijd_rijden' : 'agenda.titel_wedstrijd', { match: String(d.summary || '').trim() || t('agenda.wedstrijd') }),
-        description: [who, t('agenda.vertrek_vanaf', { place: matchFromName(c, cfg) }), t('agenda.aftrap', { time: amsterdamClock(d.startMs) }), t('agenda.indicatief')].join('\n'),
+        description: [who, c.leg === 'terug' ? t('agenda.ophalen_na') : t('agenda.vertrek_vanaf', { place: matchFromName(c, cfg) }), t('agenda.aftrap', { time: amsterdamClock(d.startMs) }), t('agenda.indicatief')].join('\n'),
         location: String(d.location || ''),
       });
     });

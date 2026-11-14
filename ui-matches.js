@@ -4,14 +4,16 @@
 // Parents can also add a practice match (oefenwedstrijd) with the button on the info line; it then behaves like any match.
 import { t, locale } from './i18n.js';
 import { closeSheet, esc, hapticTap, locationsCfg, phIcon, showToast } from './ui-common.js';
-import { buildPracticeDoc, carpoolFor, currentMatchList, isMatchPlannable, isPracticeMatch, matchCarCapacityState, matchLabel, matchSlug, matchesNext29Days, plannableFrom, practiceIdOf, practiceToMatch, suggestedMatchDeparture } from './matches.js';
+import { analyzeMatch, buildPracticeDoc, busPlaceOfMatch, busStateOf, carpoolFor, currentMatchList, isMatchPlannable, isPracticeMatch, matchCarCapacityState, matchLabel, matchSlug, matchesNext29Days, plannableFrom, practiceIdOf, practiceToMatch, suggestedMatchDeparture, suggestedMatchPickup } from './matches.js';
 import { FREE_TEXT_MAX, MATCH_FROM_OTHER, matchFromChoice, matchFromFields, matchFromName, matchFromOptions } from './locations.js';
 import { familyRiding, fam, girlName, playerSeats, seats, sortFamEntriesFlexLast, sortGirlIds } from './rides.js';
 import { S } from './state.js';
 import { db } from './data.js';
 import { matchInfoHtml } from './ui-myweek.js';
-import { isRealCoordinator, myLinkedFamilyId } from './coordinator.js';
+import { canEditFor, myLinkedFamilyId } from './coordinator.js';
 import { changeMatchCar, logEntries } from './match-cars.js';
+import { coversLeg, legChoices, legField, legOf } from './match-legs.js';
+import { BUS_DRIVE_MIN, BUS_MARGIN_MIN, busPatch, busPlaceOf, carArrival, carMissesBus, setMatchBus, suggestedBusCarDeparture, validTime } from './match-bus.js';
 
 // ---------- "Vertrek vanaf" (every car of a match carpool) ----------
 // The select (all known places + "Andere locatie") and, for a free input, a text field. `car` is the car being edited, or null.
@@ -27,6 +29,18 @@ export function matchFromFieldsHtml(slug, car){
 
 // One car of a match carpool. `editable` adds the delete button (Wedstrijden tab only); `highlightId`
 // tints the row when that family drives it or has its daughter in it.
+// The line under a car of a match by bus: when it is at AFC '34 and when it picks up again. `bad` = it would arrive after the bus left. null = nothing to say.
+const legName = leg => t(leg==='terug'? 'matches.leg_terug' : 'matches.leg_heen');
+// The label of one choice in the form: by bus the legs are "Heen, naar de bus" / "Terug, ophalen".
+const legOptName = (ch, busOn) => t(ch==='beide'? 'matches.leg_opt_beide' : ch==='terug'? (busOn? 'matches.leg_opt_bus_terug' : 'matches.leg_opt_terug') : (busOn? 'matches.leg_opt_bus_heen' : 'matches.leg_opt_heen'));
+export function busCarSub(c, st){
+  const arrive = carArrival(c.departureTime);
+  if(!arrive) return null;
+  if(carMissesBus(c.departureTime, st.depart)) return {bad:true, text:t('matches.bus_auto_te_laat', { arrive, depart: st.depart })};
+  return {bad:false, text:t('matches.bus_auto_aankomst', { arrive })};
+}
+
+// opts.leg ('heen' | 'terug') = the leg of the card this row is drawn in. A car that drives both legs shows in both, but only its heen row has the buttons.
 export function matchCarRowHtml(c, opts){
   opts = opts||{};
   const girlIds = c.girlIds||[];
@@ -38,26 +52,77 @@ export function matchCarRowHtml(c, opts){
   const overHtml = over? ` <span class="fitbad" title="${t('deviation.meer_passagiers_dan_plekken')}">${phIcon('warning')} ${girlIds.length}/${cap}</span>` : '';
   const seatHtml = cap!=null && !over? ` <span class="tag">${girlIds.length}/${cap}</span>` : '';
   const familyHtml = family? ` <span class="tag tag--ok">${esc(t('matches.gezin_tag',{n:family}))}</span>` : '';
-  const delHtml = opts.editable? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="${t('deviation.verwijder_carpool')}">${phIcon('trash')}</button>` : '';
-  const editHtml = opts.editable? `<button type="button" class="iconbtn" data-editmatchcar="${opts.slug}|${opts.idx}" aria-label="${t('matches.auto_wijzigen',{driver})}" title="${t('matches.auto_wijzigen',{driver})}">${phIcon('pencil')}</button>` : '';
-  const place = matchFromName(c, locationsCfg());
-  const fromHtml = `<span class="matchCarFrom">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf',{place}))}</span>`;
+  const busOn = !!(opts.bus && opts.bus.on);
+  const own = legOf(c, busOn);
+  const echo = opts.leg==='terug' && own==='beide';   // the car of the heen row, shown again under Terug (no buttons, no time of its own)
+  const buttons = opts.editable && !echo;
+  const delHtml = buttons? `<button type="button" class="iconbtn danger" data-delmatchcar="${opts.slug}|${opts.idx}" aria-label="Verwijder carpool van ${driver}" title="${t('deviation.verwijder_carpool')}">${phIcon('trash')}</button>` : '';
+  const editHtml = buttons? `<button type="button" class="iconbtn" data-editmatchcar="${opts.slug}|${opts.idx}" aria-label="${t('matches.auto_wijzigen',{driver})}" title="${t('matches.auto_wijzigen',{driver})}">${phIcon('pencil')}</button>` : '';
+  let lines;
+  if(echo) lines = `<span class="matchCarFrom">${esc(t('matches.leg_zelfde'))}</span>`;
+  else if(opts.leg==='terug') lines = `<span class="matchCarFrom">${phIcon('map-pin')} ${esc(t('matches.leg_ophalen_bij',{place:opts.pickupPlace||''}))}</span>`;
+  else {
+    const place = matchFromName(c, locationsCfg());
+    const sub = busOn && opts.leg? busCarSub(c, opts.bus) : null;
+    const subHtml = sub? `<span class="matchCarSub${sub.bad?' matchCarSub--bad':''}">${sub.bad? phIcon('warning')+' ' : ''}${esc(sub.text)}</span>` : '';
+    const alsoBack = opts.leg==='heen' && !busOn && own==='beide'? `<span class="matchCarSub">${esc(t('matches.leg_ook_terug'))}</span>` : '';
+    lines = `<span class="matchCarFrom">${phIcon('map-pin')} ${esc(t('matches.vertrek_vanaf',{place}))}</span>${subHtml}${alsoBack}`;
+  }
+  // In a leg the time is the one the car leaves (heen) or picks up (terug), big and with its meaning under it. Outside a leg: the time alone.
+  const depTime = esc(c.departureTime||'--:--');
+  const depHtml = opts.leg? `<b>${depTime}</b><small>${esc(t(opts.leg==='terug'? (busOn? 'matches.car_ophalen' : 'matches.car_ca_ophalen') : 'matches.car_vertrek'))}</small>` : depTime;
   return `<div class="matchCarRow${mine?' mine':''}">
-    <span class="matchCarDep">${esc(c.departureTime||'--:--')}</span>
-    <span class="matchCarWho">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}${familyHtml}${fromHtml}</span>
+    <span class="matchCarDep">${echo? '' : depHtml}</span>
+    <span class="matchCarWho">${phIcon('car')} <strong>${driver}</strong> · ${sortGirlIds(girlIds).map(id=>girlName(id)).join(', ')||t('deviation.geen_passagiers')}${overHtml}${seatHtml}${familyHtml}${lines}</span>
     ${editHtml}${delHtml}
   </div>`;
 }
 
 // A match card. A practice match gets a pencil and a trash button next to its title (anyone may change or remove it).
-function matchCardHtml(m, bodyHtml){
-  if(!isPracticeMatch(m)) return `<div class="card matchCard">${matchInfoHtml(m,{geo:true})}${bodyHtml}</div>`;
+function matchCardHtml(m, bodyHtml, info){
+  const infoOpts = {geo:true, ...(info||{})};
+  // One framed whole per match: the head (date, title, place, kick-off) on a violet glow, under it the legs and cars.
+  const frame = head => `<div class="card matchCard matchFrame"><div class="matchFrame__head">${head}</div><div class="matchFrame__body">${bodyHtml}</div></div>`;
+  if(!isPracticeMatch(m)) return frame(matchInfoHtml(m,infoOpts));
   const id = esc(practiceIdOf(m));
   const tools = `<div class="matchTools">
     <button type="button" class="iconbtn" data-editpractice="${id}" aria-label="${esc(t('matches.oefen_wijzig_aria'))}" title="${esc(t('matches.oefen_wijzig_aria'))}">${phIcon('pencil')}</button>
     <button type="button" class="iconbtn danger" data-delpractice="${id}" aria-label="${esc(t('matches.oefen_verwijder_aria'))}" title="${esc(t('matches.oefen_verwijder_aria'))}">${phIcon('trash')}</button>
   </div>`;
-  return `<div class="card matchCard"><div class="matchCard__top">${matchInfoHtml(m,{geo:true})}${tools}</div>${bodyHtml}</div>`;
+  return frame(`<div class="matchCard__top">${matchInfoHtml(m,infoOpts)}${tools}</div>`);
+}
+
+// ---------- Met de bus (match-bus.js) ----------
+// The switch at the right of the head of an away match: tap = the bus is on or off for this match.
+function busSwitchHtml(slug, st){
+  return `<span class="swWrap"><button type="button" class="switch switch--sm${st.on?' on':''}" role="switch" aria-checked="${st.on}" aria-label="${esc(t('matches.bus_aria'))}" data-busswitch="${slug}"><span class="switch__track"><span class="switch__knob">${phIcon('bus')}</span></span></button><span class="swCap">${esc(t(st.on?'matches.bus_aan':'matches.bus_uit'))}</span></span>`;
+}
+// The name of the place where the bus leaves ('AFC' = AFC '34 unless the carpool says otherwise).
+export function busPlaceName(place){
+  return place.key==='OTHER'? place.text : t(place.key==='ATC'? 'loc.fixedATC' : 'loc.fixedAFC');
+}
+// While no bus time is known yet: one dashed line above the two legs (tap = the sheet to fill them in).
+function busTimesHtml(slug){
+  return `<div class="busTimes"><button type="button" class="busTimes__cell busTimes__cell--empty" data-busedit="${slug}" aria-label="${esc(t('matches.bus_tijden_aria'))}"><div class="busTimes__time">${phIcon('clock')} ${esc(t('matches.bus_onbekend'))}</div><div class="busTimes__sub">${esc(t('matches.bus_onbekend_sub'))}</div></button></div>`;
+}
+export function busSheetHtml(slug){
+  const m = S.weekendMatchBySlug && S.weekendMatchBySlug[slug]; if(!m) return '';
+  const st = busStateOf(m), place = busPlaceOfMatch(m);
+  const placeOpt = (k, name) => `<option value="${k}"${place.key===k?' selected':''}>${esc(name)}</option>`;
+  return `<div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <div class="sheet__handle"></div>
+    <h3 id="sheetTitle">${esc(t('matches.bus_sheet_titel'))}</h3><p class="sheet__sub">${esc(t('matches.bus_sheet_sub', { match: matchLabel(m)+' '+t('myweek.vs')+' '+analyzeMatch(m.summary).opponent }))}</p>
+    <label for="busPlaceSel">${esc(t('matches.bus_plek_label'))}</label>
+    <select id="busPlaceSel">${placeOpt('AFC', t('loc.fixedAFC'))}${placeOpt('ATC', t('loc.fixedATC'))}${placeOpt('OTHER', t('matches.vertrek_andere'))}</select>
+    <input type="text" id="busPlaceTxt" class="matchFromTxt" maxlength="80" placeholder="${esc(t('matches.vertrek_andere_ph'))}" aria-label="${esc(t('matches.bus_plek_label'))}" value="${esc(place.text)}"${place.key==='OTHER'?'':' hidden'}>
+    <div class="formRow">
+      <div><label for="busDepartInp">${esc(t('matches.bus_vertrekt_label'))}</label><input type="time" id="busDepartInp" value="${esc(st.depart)}"></div>
+      <div><label for="busBackInp">${esc(t('matches.bus_terug_label'))}</label><input type="time" id="busBackInp" value="${esc(st.back)}"></div>
+    </div>
+    <p class="formHint">${esc(t('matches.bus_sheet_hint'))}</p>
+    <p class="formErr" id="busErr" role="alert" hidden>${esc(t('matches.bus_fout_tijd'))}</p>
+    <button type="button" class="btn sheet__submit" id="busSave" data-slug="${slug}">${esc(t('matches.bus_opslaan'))}</button>
+  </div>`;
 }
 
 const addPracticeBtn = () => `<button type="button" class="btn small secondary" data-addpractice="1">${phIcon('plus-circle')}${esc(t('matches.oefen_knop'))}</button>`;
@@ -74,24 +139,51 @@ export function matchesCardHtml(){
     const plannable = isMatchPlannable(m);
     const cp = carpoolFor(m);
     const cars = (cp.doc && cp.doc.cars) || [];
-    const carsHtml = cars.length? cars.map((c,idx)=>matchCarRowHtml(c,{editable:plannable, slug:cp.id, idx})).join('') : '';
+    const bus = busStateOf(m, cp.doc||null);   // by bus? (only an away match can be)
+    const carsHtml = cars.length? cars.map((c,idx)=>matchCarRowHtml(c,{editable:plannable, slug:cp.id, idx, bus})).join('') : '';
     if(!plannable){
-      // Too far ahead: no carpool yet. A small note says from which day it can be set up.
+      // Too far ahead: no carpool yet. A small note says from which day it can be set up. By bus: only a tag (the switch comes with the carpool).
       const from = plannableFrom(m).toLocaleDateString(locale(),{weekday:'long', day:'numeric', month:'long'});
-      return matchCardHtml(m, `${carsHtml}<p class="matchNote">${phIcon('calendar')} ${t('matches.nog_niet_te_plannen', { date: from })}</p>`);
+      const busTag = bus.on? `<span class="tag">${phIcon('bus')}${esc(t('matches.bus_aan'))}</span>` : '';
+      return matchCardHtml(m, `${carsHtml}<p class="matchNote">${phIcon('calendar')} ${t('matches.nog_niet_te_plannen', { date: from })}</p>`, {headTags:busTag});
     }
     S.weekendMatchBySlug[slug] = m;
     const isOpen = S.openMatchCarpoolForm===slug;
     const own = myLinkedFamilyId();
-    const ownIdx = own? cars.findIndex(c=>c.driverFamilyId===own) : -1;
-    // One row of two buttons ("Ik rij ook" only while the own car is not in yet); while the form is open the row is hidden.
-    const quickHtml = !own || ownIdx>=0? ''
-      : `<button type="button" class="btn small" data-iride="${slug}">${phIcon('plus-circle')}${t('matches.ik_rij_ook')}</button>`;
-    const actionsHtml = isOpen? '' : `<div class="matchActions">${quickHtml}<button type="button" class="btn small secondary" data-addmatchcar="${slug}">${phIcon('car')}${t('matches.auto_toevoegen')}</button></div>`;
+    const busOn = bus.on;
+    const place = busOn? busPlaceName(busPlaceOf(cp.doc||null)) : '';
+    // One card per leg (design: Heen / Terug tints as in Rooster). By bus both are always there; without the bus only Heen, and Terug as soon as a car drives it alone.
+    const buttonsFor = leg => {
+      if(isOpen) return '';
+      const ownDrives = !!own && cars.some(c=>c.driverFamilyId===own && coversLeg(c, leg, busOn));
+      const quick = !own || ownDrives? '' : `<button type="button" class="btn small" data-iride="${slug}|${leg}">${phIcon('plus-circle')}${t(leg==='terug'? 'matches.ik_rij_terug' : busOn? 'matches.ik_rij_heen' : 'matches.ik_rij_ook')}</button>`;
+      return `<div class="matchActions">${quick}<button type="button" class="btn small secondary" data-addmatchcar="${slug}|${leg}">${phIcon('car')}${t('matches.auto_toevoegen')}</button></div>`;
+    };
+    const opponent = analyzeMatch(m.summary).opponent;   // the venue is already in the card header: the legs name the opponent instead
+    const kick = m.start.toLocaleTimeString(locale(),{hour:'2-digit',minute:'2-digit'});
+    const legHtml = leg => {
+      const rows = cars.map((c,idx)=>({c,idx})).filter(x=>coversLeg(x.c, leg, busOn))
+        .map(x=>matchCarRowHtml(x.c,{editable:true, slug:cp.id, idx:x.idx, bus, leg, pickupPlace: busOn? place : opponent})).join('');
+      const head = busOn? `<button type="button" class="matchLeg__edit" data-busedit="${slug}" aria-label="${esc(t('matches.bus_tijden_aria'))}">${esc(legName(leg))} ${phIcon('pencil')}</button>` : `<span>${esc(legName(leg))}</span>`;
+      const when = busOn? (leg==='heen'? (bus.depart||'--:--') : (bus.back? '± '+bus.back : '--:--')) : (leg==='heen'? t('matches.leg_aftrap',{time:kick}) : t('matches.leg_na_afloop'));
+      const sub = busOn? t(leg==='heen'? 'matches.leg_bus_heen_sub' : 'matches.leg_bus_terug_sub',{place}) : '';   // without the bus the opponent is already in the header
+      const empty = rows? '' : busOn && leg==='terug'? `<p class="matchLeg__empty">${phIcon('warning')} ${esc(t('matches.leg_geen_auto_terug'))}</p>` : `<p class="matchNote">${t('deviation.p_class_muted_style_font')}</p>`;
+      return `<div class="matchLeg matchLeg--${leg}"><div class="matchLeg__head">${head}<span class="matchLeg__when">${esc(when)}</span></div>${sub? `<div class="matchLeg__sub">${esc(sub)}</div>` : ''}${rows? `<div class="matchLeg__cars">${rows}</div>` : empty}${buttonsFor(leg)}</div>`;
+    };
+    const hasTerugCar = cars.some(c=>legOf(c, busOn)==='terug');
+    const quietBack = busOn || hasTerugCar || isOpen? '' : `<div class="matchLegQuiet">${phIcon('users')}<span>${esc(t('matches.leg_terug_stil'))}</span><button type="button" class="btn small secondary" data-addmatchcar="${slug}|terug">${esc(t('matches.leg_terug_regelen'))}</button></div>`;
+    const legsHtml = legHtml('heen') + (busOn || hasTerugCar? legHtml('terug') : '') + quietBack;
     let formHtml = '';
     if(isOpen){
       const editing = S.editMatchCarBefore || null;   // the car being edited (as it was when the pencil was tapped), or null when adding
-      const suggestedDep = (editing && editing.departureTime) || suggestedMatchDeparture(m.start);
+      const choices = legChoices(busOn);
+      const editLeg = editing? legOf(editing, busOn) : '';
+      const choice = choices.includes(editLeg)? editLeg : choices.includes(S.openMatchCarpoolLeg)? S.openMatchCarpoolLeg : choices[0];
+      const terug = choice==='terug';
+      const ownTime = editing && legOf(editing, busOn)===choice? editing.departureTime : '';   // a time only goes along when the leg stays the same
+      const suggestedDep = (!terug && ownTime) || (busOn && suggestedBusCarDeparture(bus.depart)) || suggestedMatchDeparture(m.start);
+      const suggestedBack = (terug && ownTime) || (busOn? bus.back : suggestedMatchPickup(m.start));
+      const legSeg = `<label>${esc(t('matches.leg_kies'))}</label><div class="segmented" role="group" aria-label="${esc(t('matches.leg_kies'))}">${choices.map(ch=>`<button type="button" class="${ch===choice?'active':''}" aria-pressed="${ch===choice}" data-matchleg="${ch}" data-slug="${slug}">${esc(legOptName(ch, busOn))}</button>`).join('')}</div><input type="hidden" id="matchCarLeg_${slug}" value="${choice}">`;
       const girlOptions = sortFamEntriesFlexLast(allFamilies).map(([id,f])=>`<label class="chip"><input type="checkbox" class="matchCarGirlPick" value="${id}"${editing && (editing.girlIds||[]).includes(id)?' checked':''}>${esc(f.girlName||f.parentName||id)}</label>`).join('');
       const driverOptions = allFamilies.map(([id,f])=>`<option value="${id}"${editing && editing.driverFamilyId===id?' selected':''}>${esc(f.parentName)} (${seats(f)} ${seats(f)===1?t('common.plek'):t('common.plekken')})</option>`).join('');
       formHtml = `<div class="dayFormCard">
@@ -113,16 +205,27 @@ export function matchesCardHtml(){
         <label>${t('deviation.welke_passagiers')} <span id="matchCarCount_${slug}"></span></label>
         <div>${girlOptions}</div>
         <div id="matchCarCapWarn_${slug}" class="matchCapWarn" role="status" aria-live="polite"></div>
-        ${matchFromFieldsHtml(slug, editing)}
-        <label>${t('deviation.vertrektijd')}</label>
-        <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
+        ${legSeg}
+        <div id="matchFromWrap_${slug}"${terug?' hidden':''}>${matchFromFieldsHtml(slug, editing)}</div>
+        <div id="matchHeenWrap_${slug}"${terug?' hidden':''}>
+          <label for="matchCarTime_${slug}">${t('deviation.vertrektijd')}</label>
+          <input type="time" id="matchCarTime_${slug}" value="${suggestedDep}">
+          ${busOn && bus.depart? `<p class="noteLine">${esc(t('matches.bus_form_hint', { depart: bus.depart, drive: BUS_DRIVE_MIN, margin: BUS_MARGIN_MIN }))}</p>` : ''}
+        </div>
+        <div id="matchTerugWrap_${slug}"${terug?'':' hidden'}>
+          ${busOn? `<label for="matchCarPickup_${slug}">${esc(t('matches.bus_form_ophalen', { place }))}</label>
+          <input type="time" id="matchCarPickup_${slug}" value="${esc(suggestedBack)}">
+          <p class="noteLine">${esc(t('matches.leg_hint_bus_terug', { back: bus.back||'--:--' }))}</p>`
+          : `<input type="hidden" id="matchCarPickup_${slug}" value="${esc(suggestedBack)}"><p class="noteLine">${esc(t('matches.leg_ongeveer_na_afloop', { time: suggestedBack }))}</p>`}
+        </div>
         <div class="formActions">
           <button type="button" class="btn small" data-savematchcar="${slug}">${t('deviation.opslaan')}</button>
           <button type="button" class="btn small secondary" data-cancelmatchcar="${slug}">${t('common.annuleren')}</button>
         </div>
       </div>`;
     }
-    return matchCardHtml(m, `${carsHtml || t('deviation.p_class_muted_style_font')}${actionsHtml}${formHtml}${matchLogHtml(cp.doc)}`);
+    const info = bus.applies? { headExtra: busSwitchHtml(slug, bus) } : {};
+    return matchCardHtml(m, `${busOn && !bus.depart && !bus.back? busTimesHtml(slug, bus) : ''}${legsHtml}${formHtml}${matchLogHtml(cp.doc)}`, info);
   }).join('');
   return `<div id="matchCarpoolCard">
     <div class="infoLine"><span class="infoLine__text">${t('matches.titel')} ${anyPlannable? t('deviation.zet_een_carpool_op_voor') : ''}</span>${addPracticeBtn()}</div>
@@ -164,13 +267,13 @@ function carpoolDoc(m, slug, cars){ return {...carpoolInfo(m, slug), cars}; }
 // The log of a match carpool, for the coordinator only: who added, changed or removed which car (newest first, see match-cars.js).
 function logLineText(e){
   const who = e.by && S.families[e.by]? S.families[e.by].parentName : t('matches.log_iemand');
-  const car = c => t('matches.log_auto', { driver: c.driverFamilyId && S.families[c.driverFamilyId]? S.families[c.driverFamilyId].parentName : '?', time: c.departureTime||'--:--', girls: sortGirlIds(c.girlIds||[]).map(id=>girlName(id)).join(', ') });
+  const car = c => t('matches.log_auto', { driver: c.driverFamilyId && S.families[c.driverFamilyId]? S.families[c.driverFamilyId].parentName : '?', time: (c.leg==='heen'||c.leg==='terug'? t(c.leg==='terug'? 'matches.leg_log_terug' : 'matches.leg_log_heen')+' ' : '')+(c.departureTime||'--:--'), girls: sortGirlIds(c.girlIds||[]).map(id=>girlName(id)).join(', ') });
   const when = new Date(e.at).toLocaleString(locale(), {weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit'});
   const key = {add:'matches.log_add', edit:'matches.log_edit', del:'matches.log_del', undo:'matches.log_undo'}[e.act] || 'matches.log_add';
   return `${when} · ` + t(key, { who, car: car(e.car), to: e.to? car(e.to) : '' });
 }
 function matchLogHtml(doc){
-  if(!isRealCoordinator()) return '';
+  if(!canEditFor(S)) return '';   // coordinator view only: "Bekijk als ouder" hides it too
   const list = logEntries(doc);
   if(!list.length) return '';
   return `<div class="matchLog"><p class="matchNote"><strong>${esc(t('matches.log_titel'))}</strong></p>${list.map(e=>`<p class="matchNote">${esc(logLineText(e))}</p>`).join('')}</div>`;
@@ -307,6 +410,36 @@ function wirePracticeSheet(editId){
   };
 }
 
+// The sheet with the two bus times of a match (same look as the practice-match sheet). Saves at once, with Ongedaan.
+export function openBusSheet(slug){
+  const html = busSheetHtml(slug); if(!html) return;
+  closeSheet();
+  const ov = document.createElement('div'); ov.className = 'sheetOverlay'; ov.id = 'sheetOverlay';
+  ov.innerHTML = html;
+  document.body.appendChild(ov);
+  ov.addEventListener('click', e => { if(e.target===ov) closeSheet(); });
+  wireBusSheet(slug);
+}
+function wireBusSheet(slug){
+  const el = id => document.getElementById(id), save = el('busSave');
+  if(!save) return;
+  const sel = el('busPlaceSel'), txt = el('busPlaceTxt');
+  if(sel && txt) sel.onchange = () => { txt.hidden = sel.value!=='OTHER'; if(!txt.hidden && txt.focus) txt.focus(); };
+  save.onclick = async () => {
+    const m = S.weekendMatchBySlug[slug]; if(!m || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
+    const r = busPatch({ on:true, depart:el('busDepartInp').value, back:el('busBackInp').value, place:el('busPlaceSel').value, placeText:el('busPlaceTxt').value });
+    if(!r.ok){ el('busErr').hidden = false; return; }
+    const cp = carpoolFor(m), doc = cp.doc||{};
+    const old = { bus: typeof doc.bus==='boolean'? doc.bus : true, busDepart: doc.busDepart||'', busBack: doc.busBack||'', busAt: doc.busAt||'', busAtText: doc.busAtText||'' };
+    save.disabled = true;
+    try{
+      await setMatchBus({ info:carpoolInfo(m, slug), slug, fromId:cp.id, patch:r.patch });
+      closeSheet(); hapticTap();
+      showToast(t('matches.bus_opgeslagen'), {action:{label:t('deviation.ongedaan'), run:()=>setMatchBus({ info:carpoolInfo(m, slug), slug, fromId:slug, patch:old })}});
+    }catch(e){ save.disabled = false; showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
+  };
+}
+
 // True while a car is being written. The database echoes our own write back (and re-draws the tab) before the write has
 // finished, so without this a second tap on Opslaan / Ik rij ook would still see the old state and add the car again.
 let savingMatchCar = false;
@@ -336,6 +469,19 @@ export function wireMatchCarpool(){
     const fromSel=document.getElementById('matchCarFrom_'+slug), fromTxt=document.getElementById('matchCarFromTxt_'+slug);
     if(fromSel && fromTxt) fromSel.onchange=()=>{ fromTxt.hidden = fromSel.value!==MATCH_FROM_OTHER; if(!fromTxt.hidden && fromTxt.focus) fromTxt.focus(); };
   }
+  // Bus switch: the bus is on or off for this match (stored on its carpool document; tap again or Ongedaan puts it back).
+  document.querySelectorAll('[data-busswitch]').forEach(b=>b.onclick=async ()=>{
+    const slug=b.dataset.busswitch, m=S.weekendMatchBySlug[slug];
+    if(!m || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
+    const cp=carpoolFor(m), was=busStateOf(m, cp.doc||null);
+    const doc=cp.doc||{}, keep={busDepart:doc.busDepart||'', busBack:doc.busBack||''};
+    hapticTap();
+    try{
+      await setMatchBus({ info:carpoolInfo(m, slug), slug, fromId:cp.id, patch:{bus:!was.on, ...keep} });
+      showToast(t(was.on? 'matches.bus_uit_toast' : 'matches.bus_aan_toast'), {action:{label:t('deviation.ongedaan'), run:()=>setMatchBus({ info:carpoolInfo(m, slug), slug, fromId:slug, patch:{bus:was.on, ...keep} })}});
+    }catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
+  });
+  document.querySelectorAll('[data-busedit]').forEach(b=>b.onclick=()=>{ hapticTap(); openBusSheet(b.dataset.busedit); });
   document.querySelectorAll('[data-addpractice]').forEach(b=>b.onclick=()=>{ hapticTap(); openPracticeSheet(null); });
   document.querySelectorAll('[data-editpractice]').forEach(b=>b.onclick=()=>{ hapticTap(); openPracticeSheet(b.dataset.editpractice); });
   document.querySelectorAll('[data-delpractice]').forEach(b=>b.onclick=async ()=>{
@@ -344,7 +490,19 @@ export function wireMatchCarpool(){
       showToast(t('matches.oefen_verwijderd'), {action:{label:t('deviation.ongedaan'), run:()=>restorePractice(r)}});
     }catch(e){ showToast(t('beheer.verwijderen_mislukt')+(e&&e.message||e)); }
   });
-  document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{ S.openMatchCarpoolForm=b.dataset.addmatchcar; S.editMatchCarIdx=null; S.editMatchCarBefore=null; hapticTap(); renderMatchesTab(); });
+  document.querySelectorAll('[data-addmatchcar]').forEach(b=>b.onclick=()=>{
+    const [slug, leg] = String(b.dataset.addmatchcar).split('|');   // "slug|leg": the leg of the card whose button it is (nothing = the default of the form)
+    S.openMatchCarpoolForm=slug; S.openMatchCarpoolLeg=leg||null; S.editMatchCarIdx=null; S.editMatchCarBefore=null; hapticTap(); renderMatchesTab();
+  });
+  // The choice heen / terug (/ both) in the form: one time field each, and "Vertrek vanaf" only where the car leaves.
+  document.querySelectorAll('[data-matchleg]').forEach(b=>b.onclick=()=>{
+    const slug=b.dataset.slug, ch=b.dataset.matchleg, inp=document.getElementById('matchCarLeg_'+slug);
+    if(inp) inp.value=ch;
+    document.querySelectorAll(`[data-matchleg][data-slug="${slug}"]`).forEach(x=>{ const on=x===b; x.classList.toggle('active', on); x.setAttribute('aria-pressed', String(on)); });
+    const show=(id,on)=>{ const e=document.getElementById(id); if(e) e.hidden=!on; };
+    show('matchFromWrap_'+slug, ch!=='terug'); show('matchHeenWrap_'+slug, ch!=='terug'); show('matchTerugWrap_'+slug, ch==='terug');
+    hapticTap();
+  });
   // Pencil on a car: the same form, filled in with that car. Anyone may change any car.
   document.querySelectorAll('[data-editmatchcar]').forEach(b=>b.onclick=()=>{
     const [slug,idxStr]=b.dataset.editmatchcar.split('|');
@@ -358,13 +516,19 @@ export function wireMatchCarpool(){
     if(savingMatchCar) return;
     const slug=b.dataset.savematchcar;
     const driverSel=document.getElementById('matchCarDriver_'+slug);
-    const timeInp=document.getElementById('matchCarTime_'+slug);
+    const m0 = S.weekendMatchBySlug[slug];
+    const busOn0 = !!(m0 && busStateOf(m0, carpoolFor(m0).doc||null).on);
+    const legInp=document.getElementById('matchCarLeg_'+slug);
+    const choice = legInp && legChoices(busOn0).includes(legInp.value)? legInp.value : legChoices(busOn0)[0];
+    const terug = choice==='terug';
+    const timeInp=document.getElementById(terug? 'matchCarPickup_'+slug : 'matchCarTime_'+slug);
     const fromSel=document.getElementById('matchCarFrom_'+slug), fromTxt=document.getElementById('matchCarFromTxt_'+slug);
     const girlIds=[...document.querySelectorAll('.matchCarGirlPick:checked')].map(c=>c.value);
     if(!driverSel || !driverSel.value){ showToast(t('deviation.kies_een_chauffeur')); return; }
     if(!girlIds.length){ showToast(t('deviation.kies_minstens_1_dochter')); return; }
-    const from = matchFromFields(fromSel? fromSel.value : '', fromTxt? fromTxt.value : '', locationsCfg());
+    const from = terug? {} : matchFromFields(fromSel? fromSel.value : '', fromTxt? fromTxt.value : '', locationsCfg());   // a pick-up car has no "Vertrek vanaf"
     if(!from){ showToast(t('matches.vertrek_vul_in')); return; }
+    if(terug && !validTime(timeInp && timeInp.value)){ showToast(t('matches.bus_fout_tijd')); return; }
     const capState = matchCarCapacityState(slug);
     if(capState.over && b.dataset.confirmOver!=='1'){
       b.dataset.confirmOver='1'; b.textContent=t('deviation.toch_opslaan');
@@ -379,7 +543,9 @@ export function wireMatchCarpool(){
     if(S.editMatchCarIdx!=null && !before){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
     // familyCount is an optional extra field: only stored when family rides along, or to reset it on a car that had it (so cars without family stay exactly as before).
     const familyField = capState.family>0 || (before && before.familyCount!=null)? {familyCount:capState.family} : {};
-    const newCar = {driverFamilyId:driverSel.value, girlIds, ...familyField, departureTime:timeInp.value, ...from};
+    // leg: only stored when it is not "both" (such a car stays exactly as it always was), or to reset it on a car that had one.
+    const legPart = legField(choice) || (before && before.leg)? {leg:legField(choice)} : {};
+    const newCar = {driverFamilyId:driverSel.value, girlIds, ...familyField, ...legPart, departureTime:timeInp.value, ...from};
     savingMatchCar = true; b.disabled = true;
     try{
       // One change on the fresh document (match-cars.js): somebody else's car added a moment ago stays, and a car that was changed or removed meanwhile is refused.
@@ -390,15 +556,19 @@ export function wireMatchCarpool(){
       showToast(!r.ok? t('matches.auto_intussen_gewijzigd') : t(before? 'matches.auto_bijgewerkt' : 'deviation.carpool_toegevoegd'));
     }catch(e){ savingMatchCar = false; b.disabled = false; showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }
   });
-  // Quick "Ik rij ook": own car with the own daughter, unless she already sits in another car of this match. Leaves from Busstation.
+  // Quick "Ik rij" (per leg): own car with the own daughter, unless she already sits in a car of that leg. Leaves from Busstation (heen) or picks up (terug).
   document.querySelectorAll('[data-iride]').forEach(b=>b.onclick=async ()=>{
     if(savingMatchCar) return;
-    const slug=b.dataset.iride; const m=S.weekendMatchBySlug[slug]; const own=myLinkedFamilyId();
+    const [slug, legArg] = String(b.dataset.iride).split('|'); const m=S.weekendMatchBySlug[slug]; const own=myLinkedFamilyId();
     if(!m || !own || !isMatchPlannable(m)){ showToast(t('deviation.kon_deze_wedstrijd_niet_vinden')); return; }
     const cp=carpoolFor(m); const cars=(cp.doc&&cp.doc.cars)||[];
-    const taken=cars.some(c=>(c.girlIds||[]).includes(own));
-    const newCar={driverFamilyId:own, girlIds:taken?[]:[own], departureTime:suggestedMatchDeparture(m.start), ...matchFromFields('busstation','',locationsCfg())};
-    if(cars.some(c=>c.driverFamilyId===own && (c.girlIds||[]).length===newCar.girlIds.length && newCar.girlIds.every(g=>(c.girlIds||[]).includes(g)) && c.departureTime===newCar.departureTime)) return;   // already in
+    const bus=busStateOf(m, cp.doc||null);   // by bus: leave in time for the bus; the return picks up at the time of the bus
+    const leg = legArg==='terug'? 'terug' : 'heen';
+    const taken=cars.some(c=>coversLeg(c, leg, bus.on) && (c.girlIds||[]).includes(own));
+    const legPart = leg==='terug'? {leg:'terug'} : bus.on? {leg:'heen'} : {};   // without the bus "Ik rij" is both ways, as before
+    const dep = leg==='terug'? (bus.on? bus.back : suggestedMatchPickup(m.start)) : (bus.on && suggestedBusCarDeparture(bus.depart)) || suggestedMatchDeparture(m.start);
+    const newCar={driverFamilyId:own, girlIds:taken?[]:[own], ...legPart, departureTime:dep, ...(leg==='terug'? {} : matchFromFields('busstation','',locationsCfg()))};
+    if(cars.some(c=>c.driverFamilyId===own && (c.leg||'')===(newCar.leg||'') && (c.girlIds||[]).length===newCar.girlIds.length && newCar.girlIds.every(g=>(c.girlIds||[]).includes(g)) && c.departureTime===newCar.departureTime)) return;   // already in
     savingMatchCar = true;
     try{ await changeMatchCar({ info:carpoolInfo(m, slug), slug, fromId:cp.id, change:{act:'add', car:newCar}, by:own }); showToast(t('matches.ik_rij_toegevoegd')); }
     catch(e){ showToast(t('data.opslaan_mislukt')+(e&&e.message||e)); }

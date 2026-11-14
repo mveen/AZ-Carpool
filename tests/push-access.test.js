@@ -1,5 +1,5 @@
 // Run with: node push-access.test.js
-// push-access.js: who sees the push TEST features ("Push-meldingen testen"). During the test phase only the coordinator; the restriction is ONE flag in ONE file.
+// push-access.js: who sees the push TEST features ("Push-meldingen testen"). Only the coordinator, for good (owner, 2026-11-14); the restriction is ONE flag in ONE file.
 // (A parent's own switch in Instellingen is not decided here; see ui-push-device.test.js.)
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
@@ -19,6 +19,9 @@ const parent = { coordinatorConfig: { uid: 'u-coord' }, me: 'u-parent', links: {
 
 console.log('=== while the restriction is on ===');
 await test('the flag is on', () => { assert.equal(COORDINATOR_ONLY, true); });
+await test('the test card is a lasting tool of the coordinator: the files no longer call it temporary', () => {
+  for (const f of ['push-access.js', 'ui-push.js']) assert.doesNotMatch(readFileSync(join(root, f), 'utf8'), /TEMPORARY|tijdelijk/i, f);
+});
 await test('the coordinator sees it, also when testing as a parent (Testweergave) or when looking at the app as a parent', () => {
   assert.equal(pushVisibleFor(coordinator), true);
   assert.equal(pushVisibleFor({ ...coordinator, impersonateFamilyId: 'f2' }), true);

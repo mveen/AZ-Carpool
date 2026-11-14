@@ -692,7 +692,7 @@ export function startDataListeners(){
       S.matchFeeds = (snap.exists && snap.data().feeds) || [];
       S.matchFeedsLoaded = true;
       refreshMatchesIfStale();   // first member of the day fetches; also when the calendars in Beheer changed
-      renderBeheer(); renderMyWeek(); renderDeviationTab();
+      renderBeheer(); renderMyWeek(); renderDeviationTab(); renderMatchesTab();   // the bus default of a team changes the Wedstrijden cards
     }, err=>{ listenFailed("settings/matchFeeds", err);});
     db.doc("settings/locations").onSnapshot(snap=>{ S.locationsDoc = snap.exists? snap.data() : null; renderBeheer(); renderSchedule(); renderMyWeek(); renderDeviationTab(); },
       err=>{ listenFailed("settings/locations", err);});

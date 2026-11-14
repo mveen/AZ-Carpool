@@ -34,6 +34,7 @@ test('Beheer has texts for the "Eigen ouder rijdt mee" rule (block title, explan
   assert.equal(t('beheer.kies_een_meisje'), 'Kies een speelster.');
   assert.equal(t('beheer.eigen_ouder_waarschuwing', { p1: 'Eline' }), 'Let op: de eigen ouder rijdt, maar Eline zit in een andere auto (regel over deze ouder-dochter-koppeling is vastgelegd in de planningsinstellingen).');
 });
+test('v249: the car rows of a match say what their big time is (vertrek, ophalen, ca. ophalen)', () => { assert.equal(t('matches.car_vertrek'), 'vertrek'); assert.equal(t('matches.car_ophalen'), 'ophalen'); assert.equal(t('matches.car_ca_ophalen'), 'ca. ophalen'); });
 test('Beheer has texts for the open-all / close-all button', () => { assert.equal(t('beheer.alles_open'), 'Alles openklappen'); assert.equal(t('beheer.alles_dicht'), 'Alles dichtklappen'); });
 test('Wijzigen has texts for deleting a car (button, toast, confirmation naming the passengers)', () => {
   assert.equal(t('deviation.verwijder_auto'), 'Verwijder auto');
@@ -444,6 +445,35 @@ test('Meerijders in een wedstrijdcarpool: title and subtitle say "anderen" (fami
 test('v242: the texts of the match carpool log and of the refused change exist', () => {
   for (const k of ['matches.auto_intussen_gewijzigd', 'matches.log_titel', 'matches.log_iemand', 'matches.log_auto', 'matches.log_add', 'matches.log_edit', 'matches.log_del', 'matches.log_undo']) assert.ok(nl[k], k);
   assert.equal(t('matches.log_edit', { who: 'Jan', car: 'A 10:00 (X)', to: 'A 11:00 (X)' }), 'Jan wijzigde een auto van A 10:00 (X) naar A 11:00 (X)');
+});
+
+
+test('v244: the bus texts exist and fill in their values', () => {
+  for (const k of ['matches.bus_aria', 'matches.bus_aan', 'matches.bus_carpool', 'matches.bus_sheet_titel', 'matches.bus_auto_aankomst', 'beheer.bus_team', 'beheer.bus_niet', 'myweek.bus_tijden']) assert.ok(hasKey(k), k);
+  assert.equal(t('myweek.bus_tijden', { depart: '09:00', back: '14:30' }), 'Bus vertrekt 09:00 · terug ± 14:30');
+  assert.equal(t('matches.bus_carpool', { venue: "AFC '34", text: '36 km' }), "Carpool naar AFC '34 · 36 km");
+});
+
+
+test('v244: the bus place texts exist, the tag text is gone, the car label names the place', () => {
+  for (const k of ['matches.bus_plek_label', 'matches.bus_carpool_kort']) assert.ok(hasKey(k), k); assert.ok(!hasKey('matches.bus_aangepast'));
+  assert.equal(t('matches.bus_form_ophalen', { place: 'ATC' }), 'Terug ophalen bij ATC'); assert.equal(t('matches.bus_carpool_kort', { venue: 'Sporthal' }), 'Carpool naar Sporthal');
+});
+
+
+test('v246: the heen / terug texts exist, fill in their values and the pickup text of the old design is gone', () => {
+  for (const k of ['matches.leg_heen', 'matches.leg_terug', 'matches.leg_kies', 'matches.leg_opt_beide', 'matches.leg_opt_bus_terug', 'matches.leg_terug_regelen', 'matches.ik_rij_terug', 'agenda.ophalen_na', 'wa.my.match_terug']) assert.ok(hasKey(k), k);
+  assert.ok(!hasKey('matches.bus_auto_terug'));
+  assert.equal(t('matches.leg_bus_terug_sub', { place: "AFC '34" }), "bus weer terug bij AFC '34"); assert.equal(t('matches.leg_ophalen_bij', { place: 'Sportpark' }), 'Ophalen bij Sportpark');
+  assert.equal(t('wa.my.match_terug', { day: 'ZA 3', team: 'A', opponent: 'B', time: '16:15', driver: 'Jan' }), 'ZA 3 — wedstrijd A vs B: ophalen 16:15 met Jan');
+});
+
+test('v247: the rough return time reads ± time (na afloop)', () => {
+  assert.equal(t('matches.leg_ongeveer_na_afloop', { time: '18:45' }), '± 18:45 (na afloop)');
+});
+
+test('v248: the Mijn week match card texts exist', () => {
+  assert.equal(t('myweek.terug_ca'), 'Terug (±)'); assert.equal(t('myweek.jij_haalt_op'), 'Jij haalt op'); assert.equal(t('myweek.match_ook_terug', { time: '12:00' }), 'rijdt ook terug, ± 12:00 (na afloop)');
 });
 
 test('the removed shift map-button texts are gone', () => {

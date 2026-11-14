@@ -1,5 +1,5 @@
 // ui-push.js — Beheer card "Push-meldingen testen": the test switch, the coordinator's devices, "Ik ben Ouder van Saar", the scenarios and
-// the phone-style preview. COORDINATOR ONLY and TEMPORARY (push-access.js). The rules are in push.js, the database in push-data.js.
+// the phone-style preview. COORDINATOR ONLY (push-access.js). The rules are in push.js, the database in push-data.js.
 // This card always works, also while the push switch on the Ritten-ruilen card is off.
 // A tapped test push opens the app in Testweergave as the family the message was meant for; a tapped real push opens Ritten ruilen
 // (applyPendingPushOpen).

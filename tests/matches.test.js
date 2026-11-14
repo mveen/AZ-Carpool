@@ -68,6 +68,25 @@ test('an old name-keyed document is found by team name and time, and flagged leg
   resetState({ matchFeeds: feeds, matchCarpools: { [legacyId]: { startMs: m().start.getTime(), cars: [] } } });
   const r = carpoolFor(m()); assert.equal(r.id, legacyId); assert.equal(r.legacy, true);
 });
+test('kick-off time changed in the calendar (other event id too): same calendar, title and day still finds the carpool', () => {
+  const old = { calendarId: m().calendarId, eventId: 'e0', summary: m().summary, startMs: m().start.getTime() + 90 * 60000, cars: [{ driverFamilyId: 'f1' }] };
+  withFakeNow(NOW, () => {
+    resetState({ matchFeeds: feeds, matches: [m()], matchesSource: 'live', matchCarpools: { old } });
+    assert.equal(carpoolFor(m()).id, 'old');
+    assert.equal(carpoolFor(m()).doc, old);
+    // another title on the same day: not the same match
+    resetState({ matchFeeds: feeds, matches: [m()], matchesSource: 'live', matchCarpools: { old: { ...old, summary: 'AZ O15-1-Alkmaar O15-3' } } });
+    assert.equal(carpoolFor(m()).doc, null);
+    // two matches with the same title that day: ambiguous, so nothing is guessed
+    const m2 = m({ eventId: 'e2', start: new Date(m().start.getTime() + 5 * 3600000) });
+    resetState({ matchFeeds: feeds, matches: [m(), m2], matchesSource: 'live', matchCarpools: { old } });
+    assert.equal(carpoolFor(m()).doc, null);
+    // a document that belongs to another match by its exact id is not taken over
+    const other = m({ eventId: 'e3', summary: m().summary, start: new Date(m().start.getTime() + 6 * 3600000) });
+    resetState({ matchFeeds: feeds, matches: [m(), other], matchesSource: 'live', matchCarpools: { [matchSlug(other)]: { ...old, eventId: 'e3' } } });
+    assert.equal(carpoolFor(m()).doc, null);
+  });
+});
 test('nothing stored: doc is null, id is where it will be saved', () => {
   resetState({}); assert.deepEqual(carpoolFor(m()), { id: matchSlug(m()), doc: null });
 });
@@ -297,6 +316,33 @@ test('matchCarCapacityState: family riding along takes seats away from the playe
   assert.deepEqual(matchCarCapacityState('y'), { n: 0, cap: 1, family: 2, driverId: 'f1', over: false });
   dom.doc.getElementById('matchCarFamily_y').value = '3';
   assert.equal(matchCarCapacityState('y').cap, 0);
+});
+
+
+console.log('\n=== busStateOf ===');
+import { busPlaceOfMatch, busStateOf, suggestedMatchPickup } from '../matches.js';
+test('busStateOf: team default, per-match override, and not for a home match', () => {
+  const away = { calendarId: 'cal1', eventId: 'b1', summary: 'Volendam O15-1-AZ O15-1', start: new Date('2026-10-03T10:30:00+02:00') };
+  const ajax = { ...away, eventId: 'b2', summary: 'Jong Ajax-AZ O15-1' };
+  const home = { ...away, eventId: 'b3', summary: 'AZ O15-1-Volendam O15-1' };
+  resetState({ matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1', bus: true, busNot: 'Ajax' }], matchCarpools: {} });
+  assert.equal(busStateOf(away).on, true); assert.equal(busStateOf(ajax).on, false); assert.equal(busStateOf(home).applies, false);
+  assert.equal(busStateOf(ajax, { bus: true, busDepart: '09:00' }).on, true); assert.equal(busStateOf(ajax, { bus: true, busDepart: '09:00' }).depart, '09:00');
+  resetState({ matchFeeds: [{ calendarId: 'cal1', label: 'AZ O15-1' }], matchCarpools: {} });
+  assert.equal(busStateOf(away).on, false);
+});
+
+
+test('busPlaceOfMatch: AFC \'34 unless the carpool of the match says ATC or a free place', () => {
+  const m = { calendarId: 'cal1', eventId: 'p1', summary: 'Volendam O15-1-AZ O15-1', start: new Date('2026-10-03T10:30:00+02:00') };
+  resetState({ matchCarpools: {} }); assert.deepEqual(busPlaceOfMatch(m), { key: 'AFC', text: '' });
+  resetState({ matchCarpools: { [matchSlug(m)]: { cars: [], busAt: 'ATC' } } }); assert.equal(busPlaceOfMatch(m).key, 'ATC');
+  resetState({ matchCarpools: { [matchSlug(m)]: { cars: [], busAtText: 'Sporthal' } } }); assert.deepEqual(busPlaceOfMatch(m), { key: 'OTHER', text: 'Sporthal' });
+});
+
+
+test('suggestedMatchPickup: about 1,5 hours after kick-off (the return leg has no end time of its own)', () => {
+  assert.equal(suggestedMatchPickup(new Date(2026, 9, 3, 10, 30)), '12:00'); assert.equal(suggestedMatchPickup(new Date(2026, 9, 3, 22, 45)), '00:15');
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

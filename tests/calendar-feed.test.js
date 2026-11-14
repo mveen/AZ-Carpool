@@ -295,5 +295,13 @@ test('a match carpool event says where the car leaves from: Busstation by defaul
   assert.match(via({ fromId: '', fromText: 'Zwaag, Dorpsstraat 12' }), /Vertrek vanaf: Zwaag, Dorpsstraat 12/);
 });
 
+
+test('a car that only picks up (leg terug) says so in the calendar and does not claim to leave from a place', () => {
+  stateWith({ matchCarpools: { 'az-ajax': MATCH({ cars: [{ ...car('f2', ['f1'], '16:15'), leg: 'terug' }] }) } });
+  const m = feedEvents('f1', S, NOW).find(e => e.uid.startsWith('match-'));
+  assert.match(m.description, /Ophalen na afloop/); assert.doesNotMatch(m.description, /Vertrek vanaf/); assert.match(m.description, /Aftrap 14:30/);
+  assert.equal(new Date(m.startMs).toISOString(), '2026-10-04T14:15:00.000Z');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
