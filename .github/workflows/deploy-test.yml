@@ -76,3 +76,26 @@ jobs:
           curl -fsS --max-time 20 "$SITE/" | grep -q 'class="envBar"' || { echo "::error::test banner is missing on the start page"; exit 1; }
           if curl -fsS --max-time 20 "$SITE/firebase-config.js" | grep -q 'projectId: *"az-carpool"'; then echo "::error::the test site uses the LIVE database"; exit 1; fi
           echo "OK: $SITE serves $expected with its own database"
+
+  # The same robot as in the live pipeline: logs in as coordinator and as parent, opens every tab, in Chromium and in WebKit (Safari engine).
+  # So a branch put on the test site is checked right away, before anybody looks at it.
+  smoke:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Install the robot browsers (Chromium and WebKit, the Safari engine)
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.0
+          npx playwright install --with-deps chromium webkit
+      - name: Smoke test the test site (coordinator and parent)
+        env:
+          SMOKE_SITE: https://test.azcarpool.nl
+          SMOKE_PHONE: ${{ secrets.SMOKE_PHONE }}
+          SMOKE_CODE_COORD: ${{ secrets.SMOKE_CODE_COORD }}
+          SMOKE_CODE_PARENT: ${{ secrets.SMOKE_CODE_PARENT }}
+        run: node scripts/smoke-test.mjs
