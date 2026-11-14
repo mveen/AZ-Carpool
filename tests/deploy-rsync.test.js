@@ -2,7 +2,7 @@
 // scripts/deploy-rsync.sh and the deploy workflow: the upload is safe (right folder only, right order, no stray deletes)
 // and the workflow only needs the five GitHub secrets. The upload itself is tried on a local folder instead of the real host.
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawnSync, spawn } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -82,6 +82,37 @@ if (!have('rsync') || !have('bash')) {
     assert.equal(again.status, 0, again.stderr);
     assert.ok(!/^[<>ch.*][fdLDS]/m.test(again.stdout.replace(/^==.*$/gm, '').replace(/^\.d\.\.t\.+ .*$/gm, '')), again.stdout);
   });
+
+  // The check between the two passes, against a small web server (its own process) that serves the destination folder.
+  if (!have('curl')) console.log('  (curl not found: served-files check skipped)');
+  else {
+    const serverJs = `const http=require('http'),fs=require('fs'),path=require('path');const root=process.argv[1],hide=process.argv[2]||'';
+      http.createServer((q,r)=>{const f=decodeURIComponent(q.url.split('?')[0]).replace(/^\\/+/,'');const p=path.join(root,f);
+        if((hide&&f===hide)||!fs.existsSync(p)||!fs.statSync(p).isFile()){r.writeHead(404);r.end();return;}r.writeHead(200);r.end(fs.readFileSync(p));})
+      .listen(0,'127.0.0.1',function(){console.log(this.address().port);});`;
+    const serve = (root, hide = '') => new Promise(res => { const c = spawn(process.execPath, ['-e', serverJs, root, hide], { stdio: ['ignore', 'pipe', 'inherit'] }); c.stdout.once('data', d => res({ port: String(d).trim(), stop: () => c.kill() })); });
+    const runChecked = (src, to, port) => spawnSync('bash', [script, src, to], { encoding: 'utf8', env: { ...process.env, DEPLOY_CHECK_SITE: `http://127.0.0.1:${port}/`, DEPLOY_CHECK_TRIES: '2', DEPLOY_CHECK_WAIT: '0' } });
+    const fresh = name => { const d = join(tmp, name); mkdirSync(d, { recursive: true }); writeFileSync(join(d, 'index.html'), 'previous start page'); return d; };
+
+    await test('with DEPLOY_CHECK_SITE: when the site serves every uploaded file, the start page and service worker follow', async () => {
+      const to = fresh('served-ok'); const s = await serve(to);
+      try { const r = runChecked(dist, to, s.port); assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /all \d+ files are served/);
+        assert.ok(r.stdout.indexOf('== check') > r.stdout.indexOf('== pass 1') && r.stdout.indexOf('== check') < r.stdout.indexOf('== pass 2'));
+        assert.equal(readFileSync(join(to, 'index.html'), 'utf8'), readFileSync(join(dist, 'index.html'), 'utf8')); } finally { s.stop(); }
+    });
+    await test('with DEPLOY_CHECK_SITE: when an uploaded file is not served (404), it stops BEFORE the start page and service worker: the previous version stays', async () => {
+      const to = fresh('served-not'); const s = await serve(to, 'firebase-sdk/firebase-app.js');
+      try { const r = runChecked(dist, to, s.port); assert.equal(r.status, 1); assert.match(r.stderr, /firebase-sdk\/firebase-app\.js\(404\)/); assert.match(r.stderr, /NOT replaced/);
+        assert.ok(existsSync(join(to, 'firebase-sdk/firebase-app.js')), 'the file itself was uploaded');
+        assert.equal(readFileSync(join(to, 'index.html'), 'utf8'), 'previous start page'); assert.ok(!existsSync(join(to, 'service-worker.js'))); } finally { s.stop(); }
+    });
+    await test('both workflows switch the check on for the website uploads (not for the cron folder)', () => {
+      const live = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8'), t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
+      assert.equal((live.match(/DEPLOY_CHECK_SITE="\$SITE" bash scripts\/deploy-rsync\.sh dist(-test)?\//g) || []).length, 2);
+      assert.equal((t.match(/DEPLOY_CHECK_SITE="\$SITE" bash scripts\/deploy-rsync\.sh dist-test\//g) || []).length, 1);
+      assert.doesNotMatch(live, /DEPLOY_CHECK_SITE[^\n]*dist-cron/);
+    });
+  }
 }
 
 console.log('=== safety ===');

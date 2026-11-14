@@ -58,7 +58,7 @@ await test('.htaccess forces https, never caches the app files and the service w
   assert.match(h, /AddType text\/javascript \.js/);
 });
 
-await test('.htaccess sends a Content-Security-Policy that allows only own files, gstatic and the hashed inline scripts', () => {
+await test('.htaccess sends a Content-Security-Policy that allows only own files and the hashed inline scripts (no other server may deliver code)', () => {
   const h = read('.htaccess');
   const csp = (h.match(/Content-Security-Policy "([^"]+)"/) || [])[1] || '';
   assert.ok(csp, 'CSP header present');
@@ -68,6 +68,7 @@ await test('.htaccess sends a Content-Security-Policy that allows only own files
   const script = (csp.match(/script-src ([^;]+)/) || [])[1] || '';
   assert.ok(!script.includes('unsafe-inline') && !script.includes('unsafe-eval'), 'no unsafe script sources');
   assert.ok(!script.includes('*'), 'no wildcard script source');
+  assert.ok(!/https?:/.test(script), 'no other server in script-src: ' + script);
   assert.ok(!h.includes(HASH_PLACEHOLDER), 'placeholder filled in');
   assert.match(h, /X-Frame-Options "DENY"/);
   assert.match(h, /Strict-Transport-Security "max-age=\d+"/);
@@ -79,15 +80,17 @@ await test('every inline script of the built index.html has its hash in the poli
   for (const x of hashes) assert.ok(h.includes(x), x);
   assert.equal(inlineScriptHashes('<script>a</script><script src="x.js"></script>')[0], "'sha256-ypeBEsobvcr6wjGzmiPcTaeG7/gUfE5yuYB3ha/uSLs='");
 });
-await test('the service worker script gets the same CSP as the page, so connect-src must also allow the Firebase SDK host it fetches', () => {
+await test('the Firebase SDK comes from the site itself: in the upload folder, in the page, and Google\'s server (gstatic) is nowhere allowed or asked', () => {
+  for (const f of ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js']) assert.ok(r.files.includes('firebase-sdk/' + f), f);
+  const html = read('index.html');
+  for (const f of ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js']) assert.ok(html.includes(`from "${SITE}firebase-sdk/${f}"`), f);
   const h = read('.htaccess'); const csp = (h.match(/Content-Security-Policy "([^"]+)"/) || [])[1];
-  assert.match((csp.match(/connect-src ([^;]+)/) || [])[1], /https:\/\/www\.gstatic\.com/);
-  const sw = read('service-worker.js');
-  assert.match(sw, /url\.hostname === 'www\.gstatic\.com'/, 'the worker still fetches gstatic');
+  assert.ok(!csp.includes('gstatic'), 'gstatic is not in the policy');
+  assert.ok(!html.includes('gstatic') && !read('service-worker.js').includes('gstatic'));
 });
 await test('connect-src names every host the app talks to', () => {
   const csp = read('.htaccess');
-  for (const host of ['www.gstatic.com', 'firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'www.googleapis.com', 'api.openrouteservice.org']) {
+  for (const host of ['firestore.googleapis.com', 'identitytoolkit.googleapis.com', 'securetoken.googleapis.com', 'www.googleapis.com', 'api.openrouteservice.org']) {
     assert.ok(csp.includes('https://' + host), host);
   }
 });

@@ -38,11 +38,14 @@ async function run(url, method = 'GET') {
 const reset = () => { store.clear(); network = async () => new Response('ok'); };
 
 console.log('=== what is kept ===');
-await test('the app\'s own files and the Firebase SDK are cached', async () => {
+await test('the app\'s own files are cached, the Firebase SDK (own folder firebase-sdk/) included', async () => {
   reset();
-  for (const u of ['https://mveen.github.io/AZ-Carpool/app.js', 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js']) {
+  for (const u of ['https://mveen.github.io/AZ-Carpool/app.js', 'https://mveen.github.io/AZ-Carpool/firebase-sdk/firebase-app.js']) {
     const r = await run(u); assert.ok(r.responded && r.cached, u);
   }
+});
+await test('nothing from Google\'s file server (gstatic) is fetched or kept by the worker any more', async () => {
+  reset(); const r = await run('https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js'); assert.equal(r.responded, false);
 });
 await test('Firestore, Google Calendar and OpenRouteService requests are left alone and never stored (API keys, addresses, family data)', async () => {
   reset();
