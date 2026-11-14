@@ -23,6 +23,7 @@ jobs:
           node-version: 22
       - name: Install the emulator and the test helpers (only here, never part of the app)
         run: npm install --no-save --no-package-lock firebase-tools@15 @firebase/rules-unit-testing@6 firebase@13
+      # Every file runs, also after a failure, so one red test never hides another.
       - name: Run every rules test against the emulator
         working-directory: firebase
         run: |
@@ -30,4 +31,4 @@ jobs:
           if [ -n "${JAVA_HOME_21_X64:-}" ]; then export JAVA_HOME="$JAVA_HOME_21_X64"; export PATH="$JAVA_HOME/bin:$PATH"; fi
           java -version
           npx firebase emulators:exec --only firestore --project demo-test \
-            'for f in rules-test/*.test.mjs; do echo "== $f"; node "$f" || exit 1; done'
+            'bad=0; for f in rules-test/*.test.mjs; do echo "== $f"; node "$f" || bad=1; done; exit $bad'
