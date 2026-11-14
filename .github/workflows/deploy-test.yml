@@ -62,25 +62,12 @@ jobs:
           DEPLOY_CHECK_SITE="$SITE" bash scripts/deploy-rsync.sh dist-test/ "$user@$SSH_HOST:$TARGET_DIR"
 
       - name: Check that the test version is live, with the test database
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          expected=$(grep -oE "CACHE_NAME *= *'[^']+'" dist-test/service-worker.js | head -1)
-          echo "Expected: $expected"
-          for attempt in 1 2 3 4 5 6; do
-            live=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
-            echo "Attempt $attempt, live: ${live:-nothing}"
-            if [ "$live" = "$expected" ]; then break; fi
-            if [ "$attempt" = 6 ]; then
-              # What did the site answer instead? (status, size, type and the first characters: enough to see a block page or an old file)
-              curl -s -o /tmp/sw-answer --max-time 20 -H 'Cache-Control: no-cache' -w 'The site answered: HTTP %{http_code}, %{size_download} bytes, type %{content_type}\n' "$SITE/service-worker.js" || true
-              head -c 300 /tmp/sw-answer | tr -d '\r' || true; echo
-              echo "::error::$SITE does not serve the new service worker"; exit 1
-            fi
-            sleep 10
-          done
-          curl -fsS --max-time 20 "$SITE/" | grep -q "$SITE/app.js" || { echo "::error::start page does not point to $SITE/app.js"; exit 1; }
-          curl -fsS --max-time 20 "$SITE/" | grep -q 'class="envBar"' || { echo "::error::test banner is missing on the start page"; exit 1; }
-          if curl -fsS --max-time 20 "$SITE/firebase-config.js" | grep -q 'projectId: *"az-carpool"'; then echo "::error::the test site uses the LIVE database"; exit 1; fi
-          echo "OK: $SITE serves $expected with its own database"
+          # Asks the site; when the host answers the robot with its wait page (bot check), the files are read on the host itself.
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          SITE_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519 $user@$SSH_HOST" REMOTE_DIR="$TARGET_DIR" bash .github/scripts/check-site.sh test "$SITE" dist-test
 
   # The same robot as in the live pipeline: logs in as coordinator and as parent, opens every tab, in Chromium and in WebKit (Safari engine).
   # So a branch put on the test site is checked right away, before anybody looks at it.
