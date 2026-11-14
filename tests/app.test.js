@@ -315,7 +315,7 @@ await testAsync('init picks up ?pushas=<family> from the address and removes it 
     for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r));   // the links, then the families, arrive
     assert.deepEqual(calls, [[null, '', '/']]);
     assert.equal(S.impersonateFamilyId, 'f6'); assert.equal(S.push.pendingOpen, '');
-  } finally { globalThis.history = had; globalThis.location = { hash: '', href: 'https://mveen.github.io/AZ-Carpool/', search: '' }; }
+  } finally { globalThis.history = had; globalThis.location = { hash: '', href: 'https://azcarpool.nl/', search: '' }; }
 });
 test('the service worker message "push-open" (the app was already open) is wired to the same request', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');

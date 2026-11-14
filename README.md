@@ -71,7 +71,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ui-beheer.js` | Beheer tab (coordinator only) | `ui-beheer.test.js` |
 | `ui-profile.js` | Gate, first-run claim, Mijn gezin, test view as a parent | `ui-profile.test.js` |
 | `ui-agenda.js` | Instellingen → Agenda: the family's two calendar links, parents' (rides the family drives) and daughter's (make once, copy, share, add to calendar) | `ui-agenda.test.js` |
-| `ui-install-prompt.js` | One-time "put the app on your home screen" sheet, behind a feature toggle that is off at deployment (remove the toggle after the rollout, see the top of the file) | `ui-install-prompt.test.js` |
+| `ui-install-prompt.js` | One-time "put the app on your home screen" sheet, a lasting feature behind a toggle that is still off (see the top of the file) | `ui-install-prompt.test.js` |
 | `calendar-feed.js` | The rides of one family for the next 3 weeks as calendar events and as an `.ics` file: `feedEvents` (the rides the daughter sits in) and `driverFeedEvents` (the rides the family drives; also used by `cron/agenda.mjs`) | `calendar-feed.test.js` |
 | `push-access.js` | **Push-meldingen testen:** who sees the push test screens (`COORDINATOR_ONLY`, one flag). Not the parents' own switch | `push-access.test.js` |
 | `push.js` | Push-meldingen, pure rules: the two switches (test `uit` / `test`, live `false` / `true`), which devices are accepted, the queue, who an entry goes to (`routeEntry`, `devicesFor`), what is still to send, what a message says | `push.test.js` |
@@ -151,7 +151,7 @@ Every on-screen text and message is in `texts-nl.js`, as `key: 'text with {place
 ## Deploy
 Live is `https://azcarpool.nl/` on mijn.host. Nobody uploads files by hand any more.
 
-**Why the code still says `mveen.github.io`:** `index.html` and `app.js` load their modules from the fixed address `https://mveen.github.io/AZ-Carpool/`. That is only a placeholder now: the build (`scripts/build-deploy.mjs`) writes a copy in `dist/` in which every such address is replaced by `https://azcarpool.nl/` (or the test site), and only that copy is uploaded. So never open the repo's own `index.html` directly; use `npm run preview`.
+**Addresses in the code:** `index.html` and `app.js` load their modules from the live address `https://azcarpool.nl/`. A live build (`scripts/build-deploy.mjs`) copies the files as they are; a test build replaces that address by `https://test.azcarpool.nl/`, and the build fails if any file still names the old GitHub Pages address. Never open the repo's own `index.html` directly (it would load the live app's code); use `npm run preview`.
 
 1. Work on a branch and open a pull request. `.github/workflows/tests.yml` runs `npm test` and checks that `CACHE_NAME` in `service-worker.js` was raised (`.github/scripts/check-cache-bump.sh`).
 2. The owner merges the pull request into `main`. Nothing reaches `main` without the owner.

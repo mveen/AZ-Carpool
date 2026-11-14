@@ -204,7 +204,7 @@ export function bootstrap(){
       const d = e && e.data;
       if(d && d.type === 'push-open') queuePushOpen(d.forFamilyId, d.open);   // the app was already open when a push was tapped
     });
-    navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js')
+    navigator.serviceWorker.register('https://azcarpool.nl/service-worker.js')
       .then(reg=>{ swReg = reg; checkForAppUpdate(); })
       .catch(()=>{});
   }

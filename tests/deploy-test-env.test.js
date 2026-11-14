@@ -7,7 +7,7 @@ import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildDeploy, readTestConfig, TEST_SITE, DEFAULT_SITE, SOURCE_SITE, TEST_BANNER_TEXT, inlineScriptHashes } from '../scripts/build-deploy.mjs';
+import { buildDeploy, readTestConfig, TEST_SITE, DEFAULT_SITE, OLD_SITE, TEST_BANNER_TEXT, inlineScriptHashes } from '../scripts/build-deploy.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -36,7 +36,7 @@ await test('uses the test database config, not the live one', () => {
   assert.match(readFileSync(join(repo, 'firebase-config.js'), 'utf8'), /projectId: "az-carpool"/, 'the live config in the repo is untouched');
 });
 await test('no file mentions the live address or GitHub Pages; the app and its links point to the test site', () => {
-  for (const f of r.files) if (/\.(html|js|css|json)$/.test(f)) { const t = read(f); assert.ok(!t.includes(DEFAULT_SITE), f); assert.ok(!t.includes(SOURCE_SITE), f); }
+  for (const f of r.files) if (/\.(html|js|css|json)$/.test(f)) { const t = read(f); assert.ok(!t.includes(DEFAULT_SITE), f); assert.ok(!t.includes(OLD_SITE), f); }
   assert.ok(read('index.html').includes(TEST_SITE + 'app.js'));
   assert.ok(read('constants.js').includes(`APP_URL = "${TEST_SITE}"`));
 });

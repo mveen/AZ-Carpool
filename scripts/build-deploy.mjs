@@ -1,8 +1,8 @@
 // scripts/build-deploy.mjs — `npm run build:deploy`
 // Builds the folder that is uploaded to the web host (default: dist/). It contains only the files the app needs
 // (the ASSETS list of service-worker.js, the service worker itself, and the server settings in deploy/), and it
-// swaps the fixed GitHub Pages address for the address of the new site. The source files in the repo are not changed,
-// so GitHub Pages keeps working exactly as before.
+// for another address than the live one (the test site, --site) swaps the live address for that one. The source files in
+// the repo already say https://azcarpool.nl/, so a live build copies them as they are.
 //
 //   node scripts/build-deploy.mjs                              -> dist/ for https://azcarpool.nl/
 //   node scripts/build-deploy.mjs --out some/dir --site https://example.nl/
@@ -12,7 +12,8 @@ import { dirname, join, extname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 
-export const SOURCE_SITE = 'https://mveen.github.io/AZ-Carpool/';
+// The address the app used until November 2026 (GitHub Pages). It only forwards now; no file may load anything from it.
+export const OLD_SITE = 'https://mveen.github.io/AZ-Carpool/';
 export const DEFAULT_SITE = 'https://azcarpool.nl/';
 export const TEST_SITE = 'https://test.azcarpool.nl/';
 // The live Firebase project. A test build must never be pointed at it.
@@ -101,8 +102,9 @@ export function buildDeploy({ rootDir = root, out = join(root, 'dist'), env = 'l
     if (env === 'test' && rel === 'firebase-config.js') { put(rel, testConfig); configSwapped = true; continue; }
     const buf = readFileSync(join(rootDir, rel));
     if (!TEXT_TYPES.has(extname(rel))) { put(rel, buf); continue; }
-    let text = buf.toString('utf8').split(SOURCE_SITE).join(site);
-    if (env === 'test') text = markAsTest(rel, text.split(DEFAULT_SITE).join(site));   // APP_URL (links in WhatsApp texts) must not point to the live site either
+    let text = buf.toString('utf8');
+    if (site !== DEFAULT_SITE) text = text.split(DEFAULT_SITE).join(site);   // modules, service worker and APP_URL (links in WhatsApp texts)
+    if (env === 'test') text = markAsTest(rel, text);
     put(rel, text);
   }
   if (env === 'test' && !configSwapped) throw new Error('firebase-config.js is not in the ASSETS list of service-worker.js, so the test config cannot replace it.');
@@ -129,13 +131,13 @@ export function buildDeploy({ rootDir = root, out = join(root, 'dist'), env = 'l
   // Tells deploy-rsync.sh which server folder this build may go to (the file itself is never uploaded).
   put('.deploy-target', env + '\n');
 
-  // Safety checks: nothing may still point to the old address, and every file that is pointed to must be in the folder.
+  // Safety checks: nothing may point to the old address (or, on another site, to the live one), and every file that is pointed to must be in the folder.
   const problems = [];
   for (const rel of written) {
     if (!TEXT_TYPES.has(extname(rel))) continue;
     const text = readFileSync(join(out, rel), 'utf8');
-    if (text.includes(SOURCE_SITE)) problems.push(`${rel} still contains ${SOURCE_SITE}`);
-    if (env === 'test' && text.includes(DEFAULT_SITE)) problems.push(`${rel} still contains the live address ${DEFAULT_SITE}`);
+    if (text.includes(OLD_SITE)) problems.push(`${rel} still contains the old address ${OLD_SITE}`);
+    if (site !== DEFAULT_SITE && text.includes(DEFAULT_SITE)) problems.push(`${rel} still contains the live address ${DEFAULT_SITE}`);
     if (env === 'test' && /"projectId":\s*"az-carpool"|projectId:\s*"az-carpool"/.test(text)) problems.push(`${rel} still contains the live Firebase project`);
     for (const ref of relativeReferences(rel, text)) {
       const target = join(dirname(join(out, rel)), ref);

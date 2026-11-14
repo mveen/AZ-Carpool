@@ -1,15 +1,13 @@
 // ui-install-prompt.js — a one-time sheet that offers to put the app on the home screen.
 //
-// FEATURE TOGGLE (temporary): the sheet is OFF in every deployment until INSTALL_PROMPT_ENABLED below is set to true.
+// FEATURE TOGGLE: the sheet is a lasting part of the app (owner's decision, 2026-11-14: never remove it). It is OFF in every deployment until INSTALL_PROMPT_ENABLED below is set to true.
 // To try it on ONE phone first, add  ?installprompt=1  to the address once (this device only; ?installprompt=0 switches it off,
 // and =1 also forgets earlier answers so it can be tried again). Nothing goes into the database: what was shown is remembered
 // per device, because installing is per device too.
 //
-// AFTER THE ROLLOUT, remove the toggle but keep the feature: delete INSTALL_PROMPT_ENABLED, PREVIEW_KEY, applyPreviewParam(),
+// AFTER THE ROLLOUT the toggle may go, the feature stays: delete INSTALL_PROMPT_ENABLED, PREVIEW_KEY, applyPreviewParam(),
 // previewOn() and isEnabled() (and the 'off' line in blockedReason()), plus the preview tests at the end of
 // tests/ui-install-prompt.test.js. No database field, Beheer card or CSS to clean up.
-// To remove the WHOLE feature instead: delete this file, its test, the 'installprompt.*' texts, its line in service-worker.js
-// (ASSETS), its README row, and the import plus the two maybeShowInstallPrompt() calls in app.js.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { closeSheet, esc, isIOSDevice, isStandaloneDisplay, phIcon } from './ui-common.js';

@@ -71,7 +71,7 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 
 Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
-## Components added for "Push-meldingen testen" (Beheer, coordinator only, temporary)
+## Components added for "Push-meldingen testen" (Beheer, coordinator only)
 
 `.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
 
