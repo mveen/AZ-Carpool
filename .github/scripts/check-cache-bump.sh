@@ -6,9 +6,9 @@ set -euo pipefail
 base="${1:?base ref required}"
 mb=$(git merge-base "$base" HEAD)
 
-# Files that do not need a bump: tests, docs, CI, repo housekeeping.
+# Files that do not need a bump: tests, docs, CI, repo housekeeping, the database rules (firebase/: never uploaded with the app).
 changed=$(git diff --name-only "$mb" HEAD \
-  | grep -vE '^(tests/|\.github/|README\.md$|CLAUDE\.md$|docs/|\.gitignore$|package\.json$|tests\.lock\.json$|run-tests\.js$|test-count\.js$|scripts/|deploy/|cron/)' || true)
+  | grep -vE '^(tests/|\.github/|README\.md$|CLAUDE\.md$|docs/|firebase/|\.gitignore$|package\.json$|tests\.lock\.json$|run-tests\.js$|test-count\.js$|scripts/|deploy/|cron/)' || true)
 
 if [ -z "$changed" ]; then
   echo "No app files changed: no CACHE_NAME bump needed."

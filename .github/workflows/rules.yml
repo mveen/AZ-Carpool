@@ -1,0 +1,47 @@
+name: Databaseregels
+
+# By hand: Actions -> Databaseregels -> Run workflow.
+#   vergelijken: is firebase/firestore.rules the same as the rules that are live in the project? Changes nothing; shows the lines that differ.
+#   publiceren:  put firebase/firestore.rules live in the project (only when they differ, after Google accepted them).
+# The deploy pipeline (deploy.yml) publishes by itself after every merge; this is for a first check and for emergencies.
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: 'Welke database'
+        type: choice
+        options: [test, live]
+        default: test
+      actie:
+        description: 'Wat doen'
+        type: choice
+        options: [vergelijken, publiceren]
+        default: vergelijken
+
+concurrency:
+  group: rules-${{ inputs.project }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Database rules (${{ inputs.actie }}, ${{ inputs.project }})
+        env:
+          RULES_KEY: ${{ inputs.project == 'live' && secrets.RULES_KEY_LIVE || secrets.RULES_KEY_TEST }}
+          PROJECT: ${{ inputs.project == 'live' && 'az-carpool' || 'az-carpool-test' }}
+          ACTIE: ${{ inputs.actie }}
+        run: |
+          if [ -z "$RULES_KEY" ]; then echo "::error::The GitHub secret with the rules key for this project is not set (RULES_KEY_TEST or RULES_KEY_LIVE, see README -> Database rules)"; exit 1; fi
+          key="$RUNNER_TEMP/rules-key.json"; printf '%s' "$RULES_KEY" > "$key"; chmod 600 "$key"
+          trap 'rm -f "$key"' EXIT
+          if [ "$ACTIE" = publiceren ]; then node scripts/publish-rules.mjs --project "$PROJECT" --key "$key" --diff --publish
+          else node scripts/publish-rules.mjs --project "$PROJECT" --key "$key" --diff; fi
