@@ -98,8 +98,8 @@ console.log('=== the installer for the Mac ===');
 const sh = readFileSync(join(repo, 'scripts/install-mac-backup.sh'), 'utf8');
 await test('copies every file the script imports, so the copy outside the repo can run on its own', () => {
   const imports = f => [...readFileSync(join(repo, f), 'utf8').matchAll(/from '(\.\.?\/[^']+)'/g)].map(m => m[1]);
-  for (const i of imports('scripts/offsite-backup.mjs')) assert.ok(sh.includes(i.replace('../', '$REPO/')), 'installer copies ' + i);
-  for (const i of imports('cron/backup.mjs')) assert.ok(sh.includes('$REPO/cron/' + i.replace('./', '')), 'installer copies ' + i);
+  for (const i of imports('scripts/offsite-backup.mjs')) { assert.ok(i.startsWith('../cron/'), i); assert.ok(sh.includes('$REPO/' + i.slice(3)), 'installer copies ' + i); }
+  for (const i of imports('cron/backup.mjs')) { assert.ok(i.startsWith('./lib/'), i); assert.ok(sh.includes('$REPO/cron/' + i.slice(2)), 'installer copies ' + i); }
   for (const lib of ['google-auth', 'firestore-rest', 'setup']) assert.deepEqual(imports(`cron/lib/${lib}.mjs`), [], lib + ' imports nothing local');
 });
 await test('schedule: at login and every hour; the folder is outside Documents; nothing is switched on when the first copy fails', () => {
