@@ -122,6 +122,20 @@ test('npm run preview uses the TEST database only: checked test config, the live
   assert.ok(src.includes("markAsTest('index.html'"), 'shows the TESTOMGEVING bar');
 });
 
+console.log('=== the old address forwards ===');
+await test('index.html sends a visitor of the old GitHub Pages address to azcarpool.nl, before anything else loads, and only there', () => {
+  const src = readFileSync(join(repo, 'index.html'), 'utf8');
+  const line = "if(location.hostname==='mveen.github.io'){location.replace('https://azcarpool.nl/');}";
+  assert.ok(src.includes(line));
+  assert.ok(src.indexOf(line) < src.indexOf('<script type="module">'), 'before the app starts');
+  assert.ok(src.indexOf(line) < src.indexOf('<link rel="stylesheet"'), 'first thing in the head');
+  // Run the line itself with a fake address bar.
+  const go = host => { let to = null; new Function('location', line)({ hostname: host, replace: u => { to = u; } }); return to; };
+  assert.equal(go('mveen.github.io'), 'https://azcarpool.nl/');
+  for (const host of ['azcarpool.nl', 'test.azcarpool.nl', 'localhost']) assert.equal(go(host), null, host);
+  assert.ok(read('index.html').includes(line), 'the live build keeps the line (harmless there)');
+});
+
 rmSync(tmp, { recursive: true, force: true });
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
