@@ -1,7 +1,7 @@
 {
   "app.js": {
-    "module": "ecfe6b1391f8779e27ee9a68e4545627854144059058d516f3d9aa147c5606e0",
-    "test": "ebb989393653407e7e8760a9fbfec31f1b35d8ca74732d37c4bede0be042c4f1"
+    "module": "af5ab4453ecabac2bdd85da413b0311159fcea5b480d34d7fcedabcdc637ec64",
+    "test": "49a4df3f6d5c1f2970ffceb05c5d9a76eaaefbe2396281ee8f9d2ff65fbe3ca9"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "768db27ec03edd4bb9f5b5509b9f3dae2df528a73eee9a8cb9deee589f001e07",
-    "test": "91a20bffb2c5cfa95179582ae5b3b8c848fbdee3a5f74cb6647eea894a95af96"
+    "module": "c83925444eff27b7d109a180717f161b11be480ffe53161a1d385ea87744f491",
+    "test": "b2bafcd38fecdf4752917d13d00ef5c70956c7e98e27532890c049c4744ddeb6"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -212,8 +212,8 @@
     "test": "70ceb6aef1b3ad79ca96b5c00682cf194f86affd37e1674b74500d7bb335c5c9"
   },
   "ui-install-prompt.js": {
-    "module": "78ef0f4034c92a39f07a342ef2693dbbe617c512a2ac2e59d1479ab49991d322",
-    "test": "2b4569d327934f8edde32ad3700c6679aea73561bb0aa6f91f82121da536e1c8"
+    "module": "f1d8ce7850157a9065f8bb5bfa8afa2ac14fac96009d6f3f2932f9f6355af293",
+    "test": "0839ed5d47c40b8017ded88ac66ec555e26b9f2d6b0b154eed587a76fea009b8"
   },
   "ui-maintenance.js": {
     "module": "5d4263989aea94200a5905c639fbb0f846445d6b4693b91326368166cb382609",

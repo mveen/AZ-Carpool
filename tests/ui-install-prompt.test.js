@@ -35,7 +35,7 @@ function installSheet() {
 }
 const sheetOpen = ov => ov.mounted && !ov.removed;
 const stored = () => JSON.parse(localStorage.getItem('install-prompt') || 'null');
-const ready = (patch = {}) => { dom.reset(); sampleParentState({ linksLoaded: true, ...patch }); setUA(IPHONE_SAFARI); globalThis.location = { hash: '', search: '', href: 'https://mveen.github.io/AZ-Carpool/' }; };
+const ready = (patch = {}) => { dom.reset(); sampleParentState({ linksLoaded: true, ...patch }); setUA(IPHONE_SAFARI); globalThis.location = { hash: '', search: '', href: 'https://azcarpool.nl/' }; };
 // A fresh copy of the module (the preview switch is read once per page load).
 let n = 0; const fresh = () => import('../ui-install-prompt.js?copy=' + (++n));
 const ON = () => localStorage.setItem('install-prompt-preview', '1');   // switches the toggle on for the test, like ?installprompt=1 would
@@ -44,6 +44,7 @@ console.log('=== the feature toggle ===');
 test('the toggle is OFF in the code that gets deployed', () => {
   assert.equal(ip.INSTALL_PROMPT_ENABLED, false);
   assert.match(fs.readFileSync(new URL('../ui-install-prompt.js', import.meta.url), 'utf8'), /export const INSTALL_PROMPT_ENABLED = false;/);
+  assert.doesNotMatch(fs.readFileSync(new URL('../ui-install-prompt.js', import.meta.url), 'utf8'), /temporary|tijdelijk|remove the WHOLE feature/i, 'the sheet is a lasting feature (owner, 2026-11-14)');
 });
 test('with the toggle off nothing is shown, however ready the phone is', () => {
   ready(); const ov = installSheet();

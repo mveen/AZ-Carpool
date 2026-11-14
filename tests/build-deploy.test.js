@@ -6,7 +6,7 @@ import { mkdtempSync, readFileSync, existsSync, writeFileSync, mkdirSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildDeploy, assetList, relativeReferences, inlineScriptHashes, HASH_PLACEHOLDER, SOURCE_SITE } from '../scripts/build-deploy.mjs';
+import { buildDeploy, assetList, relativeReferences, inlineScriptHashes, HASH_PLACEHOLDER, OLD_SITE, DEFAULT_SITE } from '../scripts/build-deploy.mjs';
 
 let passed = 0, failed = 0;
 async function test(name, fn) {
@@ -38,11 +38,13 @@ await test('the start page and app point to the new address and not to GitHub Pa
   assert.ok(read('index.html').includes(SITE + 'data.js'));
   assert.ok(read('constants.js').includes(`APP_URL = "${SITE}"`));
   assert.ok(read('app.js').includes(SITE + 'service-worker.js'));
-  for (const f of r.files) if (/\.(html|js|css|json)$/.test(f)) assert.ok(!read(f).includes(SOURCE_SITE), f);
+  for (const f of r.files) if (/\.(html|js|css|json)$/.test(f)) assert.ok(!read(f).includes(OLD_SITE), f);
 });
-await test('the source files in the repo are not changed (GitHub Pages keeps working); APP_URL, used in the WhatsApp messages, is already the new address', () => {
+await test('the source files in the repo already use the live address and never the old one (GitHub Pages)', () => {
   assert.ok(readFileSync(join(repo, 'constants.js'), 'utf8').includes(`APP_URL = "${SITE}"`));
-  assert.ok(readFileSync(join(repo, 'index.html'), 'utf8').includes(SOURCE_SITE + 'app.js'));
+  assert.ok(readFileSync(join(repo, 'index.html'), 'utf8').includes(DEFAULT_SITE + 'app.js'));
+  assert.ok(readFileSync(join(repo, 'app.js'), 'utf8').includes(DEFAULT_SITE + 'service-worker.js'));
+  for (const f of ['index.html', 'app.js', 'service-worker.js', 'constants.js', 'manifest.json']) assert.ok(!readFileSync(join(repo, f), 'utf8').includes(OLD_SITE), f);
 });
 await test('binary files are copied byte for byte', () => {
   assert.deepEqual(readFileSync(join(tmp, 'dist', 'icon-192.png')), readFileSync(join(repo, 'icon-192.png')));
