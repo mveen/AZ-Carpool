@@ -1,5 +1,5 @@
 // Run with: node vendor-firebase.test.js
-// The Firebase SDK is part of the app's own files (vendor/firebase/, made by scripts/vendor-firebase.mjs): complete, the version the
+// The Firebase SDK is part of the app's own files (firebase-sdk/, made by scripts/vendor-firebase.mjs): complete, the version the
 // script names, importing only from its own folder, and offering everything index.html and data.js ask of it.
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';

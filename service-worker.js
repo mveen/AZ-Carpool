@@ -8,9 +8,9 @@ const CACHE_NAME = 'az-carpool-v254';
 const ASSETS = [
   './',
   './index.html',
-  './vendor/firebase/firebase-app.js',
-  './vendor/firebase/firebase-auth.js',
-  './vendor/firebase/firebase-firestore.js',
+  './firebase-sdk/firebase-app.js',
+  './firebase-sdk/firebase-auth.js',
+  './firebase-sdk/firebase-firestore.js',
   './tokens.css',
   './components.css',
   './print.css',
@@ -174,7 +174,7 @@ self.addEventListener('notificationclick', (event) => {
   })());
 });
 
-// Only the app's own files (the Firebase SDK in vendor/firebase/ is one of them) are worth keeping for offline use. Everything else
+// Only the app's own files (the Firebase SDK in firebase-sdk/ is one of them) are worth keeping for offline use. Everything else
 // (Firestore, Google Calendar, OpenRouteService: URLs with API keys, addresses and family data) goes straight to the network and is never stored here.
 function isCacheable(url){
   return url.origin === self.location.origin;

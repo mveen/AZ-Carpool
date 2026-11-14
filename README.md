@@ -68,7 +68,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `tests/__snapshots__/` | Saved page output that render tests compare against | |
 | `package.json` | `npm test`, `npm run lock` | |
 | `firebase-config.js` | Firebase config + Google Calendar API key (fill in once). **No secret keys**: the OpenRouteService key is in the database (Beheer → *API-sleutels*) | never overwrite |
-| `vendor/firebase/` | The Firebase SDK (app, auth, firestore), served by the site itself instead of Google's server. Made by `node scripts/vendor-firebase.mjs` (version in that file); never edit by hand. Upgrade: run it with the new version, set `FIREBASE_VERSION`, bump `CACHE_NAME`, put the branch on the test site (the robot checks Chromium and WebKit) | `vendor-firebase.test.js` |
+| `firebase-sdk/` | The Firebase SDK (app, auth, firestore), served by the site itself instead of Google's server. Made by `node scripts/vendor-firebase.mjs` (version in that file); never edit by hand. Upgrade: run it with the new version, set `FIREBASE_VERSION`, bump `CACHE_NAME`, put the branch on the test site (the robot checks Chromium and WebKit) | `vendor-firebase.test.js` |
 | `firebase/firestore.rules` | Firestore security rules | paste into Firebase console → Rules |
 | `manifest.json`, `service-worker.js`, `icon-*.png`, `apple-touch-icon.png`, `favicon-32.png`, `icon.svg` (AZ Carpool logo) | PWA (install on home screen) | once; `service-worker.js` changes when modules are added |
 | `backups/` | Only on the owner's computer, never in git (`.gitignore`): database back-ups and the test key for `npm run seed:test` | never on the site |

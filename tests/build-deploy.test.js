@@ -81,9 +81,9 @@ await test('every inline script of the built index.html has its hash in the poli
   assert.equal(inlineScriptHashes('<script>a</script><script src="x.js"></script>')[0], "'sha256-ypeBEsobvcr6wjGzmiPcTaeG7/gUfE5yuYB3ha/uSLs='");
 });
 await test('the Firebase SDK comes from the site itself: in the upload folder, in the page, and Google\'s server (gstatic) is nowhere allowed or asked', () => {
-  for (const f of ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js']) assert.ok(r.files.includes('vendor/firebase/' + f), f);
+  for (const f of ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js']) assert.ok(r.files.includes('firebase-sdk/' + f), f);
   const html = read('index.html');
-  for (const f of ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js']) assert.ok(html.includes(`from "${SITE}vendor/firebase/${f}"`), f);
+  for (const f of ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js']) assert.ok(html.includes(`from "${SITE}firebase-sdk/${f}"`), f);
   const h = read('.htaccess'); const csp = (h.match(/Content-Security-Policy "([^"]+)"/) || [])[1];
   assert.ok(!csp.includes('gstatic'), 'gstatic is not in the policy');
   assert.ok(!html.includes('gstatic') && !read('service-worker.js').includes('gstatic'));

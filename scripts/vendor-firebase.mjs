@@ -1,4 +1,4 @@
-// scripts/vendor-firebase.mjs — puts the Firebase SDK (app, auth, firestore) in vendor/firebase/, so the app loads it from its
+// scripts/vendor-firebase.mjs — puts the Firebase SDK (app, auth, firestore) in firebase-sdk/, so the app loads it from its
 // own site instead of from Google's server (www.gstatic.com).
 //   node scripts/vendor-firebase.mjs            -> the version in FIREBASE_VERSION below
 //   node scripts/vendor-firebase.mjs 13.4.0     -> another version (then also set FIREBASE_VERSION, bump CACHE_NAME, try it on the test site)
@@ -13,7 +13,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 export const FIREBASE_VERSION = '13.3.0';
 export const FIREBASE_FILES = ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js'];
-export const VENDOR_DIR = 'vendor/firebase';
+export const VENDOR_DIR = 'firebase-sdk';
 
 // PURE. The one change to a file of the package: imports from Google's server become imports from the folder itself.
 export function localise(text, version) {
@@ -42,5 +42,5 @@ export function vendorFirebase({ version = FIREBASE_VERSION, rootDir = join(dirn
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const r = vendorFirebase({ version: process.argv[2] || FIREBASE_VERSION });
-  console.log(`vendor/firebase/ now holds Firebase ${r.version}: ${r.files.join(', ')}`);
+  console.log(`firebase-sdk/ now holds Firebase ${r.version}: ${r.files.join(', ')}`);
 }

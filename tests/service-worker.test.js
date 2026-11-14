@@ -38,9 +38,9 @@ async function run(url, method = 'GET') {
 const reset = () => { store.clear(); network = async () => new Response('ok'); };
 
 console.log('=== what is kept ===');
-await test('the app\'s own files are cached, the Firebase SDK (own folder vendor/firebase/) included', async () => {
+await test('the app\'s own files are cached, the Firebase SDK (own folder firebase-sdk/) included', async () => {
   reset();
-  for (const u of ['https://mveen.github.io/AZ-Carpool/app.js', 'https://mveen.github.io/AZ-Carpool/vendor/firebase/firebase-app.js']) {
+  for (const u of ['https://mveen.github.io/AZ-Carpool/app.js', 'https://mveen.github.io/AZ-Carpool/firebase-sdk/firebase-app.js']) {
     const r = await run(u); assert.ok(r.responded && r.cached, u);
   }
 });

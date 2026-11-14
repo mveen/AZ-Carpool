@@ -66,10 +66,10 @@
 // connects the real Firebase and starts the app. Absolute URLs on purpose: a relative module
 // specifier triggered a Firefox security error for at least one user ("may not load or link to
 // file:///"). If this site's URL ever changes, the URLs in this script need to change with it.
-// The Firebase SDK is served by this site itself (vendor/firebase/, made by scripts/vendor-firebase.mjs), not by Google's server.
-import { initializeApp } from "https://mveen.github.io/AZ-Carpool/vendor/firebase/firebase-app.js";
-import * as firestoreSdk from "https://mveen.github.io/AZ-Carpool/vendor/firebase/firebase-firestore.js";
-import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence, signInAnonymously, signOut } from "https://mveen.github.io/AZ-Carpool/vendor/firebase/firebase-auth.js";
+// The Firebase SDK is served by this site itself (firebase-sdk/, made by scripts/vendor-firebase.mjs), not by Google's server.
+import { initializeApp } from "https://mveen.github.io/AZ-Carpool/firebase-sdk/firebase-app.js";
+import * as firestoreSdk from "https://mveen.github.io/AZ-Carpool/firebase-sdk/firebase-firestore.js";
+import { initializeAuth, getAuth, indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence, signInAnonymously, signOut } from "https://mveen.github.io/AZ-Carpool/firebase-sdk/firebase-auth.js";
 // Whole module on purpose: an older firebase-config.js must not break start-up. (The OpenRouteService key is not in this file: it is in the database, see settings/apiKeys.)
 import * as appConfig from "https://mveen.github.io/AZ-Carpool/firebase-config.js";
 import { initDb, createFirestoreDb } from "https://mveen.github.io/AZ-Carpool/data.js";
