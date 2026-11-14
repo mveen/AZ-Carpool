@@ -91,12 +91,12 @@ if (!have('rsync') || !have('bash')) {
         if((hide&&f===hide)||!fs.existsSync(p)||!fs.statSync(p).isFile()){r.writeHead(404);r.end();return;}r.writeHead(200);r.end(fs.readFileSync(p));})
       .listen(0,'127.0.0.1',function(){console.log(this.address().port);});`;
     const serve = (root, hide = '') => new Promise(res => { const c = spawn(process.execPath, ['-e', serverJs, root, hide], { stdio: ['ignore', 'pipe', 'inherit'] }); c.stdout.once('data', d => res({ port: String(d).trim(), stop: () => c.kill() })); });
-    const runChecked = (src, to, port) => spawnSync('bash', [script, src, to], { encoding: 'utf8', env: { ...process.env, DEPLOY_CHECK_SITE: `http://127.0.0.1:${port}/`, DEPLOY_CHECK_TRIES: '2', DEPLOY_CHECK_WAIT: '0' } });
+    const runChecked = (src, to, port) => spawnSync('bash', [script, src, to], { encoding: 'utf8', env: { ...process.env, DEPLOY_CHECK_SITE: `http://127.0.0.1:${port}/`, DEPLOY_CHECK_TRIES: '2', DEPLOY_CHECK_WAIT: '0', DEPLOY_CHECK_GAP: '0' } });
     const fresh = name => { const d = join(tmp, name); mkdirSync(d, { recursive: true }); writeFileSync(join(d, 'index.html'), 'previous start page'); return d; };
 
-    await test('with DEPLOY_CHECK_SITE: when the site serves every uploaded file, the start page and service worker follow', async () => {
+    await test('with DEPLOY_CHECK_SITE: when the site serves every new file, the start page and service worker follow', async () => {
       const to = fresh('served-ok'); const s = await serve(to);
-      try { const r = runChecked(dist, to, s.port); assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /all \d+ files are served/);
+      try { const r = runChecked(dist, to, s.port); assert.equal(r.status, 0, r.stderr); assert.match(r.stdout, /all \d+ new files are served/);
         assert.ok(r.stdout.indexOf('== check') > r.stdout.indexOf('== pass 1') && r.stdout.indexOf('== check') < r.stdout.indexOf('== pass 2'));
         assert.equal(readFileSync(join(to, 'index.html'), 'utf8'), readFileSync(join(dist, 'index.html'), 'utf8')); } finally { s.stop(); }
     });
@@ -105,6 +105,19 @@ if (!have('rsync') || !have('bash')) {
       try { const r = runChecked(dist, to, s.port); assert.equal(r.status, 1); assert.match(r.stderr, /firebase-sdk\/firebase-app\.js\(404\)/); assert.match(r.stderr, /NOT replaced/);
         assert.ok(existsSync(join(to, 'firebase-sdk/firebase-app.js')), 'the file itself was uploaded');
         assert.equal(readFileSync(join(to, 'index.html'), 'utf8'), 'previous start page'); assert.ok(!existsSync(join(to, 'service-worker.js'))); } finally { s.stop(); }
+    });
+    await test('with DEPLOY_CHECK_SITE: an upload without new files asks the site nothing (no row of requests at every deploy)', async () => {
+      const to = fresh('served-again'); const s = await serve(to);
+      try { assert.equal(runChecked(dist, to, s.port).status, 0);
+        const r = runChecked(dist, to, s.port); assert.equal(r.status, 0, r.stderr);
+        assert.match(r.stdout, /no new files in this upload, nothing to ask the site/); assert.doesNotMatch(r.stdout, /new files are served/); } finally { s.stop(); }
+    });
+    await test('only files that are new on the host are asked for, one at a time with a pause', () => {
+      const sh = readFileSync(script, 'utf8');
+      assert.match(sh, /grep -E '\^\[<>\]f\\\+\{9\} '/); assert.match(sh, /sleep "\$gap"/); assert.match(sh, /DEPLOY_CHECK_GAP:-0\.5/);
+    });
+    await test('when the version check after an upload fails, the workflows show what the site answered instead', () => {
+      for (const f of ['deploy.yml', 'deploy-test.yml']) assert.match(readFileSync(join(repo, '.github/workflows', f), 'utf8'), /The site answered: HTTP %\{http_code\}/, f);
     });
     await test('both workflows switch the check on for the website uploads (not for the cron folder)', () => {
       const live = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8'), t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');

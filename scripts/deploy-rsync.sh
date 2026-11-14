@@ -11,7 +11,7 @@
 #     a build says in .deploy-target (never uploaded) whether it is live or test: a test build can never reach the live folder and the other way round;
 #   - uploads everything except index.html and service-worker.js first, then those two last, so a phone never
 #     gets a new start page or service worker that points to files that are not there yet; with DEPLOY_CHECK_SITE set it also
-#     checks in between that the site really serves every uploaded file, and stops before those two if not;
+#     checks in between that the site really serves every NEW file, and stops before those two if not;
 #   - removes files that are no longer part of the app, but never touches .well-known (certificate checks), cgi-bin or agenda (the calendar files that cron/agenda.mjs makes).
 set -euo pipefail
 
@@ -54,27 +54,37 @@ opts=(-rlt --human-readable --itemize-changes --chmod=D755,F644 --exclude=/.well
 if [ -n "${RSYNC_SSH:-}" ]; then opts+=(-e "$RSYNC_SSH"); fi
 
 echo "== pass 1: everything except the start page and the service worker"
-rsync "${opts[@]}" --exclude=/index.html --exclude=/service-worker.js "$src" "$dest"
-# Between the two passes: is every uploaded file really served? A file that is new on the host (seen 2026-11-14 with a new folder: 404 for a few
-# minutes after the upload) must be reachable BEFORE the start page and the service worker start pointing to it; otherwise the app would not start.
+pass1_log=$(mktemp)
+rsync "${opts[@]}" --exclude=/index.html --exclude=/service-worker.js "$src" "$dest" | tee "$pass1_log"
+# Between the two passes: is every NEW file really served? A file that did not exist on the host before (seen 2026-11-14 with a new folder:
+# 404 for a few minutes after the upload) must be reachable BEFORE the start page and the service worker start pointing to it; otherwise
+# the app would not start. Only the new files are asked for (rsync marks them +++++++++): a changed file was already served, and asking
+# for every file at each upload (116 requests in a row) made the host answer the next request with something else than the file
+# (seen 2026-11-14: the version check after the upload then failed). One request per new file, with a short pause in between.
 # DEPLOY_CHECK_SITE=https://azcarpool.nl switches the check on (the workflows do); it waits up to DEPLOY_CHECK_TRIES x DEPLOY_CHECK_WAIT seconds.
 if [ -n "${DEPLOY_CHECK_SITE:-}" ]; then
-  site="${DEPLOY_CHECK_SITE%/}"; tries="${DEPLOY_CHECK_TRIES:-30}"; pause="${DEPLOY_CHECK_WAIT:-10}"
-  echo "== check: every uploaded file is served by $site"
-  files=$(cd "$src" && find . -type f ! -name '.*' ! -path './index.html' ! -path './service-worker.js' | sed 's|^\./||' | sort)
-  for attempt in $(seq 1 "$tries"); do
-    missing=""
-    while IFS= read -r f; do
-      [ -n "$f" ] || continue
-      code=$(curl -s -o /dev/null --max-time 20 -w '%{http_code}' "$site/$f" || true)
-      [ "$code" = 200 ] || missing="$missing $f($code)"
-    done <<< "$files"
-    if [ -z "$missing" ]; then echo "   all $(printf '%s\n' "$files" | grep -c .) files are served"; break; fi
-    echo "   attempt $attempt of $tries, not served yet:$missing"
-    if [ "$attempt" = "$tries" ]; then echo "ERROR: these files are uploaded but not served by $site:$missing. The start page and the service worker were NOT replaced: the site still runs the previous version." >&2; exit 1; fi
-    sleep "$pause"
-  done
+  site="${DEPLOY_CHECK_SITE%/}"; tries="${DEPLOY_CHECK_TRIES:-30}"; pause="${DEPLOY_CHECK_WAIT:-10}"; gap="${DEPLOY_CHECK_GAP:-0.5}"
+  files=$(grep -E '^[<>]f\+{9} ' "$pass1_log" | sed -E 's/^[<>]f\+{9} //' | grep -vE '(^|/)\.[^/]*$' | sort || true)
+  count=$(printf '%s\n' "$files" | grep -c . || true)
+  if [ "$count" = 0 ]; then echo "== check: no new files in this upload, nothing to ask the site"
+  else
+    echo "== check: the $count new file(s) are served by $site"
+    for attempt in $(seq 1 "$tries"); do
+      missing=""
+      while IFS= read -r f; do
+        [ -n "$f" ] || continue
+        code=$(curl -s -o /dev/null --max-time 20 -w '%{http_code}' "$site/$f" || true)
+        [ "$code" = 200 ] || missing="$missing $f($code)"
+        sleep "$gap"
+      done <<< "$files"
+      if [ -z "$missing" ]; then echo "   all $count new files are served"; break; fi
+      echo "   attempt $attempt of $tries, not served yet:$missing"
+      if [ "$attempt" = "$tries" ]; then echo "ERROR: these files are uploaded but not served by $site:$missing. The start page and the service worker were NOT replaced: the site still runs the previous version." >&2; rm -f "$pass1_log"; exit 1; fi
+      sleep "$pause"
+    done
+  fi
 fi
+rm -f "$pass1_log"
 
 echo "== pass 2: start page, service worker, and clean-up of files that are gone"
 rsync "${opts[@]}" --delete "$src" "$dest"

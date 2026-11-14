@@ -100,7 +100,12 @@ jobs:
             now=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
             echo "Attempt $attempt, test site: ${now:-nothing}"
             if [ "$now" = "$expected" ]; then break; fi
-            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve the new service worker"; exit 1; fi
+            if [ "$attempt" = 6 ]; then
+              # What did the site answer instead? (status, size, type and the first characters: enough to see a block page or an old file)
+              curl -s -o /tmp/sw-answer --max-time 20 -H 'Cache-Control: no-cache' -w 'The site answered: HTTP %{http_code}, %{size_download} bytes, type %{content_type}\n' "$SITE/service-worker.js" || true
+              head -c 300 /tmp/sw-answer | tr -d '\r' || true; echo
+              echo "::error::$SITE does not serve the new service worker"; exit 1
+            fi
             sleep 10
           done
           curl -fsS --max-time 20 "$SITE/" | grep -q 'class="envBar"' || { echo "::error::the test banner is missing: this is not the test build"; exit 1; }
@@ -197,7 +202,12 @@ jobs:
             live=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
             echo "Attempt $attempt, live: ${live:-nothing}"
             if [ "$live" = "$expected" ]; then break; fi
-            if [ "$attempt" = 6 ]; then echo "::error::$SITE does not serve the new service worker"; exit 1; fi
+            if [ "$attempt" = 6 ]; then
+              # What did the site answer instead? (status, size, type and the first characters: enough to see a block page or an old file)
+              curl -s -o /tmp/sw-answer --max-time 20 -H 'Cache-Control: no-cache' -w 'The site answered: HTTP %{http_code}, %{size_download} bytes, type %{content_type}\n' "$SITE/service-worker.js" || true
+              head -c 300 /tmp/sw-answer | tr -d '\r' || true; echo
+              echo "::error::$SITE does not serve the new service worker"; exit 1
+            fi
             sleep 10
           done
           curl -fsS --max-time 20 "$SITE/" | grep -q "$SITE/app.js" || { echo "::error::start page does not point to $SITE/app.js"; exit 1; }
