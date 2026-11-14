@@ -444,5 +444,8 @@ test('the bus article explains Heen and Terug (one leg per car by bus; without t
 });
 
 test('the Help never says "meisje", "meid" or "meiden": it is speelster or dochter', () => { assert.doesNotMatch(JSON.stringify(articles), /\b(meisjes?|meid|meiden)\b/i); });
+test('the services article says that all program code comes from the own host (no code loaded from Google servers)', () => {
+  const a = articles.find(x => x.title === 'Over deze app: gebruikte diensten'); assert.ok(a); assert.match(allText(a), /geen code van servers van Google geladen/);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

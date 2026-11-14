@@ -4,10 +4,13 @@
 // worker installs a fresh copy of every ASSET, and bootstrap() in app.js reloads the open app. Not in the cache yet: network.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v253';
+const CACHE_NAME = 'az-carpool-v254';
 const ASSETS = [
   './',
   './index.html',
+  './firebase-sdk/firebase-app.js',
+  './firebase-sdk/firebase-auth.js',
+  './firebase-sdk/firebase-firestore.js',
   './tokens.css',
   './components.css',
   './print.css',
@@ -171,11 +174,10 @@ self.addEventListener('notificationclick', (event) => {
   })());
 });
 
-// Only the app's own files and the Firebase SDK are worth keeping for offline use. Everything else (Firestore, Google Calendar,
-// OpenRouteService: URLs with API keys, addresses and family data) goes straight to the network and is never stored here.
+// Only the app's own files (the Firebase SDK in firebase-sdk/ is one of them) are worth keeping for offline use. Everything else
+// (Firestore, Google Calendar, OpenRouteService: URLs with API keys, addresses and family data) goes straight to the network and is never stored here.
 function isCacheable(url){
-  return url.origin === self.location.origin
-    || (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/'));
+  return url.origin === self.location.origin;
 }
 
 self.addEventListener('fetch', (event) => {
