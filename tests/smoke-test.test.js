@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSmokeConfig, isHarmless, TEST_ORIGIN, TABS } from '../scripts/smoke-test.mjs';
+import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES } from '../scripts/smoke-test.mjs';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { transformBackup, checkFixedCodes } from '../scripts/seed-test-data.mjs';
 
@@ -66,6 +66,25 @@ await test('the smoke job gets only the smoke secrets and never the deploy key',
   const j = job('smoke');
   assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
   assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
+});
+
+console.log('=== two browsers, and also after a test deploy ===');
+await test('the robot uses Chromium and WebKit (the Safari engine of the iPhone) unless SMOKE_BROWSERS names fewer', () => {
+  assert.deepEqual(ENGINES, ['chromium', 'webkit']);
+  assert.deepEqual(readEngines({}), ['chromium', 'webkit']);
+  assert.deepEqual(readEngines({ SMOKE_BROWSERS: 'webkit' }), ['webkit']);
+  assert.deepEqual(readEngines({ SMOKE_BROWSERS: ' WebKit , chromium ' }), ['chromium', 'webkit']);
+  assert.throws(() => readEngines({ SMOKE_BROWSERS: 'safari' }), /unknown browser safari/);
+});
+await test('both workflows install both browsers', () => {
+  const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
+  for (const f of [y, t]) assert.match(f, /playwright install --with-deps chromium webkit/);
+});
+await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets', () => {
+  const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
+  const j = t.slice(t.indexOf('\n  smoke:\n')); assert.ok(t.includes('\n  smoke:\n'));
+  assert.match(j, /needs: deploy\n/); assert.match(j, /node scripts\/smoke-test\.mjs/); assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
+  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
 });
 
 console.log('=== fixed codes in the test data ===');
