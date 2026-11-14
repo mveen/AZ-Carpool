@@ -364,7 +364,6 @@ test('the switch-parent button and sheet have their texts', () => {
 
 test('the texts of the redesign of Mijn week and Rooster are there', () => {
   assert.equal(t('myweek.passagiers'), 'Passagiers'); assert.equal(t('ride.chauffeur'), 'Chauffeur');
-  assert.equal(t('schedule.vertrek_bij', { p1: "AFC '34" }), "Vertrek bij AFC '34");
   assert.equal(t('shell.context_mijnweek', { week: 44 }), 'Week 44 · mijn gezin'); assert.equal(t('schedule.auto_aantal', { p1: 4 }), '4 ritten');
   assert.equal(t('contact.open_met', { p1: 'Jan' }), 'Neem contact op met Jan');
 });
@@ -381,9 +380,8 @@ test('the direction nobody asked to change has its texts, and the way back says 
   assert.equal(t('weekrooster.flow.chipLate'), 'Iemand komt te laat'); assert.equal(t('weekrooster.flow.chipLateTerug'), 'Iemand is nog niet klaar');
 });
 test('the flow of the day coordinator (Indeling, Controleren, Doorvoeren) has its texts, and the old counters are gone', () => {
-  ['step1', 'step2', 'step3', 'segAdvice', 'segAlt', 'moved0', 'notice0', 'adjust', 'toCheck', 'notFit', 'pickTitle', 'blockChanges', 'blockSeats', 'blockOut', 'blockEdit', 'fromCar', 'addPassenger', 'addTitle', 'addSub', 'addNow', 'addNone', 'addEmpty', 'removeItem', 'removeTitle', 'removeText', 'removeLast', 'removeNo', 'removeYes', 'addMore', 'addMoreSub', 'addNoRide', 'timeTitle', 'timeHeen', 'timeTerug', 'timeAdd', 'chipNoSwap', 'chipSeatsOk', 'summary', 'apply', 'applySub', 'backToPlan', 'doneTitle', 'undoAll', 'undoSure'].forEach(k => assert.ok(hasKey('weekrooster.flow.' + k), k));
+  ['step1', 'step2', 'step3', 'segAdvice', 'segAlt', 'notice0', 'adjust', 'toCheck', 'notFit', 'pickTitle', 'blockChanges', 'blockSeats', 'blockOut', 'blockEdit', 'fromCar', 'addPassenger', 'addTitle', 'addSub', 'addNow', 'addNone', 'addEmpty', 'removeItem', 'removeTitle', 'removeText', 'removeLast', 'removeNo', 'removeYes', 'addMore', 'addMoreSub', 'addNoRide', 'timeTitle', 'timeHeen', 'timeTerug', 'timeAdd', 'chipNoSwap', 'chipSeatsOk', 'summary', 'apply', 'applySub', 'backToPlan', 'doneTitle', 'undoAll', 'undoSure'].forEach(k => assert.ok(hasKey('weekrooster.flow.' + k), k));
   ['dep', 'join1', 'joinN', 'gone', 'off'].forEach(k => assert.ok(hasKey('weekrooster.essence.' + k), k)); ['adviceMoved1', 'adviceMovedN', 'waitNone', 'waitSome'].forEach(k => assert.ok(hasKey('weekrooster.action.' + k), k));
-  assert.equal(t('weekrooster.flow.movedN', { p1: 2 }), '2 speelsters in een andere auto');
   assert.equal(t('weekrooster.flow.chipRequests', { p1: 3, p2: 3 }), '3 van 3 aanvragen'); assert.equal(t('weekrooster.flow.undoAll'), 'Alles terugdraaien');
   assert.equal(t('weekrooster.advice.look'), 'Advies bekijken en aanpassen'); assert.equal(t('weekrooster.action.adviceFitsWait', { p1: 30 }), 'Advies: past in de bestaande auto’s, 30 min extra wachten.');
   ['weekrooster.action.adviceLess1', 'weekrooster.action.adviceLessN', 'weekrooster.action.adviceSame', 'weekrooster.action.adviceMore1', 'weekrooster.action.adviceMoreN'].forEach(k => assert.equal(hasKey(k), false, k));
@@ -581,8 +579,8 @@ console.log('=== housekeeping ===');
 test('every text key is used by the app: a key nobody asks for is dead weight (remove it with the screen it belonged to)', () => {
   const dirs = ['..', '../cron', '../cron/lib', '../scripts'];
   const src = dirs.flatMap(d => fs.readdirSync(new URL(d + '/', import.meta.url)).filter(f => /\.(js|mjs|html)$/.test(f) && f !== 'texts-nl.js').map(f => fs.readFileSync(new URL(d + '/' + f, import.meta.url), 'utf8'))).join('\n');
-  // A key counts as used when it is written out somewhere, or when the app builds it from a written-out start (e.g. 'weekrooster.flow.moved' + n).
-  const built = k => { for (let i = k.length - 1; i > k.indexOf('.') + 1; i--) { const p = k.slice(0, i); if (src.includes("'" + p + "'") || src.includes('"' + p + '"') || src.includes(p + '${') || src.includes('`' + p + '`')) return true; } return false; };
+  // A key counts as used when it is written out somewhere, or when the app builds it from a written-out start that is not a key itself (e.g. `weekrooster.flow.scene${...}`), or a 'Terug' variant of a used key (lateKey). A start that is a key does not count: that is how 'moved1' stayed unnoticed.
+  const built = k => { if (k.endsWith('Terug') && hasKey(k.slice(0, -5)) && src.includes(k.slice(0, -5))) return true; for (let i = k.length - 1; i > k.indexOf('.') + 1; i--) { const p = k.slice(0, i); if (hasKey(p)) continue; if (src.includes("'" + p + "'") || src.includes('"' + p + '"') || src.includes(p + '${') || src.includes('`' + p + '`')) return true; } return false; };
   assert.deepEqual(allKeys().filter(k => !src.includes(k) && !built(k)), []);
 });
 test('no text says "meisje", "meid" or "meiden": it is speelster or dochter', () => {

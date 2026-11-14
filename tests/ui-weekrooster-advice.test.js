@@ -400,7 +400,6 @@ test('the texts of the flow say what the design says', () => {
   assert.equal(t('weekrooster.flow.apply', { p1: 'woensdag' }), 'Doorvoeren voor woensdag'); assert.equal(t('weekrooster.flow.applySub'), 'Direct daarna kun je alles ongedaan maken');
   assert.equal(t('weekrooster.flow.undoTextMany', { p1: 'woensdag', p2: 3 }), 'Het rooster van woensdag gaat terug naar de oorspronkelijke situatie. De 3 aanvragen staan dan weer open.');
   assert.equal(t('weekrooster.flow.carsHeen', { p1: "AFC '34" }), "Auto’s heen · aankomst bij AFC '34"); assert.equal(t('weekrooster.flow.carsTerug', { p1: "AFC '34" }), "Auto’s terug · vertrek bij AFC '34");
-  assert.equal(t('weekrooster.flow.noticeN', { p1: 2 }), '2 chauffeurs met impact');
   assert.equal(t('weekrooster.entry.titleOne', { p2: 'donderdag' }), '1 aanvraag voor donderdag'); assert.equal(t('weekrooster.entry.titleMany', { p1: 2, p2: 'donderdag' }), '2 aanvragen voor donderdag');
 });
 console.log('=== earlier changes of the day that the proposal takes back ===');
