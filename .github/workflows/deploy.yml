@@ -52,6 +52,17 @@ jobs:
         with:
           node-version: 22
 
+      # Database rules: firebase/firestore.rules goes live in the test database by itself (no more pasting in the Firebase console).
+      # Skipped with a notice while the secret RULES_KEY_TEST is not set (README -> Database rules).
+      - name: Publish the database rules (test database)
+        env:
+          RULES_KEY: ${{ secrets.RULES_KEY_TEST }}
+        run: |
+          if [ -z "$RULES_KEY" ]; then echo "::notice::RULES_KEY_TEST is not set: the database rules were NOT published. Paste firebase/firestore.rules in the Firebase console if it changed."; exit 0; fi
+          key="$RUNNER_TEMP/rules-key.json"; printf '%s' "$RULES_KEY" > "$key"; chmod 600 "$key"
+          trap 'rm -f "$key"' EXIT
+          node scripts/publish-rules.mjs --project az-carpool-test --key "$key" --diff --publish
+
       - name: Build the test upload folder (own database, test banner)
         run: npm run build:deploy:test
 
@@ -132,6 +143,17 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
+
+      # Database rules: firebase/firestore.rules goes live in the live database by itself (no more pasting in the Firebase console).
+      # Skipped with a notice while the secret RULES_KEY_LIVE is not set (README -> Database rules).
+      - name: Publish the database rules (live database)
+        env:
+          RULES_KEY: ${{ secrets.RULES_KEY_LIVE }}
+        run: |
+          if [ -z "$RULES_KEY" ]; then echo "::notice::RULES_KEY_LIVE is not set: the database rules were NOT published. Paste firebase/firestore.rules in the Firebase console if it changed."; exit 0; fi
+          key="$RUNNER_TEMP/rules-key.json"; printf '%s' "$RULES_KEY" > "$key"; chmod 600 "$key"
+          trap 'rm -f "$key"' EXIT
+          node scripts/publish-rules.mjs --project az-carpool --key "$key" --diff --publish
 
       - name: Build the upload folder
         run: npm run build:deploy
