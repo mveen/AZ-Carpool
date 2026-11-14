@@ -633,7 +633,7 @@ export default [
       '• Agenda van je dochter en Mijn agenda: twee agenda-bestanden per gezin (Instellingen → Agenda) die je agenda-app zelf ophaalt. Het wordt elk half uur bijgewerkt door een taak op de webserver van mijn.host.',
       '• Berichten: via WhatsApp. De app verstuurt zelf geen WhatsApp-berichten.',
       '• Push-meldingen: alleen bij Ruilen en alleen als je ze zelf aanzet. Een taak op de webserver van mijn.host stuurt ze via de pushdienst van je browser (Google, Mozilla of Apple).',
-      '• Opslag en hosting: Google Firebase (database), mijn.host in Nederland (hosting, back-ups en geplande taken).',
+      '• Opslag en hosting: Google Firebase (database), mijn.host in Nederland (hosting, back-ups en geplande taken). Alle programmacode van de app komt van mijn.host zelf, ook de onderdelen die met de database praten; er wordt geen code van servers van Google geladen.',
       '• Opschonen: elke vrijdag kort na 19:00 worden de eenmalige wijzigingen van de afgelopen week door een taak op de webserver verwijderd. Daarvoor worden de gereden ritten eerst vastgelegd.',
     ],
   },
