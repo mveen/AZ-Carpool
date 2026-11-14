@@ -1,0 +1,45 @@
+name: Restart deploy after host wait page
+
+# mijn.host sometimes answers the GitHub computer that is deploying with its own bot check ("One moment, please...") instead of the site,
+# for minutes. The upload worked; the check afterwards (or the smoke test) is blocked. This workflow restarts the FAILED jobs once,
+# which runs them on another computer with another address. See README (Test environment -> Wait page of the host).
+# It restarts only when every failed step is one that talks to the host (scripts/should-retry-deploy.mjs); a failing test or build is never restarted.
+on:
+  workflow_run:
+    workflows: ['Deploy azcarpool.nl', 'Deploy test.azcarpool.nl']
+    types: [completed]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  restart:
+    # Only the first attempt: a second failure is a real problem and stays red.
+    if: github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Was it the wait page of the host?
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh api "repos/$REPO/actions/runs/$RUN_ID/jobs?per_page=100" | node scripts/should-retry-deploy.mjs | tee /tmp/decision
+          echo "answer=$(cat /tmp/decision)" >> "$GITHUB_OUTPUT"
+      - name: Wait a little, then restart the failed jobs once
+        if: steps.decide.outputs.answer == 'retry'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "A host step failed (wait page of mijn.host). Waiting 90 s, then restarting the failed jobs of run $RUN_ID."
+          sleep 90
+          gh run rerun "$RUN_ID" --failed --repo "$REPO"
