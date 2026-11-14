@@ -114,7 +114,9 @@ await test('runs only by hand, builds the test version, uploads only to the test
   assert.match(y, /TARGET_DIR: domains\/test\.azcarpool\.nl\/public_html\//); assert.match(y, /SITE: https:\/\/test\.azcarpool\.nl/);
   assert.match(y, /npm run build:deploy:test/); assert.match(y, /deploy-rsync\.sh dist-test\//);
   assert.doesNotMatch(y, /domains\/azcarpool\.nl/); assert.doesNotMatch(y, /azcarpool-cron/);
-  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER']);
+  // The upload job knows only the two deploy secrets; the robot job after it (smoke) knows only its own logins (smoke-test.test.js).
+  const upload = y.slice(0, y.indexOf('\n  smoke:\n')); assert.ok(y.includes('\n  smoke:\n'));
+  assert.deepEqual([...new Set([...upload.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER']);
   assert.ok(y.indexOf('npm test') < y.indexOf('deploy-rsync.sh'));
   assert.match(y, /StrictHostKeyChecking=yes/); assert.match(y, /permissions:\s*\n\s*contents: read/);
   assert.match(y, /LIVE database/);
