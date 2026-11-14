@@ -79,6 +79,6 @@ export async function runOffsite({ dir = offsiteDir(), now = Date.now(), makeFir
 
 if (isMainModule(import.meta.url)) {
   const r = await runOffsite();
-  console.log(r.message);
+  if (r.status !== 'skipped' || process.stdout.isTTY) console.log(r.message);   // the hourly "already there" would only fill launchd.log
   process.exit(r.status === 'failed' ? 1 : 0);
 }
