@@ -2,6 +2,7 @@
 // Everything that reads or writes the database. The database here is ALWAYS the in-memory fake from
 // fake-db.js — these tests never touch the real Firestore.
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -295,6 +296,37 @@ await testAsync('syncListeners: a parent never listens to the error log', async 
   sampleParentState({ families: {}, groups: {} });
   syncListeners(); await tick(); await tick();
   assert.equal(S.errorLogUnsub, null); assert.deepEqual(S.errorLog, {});
+});
+await testAsync('syncListeners: only the coordinator\'s app asks for the API keys; the OpenRouteService key is then known there', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/apiKeys': { ors: ' abcdefgh12345678 ' } });
+  sampleCoordinatorState({ links: {}, families: {} });
+  assert.equal(S.apiKeysUnsub, null);
+  syncListeners(); await tick(); await tick();
+  assert.equal(typeof S.apiKeysUnsub, 'function'); assert.equal(S.orsApiKey, 'abcdefgh12345678');
+  stopDataListeners();
+});
+await testAsync('syncListeners: a parent\'s app never asks for the API keys, so the key never reaches a parent\'s phone (also when the database would hand it over)', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/apiKeys': { ors: 'abcdefgh12345678' } });
+  sampleParentState({ families: {}, groups: {} });
+  syncListeners(); await tick(); await tick(); await tick();
+  assert.equal(S.apiKeysUnsub, null); assert.equal(S.orsApiKey, '');
+  stopDataListeners();
+});
+await testAsync('syncListeners: who is no coordinator any more loses the listener and the key', async () => {
+  useFakeDb({ ...sampleDbSeed(), 'settings/apiKeys': { ors: 'abcdefgh12345678' } });
+  sampleCoordinatorState({ links: {}, families: {} });
+  syncListeners(); await tick(); await tick();
+  assert.equal(S.orsApiKey, 'abcdefgh12345678');
+  sampleParentState({ families: {}, groups: {}, apiKeysUnsub: S.apiKeysUnsub, orsApiKey: S.orsApiKey });
+  syncListeners(); await tick();
+  assert.equal(S.apiKeysUnsub, null); assert.equal(S.orsApiKey, '');
+  stopDataListeners();
+});
+test('the listeners every member gets (startDataListeners) do not include the API keys', () => {
+  const src = readFileSync(new URL('../data.js', import.meta.url), 'utf8');
+  const start = src.slice(src.indexOf('export function startDataListeners'), src.indexOf('export function stopDataListeners'));
+  assert.ok(start.length > 1000); assert.doesNotMatch(start, /db\.doc\("settings\/apiKeys"\)/);
+  assert.equal((src.match(/db\.doc\("settings\/apiKeys"\)\.onSnapshot/g) || []).length, 1, 'one listener, in syncListeners');
 });
 await testAsync('syncListeners: when the person is no coordinator (any more), "Beheer opened" is forgotten, so the next coordinator on this page starts without those reads', async () => {
   useFakeDb(sampleDbSeed());
