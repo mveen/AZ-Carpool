@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES } from '../scripts/smoke-test.mjs';
+import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES, isHostWaitPage, withHostRetry, HOST_RETRIES } from '../scripts/smoke-test.mjs';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { transformBackup, checkFixedCodes } from '../scripts/seed-test-data.mjs';
 
@@ -113,6 +113,42 @@ await test('refuses unknown families, short codes, live codes and duplicates', (
   assert.throws(() => checkFixedCodes({ eline: '1111111111' }, fam, new Set(['1111111111'])), /live app/);
   assert.throws(() => checkFixedCodes({ eline: 'abcdefghij', evi: 'abcdefghij' }, fam), /same/);
 });
+
+console.log('=== the wait page of the host (bot check) ===');
+await test('the wait page of the host is recognised, an ordinary file or error is not', () => {
+  assert.ok(isHostWaitPage({ url: 'https://test.azcarpool.nl/z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f', headers: { server: 'LiteSpeed' } }));
+  assert.ok(isHostWaitPage({ url: 'https://test.azcarpool.nl/z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f?x=1' }));
+  assert.ok(isHostWaitPage({ url: 'https://test.azcarpool.nl/app.js', headers: { server: 'openresty/1.31.1.1', 'cf-edge-cache': 'no-cache' } }));
+  assert.ok(!isHostWaitPage({ url: 'https://test.azcarpool.nl/app.js', headers: { server: 'LiteSpeed' } }));
+  assert.ok(!isHostWaitPage({ url: 'https://test.azcarpool.nl/zebra.js', headers: { server: 'LiteSpeed' } }));
+  assert.ok(!isHostWaitPage({ url: 'https://test.azcarpool.nl/missing.js', headers: { server: 'openresty' } }), 'openresty alone is not enough');
+  assert.ok(!isHostWaitPage({}));
+});
+const noSleep = { sleep: async () => {}, log: () => {}, who: 'chromium parent' };
+await test('a clean check runs once', async () => {
+  let n = 0; assert.deepEqual(await withHostRetry(async () => { n++; return { problems: [], hostWait: false }; }, noSleep), []); assert.equal(n, 1);
+});
+await test('a real app error is NOT retried: it fails at once', async () => {
+  let n = 0; const p = await withHostRetry(async () => { n++; return { problems: ['tab myweek is empty'], hostWait: false }; }, noSleep);
+  assert.equal(n, 1); assert.deepEqual(p, ['tab myweek is empty']);
+});
+await test('with the wait page of the host the check is repeated, and a later clean try makes it pass', async () => {
+  let n = 0; const lines = [], waits = [];
+  const p = await withHostRetry(async () => { n++; return n < 3 ? { problems: ['Timeout'], hostWait: true } : { problems: [], hostWait: false }; }, { who: 'webkit parent', log: l => lines.push(l), sleep: async ms => { waits.push(ms); } });
+  assert.deepEqual(p, []); assert.equal(n, 3); assert.equal(waits.length, 2); assert.match(lines[0], /webkit parent: the wait page of the host/);
+});
+await test('a real error on the try after the wait page still fails', async () => {
+  let n = 0; const p = await withHostRetry(async () => { n++; return n === 1 ? { problems: ['Timeout'], hostWait: true } : { problems: ['page error: x'], hostWait: false }; }, noSleep);
+  assert.equal(n, 2); assert.deepEqual(p, ['page error: x']);
+});
+await test('the wait page every time: the run fails after the last try and names the cause', async () => {
+  let n = 0; const p = await withHostRetry(async () => { n++; return { problems: ['Timeout'], hostWait: true }; }, noSleep);
+  assert.equal(n, HOST_RETRIES); assert.match(p[0], /wait page of the host/); assert.match(p[0], /not an app error/); assert.equal(p[1], 'Timeout');
+});
+await test('the wait page seen but nothing went wrong: no retry needed', async () => {
+  let n = 0; assert.deepEqual(await withHostRetry(async () => { n++; return { problems: [], hostWait: true }; }, noSleep), []); assert.equal(n, 1);
+});
+await test('the smoke job has time for the retries', () => { assert.match(job('smoke'), /timeout-minutes: 25/); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
