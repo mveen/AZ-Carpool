@@ -30,8 +30,11 @@ export function readSmokeConfig(env = process.env) {
 }
 
 // Browser noise that is not an app error (e.g. the favicon of a tab, Google fonts blocked by an ad blocker).
+// Also harmless: in Safari the Firebase sign-in code tries to fetch a Google helper script (apis.google.com/js/api.js, only needed for
+// "log in with Google" windows, which this app does not have). The site's Content-Security-Policy refuses it on purpose; the app works without.
 export function isHarmless(msg) {
-  return /favicon|ERR_BLOCKED_BY_CLIENT|Failed to load resource: net::ERR_(INTERNET_DISCONNECTED|NAME_NOT_RESOLVED)/i.test(msg);
+  return /favicon|ERR_BLOCKED_BY_CLIENT|Failed to load resource: net::ERR_(INTERNET_DISCONNECTED|NAME_NOT_RESOLVED)/i.test(msg)
+    || /^Refused to load https:\/\/apis\.google\.com\/js\/api\.js\S* because it does not appear in the script-src directive of the Content Security Policy/.test(msg);
 }
 
 async function loadPlaywright() {

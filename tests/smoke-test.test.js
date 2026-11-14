@@ -76,6 +76,11 @@ await test('the robot uses Chromium and WebKit (the Safari engine of the iPhone)
   assert.deepEqual(readEngines({ SMOKE_BROWSERS: ' WebKit , chromium ' }), ['chromium', 'webkit']);
   assert.throws(() => readEngines({ SMOKE_BROWSERS: 'safari' }), /unknown browser safari/);
 });
+await test('the refused Google helper script in Safari is not an app error, any other refused script is', () => {
+  assert.ok(isHarmless('Refused to load https://apis.google.com/js/api.js?onload=__iframefcb586424 because it does not appear in the script-src directive of the Content Security Policy.'));
+  assert.ok(!isHarmless('Refused to load https://evil.example/x.js because it does not appear in the script-src directive of the Content Security Policy.'));
+  assert.ok(!isHarmless('Refused to load https://test.azcarpool.nl/app.js because it does not appear in the script-src directive of the Content Security Policy.'));
+});
 await test('both workflows install both browsers', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
   for (const f of [y, t]) assert.match(f, /playwright install --with-deps chromium webkit/);
