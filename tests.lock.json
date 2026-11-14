@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "19096074f897024dccbb8cf984a678d08e0f679a29e6dd855c2a6bf5e8ec2e11",
-    "test": "d5c424edb33e49eb8eb1e715578775b50088f105dafe664731497d1fca25a0ff"
+    "module": "6f9db32c741056b73f4ab15c0682a82bf46ee0e01819896a4ca520f7c184cbfb",
+    "test": "cde9e57a33dfcf43795380f98118c4d26180d608720dba9c6c7e16634430e704"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -212,8 +212,8 @@
     "test": "70ceb6aef1b3ad79ca96b5c00682cf194f86affd37e1674b74500d7bb335c5c9"
   },
   "ui-install-prompt.js": {
-    "module": "f1d8ce7850157a9065f8bb5bfa8afa2ac14fac96009d6f3f2932f9f6355af293",
-    "test": "0839ed5d47c40b8017ded88ac66ec555e26b9f2d6b0b154eed587a76fea009b8"
+    "module": "ab091a18004c8cf751d7b03da0f86324deba1de11fedf28c03d382de6292b01d",
+    "test": "b2f478874e0d48cd296f0339b19858d0edece88cdac3031694cc617ccb1ae3cc"
   },
   "ui-maintenance.js": {
     "module": "5d4263989aea94200a5905c639fbb0f846445d6b4693b91326368166cb382609",

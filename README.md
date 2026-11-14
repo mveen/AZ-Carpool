@@ -71,7 +71,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `ui-beheer.js` | Beheer tab (coordinator only) | `ui-beheer.test.js` |
 | `ui-profile.js` | Gate, first-run claim, Mijn gezin, test view as a parent | `ui-profile.test.js` |
 | `ui-agenda.js` | Instellingen → Agenda: the family's two calendar links, parents' (rides the family drives) and daughter's (make once, copy, share, add to calendar) | `ui-agenda.test.js` |
-| `ui-install-prompt.js` | One-time "put the app on your home screen" sheet, a lasting feature behind a toggle that is still off (see the top of the file) | `ui-install-prompt.test.js` |
+| `ui-install-prompt.js` | One-time "put the app on your home screen" sheet, a lasting feature, rolled out to everyone on 2026-11-14 behind a toggle (`INSTALL_PROMPT_ENABLED`, see the top of the file) | `ui-install-prompt.test.js` |
 | `calendar-feed.js` | The rides of one family for the next 3 weeks as calendar events and as an `.ics` file: `feedEvents` (the rides the daughter sits in) and `driverFeedEvents` (the rides the family drives; also used by `cron/agenda.mjs`) | `calendar-feed.test.js` |
 | `push-access.js` | **Push-meldingen testen:** who sees the push test screens (`COORDINATOR_ONLY`, one flag). Not the parents' own switch | `push-access.test.js` |
 | `push.js` | Push-meldingen, pure rules: the two switches (test `uit` / `test`, live `false` / `true`), which devices are accepted, the queue, who an entry goes to (`routeEntry`, `devicesFor`), what is still to send, what a message says | `push.test.js` |
