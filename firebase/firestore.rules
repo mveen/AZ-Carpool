@@ -154,7 +154,8 @@ service cloud.firestore {
       allow read, write: if isCoordinator();
     }
     match /settings/{docId} {
-      allow read: if isMember();
+      // Rules from overlapping match blocks are OR-ed: without the docId check a linked parent could still read settings/apiKeys through this one.
+      allow read: if isMember() && docId != 'apiKeys';
       allow write: if isCoordinator();
     }
 
