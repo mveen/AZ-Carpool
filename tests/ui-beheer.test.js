@@ -169,10 +169,10 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 20);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 19);   // 16 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
-  assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
+  assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0);
 });
 test('one button opens every menu in Beheer, and closes them all again when all are open', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState(); S.folds = {};
@@ -215,7 +215,7 @@ test('the menus inside each Beheer section are in the order the coordinator chos
   assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard']);
   assert.deepEqual(order('periodes'), ['locationsCard', 'planningCard', 'periodCard']);
   assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'dayNoticeCard', 'maintenanceCard', 'notifCard']);
-  assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'impactCard', 'errorLogCard']);
+  assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'errorLogCard']);
 });
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
@@ -331,7 +331,7 @@ test('a Flex family is marked in the family list', () => {
   assert.match(text(html), /Sanne Smit Flex/);
 });
 
-console.log('\n=== places, fixed distances and impact preview (US-15, US-21, US-07) ===');
+console.log('\n=== places and fixed distances (US-15, US-21) ===');
 import { locationsCardHtml, saveLocations } from '../ui-beheer.js';
 test('Beheer has a card with the three places, exact addresses, the destination, defaults and fixed distances', () => {
   sampleCoordinatorState({ locationsDoc: { places: [{ id: 'busstation' }, { id: 'a4-de-hoek' }, { id: 'de-parel', address: 'Parelstraat 1, Aalsmeer' }], fixedKm: { AFC: 36 } } });
@@ -341,10 +341,10 @@ test('Beheer has a card with the three places, exact addresses, the destination,
   assert.match(html, /id="locDestName" value="AFC &#39;34"/); assert.match(html, /id="locFixAFC"[^>]*value="36"/); assert.match(html, /id="locFixATC"[^>]*value=""/);
   assert.match(html, /id="locDefHeen">.*<option value="busstation" selected>/);
 });
-test('the card and the impact-preview switch are part of the Beheer page', () => {
-  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ impactPreview: false });
+test('the places card is part of the Beheer page', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
-  assert.match(dom.html('tab-beheer'), /id="locationsCard"/); assert.match(dom.html('tab-beheer'), /id="impactToggle" >/);
+  assert.match(dom.html('tab-beheer'), /id="locationsCard"/);
 });
 await testAsync('saveLocations stores one settings/locations document, normalised', async () => {
   const fake = useFakeDb({}); sampleCoordinatorState();

@@ -358,15 +358,3 @@ export function planPeriodRooster(st=S, p){
   if(!p) return [];
   return periodWorkdays(p.firstDay, p.lastDay).flatMap(iso => ['heen','terug'].map(direction => ({ iso, direction, ...planPeriodShift(iso,direction, st) })));
 }
-
-// The families as the planning must see them for one shift of the current planning week: with the handed-in times where the temporary
-// rooster applies (the impact preview plans with family.schedule), else the families themselves.
-export function shiftFamilies(day,direction, st=S){
-  const ps = periodShift(day,direction, st);
-  if(!ps) return st.families;
-  return Object.fromEntries(Object.entries(st.families).map(([id,f])=>{
-    const time = periodTimeFor(id, ps.iso, direction, st);
-    const schedule = {...(f.schedule||{}), [day]: {...((f.schedule||{})[day]||{}), [direction]: time}};
-    return [id, {...f, schedule}];
-  }));
-}

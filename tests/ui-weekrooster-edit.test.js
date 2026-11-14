@@ -149,7 +149,7 @@ await testAsync('a change made that way is marked (selfBy, selfAt); the day coor
   const fake = await setup(); S.wrEdit = { day: 'Do', override: true };
   await withFakeNowAsync(NOW, async () => {
     const cars = effectiveCars('Do', 'heen').map(c => ({ ...c })); if (!cars.length) cars.push({ driverFamilyId: 'f1', girlIds: ['f2'], reserveFamilyIds: [], departureTime: '09:00' });
-    assert.equal(await saveDeviationCars('Do', 'heen', cars, { skipGate: true }), true);
+    assert.equal(await saveDeviationCars('Do', 'heen', cars), true);
   });
   const d = fake.get('deviations/Do_heen'); assert.equal(d.selfBy, 'f2'); assert.equal(typeof d.selfAt, 'number');
   assert.deepEqual(Object.keys(d).filter(k => /reden|reason|text|note/i.test(k)), [], 'no reason or free text');
@@ -165,7 +165,7 @@ await testAsync('a change by the planner himself is never marked', async () => {
   const fake = await setup(); S.wrEdit = { day: 'Do', override: false };
   await withFakeNowAsync(NOW, async () => {
     const cars = [{ driverFamilyId: 'f1', girlIds: ['f2'], reserveFamilyIds: [], departureTime: '09:00' }];
-    await saveDeviationCars('Do', 'heen', cars, { skipGate: true });
+    await saveDeviationCars('Do', 'heen', cars);
   });
   assert.equal('selfBy' in fake.get('deviations/Do_heen'), false);
 });

@@ -284,7 +284,7 @@ export function ownCarCardHtml(day,direction,cars){
 export function askOwnCar(day,direction,text){
   const key=`${day}|${direction}`;
   openChoiceSheet({ title:t('deviation.eigen_ouder_titel'), text, backLabel:t('deviation.eigen_ouder_zet_terug'), goLabel:t('deviation.eigen_ouder_laten'),
-    onBack: async ()=>{ const st=S.devOwn[key]; if(!st) return; if(await saveDeviationCars(day,direction,st.prev,{skipGate:true})){ delete S.devOwn[key]; showToast(t('deviation.hersteld')); } renderDeviationTab(); },
+    onBack: async ()=>{ const st=S.devOwn[key]; if(!st) return; if(await saveDeviationCars(day,direction,st.prev)){ delete S.devOwn[key]; showToast(t('deviation.hersteld')); } renderDeviationTab(); },
     onGo: ()=>{ if(S.devOwn[key]) S.devOwn[key].kept=true; renderDeviationTab(); } });
 }
 
@@ -331,7 +331,7 @@ export async function saveWithUndo(day,direction,prev,cars,text){
   if(ok){
     const key = `${day}|${direction}`;
     if(warning) S.devOwn[key] = { prev, kept:false }; else delete S.devOwn[key];
-    showToast(text, { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) { delete S.devOwn[key]; showToast(t('deviation.hersteld')); } } } });
+    showToast(text, { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev)) { delete S.devOwn[key]; showToast(t('deviation.hersteld')); } } } });
     if(warning) askOwnCar(day,direction,warning);
   }
   return ok;
@@ -505,7 +505,7 @@ export function attachDeviationHandlers(){
     // Written as an empty deviation instead of a delete: activeDeviation() ignores empty `cars`,
     // and deletes of a current-week deviation are refused by firestore.rules until it expires.
     try{ refreshWeekKey(); await db.doc("deviations/"+deviationKey(day,direction)).set({day,direction,weekKey:S.currentWeekKey,expiresAt:deviationExpiryMs(),cars:[]}); S.lastDeviationEditDay = day; recordLastUpdate('Deviation');
-      showToast(t('deviation.teruggezet_naar_standaard'), { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev,{skipGate:true})) showToast(t('deviation.hersteld')); } } }); }
+      showToast(t('deviation.teruggezet_naar_standaard'), { action: { label: t('deviation.ongedaan'), run: async ()=>{ if(await saveDeviationCars(day,direction,prev)) showToast(t('deviation.hersteld')); } } }); }
     catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
   }));
 

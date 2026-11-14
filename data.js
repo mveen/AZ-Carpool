@@ -26,7 +26,6 @@ import { readFamilyForm } from './ui-profile.js';
 import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
-import { impactGate } from './impact.js';
 import { logError, purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
@@ -800,10 +799,8 @@ export async function writeDeviation(day,direction,cars,extra){
   recordLastUpdate('Deviation');
 }
 
-// opts.skipGate: the impact preview (US-07) already looked at this change and the user confirmed it.
-export async function saveDeviationCars(day,direction,cars,opts){
+export async function saveDeviationCars(day,direction,cars){
   if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
-  if(!(opts&&opts.skipGate) && await impactGate(day,direction,cars, ()=>saveDeviationCars(day,direction,cars,{skipGate:true}), renderDeviationTab)) return false;
   try{
     refreshWeekKey();
     // "Rijdt niet mee" marks (US-06, both directions) live on the deviation and survive other edits, unless the girl is in a car again.

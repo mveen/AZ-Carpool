@@ -1164,10 +1164,10 @@ await testAsync('marking public transport keeps the one-off times of a deviation
 await testAsync('saveDeviationCars marks a change made by "Toch zelf wijzigen" (selfBy, selfAt) and leaves a planner\'s change unmarked', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState(); const cars = [{ driverFamilyId: 'f3', girlIds: ['f1', 'f4'], reserveFamilyIds: [], departureTime: '09:00' }];
   S.wrEdit = { day: 'Di', override: true };
-  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars));
   assert.equal(fake.get('deviations/Di_heen').selfBy, 'f2'); assert.equal(typeof fake.get('deviations/Di_heen').selfAt, 'number');
   S.wrEdit = { day: 'Di', override: false };
-  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars));
   assert.equal('selfBy' in fake.get('deviations/Di_heen'), false); S.wrEdit = null;
 });
 console.log('=== writeDeviation (also used by the driver\'s "Tijd en plek") ===');

@@ -655,5 +655,10 @@ test('with three cars the ··· menu stays (several cars to move to), with the 
   assert.match(html, /devKidMore/); assert.match(html, /devKidTime/);
 });
 
+test('Wijzigen saves straight away: the impact-preview gate (skipGate) is gone', async () => {
+  const { readFileSync } = await import('node:fs');
+  assert.doesNotMatch(readFileSync(new URL('../ui-deviation.js', import.meta.url), 'utf8'), /skipGate/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
