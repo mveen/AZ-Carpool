@@ -99,11 +99,11 @@ export function matchesThisWeek(list){ const now=new Date(); const s=startOfWeek
 export const MATCH_HORIZON_DAYS = 29;   // shown
 export const MATCH_PLAN_DAYS = 8;       // a carpool can be set up
 
+// Today's matches stay in the list all day, also after kick-off: the return ride is arranged later.
 function matchesWithin(list, days){
-  const now=new Date();
-  const start=new Date(now); start.setHours(0,0,0,0);
+  const start=new Date(); start.setHours(0,0,0,0);
   const end=new Date(start); end.setDate(start.getDate()+days);
-  return list.filter(m=>m.start>=now && m.start<end).sort((a,b)=>a.start-b.start);
+  return list.filter(m=>m.start>=start && m.start<end).sort((a,b)=>a.start-b.start);
 }
 export function matchesNext8Days(list){ return matchesWithin(list, MATCH_PLAN_DAYS); }
 export function matchesNext29Days(list){ return matchesWithin(list, MATCH_HORIZON_DAYS); }
