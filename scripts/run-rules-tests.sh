@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the Firestore rules tests (firebase/rules-test/*.test.mjs) against the Firestore emulator, with the rules in firebase/firestore.rules.
-# Local and in CI (.github/workflows/rules-tests.yml): `bash scripts/run-rules-tests.sh`. Needs node and Java (JDK 11 or newer).
+# Local and in CI (.github/workflows/rules-tests.yml): `bash scripts/run-rules-tests.sh`. Needs node and Java (JDK 21 or newer: firebase-tools refuses older ones).
 # The repo has no npm dependencies, so the test tools are installed in a temporary folder, not in the repo. node_modules (git-ignored)
 # is a link to it, because the tests import their packages from there.
 set -euo pipefail
