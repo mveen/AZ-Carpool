@@ -62,7 +62,7 @@ if [ ! -f "$DIR/backup-key.json" ]; then
   echo "Almost there. The read-only key is not on this Mac yet. Copy it from the host with this command"
   echo "(put your mijn.host user name in place of YOUR-USER; it asks for your password), then run this installer again:"
   echo
-  echo "  scp YOUR-USER@h70.mijn.host:azcarpool-secrets/backup-key.json \"$DIR/backup-key.json\" && chmod 600 \"$DIR/backup-key.json\""
+  echo "  scp -P 26 YOUR-USER@h70.mijn.host:azcarpool-secrets/backup-key.json \"$DIR/backup-key.json\" && chmod 600 \"$DIR/backup-key.json\""
   echo
   exit 0
 fi

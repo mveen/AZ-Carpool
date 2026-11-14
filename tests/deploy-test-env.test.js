@@ -119,7 +119,8 @@ await test('runs only by hand, builds the test version, uploads only to the test
   assert.deepEqual([...new Set([...upload.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER']);
   assert.ok(y.indexOf('npm test') < y.indexOf('deploy-rsync.sh'));
   assert.match(y, /StrictHostKeyChecking=yes/); assert.match(y, /permissions:\s*\n\s*contents: read/);
-  assert.match(y, /LIVE database/);
+  assert.match(y, /check-site\.sh test "\$SITE" dist-test/);
+  assert.match(readFileSync(join(repo, '.github/scripts/check-site.sh'), 'utf8'), /LIVE database/);
 });
 
 rmSync(tmp, { recursive: true, force: true });
