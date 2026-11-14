@@ -43,7 +43,8 @@ async function countLines(file) {
   return n;
 }
 
-export async function runBackup({ firestore, dir, now = Date.now(), log = console.log, warn = console.error }) {
+// `keep` says how many back-ups stay (default: the host's 30 daily + monthly for a year); the copy on the owner's computer keeps only the newest.
+export async function runBackup({ firestore, dir, now = Date.now(), log = console.log, warn = console.error, keep = {} }) {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   chmodSync(dir, 0o700);
   const name = backupName(now), tmp = join(dir, '.tmp-' + name), final = join(dir, name);
@@ -64,7 +65,7 @@ export async function runBackup({ firestore, dir, now = Date.now(), log = consol
   } catch (e) { gz.destroy(); out.destroy(); rmSync(tmp, { force: true }); throw e; }
   const before = readdirSync(dir).filter(n => NAME.test(n) && n !== name).sort().pop();
   renameSync(tmp, final);
-  const doomed = filesToPrune(readdirSync(dir), now);
+  const doomed = filesToPrune(readdirSync(dir), now, keep);
   for (const n of doomed) rmSync(join(dir, n), { force: true });
   log(`Back-up ${name}: ${docs} documents in ${collections.size} collections` + (doomed.length ? `, ${doomed.length} old back-ups removed` : ''));
   return { name, docs, pruned: doomed, previous: before };
