@@ -41,10 +41,13 @@ for (const f of testFiles) {
   const m = out.match(/(\d+) passed, (\d+) failed/g);
   const last = m ? m[m.length - 1].match(/(\d+) passed, (\d+) failed/) : null;
   const p = last ? +last[1] : 0, x = last ? +last[2] : 0;
-  const ok = r.status === 0 && last && x === 0;
+  // The count must be the LAST thing a test file prints: a test written below the summary line would run but not count, and could fail unseen.
+  const summaryLast = /\d+ passed, \d+ failed\s*$/.test(out);
+  const ok = r.status === 0 && last && x === 0 && summaryLast;
   totalPassed += p; totalFailed += x;
   if (!ok) { failedFiles++; if (!last) totalFailed++; }
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${f.padEnd(28)} ${last ? `${p} passed, ${x} failed` : 'did not finish (crash or timeout)'}`);
+  if (last && !summaryLast) console.log('      the "N passed, M failed" line is not the last line: move it to the end of the file');
   if (!ok) console.log(out.split('\n').filter(l => /✗|Error|error/.test(l) || l.startsWith('     ')).slice(0, 30).map(l => '      ' + l).join('\n'));
 }
 

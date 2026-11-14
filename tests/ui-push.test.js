@@ -1,5 +1,5 @@
 // Run with: node ui-push.test.js
-// ui-push.js: the Beheer card "Push-meldingen testen" (coordinator only, always works) and the way a tapped push opens the app: as the right family for a test
+// ui-push.js: the Beheer card "Push-meldingen testen" (coordinator only for good, always works) and the way a tapped push opens the app: as the right family for a test
 // push, on Ritten ruilen for a real one.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';

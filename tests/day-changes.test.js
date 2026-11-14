@@ -121,8 +121,6 @@ console.log('\n=== overwrittenChanges: earlier changes a plan takes back ===');
 import { assertNoUnusedImports } from './test-support.js';
 test('day-changes.js imports nothing it does not use', () => assertNoUnusedImports('day-changes.js'));
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
 
 console.log('\n=== arrival place ===');
 test('the same car arriving somewhere else is a place change (one-off choice or standard of the car)', () => {
@@ -133,3 +131,6 @@ test('no place change when both say AFC, or both ATC (one-off or standard)', () 
   assert.deepEqual(dayChanges([car('f1', ['f1'])], [{ ...car('f1', ['f1']), destination: 'AFC' }]), []);
   assert.deepEqual(dayChanges([{ ...car('f1', ['f1']), stdDestination: 'ATC' }], [{ ...car('f1', ['f1']), destination: 'ATC' }]), []);
 });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);

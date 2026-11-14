@@ -9,3 +9,4 @@ preview.html
 dist/
 dist-test/
 dist-cron/
+.claude/

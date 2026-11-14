@@ -180,8 +180,6 @@ test('arrivalLabel: AFC \'34 as it is, ATC with its place (the short name alone 
   assert.equal(arrivalLabel(destinationFor({ destination: 'ATC' }, cfg)), 'ATC Wijdewormer');
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-if (failed > 0) process.exit(1);
 
 console.log('\n=== arrival places of one direction ===');
 test("arrivalPlaces: the places of the rides, each once, AFC '34 before ATC", () => {
@@ -195,3 +193,6 @@ test("arrivalPlaces: no rides means AFC '34, so a header is never empty", () => 
   assert.deepEqual(arrivalPlaces([], cfg).map(p => p.city), ['Alkmaar']);
   assert.deepEqual(arrivalPlaces(undefined, cfg).map(p => p.name), ["AFC '34"]);
 });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+if (failed > 0) process.exit(1);
