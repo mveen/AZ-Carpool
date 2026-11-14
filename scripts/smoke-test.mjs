@@ -51,6 +51,8 @@ async function checkRole(browser, cfg, role, log, engine = 'chromium') {
   const page = await ctx.newPage();
   page.on('console', m => { if (m.type() === 'error' && !isHarmless(m.text())) problems.push(`${who}: console: ${m.text()}`); });
   page.on('pageerror', e => problems.push(`${who}: page error: ${e.message}`));
+  // The console only says "404"; name the address (without what comes after the ?, which can hold a key), so the cause is in the log.
+  page.on('response', r => { if (r.status() >= 400) log(`${who}: ${r.status()} ${r.url().split('?')[0]}`); });
   page.on('requestfailed', r => { const u = r.url(); if (u.startsWith(cfg.site) && !isHarmless(r.failure()?.errorText || '')) problems.push(`${who}: request failed: ${u}`); });
   try {
     await page.goto(cfg.site + '/', { waitUntil: 'domcontentloaded', timeout: 30000 });

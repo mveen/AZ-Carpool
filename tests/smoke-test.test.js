@@ -1,5 +1,5 @@
 // Run with: node smoke-test.test.js
-// The automatic pipeline: every merge goes to the TEST site first, a robot smoke-tests it, and only a green robot lets
+// The automatic pipeline: every merge goes to the TEST site first, a robot smoke-tests it, and only a green robot lets A failed request is named in the log.
 // the live upload run. Also: fixed smoke codes survive a re-seed of the test data.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
