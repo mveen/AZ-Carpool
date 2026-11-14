@@ -1,11 +1,11 @@
 // Run with: node smoke-test.test.js
-// The automatic pipeline: every merge goes to the TEST site first, a robot smoke-tests it, and only a green robot lets
+// The automatic pipeline: every merge goes to the TEST site first, a robot smoke-tests it, and only a green robot lets A failed request is named in the log.
 // the live upload run. Also: fixed smoke codes survive a re-seed of the test data.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSmokeConfig, isHarmless, TEST_ORIGIN, TABS } from '../scripts/smoke-test.mjs';
+import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES } from '../scripts/smoke-test.mjs';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { transformBackup, checkFixedCodes } from '../scripts/seed-test-data.mjs';
 
@@ -66,6 +66,30 @@ await test('the smoke job gets only the smoke secrets and never the deploy key',
   const j = job('smoke');
   assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
   assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
+});
+
+console.log('=== two browsers, and also after a test deploy ===');
+await test('the robot uses Chromium and WebKit (the Safari engine of the iPhone) unless SMOKE_BROWSERS names fewer', () => {
+  assert.deepEqual(ENGINES, ['chromium', 'webkit']);
+  assert.deepEqual(readEngines({}), ['chromium', 'webkit']);
+  assert.deepEqual(readEngines({ SMOKE_BROWSERS: 'webkit' }), ['webkit']);
+  assert.deepEqual(readEngines({ SMOKE_BROWSERS: ' WebKit , chromium ' }), ['chromium', 'webkit']);
+  assert.throws(() => readEngines({ SMOKE_BROWSERS: 'safari' }), /unknown browser safari/);
+});
+await test('the refused Google helper script in Safari is not an app error, any other refused script is', () => {
+  assert.ok(isHarmless('Refused to load https://apis.google.com/js/api.js?onload=__iframefcb586424 because it does not appear in the script-src directive of the Content Security Policy.'));
+  assert.ok(!isHarmless('Refused to load https://evil.example/x.js because it does not appear in the script-src directive of the Content Security Policy.'));
+  assert.ok(!isHarmless('Refused to load https://test.azcarpool.nl/app.js because it does not appear in the script-src directive of the Content Security Policy.'));
+});
+await test('both workflows install both browsers', () => {
+  const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
+  for (const f of [y, t]) assert.match(f, /playwright install --with-deps chromium webkit/);
+});
+await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets', () => {
+  const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
+  const j = t.slice(t.indexOf('\n  smoke:\n')); assert.ok(t.includes('\n  smoke:\n'));
+  assert.match(j, /needs: deploy\n/); assert.match(j, /node scripts\/smoke-test\.mjs/); assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
+  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
 });
 
 console.log('=== fixed codes in the test data ===');
