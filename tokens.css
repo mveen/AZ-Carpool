@@ -55,6 +55,7 @@
   --warn-ink:var(--amber-700);          /* "Gewijzigd", "Nog geen rit" */
   --match-soft:var(--violet-50);
   --match-ink:var(--violet-700);        /* everything about matches */
+  --match-glow:#e3dbfa;                 /* violet tint at the top of a match card (like --ok-glow on the card you drive) */
   --info:var(--blue-500);               /* progress bars, back-up selection, focus ring */
   --info-soft:var(--blue-50);
   --ruil:#0d7f7b;                       /* teal: the colour of Vervanger (tab, selected pill, section marks) */
@@ -119,7 +120,7 @@
   --accent-soft:#3d1218; --accent-ink:#ff7584;
   --ok-soft:#123222; --ok-ink:#62d69d;
   --warn-soft:#33270f; --warn-icon:#f5a524; --warn-ink:#f5b94a; --warn-edge:#78510f;
-  --match-soft:#251d40; --match-ink:#b9a6ff;
+  --match-soft:#251d40; --match-ink:#b9a6ff; --match-glow:#2b2152;
   --info-soft:#122036;
   --ruil:#3cc0bb; --ruil-soft:#0f2a29; --ruil-ink:#6fd8d3;
   --shadow-card:0 0 0 1px #24262a;

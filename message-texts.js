@@ -51,7 +51,7 @@ export function buildMyWeekMessageFrom(ctx){
     const dayStart = new Date(d); dayStart.setHours(0,0,0,0);
     // Plain text only (no emoji): WhatsApp's share link doesn't reliably carry them.
     entries.push({sort:dayStart.getTime(), order:1+r.doc.startMs/1e13,
-      text:t(ctx.locCfg? 'wa.my.match_van' : 'wa.my.match', { day: dl, team: ctx.matchLabel(r.doc), opponent: a.opponent, time: r.car.departureTime||'?', driver: ctx.driverName(r.car.driverFamilyId), place: ctx.locCfg? matchFromName(r.car, ctx.locCfg) : '' })});
+      text:t(r.car.leg==='terug'? 'wa.my.match_terug' : ctx.locCfg? 'wa.my.match_van' : 'wa.my.match', { day: dl, team: ctx.matchLabel(r.doc), opponent: a.opponent, time: r.car.departureTime||'?', driver: ctx.driverName(r.car.driverFamilyId), place: ctx.locCfg? matchFromName(r.car, ctx.locCfg) : '' })});
   });
   entries.sort((x,y)=>x.sort-y.sort || x.order-y.order);
   const lines = entries.map(e=>e.text);

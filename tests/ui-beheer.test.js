@@ -759,5 +759,45 @@ test('v206: Beheer shows no "Laatst opgehaald" timestamp for the match calendars
   assert.doesNotMatch(src, /laatst_opgehaald|cachedMatchesAt/);
 });
 
+
+console.log('\n=== match calendars: the bus per team ===');
+const busTeams = [{ calendarId: 'cal1', label: 'Jong AZ', bus: true, busNot: 'Ajax' }, { calendarId: 'cal2', label: 'AZ O17' }];
+test('every team with a calendar has a bus switch; "Niet met de bus tegen" shows only for a team that goes by bus', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ matchFeeds: busTeams });
+  dom.doc.querySelectorAll = () => [];
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer'), card = html.slice(html.indexOf('id="feedsCard"'), html.indexOf('id="apiKeysCard"'));
+  assert.match(card, /aria-checked="true" aria-label="Uitwedstrijden met de bus" data-feedbus="0"/); assert.match(card, /aria-checked="false" aria-label="Uitwedstrijden met de bus" data-feedbus="1"/);
+  assert.match(text(card), /Uitwedstrijden met de bus Standaard voor alle uitwedstrijden van dit team/);
+  assert.match(card, /id="feedBusNot_0"[^>]*value="Ajax"/); assert.doesNotMatch(card, /feedBusNot_1/);
+  assert.match(text(card), /Staat de naam in de tegenstander, dan staat de bus uit\./);
+});
+test('a new calendar row without a calendar ID has no bus settings yet', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ matchFeeds: [...busTeams, { label: '', calendarId: '' }] });
+  dom.doc.querySelectorAll = () => [];
+  withFakeNow(NOW, () => renderBeheer());
+  assert.doesNotMatch(dom.html('tab-beheer'), /data-feedbus="2"/);
+});
+await testAsync('the bus switch of a team saves at once, keeps the other fields of every team, and the "niet tegen" words stay', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/matchFeeds': { feeds: busTeams } }); sampleCoordinatorState({ matchFeeds: busTeams });
+  const btns = [{ dataset: { feedbus: '0' }, onclick: null }, { dataset: { feedbus: '1' }, onclick: null }];
+  dom.doc.querySelectorAll = sel => (sel === '[data-feedbus]' ? btns : []);
+  withFakeNow(NOW, () => renderBeheer());
+  await btns[1].onclick();   // O17 goes by bus
+  assert.deepEqual(fake.get('settings/matchFeeds').feeds, [{ calendarId: 'cal1', label: 'Jong AZ', bus: true, busNot: 'Ajax' }, { calendarId: 'cal2', label: 'AZ O17', bus: true }]);
+  await btns[0].onclick();   // Jong AZ stops going by bus: the words stay for later
+  assert.deepEqual(fake.get('settings/matchFeeds').feeds[0], { calendarId: 'cal1', label: 'Jong AZ', bus: false, busNot: 'Ajax' }); assert.equal(toast(), 'Opgeslagen ✓');
+});
+await testAsync('saving the name, the calendar or the words keeps the bus switch of each team and drops an emptied words field', async () => {
+  const fake = useFakeDb({ ...sampleDbSeed(), 'settings/matchFeeds': { feeds: busTeams } }); sampleCoordinatorState({ matchFeeds: busTeams });
+  const labels = [{ value: 'Jong AZ' }, { value: 'AZ O17' }], cals = [{ value: 'cal1' }, { value: 'cal2' }], words = [{ dataset: { feedidx: '0' }, onchange: null, value: 'Ajax, PSV' }];
+  dom.doc.querySelectorAll = sel => ({ '.matchFeedLabel': labels, '.matchFeedCalId': cals, '.matchFeedLabel,.matchFeedCalId,.matchFeedBusNot': words }[sel] || []);
+  withFakeNow(NOW, () => renderBeheer());
+  dom.el('feedBusNot_0').value = 'Ajax, PSV'; await words[0].onchange();
+  assert.deepEqual(fake.get('settings/matchFeeds').feeds, [{ calendarId: 'cal1', label: 'Jong AZ', bus: true, busNot: 'Ajax, PSV' }, { calendarId: 'cal2', label: 'AZ O17' }]);
+  dom.el('feedBusNot_0').value = '  '; await words[0].onchange();
+  assert.deepEqual(fake.get('settings/matchFeeds').feeds[0], { calendarId: 'cal1', label: 'Jong AZ', bus: true });
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -703,7 +703,14 @@ export function renderBeheer(){
               <div><label style="margin-top:0">${t('beheer.calendar_id')}</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="${t('beheer.xxxx_group_v_calendar_google')}"></div>
             </div>
             <button type="button" class="iconbtn danger" data-delfeed="${i}" aria-label="${t('beheer.verwijder_kalender')}" title="${t('beheer.verwijder_kalender')}">${phIcon('trash')}</button>
-          </div>`).join('')}
+          </div>
+          ${f.calendarId? `<div class="feedBus">
+            <div class="feedBus__row"><div><div class="feedBus__title">${esc(t('beheer.bus_team'))}</div><div class="feedBus__sub">${esc(t('beheer.bus_team_sub'))}</div></div>
+              <button type="button" class="switch switch--sm${f.bus===true?' on':''}" role="switch" aria-checked="${f.bus===true}" aria-label="${esc(t('beheer.bus_team'))}" data-feedbus="${i}"><span class="switch__track"><span class="switch__knob">${phIcon('bus')}</span></span></button></div>
+            ${f.bus===true? `<label for="feedBusNot_${i}">${esc(t('beheer.bus_niet'))}</label>
+              <input type="text" id="feedBusNot_${i}" class="matchFeedBusNot" data-feedidx="${i}" maxlength="60" value="${esc(f.busNot||'')}" placeholder="${esc(t('beheer.bus_niet_ph'))}">
+              <p class="noteLine">${esc(t('beheer.bus_niet_hint'))}</p>` : ''}
+          </div>` : ''}`).join('')}
         <div class="cardActions">
           <button type="button" class="btn small secondary" id="addMatchFeedBtn">${t('beheer.nieuwe_kalender_toevoegen')}</button>
           <button type="button" class="btn small secondary" id="refreshMatchesBtn">${phIcon('refresh')} ${t('beheer.nu_verversen')}</button>
@@ -856,11 +863,24 @@ export function renderBeheer(){
     const saveMatchFeeds = async ()=>{
       const labels=[...document.querySelectorAll('.matchFeedLabel')];
       const calIds=[...document.querySelectorAll('.matchFeedCalId')];
-      const feeds = labels.map((el,i)=>({label:el.value.trim(), calendarId:(calIds[i]&&calIds[i].value.trim())||''})).filter(f=>f.calendarId);
+      // The bus settings of a team (match-bus.js) stay with it: the switch is stored as it is, the "niet met de bus tegen" field is read from the screen.
+      const busOf = i => {
+        const old = activeMatchFeeds()[i] || {}, inp = document.getElementById('feedBusNot_'+i);
+        const busNot = inp? inp.value.trim() : (old.busNot||'');
+        return {...(old.bus===true? {bus:true} : {}), ...(busNot? {busNot} : {})};
+      };
+      const feeds = labels.map((el,i)=>({label:el.value.trim(), calendarId:(calIds[i]&&calIds[i].value.trim())||'', ...busOf(i)})).filter(f=>f.calendarId);
       try{ await db.doc("settings/matchFeeds").set({feeds}); showToast(t('data.opgeslagen')); }
       catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
     };
-    document.querySelectorAll('.matchFeedLabel,.matchFeedCalId').forEach(el=>el.onchange=saveMatchFeeds);
+    document.querySelectorAll('.matchFeedLabel,.matchFeedCalId,.matchFeedBusNot').forEach(el=>el.onchange=saveMatchFeeds);
+    // The bus switch of a team saves at once (no Opslaan button next to a toggle).
+    document.querySelectorAll('[data-feedbus]').forEach(b=>b.onclick=async ()=>{
+      const idx=+b.dataset.feedbus;
+      const feeds = activeMatchFeeds().map((f,i)=>i===idx? {...f, bus:f.bus!==true} : f).filter(f=>f.calendarId);
+      try{ await db.doc("settings/matchFeeds").set({feeds}); showToast(t('data.opgeslagen')); }
+      catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); }
+    });
     const addFeedBtn=document.getElementById('addMatchFeedBtn');
     if(addFeedBtn) addFeedBtn.onclick=()=>{ S.matchFeeds=[...activeMatchFeeds(), {label:'', calendarId:''}]; renderBeheer(); };
     document.querySelectorAll('[data-delfeed]').forEach(b=>b.onclick=async ()=>{

@@ -428,5 +428,20 @@ test('help describes the Rooster list with sun and moon, and no yellow Gewijzigd
   assert.doesNotMatch(all, /gele pil|meiden erin|in een eigen blok/); assert.match(all, /Een blauwgrijze kaart is een heenrit/);
 });
 
+
+test('the article about away matches by bus exists, belongs to the Wedstrijden tab and is found by "bus"', () => {
+  const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.ok(a); assert.equal(a.tab, 'matches'); assert.match(allText(a), /AFC '34/);
+  assert.ok(ids('bus').includes('wedstrijd-bus')); assert.ok(ids('busrit uitwedstrijd').includes('wedstrijd-bus'));
+});
+
+
+test('the bus article says where the bus leaves (AFC \'34 by default, changeable) and no longer mentions the tag Aangepast', () => {
+  const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.match(allText(a), /standaard AFC '34/); assert.match(allText(a), /andere locatie/); assert.doesNotMatch(allText(a), /Aangepast/);
+});
+
+test('the bus article explains Heen and Terug (one leg per car by bus; without the bus the return is usually not needed)', () => {
+  const a = articles.find(x => x.id === 'wedstrijd-bus'); assert.match(allText(a), /Heen en Terug/); assert.match(allText(a), /niet allebei/); assert.match(allText(a), /Terugrit regelen/); assert.match(allText(a), /Ik rij terug/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
