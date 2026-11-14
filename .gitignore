@@ -10,3 +10,5 @@ dist/
 dist-test/
 dist-cron/
 .claude/
+firestore-debug.log
+ui-debug.log
