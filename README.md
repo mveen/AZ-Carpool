@@ -161,7 +161,7 @@ Live is `https://azcarpool.nl/` on mijn.host. Nobody uploads files by hand any m
 5. **Always bump `CACHE_NAME` in `service-worker.js` (and `APP_VERSION` in `constants.js`) on every change to app files.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
 6. Secrets (API keys, service account keys, the deploy key) are never in the repo: the OpenRouteService key is in the database (Beheer -> *API-sleutels*), the cron keys are on the host, the deploy key and smoke-test codes are GitHub secrets.
 
-The old address `https://mveen.github.io/AZ-Carpool/` (GitHub Pages) is still switched on in the repo settings and published from `main` by GitHub itself, outside the deploy workflow. Since v253 it only forwards to `https://azcarpool.nl/` (first script in `index.html`); nobody uses the app there. Switching it off (GitHub -> Settings -> Pages) is safe for the live site: the build does not need it.
+The old address `https://mveen.github.io/AZ-Carpool/` (GitHub Pages) was switched off in the repo settings on 2026-11-14 (it only forwarded to `https://azcarpool.nl/` since v253). Nothing is published from GitHub any more: `azcarpool.nl` is only ever updated by the deploy workflow. The forwarding script at the top of `index.html` stays for phones that still have the old address saved.
 
 ### Test environment (`test.azcarpool.nl`)
 A second copy of the app with its own database, so trying things never touches live data.

@@ -4,7 +4,7 @@ name: Deploy azcarpool.nl
 # Order: tests -> put it on the TEST site -> robot smoke test on the test site -> only then LIVE.
 # If a step fails, everything after it is skipped: live stays exactly as it was.
 # By hand you can tick "skip_smoke" to go live even when the robot is red (emergency only).
-# GitHub Pages is not touched by this: it keeps deploying from main on its own.
+# GitHub Pages is switched off (2026-11-14): this workflow is the only way the app reaches azcarpool.nl.
 on:
   push:
     branches: [main]
