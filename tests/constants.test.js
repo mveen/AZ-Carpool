@@ -102,6 +102,9 @@ test('v238: this version is at least v238', () => { assert.ok(Number(APP_VERSION
 test('v240: this version is at least v240', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 240); });
 test('v241: this version is at least v241', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 241); });
 test('v243: this version is at least v243', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 243); });
+test('v249: this version is at least v249', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 249); });
+test('v250: this version is at least v250', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 250); });
+test('v251: this version is at least v251', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 251); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
@@ -175,6 +178,14 @@ test('APP_VERSION is at least v237 (tekst bij meerijders in een wedstrijdcarpool
 test('APP_VERSION is at least v238 (Melding dagwijzigingen in het scherm Wijzigingen voor <dag>)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 238); });
 
 test('APP_VERSION is at least v242 (veilig opslaan van wedstrijdritten + wijzigingslog)', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 242); });
+
+test('v244: the bus icon exists', () => { assert.match(PH_PATHS.bus, /^<path/); assert.ok(Number(APP_VERSION.slice(1)) >= 243); });
+
+test('v246: heen / terug per car of a match', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 246); });
+
+test('v247: terug without the bus shows the opponent and a rough time', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 247); });
+
+test('v248: match rides in Mijn week are weekday-style cards (violet), without a switch', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 248); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

@@ -4,7 +4,7 @@
 // worker installs a fresh copy of every ASSET, and bootstrap() in app.js reloads the open app. Not in the cache yet: network.
 // Bump CACHE_NAME on EVERY deploy (not only when the asset list changes): a changed service-worker.js is the
 // signal that makes open apps pick up the new version and reload (see bootstrap() in app.js).
-const CACHE_NAME = 'az-carpool-v243';
+const CACHE_NAME = 'az-carpool-v251';
 const ASSETS = [
   './',
   './index.html',
@@ -86,6 +86,8 @@ const ASSETS = [
   './ui-install-prompt.js',
   './error-log.js',
   './match-cars.js',
+  './match-bus.js',
+  './match-legs.js',
   './session-reset.js',
   './calendar-feed.js',
   './schedule-changes.js',

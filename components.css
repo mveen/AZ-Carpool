@@ -419,7 +419,10 @@ button.chip{cursor:pointer;font-family:inherit}
 .dayHead small{font:var(--type-caption);color:var(--text-muted)}
 .rideRow{display:block;background:var(--surface-card);border:1px solid var(--edge);border-radius:var(--radius-card);padding:var(--space-6);margin-bottom:var(--space-4)}
 .rideRow--mine{border-top:3px solid var(--ok)}
-.rideRow--match{border-color:var(--match-ink)}
+.rideRow--match{border-top:3px solid var(--match-ink)}
+.rideRow--match.rideRow--glow{background:linear-gradient(180deg,var(--match-soft) 0%,var(--surface-card) calc(var(--space-6) + var(--hit-min) + var(--space-3)))}
+.rideRow--match .rideRow__dep,.rideRow--match .rideRow__lab.rideRow__lab--me{color:var(--match-ink)}
+.rideRow--match .rideRow__title{margin-top:var(--space-2)}
 .rideRow__head{display:flex;align-items:flex-start;gap:var(--space-5)}
 .rideRow__time{width:64px;flex:none}
 .rideRow__dep{font:var(--type-time-md);letter-spacing:var(--track-time)}
@@ -899,7 +902,9 @@ input[type=time]::-webkit-calendar-picker-indicator{opacity:1;cursor:pointer}
 .matchCarRow{display:flex;align-items:center;gap:var(--space-3);padding:var(--space-3) 0;border-top:1px solid var(--line);font:var(--type-caption)}
 .matchActions{display:flex;gap:var(--space-3);margin-top:var(--space-3)}
 .matchActions:empty{display:none}
-.matchCarRow .matchCarDep{font:var(--type-time-sm);color:var(--match-ink);flex-shrink:0}
+.matchCarRow .matchCarDep{display:flex;flex-direction:column;flex:none;width:72px}
+.matchCarDep b{font:var(--type-time-md);letter-spacing:var(--track-time);color:var(--text-1)}
+.matchCarDep small{font:var(--type-caption);color:var(--text-muted);margin-top:var(--space-1);white-space:nowrap}
 .matchCarRow.mine{background:var(--match-soft);border-radius:var(--radius-chip);padding:var(--space-3) var(--space-4);border-top-color:transparent}
 .matchCapWarn{color:var(--warn-ink);font:var(--type-caption);font-weight:700;margin-top:var(--space-3)}
 .matchNote{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-3) 0 0;font:var(--type-caption);color:var(--match-ink)}
@@ -1161,3 +1166,36 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .navtab.active[data-tab="deviation"].navtab--ruil{color:var(--ruil)}
 .navtab--ruil .navbadge{background:var(--ruil)}
 .tag--ruil{background:var(--ruil-soft);color:var(--ruil-ink)}
+
+/* ---------- Wedstrijden: away match by team bus (match-bus.js). The bus switch sits at the right of the match head; the two bus times
+   are one tap target each (Heen/Terug tints as in Rooster); a car says when it is at AFC '34 and when it picks up. ---------- */
+.matchHead .swWrap{margin-left:auto;flex-direction:row-reverse;gap:var(--space-3)}   /* caption in front of the switch, switch at the right edge */
+.matchHead .swCap{margin-top:0}
+.matchHead .switch{margin:calc(var(--space-3) * -1) 0}
+.busTimes{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:var(--space-3);margin-top:var(--space-5)}
+.busTimes__cell{appearance:none;font:inherit;color:var(--text-1);text-align:left;cursor:pointer;min-height:var(--hit-min);border:1px solid var(--edge);border-radius:var(--radius-car);padding:var(--space-4) var(--space-5)}
+.busTimes__time{font:var(--type-time-lg);margin-top:var(--space-1)}
+.busTimes__sub{font:var(--type-caption);color:var(--text-2)}
+.busTimes__cell--empty{grid-column:1 / -1;background:var(--surface-card);border:2px dashed var(--warn-icon);color:var(--warn-ink)}
+.busTimes__cell--empty .busTimes__time{font:var(--type-body);font-weight:700}
+.matchFrame{padding:0;overflow:hidden;border:2px solid var(--match-ink)}
+.matchFrame__head{padding:var(--space-7) var(--space-7) var(--space-1);background:linear-gradient(180deg,var(--match-glow) 0%,var(--surface-card) 100%)}
+.matchFrame__body{padding:0 var(--space-7) var(--space-4)}
+.matchLeg{margin-top:var(--space-2)}
+.matchLeg--heen{--leg-ink:var(--heen-ink)}
+.matchLeg--terug{--leg-ink:var(--terug-ink)}
+.matchLeg__head{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4);padding-top:var(--space-4);font:var(--type-micro);letter-spacing:var(--track-micro);text-transform:uppercase;font-weight:700;color:var(--leg-ink)}
+.matchLeg__when{font:var(--type-time-sm);letter-spacing:0;text-transform:none;color:var(--text-2)}
+.matchLeg__edit{appearance:none;border:0;background:none;padding:0;min-height:var(--hit-min);display:inline-flex;align-items:center;gap:var(--space-2);font:inherit;letter-spacing:inherit;text-transform:inherit;color:inherit;cursor:pointer}
+.matchLeg__sub{font:var(--type-caption);color:var(--text-2)}
+.matchLeg__cars{margin-top:var(--space-2)}
+.matchLeg__empty{display:flex;align-items:center;gap:var(--space-3);margin:var(--space-4) 0 0;padding:var(--space-4) var(--space-5);border:2px dashed var(--warn-icon);border-radius:var(--radius-card);background:var(--surface-card);color:var(--warn-ink);font:var(--type-caption);font-weight:700}
+.matchLegQuiet{display:flex;align-items:center;gap:var(--space-4);margin-top:var(--space-5);padding:var(--space-4) var(--space-5);border:1px dashed var(--edge);border-radius:var(--radius-card);font:var(--type-caption);color:var(--text-2)}
+.matchLegQuiet span{flex:1;min-width:0}
+.matchLegQuiet .btn{flex:none}
+.matchCarSub{display:block;color:var(--text-muted)}
+.matchCarSub--bad{color:var(--warn-ink);font-weight:700}
+.feedBus{border-top:1px solid var(--line);margin-top:var(--space-4);padding-top:var(--space-3)}
+.feedBus__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
+.feedBus__title{font:var(--type-body)}
+.feedBus__sub{font:var(--type-caption);color:var(--text-muted)}

@@ -9,6 +9,7 @@ import { fam, playerSeats, familyRiding, seats } from './rides.js';
 import { ensureDistances, hasApiKey, fetchWithTimeout } from './distance.js';
 import { normalizeLocations } from './locations.js';
 import { isMemberNow } from './coordinator.js';
+import { busPlaceOf, busState } from './match-bus.js';
 
 export function activeMatchFeeds(){ return S.matchFeeds; }
 
@@ -18,6 +19,14 @@ function feedLabel(calendarId){
   const f = calendarId && S.matchFeeds.find(x=>x.calendarId===calendarId);
   return f? (f.label||'') : '';
 }
+
+// Does this match go by bus, and when? (match-bus.js) `doc` = its carpool document; left out it is looked up.
+export function busStateOf(m, doc){
+  const feed = (S.matchFeeds||[]).find(f=>f.calendarId===(m && m.calendarId));
+  return busState(analyzeMatch((m && m.summary)||''), feed, doc===undefined? carpoolFor(m).doc : doc);
+}
+// Where the bus of a match leaves: { key: 'AFC'|'ATC'|'OTHER', text } (AFC '34 unless changed).
+export function busPlaceOfMatch(m){ return busPlaceOf(carpoolFor(m).doc); }
 
 export function matchLabel(m){ return feedLabel(m && m.calendarId) || (m && m.teamLabel) || ''; }
 
@@ -56,6 +65,18 @@ export function carpoolFor(m){
   if(m.calendarId){
     const sameCal = Object.entries(S.matchCarpools).find(([,d])=>d && d.calendarId===m.calendarId && d.startMs===m.start.getTime());
     if(sameCal) return {id:sameCal[0], doc:sameCal[1]};
+  }
+  // The kick-off time was changed in the calendar (and the event ID is not the one the document was saved under): same
+  // calendar, same title, same day is still the same match, but only when that is unambiguous (one such document, one
+  // such match today) and no other match owns the document by its exact ID.
+  if(m.calendarId && m.summary){
+    const day = m.start.toDateString();
+    const same = x=>x && x.calendarId===m.calendarId && x.summary===m.summary;
+    const list = currentMatchList();
+    const rivals = list.filter(o=>same(o) && o.start.toDateString()===day).length;
+    const ownedByOther = new Set(list.filter(o=>o!==m).map(matchSlug));
+    const sameDay = Object.entries(S.matchCarpools).filter(([slug,d])=>same(d) && d.startMs && new Date(d.startMs).toDateString()===day && !ownedByOther.has(slug));
+    if(rivals===1 && sameDay.length===1) return {id:sameDay[0][0], doc:sameDay[0][1]};
   }
   const candidates = [matchLabel(m), m.teamLabel].filter(Boolean);
   for(const label of candidates){
@@ -272,6 +293,12 @@ export function myMatchRides(myId){
 
 export function suggestedMatchDeparture(matchDate){
   const t = new Date(matchDate.getTime() - 210*60000); // 3.5 hours before
+  return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
+}
+
+// A car that picks the players up after the match (the return leg): about 1,5 hours after kick-off, as a starting point.
+export function suggestedMatchPickup(matchDate){
+  const t = new Date(matchDate.getTime() + 90*60000);
   return String(t.getHours()).padStart(2,'0')+':'+String(t.getMinutes()).padStart(2,'0');
 }
 
