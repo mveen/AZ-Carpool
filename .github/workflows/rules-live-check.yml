@@ -1,0 +1,32 @@
+name: Live rules controleren
+
+# Every day (and by hand): are the Firestore rules that are published in Firebase, for azcarpool AND the test project, exactly the file
+# firebase/firestore.rules? Read-only: nothing is published. Red = someone must paste the repo file in the Firebase console (README, Deploy, step 4).
+# Needs the secret FIREBASE_RULES_READER_KEY (the JSON key of a service account that may read Firebase rules, see README). Without the secret
+# this job only says so and stays green.
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      KEY: ${{ secrets.FIREBASE_RULES_READER_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Compare the live rules with firebase/firestore.rules
+        run: |
+          if [ -z "$KEY" ]; then echo "::notice::Secret FIREBASE_RULES_READER_KEY is not set: the live rules were not compared (see README)."; exit 0; fi
+          umask 077
+          printf '%s' "$KEY" > "$RUNNER_TEMP/rules-reader.json"
+          trap 'rm -f "$RUNNER_TEMP/rules-reader.json"' EXIT
+          node scripts/check-live-rules.mjs "$RUNNER_TEMP/rules-reader.json"
