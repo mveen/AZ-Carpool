@@ -40,7 +40,7 @@ import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, p
 //   db.collection(path)     -> { get, onSnapshot, doc }
 //   db.batch()              -> { set(path,data,opts), update(path,data), delete(path), commit() }
 //   db.deleteField(), db.signIn(), db.calendarApiKey, db.setListenerSink(array|null)
-// The OpenRouteService key is NOT here: it lives in the database (settings/apiKeys, members only) -> S.orsApiKey.
+// The OpenRouteService key is NOT here: it lives in the database (settings/apiKeys, the coordinator only) -> S.orsApiKey.
 // ============================================================
 export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
   const { collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, writeBatch, runTransaction, deleteField, signInAnonymously, query, where } = sdk;
@@ -571,8 +571,21 @@ export function syncListeners(){
       renderBeheer();
     }, err=>{});
   }
+  // API keys that must not sit in the public GitHub folder (OpenRouteService). Only the real coordinator's app asks for them: a parent's app
+  // never does, so the key never reaches a parent's phone (S.orsApiKey stays empty there and a parent's browser never calculates distances;
+  // the daily server job does, cron/match-calendars.mjs, and everybody reads the result from settings/matchDistances).
+  // Because a parent never asks, the database can refuse parents this document without an error in the log or a restart of the listeners.
+  if(coord && !S.apiKeysUnsub){
+    S.apiKeysUnsub = db.doc("settings/apiKeys").onSnapshot(snap=>{
+      S.orsApiKey = snap.exists? String((snap.data()||{}).ors||'').trim() : '';
+      renderBeheer(); renderMyWeek(); renderMatchesTab();
+      calculateMatchDistances(currentMatchList());
+    }, err=>{ S.apiKeysUnsub = null; });   // refused or broken: no key; the next syncListeners asks again
+  }
   syncPushListeners();
   if(!coord){
+    if(S.apiKeysUnsub){ S.apiKeysUnsub(); S.apiKeysUnsub=null; }
+    S.orsApiKey = '';
     S.beheerOpened = false;
     if(S.errorLogUnsub){ S.errorLogUnsub(); S.errorLogUnsub=null; S.errorLog={}; S.errorLogLoaded=false; }
     if(S.rideLogUnsub){ S.rideLogUnsub(); S.rideLogUnsub=null; S.rideLog={}; S.rideLogLoaded=false; }
@@ -711,13 +724,7 @@ export function startDataListeners(){
       renderMyWeek(); renderMatchesTab();
       refreshMatchesIfStale();
     }, err=>{ listenFailed("settings/matchCache", err); S.matchCacheLoaded = true; refreshMatchesIfStale(); });
-    // API keys that must not sit in the public GitHub folder. Coordinator only (Firestore rules): for a parent this listener is refused and
-    // S.orsApiKey stays empty, so a parent's browser never calculates distances; the daily server job does (cron/match-calendars.mjs).
-    db.doc("settings/apiKeys").onSnapshot(snap=>{
-      S.orsApiKey = snap.exists? String((snap.data()||{}).ors||'').trim() : '';
-      renderBeheer(); renderMyWeek(); renderMatchesTab();
-      calculateMatchDistances(currentMatchList());
-    }, err=>{ listenFailed("settings/apiKeys", err);});
+    // The API keys (settings/apiKeys) are NOT listened to here: only the real coordinator's app asks for them, in syncListeners.
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   finally{ db.setListenerSink(null); }
 }

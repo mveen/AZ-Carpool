@@ -42,7 +42,7 @@ export const S = {
   cachedMatchesPartial: false,     // the cache was written while a team calendar failed
   matchCacheLoaded: false,         // settings/matchCache has been read (also when it does not exist yet)
   matchLastAttempt: null,          // {at, sig}: last automatic fetch in this session (limits retries)
-  orsApiKey: '',                   // OpenRouteService key, read from settings/apiKeys (members only)
+  orsApiKey: '',                   // OpenRouteService key, read from settings/apiKeys by the coordinator's app only (empty for a parent)
   matchCarpools: {},
   practiceMatches: {},             // practiceMatches/<id>: practice matches added by the parents (see matches.js practiceToMatch)
   weekendMatchBySlug: {},
@@ -141,6 +141,7 @@ export const S = {
   sessionsByUid: {}, sessionsAllLoaded: false, linksAllLoaded: false,   // raw sessions (uid -> at) and 'both lists read' flags for the 30-day tidy-up (data.js)
   invitesUnsub: null,
   errorLogUnsub: null,
+  apiKeysUnsub: null,
   errorLogLoaded: false,
   errorLog: {},            // Beheer: the app's own error log (errorLog/<uid>_<slot>), coordinator only
   migratingSecrets: false,
