@@ -11,6 +11,7 @@ import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
 import { weekroosterActionCount } from './ui-weekrooster-rooster.js';
 import { pushCardHtml, wirePushCard } from './ui-push.js';
 import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
+import { waitLogCardHtml, wireWaitLogCard } from './ui-wait-log.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
 import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
@@ -746,6 +747,7 @@ export function renderBeheer(){
         ${renderAvailabilityTable()}
       </div>`),
       ic('chart', rideLogCardHtml()),
+      ic('clock', waitLogCardHtml()),
     ]],
     ['periodes', 'beheer.chip_periodes', 'beheer.sec_periodes', [
       ic('map-pin', locationsCardHtml()),
@@ -799,6 +801,7 @@ export function renderBeheer(){
     wireNoticeCard();
     wireDayChangeNoticeCard();
     wireRideLogCard();
+    wireWaitLogCard();
     wireMaintenanceCard();
     wireRitbeursCard();
     wirePushCard();

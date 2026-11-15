@@ -118,6 +118,7 @@ export const S = {
   beheerOpened: false,     // Beheer has been opened this session: only then the coordinator listens to the ride log, the error log and the period back-ups (they cost reads)
   rideLogLoaded: false,    // the log has been read, so logPassedShifts can tell what is new
   rideLogUnsub: null,
+  waitLogView: null,       // Beheer, Wachttijd speelsters: { mode:'week'|'month'|'year', weekKey, year, month } while the coordinator looks at it (null = the current month)
   rideLogView: null,       // Beheer, Gereden shifts: { mode:'month'|'year', year, month } while the coordinator looks at it (null = the current month)
   periodDay: null,         // Rooster, temporary view: the open date ('YYYY-MM-DD')
   folds: {},               // open state of the collapsible sections, by key (default = collapsed); see foldHtml in ui-common.js

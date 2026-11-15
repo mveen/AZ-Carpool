@@ -107,6 +107,7 @@ test('v250: this version is at least v250', () => { assert.ok(Number(APP_VERSION
 test('v265: this version is at least v265', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 265); });
 test('v266: this version is at least v266', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 266); });
 test('v267: this version is at least v267', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 267); });
+test('v269: this version is at least v269', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 269); });
 test('v268: this version is at least v268', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 268); });
 test('v251: this version is at least v251', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 251); });
 test('v252: this version is at least v252', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 252); });
@@ -204,5 +205,6 @@ test('v247: terug without the bus shows the opponent and a rough time', () => { 
 
 test('v248: match rides in Mijn week are weekday-style cards (violet), without a switch', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 248); });
 
+test('v266: the version was bumped with the Wachttijd speelsters card', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 266); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

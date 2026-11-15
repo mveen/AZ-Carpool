@@ -148,5 +148,6 @@ test('openMatchCarpoolLeg starts empty (the open match car form then starts on t
 test('devOwn starts empty (the warning Eigen ouder rijdt mee waits for a choice per shift)', () => { assert.deepEqual(S.devOwn, {}); });
 
 test('the API key and its listener start empty (only the coordinator\'s app fills them)', () => { assert.equal(S.orsApiKey, ''); assert.equal(S.apiKeysUnsub, null); });
+test('waitLogView (Wachttijd speelsters) starts empty: the card shows the current month', () => { assert.equal(S.waitLogView, null); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
