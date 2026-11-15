@@ -86,6 +86,29 @@ export function familiesWithPush(devices){
   return new Set(Object.values(devices || {}).filter(d => d && typeof d.familyId === 'string' && d.familyId).map(d => d.familyId)).size;
 }
 
+// Beheer: which families have a phone switched on for the real pushes and which do not (devices: id -> document, families: id -> document,
+// links: uid -> link document). Returns { on, off }, two lists of { id, label, tails } sorted by name. A family counts as "on" under the same
+// rule as familiesWithPush. tails = the last 3 digits of the phone number(s) that tell the parents apart: for a family with push on, the number
+// each registered phone was linked with (links/<uid>.phoneKey), falling back to the family's numbers; for a family without, its numbers.
+export function pushFamilySplit(devices, families, links){
+  const byFamily = {};
+  Object.values(devices || {}).filter(d => d && typeof d.familyId === 'string' && d.familyId).forEach(d => { (byFamily[d.familyId] = byFamily[d.familyId] || []).push(d); });
+  const tail = n => { const digits = String(n || '').replace(/\D/g, ''); return digits.length >= 3 ? digits.slice(-3) : ''; };
+  const uniq = list => [...new Set(list.filter(Boolean))];
+  const label = (f, id) => {
+    const parent = String((f && f.parentName) || '').trim(), girl = String((f && f.girlName) || '').trim();
+    if(parent && girl) return t('push.gezinLabel', { parent, girl });
+    return parent || (girl ? t('push.ouderVan', { name: girl }) : String(id));
+  };
+  const entries = Object.entries(families || {}).filter(([, f]) => f && typeof f === 'object').map(([id, f]) => {
+    const own = uniq([tail(f.parentPhone1), tail(f.parentPhone2)]);
+    const linked = uniq((byFamily[id] || []).map(d => tail(links && links[d.uid] && links[d.uid].phoneKey)));
+    return { id, label: label(f, id), tails: byFamily[id] ? (linked.length ? linked : own) : own };
+  });
+  entries.sort((a, b) => a.label.localeCompare(b.label, 'nl'));
+  return { on: entries.filter(e => byFamily[e.id]), off: entries.filter(e => !byFamily[e.id]) };
+}
+
 // ---------- who the test message is "for" ----------
 // "Ouder van Saar": how the coordinator recognises the family a message was meant for.
 export function recipientLabel(family, id){

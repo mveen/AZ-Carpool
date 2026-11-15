@@ -259,7 +259,8 @@ test('the texts of the parent\'s push switch and of the push switch in Beheer ex
   assert.equal(t('push.me.title'), 'Push-meldingen');
   assert.equal(t('ritbeurs.beheer.push.statusAan', { n: 2, m: 7 }), 'Aan: 2 van 7 gezinnen hebben een telefoon aangemeld.'); assert.equal(t('ritbeurs.beheer.push.label'), 'Push-meldingen aan');
   for (const k of ['push.me.uitleg', 'push.me.label', 'push.me.dezeTelefoon', 'push.me.privacy', 'push.me.laden', 'push.me.laden_mislukt', 'push.me.geenSleutel', 'push.toast.liveAan', 'push.toast.liveUit', 'push.toast.mijnAan', 'push.toast.mijnUit',
-    'ritbeurs.beheer.push.title', 'ritbeurs.beheer.push.uitleg', 'ritbeurs.beheer.push.statusUit', 'ritbeurs.beheer.push.serverStil']) assert.notEqual(t(k), k, k);
+    'ritbeurs.beheer.push.title', 'ritbeurs.beheer.push.uitleg', 'ritbeurs.beheer.push.statusUit', 'ritbeurs.beheer.push.serverStil', 'ritbeurs.beheer.push.metLeeg', 'ritbeurs.beheer.push.zonderLeeg']) assert.notEqual(t(k), k, k);
+  assert.equal(t('ritbeurs.beheer.push.metTitel', { n: 3 }), 'Met push-meldingen (3)'); assert.equal(t('ritbeurs.beheer.push.zonderTitel', { n: 10 }), 'Zonder push-meldingen (10)'); assert.equal(t('ritbeurs.beheer.push.tel', { n: '123' }), 'telnr …123'); assert.equal(t('push.gezinLabel', { parent: 'Jan', girl: 'Eline' }), 'Jan (ouder van Eline)');
   assert.match(t('push.me.privacy'), /Google, Mozilla of Apple/); assert.match(t('push.intro'), /Testen kan altijd, ook als Push-meldingen bij Ruilen uit staan/);
 });
 test('every state the push screen can be in has a text', () => {

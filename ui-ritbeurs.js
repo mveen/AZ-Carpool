@@ -16,7 +16,7 @@ import { openOfferSheet } from './ui-driver-car.js';
 import { redrawAfterTyping, weekroosterActive } from './ui-weekrooster-form.js';
 import { renderBeheer } from './ui-beheer.js';
 import { periodCardsHtml } from './ui-period.js';
-import { familiesWithPush, serverState } from './push.js';
+import { familiesWithPush, pushFamilySplit, serverState } from './push.js';
 import {
   activeMoments, hasOpenOffer, momentCovers, openOffers, rideStartMs, sortedNotifications, unreadCount, urgency,
 } from './ritbeurs.js';
@@ -312,7 +312,16 @@ function pushLiveHtml(nowMs){
         <input type="checkbox" role="switch" class="switch" id="pushLiveOn"${live ? ' checked' : ''}></label>
       <div class="rowflex"><span class="noticeChip ${live ? 'ok' : 'off'}">${t(live ? 'ritbeurs.beheer.status.on' : 'ritbeurs.beheer.status.off')}</span>
       <span class="muted">${esc(live ? t('ritbeurs.beheer.push.statusAan', { n: phones, m: families }) : t('ritbeurs.beheer.push.statusUit'))}</span></div>
-      ${live && server !== 'ok' ? `<p class="muted">${t('ritbeurs.beheer.push.serverStil')}</p>` : ''}`;
+      ${live && server !== 'ok' ? `<p class="muted">${t('ritbeurs.beheer.push.serverStil')}</p>` : ''}
+      ${live ? pushFamiliesHtml() : ''}`;
+}
+// Beheer: who has push switched on and who has not (two folds under the counter).
+function pushFamiliesHtml(){
+  const { on, off } = pushFamilySplit(S.push.devices, S.families, S.links);
+  const fold = (id, titleKey, emptyKey, list) => `<details class="fold" id="${id}"><summary>${t(titleKey, { n: list.length })}</summary>
+        ${list.length ? `<ul class="pushFamList">${list.map(f => `<li>${esc(f.label)}${f.tails.length ? ` <span class="muted">${esc(f.tails.map(n => t('ritbeurs.beheer.push.tel', { n })).join(', '))}</span>` : ''}</li>`).join('')}</ul>` : `<p class="muted">${t(emptyKey)}</p>`}</details>`;
+  return fold('pushFamOn', 'ritbeurs.beheer.push.metTitel', 'ritbeurs.beheer.push.metLeeg', on)
+    + fold('pushFamOff', 'ritbeurs.beheer.push.zonderTitel', 'ritbeurs.beheer.push.zonderLeeg', off);
 }
 export function ritbeursCardHtml(nowMs = Date.now()){
   const on = ritbeursOn();
