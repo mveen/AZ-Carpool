@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Checks the pipeline itself: actionlint over .github/workflows (syntax, wrong names, expressions, and shellcheck on every `run:` script) and
-# shellcheck (warnings and errors) over every .sh file of the repo. Local (Linux) and in CI (.github/workflows/lint.yml): `bash scripts/run-workflow-lint.sh`.
+# Checks the pipeline itself: actionlint over .github/workflows (syntax, wrong names, expressions, and the shell checker on every `run:` script)
+# and the shell checker (warnings and errors only) over every .sh file of the repo. Local (Linux) and in CI (.github/workflows/lint.yml): `bash scripts/run-workflow-lint.sh`.
 # actionlint is downloaded in a temporary folder, pinned to one version AND its checksum (no unpinned download script). Needs curl, tar,
 # sha256sum and shellcheck. Already have actionlint? `ACTIONLINT=/path/to/actionlint bash scripts/run-workflow-lint.sh` skips the download.
 set -euo pipefail
