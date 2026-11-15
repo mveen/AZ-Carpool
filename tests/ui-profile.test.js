@@ -95,6 +95,12 @@ await testAsync('a code with invalid characters is refused before contacting the
   assert.match(dom.el('gateMsg').textContent, /Code klopt niet/);
   assert.equal(fake.get('links/u1'), undefined);
 });
+await testAsync('a code shorter than 8 characters is refused before contacting the database, even if the database still has it (old short codes no longer work)', async () => {
+  const fake = useFakeDb({ 'invites/AB12': { familyId: 'f1' }, 'families/f1': { parentName: 'x', phoneKeys: ['0611111111'] } }); resetState({ me: 'u1' }); fillGate('0611111111', 'AB12');
+  await submitGate();
+  assert.match(dom.el('gateMsg').textContent, /Code klopt niet/);
+  assert.equal(fake.get('links/u1'), undefined);
+});
 await testAsync('an unknown code is refused', async () => {
   const fake = useFakeDb({}); resetState({ me: 'u1' }); fillGate('0611111111', 'NOPE1234');
   await submitGate();

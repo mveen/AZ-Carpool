@@ -15,6 +15,7 @@ await env.withSecurityRulesDisabled(async ctx => {
   await setDoc(doc(d, 'settings/apiKeys'), { ors: 'SECRET' });
   await setDoc(doc(d, 'settings/matchDistances'), { m1: { loc: 'x', km: 5 } });
   await setDoc(doc(d, 'invites/OLD1'), { familyId: 'f1' });
+  await setDoc(doc(d, 'invites/LONGCODE12'), { familyId: 'f1' });
 });
 const as = u => env.authenticatedContext(u).firestore();
 
@@ -36,6 +37,11 @@ await check('the coordinator creates a code of 10 digits', setDoc(doc(as('coord'
 await check('the coordinator creates a code of exactly 8 characters', setDoc(doc(as('coord'), 'invites/abcd1234'), { familyId: 'f1' }));
 await check('the coordinator cannot create a new code of 7 characters', setDoc(doc(as('coord'), 'invites/abcd123'), { familyId: 'f1' }), false);
 await check('the coordinator cannot create a new code of 4 characters', setDoc(doc(as('coord'), 'invites/ABCD'), { familyId: 'f1' }), false);
+await check('a parent cannot look up an old short code (it can be guessed)', getDoc(doc(as('stranger'), 'invites/OLD1')), false);
+await check('a parent can look up a code of 8 or more characters', getDoc(doc(as('stranger'), 'invites/LONGCODE12')));
+await check('the coordinator can still read an old short code', getDoc(doc(as('coord'), 'invites/OLD1')));
+await check('a link cannot be made with an old short code, even with the right phone number', setDoc(doc(as('stranger'), 'links/stranger'), { familyId: 'f1', code: 'OLD1', phoneKey: '0612345678', linkedAt: 1 }), false);
+await check('a link with a code of 8 or more characters and the right phone number works', setDoc(doc(as('stranger'), 'links/stranger'), { familyId: 'f1', code: 'LONGCODE12', phoneKey: '0612345678', linkedAt: 1 }));
 await check('an old short code can still be updated to the same family', updateDoc(doc(as('coord'), 'invites/OLD1'), { familyId: 'f1' }));
 await check('an old short code can still be removed', deleteDoc(doc(as('coord'), 'invites/OLD1')));
 await check('a parent cannot create a code', setDoc(doc(as('u1'), 'invites/zzzzzzzz9'), { familyId: 'f1' }), false);

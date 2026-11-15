@@ -44,7 +44,7 @@ service cloud.firestore {
       let invite = /databases/$(database)/documents/invites/$(d.code);
       let family = /databases/$(database)/documents/families/$(d.familyId);
       return d.keys().hasOnly(['familyId', 'code', 'phoneKey', 'linkedAt'])
-        && d.familyId is string && d.code is string && d.phoneKey is string
+        && d.familyId is string && d.code is string && d.code.size() >= 8 && d.phoneKey is string
         && d.phoneKey.size() >= 8
         && exists(invite) && get(invite).data.familyId == d.familyId
         && exists(family)
@@ -64,9 +64,11 @@ service cloud.firestore {
 
     // ---- Invite codes (doc id = the code) ------------------------------------------
     match /invites/{code} {
-      allow get: if signedIn();          // look up ONE code you already know
+      // Look up ONE code you already know. Only codes of at least 8 characters: an old short code (4-7 characters, from before this rule) can be guessed,
+      // so it no longer works for a parent; the coordinator can still read, update and remove it.
+      allow get: if signedIn() && (code.size() >= 8 || isCoordinator());
       allow list: if isCoordinator();    // only the coordinator can see all codes
-      // A NEW code has at least 8 characters (the app generates 10 digits). Codes made before this rule stay valid and can still be updated or removed.
+      // A NEW code has at least 8 characters (the app generates 10 digits). An old shorter code can still be updated or removed by the coordinator.
       allow create: if isCoordinator()
         && code.size() >= 8
         && request.resource.data.keys().hasOnly(['familyId'])
