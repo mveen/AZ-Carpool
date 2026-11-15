@@ -140,6 +140,10 @@ test('showConnectionError replaces the app by an explanation with the error mess
   assert.equal(dom.el('tab-gate').style.display, 'block'); assert.match(dom.html('tab-gate'), /Geen verbinding/); assert.match(dom.html('tab-gate'), /offline/);
   assert.equal(dom.el('tab-myweek').style.display, 'none');
 });
+test('showConnectionError escapes the error message (it is shown as text, never as HTML)', () => {
+  showConnectionError(new Error('<img src=x onerror=alert(1)>'));
+  assert.doesNotMatch(dom.html('tab-gate'), /<img/); assert.match(dom.html('tab-gate'), /&lt;img src=x onerror=alert\(1\)&gt;/);
+});
 test('showConnectionError offers a retry button that reloads the page', () => {
   showConnectionError(new Error('offline'));
   assert.match(dom.html('tab-gate'), /id="retryConnection"/); assert.match(dom.html('tab-gate'), /Opnieuw proberen/);
