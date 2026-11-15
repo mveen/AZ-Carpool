@@ -106,6 +106,7 @@ test('v249: this version is at least v249', () => { assert.ok(Number(APP_VERSION
 test('v250: this version is at least v250', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 250); });
 test('v265: this version is at least v265', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 265); });
 test('v274: this version is at least v274', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 274); });
+test('v277: this version is at least v277', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 277); });
 test('v276: this version is at least v276', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 276); });
 test('v275: this version is at least v275', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 275); });
 test('v273: this version is at least v273', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 273); });

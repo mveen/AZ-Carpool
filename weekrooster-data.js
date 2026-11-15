@@ -1,7 +1,7 @@
 // weekrooster-data.js — Afwijkend weekrooster, the database side. The rules are in weekrooster.js; the screens are in ui-weekrooster*.js.
 //
-// Requests (weekRequests/<weekKey>_<day>_<familyId>): the own ones are read document by document (10 known ids: this week and next week, five
-// days); the requests of the other families (times only) come in through ONE listener on the collection. Only for a person with a linked family.
+// Requests (weekRequests/<weekKey>_<day>_<familyId>): the own ones come in through ONE listener on the family's
+// requests (this week and next week are kept); the requests of the other families (times only) through ONE more, on this week. Only for a person with a linked family.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { isRealCoordinator, dayCoordinatorFor, myFamilyId, myLinkedFamilyId } from './coordinator.js';
@@ -79,7 +79,7 @@ export function requestsForDeciding() { return { ...S.dayRequests, ...S.weekRequ
 
 // Keeps the listeners in step with: who is looking (also in Testweergave) and the planning week. Without a linked family there are none,
 // and nothing is read.
-// - Own requests: 10 known documents (this week and next week, five days).
+// - Own requests: one listener on the requests of this family (this week and next week are kept).
 // - Every family also reads the requests of the other families, THIS week only (a day coordinator to decide, a parent for the note): what was handed in as
 //   "next week" shows up by itself when the week changes (Friday 19:00).
 export function syncWeekRequests() {
@@ -101,15 +101,16 @@ function syncOwn(fid) {
   stopWeekRequestListeners();
   S.weekRequests = {}; S.weekRequestsKey = key;
   if (!fid) return;
-  [weekKeyFor('this'), weekKeyFor('next')].forEach(wk => REQUEST_DAYS.forEach(day => {
-    const id = requestId(wk, day, fid);
-    S.weekRequestsUnsubs.push(db.doc('weekRequests/' + id).onSnapshot(snap => {
-      const next = { ...S.weekRequests };
-      if (snap.exists) next[id] = snap.data(); else delete next[id];
-      S.weekRequests = next; retries = 0;
-      renderDeviationTab(); renderMyWeek(); renderSchedule();
-    }, () => resyncSoon()));   // no permission or offline: the screens show no requests until it works again
-  }));
+  // ONE listener on the requests of this family (before: ten listeners on known ids, each its own request to the database, and each
+  // checked by the database rules). Only this week and next week are kept; older ones of this family (the coordinator's browser removes
+  // them) are ignored.
+  const weeks = new Set([weekKeyFor('this'), weekKeyFor('next')]);
+  S.weekRequestsUnsubs.push(db.collection('weekRequests').whereEqual('familyId', fid).onSnapshot(snap => {
+    const next = {};
+    snap.docs.forEach(d => { const r = d.data(); if (r && r.familyId === fid && weeks.has(r.weekKey) && REQUEST_DAYS.includes(r.day)) next[d.id] = r; });
+    S.weekRequests = next; retries = 0;
+    renderDeviationTab(); renderMyWeek(); renderSchedule();
+  }, () => resyncSoon()));   // no permission or offline: the screens show no requests until it works again
 }
 function syncDays(fid) {
   // Every linked family reads the open requests of the others (times only), for the parent's note: ONE listener on the collection, filtered
