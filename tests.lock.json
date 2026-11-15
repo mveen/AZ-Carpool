@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "c03b2a7c18881c3d17274b31ed9782b8f1157d856f39eb0cc8474bc0074f1a19",
-    "test": "b9f5b6128ecaf40aa143c93fefce40e5931f79f5844faae93e85c05b8bbe9f14"
+    "module": "bd3b62155880deefeebebbdb40953295cba99d8409c1ebcedc7883154a8af31b",
+    "test": "9961e9adddf01ada9ee780d08651790f3428eb01c2306c4ee9f59fcc7c8c5cb3"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -268,8 +268,8 @@
     "test": "5531ef0a652060b29f8557fe221b87c6f585c9adcf30b29258d0700c150ac65d"
   },
   "ui-shell.js": {
-    "module": "28663f88a1df4e1324280aa21310c62699d538d11d407ec2e5dc5e5ef75ef742",
-    "test": "d935d250759074a8c1e2f1da4c62657c82dcfe9018515962024e8c1a0a448831"
+    "module": "9f14b70ed0a9653af0914489db4af4242cb3de72e56b1a2e34eebb5ceb6ce01e",
+    "test": "4a2b339e189c7d3e906adf39e124430ab6a0c9230e4457ff0041410a03b61096"
   },
   "ui-weekrooster-advice.js": {
     "module": "53837f79773eda6cfa6832f1651990df6da6836fd09c77959369d67fc1576e79",

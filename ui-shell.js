@@ -282,8 +282,11 @@ export function initShell(onNavigate, onViewChange){
     const ft = e.target && e.target.closest ? e.target.closest('[data-famtype]') : null;
     if(ft){
       const sel = document.getElementById(ft.dataset.famtypefor);
+      const changed = !!sel && sel.value !== ft.dataset.famtype;
       if(sel) sel.value = ft.dataset.famtype;
       document.querySelectorAll('[data-famtypefor="' + ft.dataset.famtypefor + '"]').forEach(x => x.classList.toggle('active', x === ft));
+      // Setting .value from code fires no 'change' event, and the Beheer family card saves on 'change': without this the choice was never stored.
+      if(changed && sel.dispatchEvent) sel.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
 }
