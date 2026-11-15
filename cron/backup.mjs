@@ -10,8 +10,6 @@ import { once } from 'node:events';
 import { finished } from 'node:stream/promises';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore } from './lib/firestore-rest.mjs';
 import { loadConfig, secretsDir, dataDir, isMainModule } from './lib/setup.mjs';

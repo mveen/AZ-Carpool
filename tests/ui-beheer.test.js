@@ -799,5 +799,42 @@ await testAsync('saving the name, the calendar or the words keeps the bus switch
   assert.deepEqual(fake.get('settings/matchFeeds').feeds[0], { calendarId: 'cal1', label: 'Jong AZ', bus: true });
 });
 
+console.log('=== cards that used to be written inside renderBeheer ===');
+const setNotif = v => { if (v === null) delete globalThis.Notification; else globalThis.Notification = { permission: v }; };
+const drawBeheer = setup => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ links: { p1: { familyId: 'f2' } }, invitesByCode: { CODE1234: 'f3' }, inviteByFamily: { f3: 'CODE1234' } });
+  if (setup) setup();
+  withFakeNow(NOW, () => renderBeheer());
+  return dom.html('tab-beheer');
+};
+test('two families with the same girl name get the duplicate warning, a single family does not', () => {
+  assert.doesNotMatch(drawBeheer(), /Mogelijk dubbele gezinnen/);
+  const html = drawBeheer(() => {
+    const f = { ...S.families }; const ids = Object.keys(f);
+    f.zz1 = { ...f[ids[0]], girlName: f[ids[1]].girlName }; f.zz2 = { ...f[ids[0]], girlName: ' ' + f[ids[1]].girlName.toUpperCase() };
+    S.families = f;
+  });
+  assert.match(html, /Mogelijk dubbele gezinnen/);
+});
+test('the notification card follows the browser permission (and survives a browser without notifications)', () => {
+  const saved = globalThis.Notification;
+  try {
+    const states = ['default', 'granted', 'denied', null].map(v => { setNotif(v); return drawBeheer(); });
+    const cards = states.map(h => h.match(/<div [^>]*id="notifCard"[\s\S]*?(?=<div [^>]*class="card"|<\/section>)/)[0]);
+    assert.equal(new Set(cards).size, 4, 'each permission state looks different');
+  } finally { if (saved === undefined) delete globalThis.Notification; else globalThis.Notification = saved; }
+});
+test('the calendar card shows each feed with its bus choice, escapes names and lists teams that failed', () => {
+  const html = drawBeheer(() => {
+    S.matchFeeds = [{ label: 'B "q"', calendarId: 'b@x', bus: false }, { label: 'C', calendarId: 'c@x', bus: true }, { label: '', calendarId: '' }];
+    S.matchFetchFailedTeams = [{ label: 'AZ <b>O13', error: 'x' }];
+  });
+  const card = html.match(/<div [^>]*id="feedsCard"[\s\S]*?(?=<div [^>]*class="card"|<\/section>)/)[0];
+  assert.match(card, /b@x/); assert.match(card, /c@x/);
+  assert.doesNotMatch(card, /<b>O13/);
+  assert.match(card, /AZ &lt;b&gt;O13/);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

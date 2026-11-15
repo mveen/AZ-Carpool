@@ -1,7 +1,7 @@
 // Firestore rules test for the error log (errorLog). Needs the Firestore emulator on port 8089 and: npm i @firebase/rules-unit-testing firebase.
 // Start: firebase emulators:start --only firestore (rules = firebase/firestore.rules, port 8089), then: node errorlog-rules.test.mjs
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc, getDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
+import { doc, setDoc, getDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 import fs from 'node:fs';
 const env = await initializeTestEnvironment({ projectId: 'demo-test', firestore: { host: '127.0.0.1', port: 8089, rules: fs.readFileSync(new URL('../firestore.rules', import.meta.url), 'utf8') } });
 let ok = 0, bad = 0;

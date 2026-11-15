@@ -15,9 +15,9 @@
 // Safe to run at any time and as often as you like; a lock keeps two runs from overlapping.
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json). Writes the push key file in the secrets folder (mode 600).
 process.env.TZ = 'Europe/Amsterdam';   // 18:00 is Amsterdam time, whatever time zone the host is in
-import { closeSync, existsSync, mkdirSync, openSync, readFileSync, statSync, unlinkSync, writeSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { closeSync, existsSync, mkdirSync, openSync, statSync, unlinkSync, writeSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { ensureVapidFile, sendPush } from './lib/webpush.mjs';
