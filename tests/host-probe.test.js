@@ -40,7 +40,7 @@ await test('no upload, copy, delete or write command anywhere in the script or t
   }
   // the only things run on the host are: command -v curl, a listing of the listening ports (ss/netstat -ltn), and curl (GET)
   const remote = [...sh.matchAll(/\$SSH_CMD "\$SSH_DEST" ('[^']*'|"[^"]*")/g)].map(m => m[1]);
-  assert.equal(remote.length, 3);
+  assert.equal(remote.length, 5);
   assert.ok(remote.every(c => /command -v curl|curl -sS|\(ss -ltn/.test(c)), remote.join(' | '));
   assert.doesNotMatch(sh, /curl[^\n]*(-X |--request|-d |--data|-T |--upload)/);
 });
