@@ -1,6 +1,7 @@
 // Run with: node ui-maintenance.test.js
 // Onderhoudsmodus: the full-screen page (everyone but the coordinator), the reminder bar (coordinator), the Beheer card and saving.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -183,6 +184,11 @@ test('design v2: ui-maintenance.js only uses variables from tokens.css in its in
   const tokens = fs.readFileSync(new URL('../tokens.css', import.meta.url), 'utf8');
   const unknown = [...src.matchAll(/var\((--[\w-]+)\)/g)].map(x => x[1]).filter(v => !tokens.includes(v + ':'));
   assert.deepEqual(unknown, []);
+});
+
+test('ui-maintenance.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-maintenance.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

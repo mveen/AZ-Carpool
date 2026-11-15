@@ -2,6 +2,7 @@
 // Small shared UI helpers: escaping, icons, toast, header status line, theme, bottom sheet.
 // They run against a tiny fake DOM (test-support.js), so no browser is needed.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 import * as uiCommonModule from '../ui-common.js';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -249,6 +250,11 @@ test('renderLoadingIfNeeded: spinner while the ride data is loading, nothing onc
   assert.equal(renderLoadingIfNeeded(box), true); assert.match(box.innerHTML, /class="spinner"/);
   sampleParentState({}); box.innerHTML = 'x';
   assert.equal(renderLoadingIfNeeded(box), false); assert.equal(box.innerHTML, 'x');
+});
+
+test('ui-common.js: inline style="..." count is 1 (only the size of the icon svg (phIcon) stays inline); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-common.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 1);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

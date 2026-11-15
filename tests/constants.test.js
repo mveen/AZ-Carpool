@@ -108,6 +108,7 @@ test('v265: this version is at least v265', () => { assert.ok(Number(APP_VERSION
 test('v266: this version is at least v266', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 266); });
 test('v267: this version is at least v267', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 267); });
 test('v269: this version is at least v269', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 269); });
+test('v270: this version is at least v270', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 270); });
 test('v268: this version is at least v268', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 268); });
 test('v251: this version is at least v251', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 251); });
 test('v252: this version is at least v252', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 252); });
@@ -123,7 +124,7 @@ test('v261: this version is at least v261', () => { assert.ok(Number(APP_VERSION
 test('v262: this version is at least v262', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 262); });
 test('v263: this version is at least v263', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 263); });
 test('v264: this version is at least v264', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 264); });
-test('v270: this version is at least v270', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 270); });
+test('v271: this version is at least v271', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 271); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
