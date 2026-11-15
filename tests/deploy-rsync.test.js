@@ -21,13 +21,13 @@ const have = c => spawnSync('sh', ['-c', `command -v ${c}`]).status === 0;
 const run = (src, dest) => spawnSync('bash', [script, src, dest], { encoding: 'utf8' });
 
 console.log('=== the workflow ===');
-await test('deploys after a merge to main, never in parallel, with only the deploy secrets (user and key), the three smoke-test logins and the restricted tunnel key, and the fixed azcarpool.nl folder', () => {
+await test('deploys after a merge to main, never in parallel, with only the deploy secrets (user and key), the three smoke-test logins and the restricted tunnel key, the two rules keys, and the fixed azcarpool.nl folder', () => {
   const y = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8');
   assert.match(y, /push:\s*\n\s*branches: \[main\]/);
   assert.match(y, /workflow_dispatch:/);
   assert.match(y, /cancel-in-progress: false/);
   assert.match(y, /TARGET_DIR: domains\/azcarpool\.nl\/public_html\//);
-  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
+  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER', 'RULES_KEY_LIVE', 'RULES_KEY_TEST', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
 });
 await test('tests run before the upload, and the server identity is pinned in the repo and checked (no blind trust, no copy-paste secret)', () => {
   const y = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8');
