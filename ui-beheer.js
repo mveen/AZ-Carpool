@@ -950,8 +950,8 @@ export function renderCoordEditor(){
       <button type="button" class="btn small secondary" id="genCodeBtn">${phIcon('dice')} ${t('beheer.nieuwe_code')}</button>
     </div>
     ${familyFormHtml('coord', f)}
-    <button type="button" class="btn secondary" id="coordCancel">${t('beheer.sluiten')}</button>
-    <p class="muted mt-3">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
+    ${isNew? `<button type="button" class="btn secondary" id="coordCancel">${t('beheer.sluiten')}</button>
+    <p class="muted mt-3">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>` : ''}
   </div>`;
   const card=area.querySelector('.card');
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
@@ -970,7 +970,7 @@ export function renderCoordEditor(){
       doToggleCoord(S.coordEditId,isCurrently);
     }
   };
-  document.getElementById('coordCancel').onclick = ()=>{ S.coordEditId=undefined; renderBeheer(); };
+  const cc=document.getElementById('coordCancel'); if(cc) cc.onclick = ()=>{ S.coordEditId=undefined; renderBeheer(); };
   const genBtn=document.getElementById('genCodeBtn');
   if(genBtn) genBtn.onclick=()=>{ document.getElementById('coord_inviteCode').value=genCode(); saveCoordFamily(); };
 }
