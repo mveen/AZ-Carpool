@@ -21,7 +21,7 @@ import {
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, staleSessionPaths, purgeStaleSessions, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
-  createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
+  logPassedShifts, createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -1260,6 +1260,14 @@ test('the matchFeeds snapshot redraws the Wedstrijden tab too (the bus default o
   const src = fs.readFileSync(new URL('../data.js', import.meta.url), 'utf8');
   const block = src.slice(src.indexOf('db.doc("settings/matchFeeds").onSnapshot'), src.indexOf('db.doc("settings/locations")'));
   assert.match(block, /renderMatchesTab\(\)/);
+});
+
+await testAsync('logPassedShifts stores the waiting of each girl with every logged car (Wachttijd speelsters)', async () => {
+  const fake = useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: true, deviationsLoaded: true });
+  await logPassedShifts();
+  const cars = fake.collection('rideLog').flatMap(([, d]) => d.cars);
+  assert.ok(cars.length > 0 && cars.every(c => c.waits && Object.keys(c.waits).length === c.girls));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

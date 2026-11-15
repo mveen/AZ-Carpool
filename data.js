@@ -23,7 +23,7 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
-import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
+import { computeDepartureTime, carWaits, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
 import { logError, purgeOldErrorLogs } from './error-log.js';
@@ -180,6 +180,7 @@ export async function logPassedShifts(){
   const docs = newLogDocs({
     weekKeys, families: S.families, logged: S.rideLog, nowMs: Date.now(), isoOf: weekKeyDayIso,
     carsOf: (weekKey, day, direction) => effectiveCars(day, direction, { ...S, currentWeekKey: weekKey }),
+    waitsOf: (weekKey, day, direction, car) => carWaits(day, direction, car, { ...S, currentWeekKey: weekKey }),
   });
   let n = 0;
   for(const [id, doc] of docs){

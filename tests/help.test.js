@@ -446,5 +446,13 @@ test('the Help never says "meisje", "meid" or "meiden": it is speelster or docht
 test('the services article says that all program code comes from the own host (no code loaded from Google servers)', () => {
   const a = articles.find(x => x.title === 'Over deze app: gebruikte diensten'); assert.ok(a); assert.match(allText(a), /geen code van servers van Google geladen/);
 });
+test('the Help explains Wachttijd speelsters, for the coordinator only, in terms of speelsters', () => {
+  const a = findArticle('beheer-wachttijd-speelsters', { canEdit: true });
+  ['Per week', 'Per maand', 'Per jaar', 'Vorige', 'Volgende', '10 minuten', '3 ritten'].forEach(w => assert.ok(allText(a).includes(w), w));
+  assert.ok(!/meisje/i.test(allText(a)));
+  assert.equal(findArticle('beheer-wachttijd-speelsters', { canEdit: false }), null);
+  assert.ok(searchHelp('wachttijd klacht', { canEdit: true }).some(r => (r.article || r).id === 'beheer-wachttijd-speelsters'));
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

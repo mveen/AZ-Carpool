@@ -81,6 +81,7 @@ export async function runPurge({ firestore, app, now = Date.now(), log = console
   const docs = app.newLogDocs({
     weekKeys: [app.getISOWeekKey(lastWeek), S.currentWeekKey], families: S.families, logged: S.rideLog, nowMs: now, isoOf: app.weekKeyDayIso,
     carsOf: (weekKey, day, direction) => app.effectiveCars(day, direction, { ...S, currentWeekKey: weekKey }),
+    waitsOf: (weekKey, day, direction, car) => app.carWaits(day, direction, car, { ...S, currentWeekKey: weekKey }),
   });
   for (const [id, doc] of docs) await firestore.setDocument('rideLog/' + id, doc);
 

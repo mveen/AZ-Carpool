@@ -169,7 +169,7 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 19);   // 16 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 20);   // 17 (incl. "Wachttijd speelsters") + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
   assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0);
@@ -212,7 +212,7 @@ test('the menus inside each Beheer section are in the order the coordinator chos
     const end = html.indexOf('</section>', start);
     return [...html.slice(start, end).matchAll(/<div data-icon="[\w-]+" class="card[^"]*" id="(\w+)"/g)].map(m => m[1]);
   };
-  assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard']);
+  assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard', 'waitLogCard']);
   assert.deepEqual(order('periodes'), ['locationsCard', 'planningCard', 'periodCard']);
   assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'dayNoticeCard', 'maintenanceCard', 'notifCard']);
   assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'errorLogCard']);
@@ -727,6 +727,7 @@ test('the Gereden shifts card is the last one in the Gezinnen section', () => {
   const html = dom.html('tab-beheer');
   const sec = html.slice(html.indexOf('id="begSec-gezinnen"'), html.indexOf('id="begSec-periodes"'));
   assert.ok(sec.indexOf('id="rideLogCard"') > 0 && sec.indexOf('id="rideLogCard"') > sec.indexOf('id="availabilityCard"'));
+  assert.ok(sec.indexOf('id="waitLogCard"') > sec.indexOf('id="rideLogCard"'), 'Wachttijd speelsters sits right under Gereden shifts');
 });
 
 test('design v2: ui-beheer.js only uses variables from tokens.css in its inline styles', async () => {

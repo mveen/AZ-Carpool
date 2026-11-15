@@ -596,5 +596,9 @@ test('no text says "meisje", "meid" or "meiden": it is speelster or dochter', ()
   assert.deepEqual(Object.entries(nl).filter(([, v]) => /\b(meisjes?|meid|meiden)\b/i.test(String(v))).map(([k]) => k), []);
 });
 
+test('the Wachttijd speelsters texts exist and speak of speelsters, never meisjes', () => {
+  for (const k of ['waitlog.title', 'waitlog.intro', 'waitlog.more_one', 'waitlog.more_many', 'waitlog.more_none', 'waitlog.summary']) assert.ok(hasKey(k), k);
+  assert.ok(!/meisje|meid/i.test(JSON.stringify(Object.entries(nl).filter(([k]) => k.startsWith("waitlog.")))));
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

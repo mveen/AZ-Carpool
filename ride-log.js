@@ -20,25 +20,30 @@ export function shiftEndMs(iso, cars){
 }
 
 // The document to store for one shift, or null when there is nothing to log yet: not over, or no car with a driver and a girl.
-// cars: the cars that actually ran (effectiveCars). families: for the names as they are today.
-export function buildRideLogDoc({ iso, day, direction, weekKey, cars, families, nowMs }){
+// cars: the cars that actually ran (effectiveCars). families: for the names as they are today. waitsOf(car) (optional): { girlId: minutes } of waiting.
+export function buildRideLogDoc({ iso, day, direction, weekKey, cars, families, nowMs, waitsOf }){
   if(!isIso(iso) || !DIRECTIONS.includes(direction)) return null;
   const driven = (cars || []).filter(c => c && c.driverFamilyId && (c.girlIds || []).length);
   if(!driven.length || shiftEndMs(iso, cars) > nowMs) return null;
   return {
     date: iso, day, direction, weekKey, loggedAt: nowMs,
-    cars: driven.map(c => ({ familyId: c.driverFamilyId, name: familyLabel(families && families[c.driverFamilyId]), girls: c.girlIds.length })),
+    cars: driven.map(c => {
+      const out = { familyId: c.driverFamilyId, name: familyLabel(families && families[c.driverFamilyId]), girls: c.girlIds.length };
+      const waits = waitsOf ? waitsOf(c) : null;   // optional: minutes of waiting per girl (see wait-log.js); older log documents do not have it
+      if(waits && Object.keys(waits).length) out.waits = waits;
+      return out;
+    }),
   };
 }
 
 // The candidate shifts to log: every day + direction of the given weeks (week keys). `carsOf(weekKey, day, direction)` gives the cars.
-// `isoOf(weekKey, day)` gives the date. Shifts that are already in the log (`logged`: { id: doc }) are skipped.
-export function newLogDocs({ weekKeys, carsOf, isoOf, families, logged, nowMs }){
+// `isoOf(weekKey, day)` gives the date. `waitsOf(weekKey, day, direction, car)` (optional) gives the waiting per girl. Shifts that are already in the log (`logged`: { id: doc }) are skipped.
+export function newLogDocs({ weekKeys, carsOf, isoOf, families, logged, nowMs, waitsOf }){
   const out = [];
   weekKeys.forEach(weekKey => DAYS.forEach(([day]) => DIRECTIONS.forEach(direction => {
     const iso = isoOf(weekKey, day), id = iso && rideLogId(iso, direction);
     if(!id || (logged && logged[id])) return;
-    const doc = buildRideLogDoc({ iso, day, direction, weekKey, cars: carsOf(weekKey, day, direction), families, nowMs });
+    const doc = buildRideLogDoc({ iso, day, direction, weekKey, cars: carsOf(weekKey, day, direction), families, nowMs, waitsOf: waitsOf && (car => waitsOf(weekKey, day, direction, car)) });
     if(doc) out.push([id, doc]);
   })));
   return out;
