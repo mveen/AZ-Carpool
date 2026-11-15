@@ -9,6 +9,7 @@
 #   tunnel    an SSH port forward (ssh -L) from this computer to the host's port 443, then a request through it with the site's name:
 #             the real certificate and the real server settings, which is what the robot test would need
 #   tunnel80  the same for port 80 (plain http, Host header)
+# Answers that are neither are shown (first 300 characters, and the headers of the tunnel answers: who answers, WebShield or the web server behind it).
 # Each answer is called REAL-FILE (the service worker, with CACHE_NAME), WAIT-PAGE (the bot check), NO-ANSWER or OTHER(...).
 # A round where the control says REAL-FILE proves nothing (the host was not blocking then): look at rounds where the control says WAIT-PAGE.
 #
@@ -32,6 +33,12 @@ split_answer() {
   echo "$code"
 }
 
+# show <label> <body-file>: the first part of an answer that is neither the real file nor the wait page (error text, status page), one line.
+show() {
+  [ -s "$2" ] || return 0
+  echo "   $1 said: $(head -c 300 "$2" | tr '\r\n\t' '   ' | tr -s ' ')"
+}
+
 main() {
   local host="${1:?usage: probe-host.sh <site-host> [path]}" path="${2:-service-worker.js}"
   local rounds="${ROUNDS:-3}" gap="${ROUND_GAP:-30}"
@@ -44,6 +51,9 @@ main() {
   echo "== is curl on the host?"
   # shellcheck disable=SC2086
   $SSH_CMD "$SSH_DEST" 'command -v curl && curl --version | head -1' 2>&1 | head -3 || true
+  echo "== which ports does the host listen on (only the listing, nothing is changed)?"
+  # shellcheck disable=SC2086
+  $SSH_CMD "$SSH_DEST" '(ss -ltn 2>/dev/null || netstat -ltn 2>/dev/null) | head -40' 2>&1 | head -45 || true
 
   local r
   for r in $(seq 1 "$rounds"); do
@@ -56,6 +66,7 @@ main() {
     # server: curl on the host itself, https with the site's name pointed at the host's own address
     # shellcheck disable=SC2086
     out=$($SSH_CMD "$SSH_DEST" "curl -sS --max-time 20 --resolve $host:443:127.0.0.1 -w '$fmt' https://$host/$path" 2>&1); code=$(split_answer "$out" "$tmp/s"); server=$(classify "$tmp/s" "$code")
+    case "$server" in REAL-FILE|WAIT-PAGE) ;; *) show "server curl" "$tmp/s" ;; esac
 
     # tunnel: ssh -L to the host's port 443 (https, real certificate) and to port 80 (http, Host header)
     for kind in 443 80; do
@@ -71,9 +82,11 @@ main() {
         sleep 0.5
       done
       if [ -z "$result" ]; then
-        if [ "$kind" = 443 ]; then out=$(curl -sS --max-time 20 --resolve "$host:$lport:127.0.0.1" -w "$fmt" "https://$host:$lport/$path" 2>&1)
-        else out=$(curl -sS --max-time 20 -H "Host: $host" -w "$fmt" "http://127.0.0.1:$lport/$path" 2>&1); fi
+        if [ "$kind" = 443 ]; then out=$(curl -sS --max-time 20 --resolve "$host:$lport:127.0.0.1" -D "$tmp/h$kind" -w "$fmt" "https://$host:$lport/$path" 2>&1)
+        else out=$(curl -sS --max-time 20 -H "Host: $host" -D "$tmp/h$kind" -w "$fmt" "http://127.0.0.1:$lport/$path" 2>&1); fi
         code=$(split_answer "$out" "$tmp/t$kind"); result=$(classify "$tmp/t$kind" "$code")
+        case "$result" in REAL-FILE|WAIT-PAGE) ;; *) show "tunnel $kind" "$tmp/t$kind" ;; esac
+        if [ -s "$tmp/h$kind" ]; then echo "   tunnel $kind headers: $(grep -iE '^(HTTP|server|location|content-type|via|x-)' "$tmp/h$kind" | tr -d '\r' | head -6 | tr '\n' ';')"; fi
         if grep -qiE 'prohibited|not allowed|refused' "$err"; then result="FORWARDING-REFUSED-BY-HOST"; fi
       fi
       kill "$pid" 2>/dev/null; wait "$pid" 2>/dev/null
