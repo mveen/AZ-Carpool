@@ -47,7 +47,24 @@ export function isHostWaitPage({ url = '', headers = {} } = {}) {
   return /openresty/i.test(headers.server || '') && 'cf-edge-cache' in headers;
 }
 
-export const HOST_RETRIES = 4, HOST_RETRY_WAIT_MS = 30000;
+export const HOST_RETRIES = 4, HOST_RETRY_WAIT_MS = 20000;
+
+// Waits for `selector` to be on the page, but gives up AT ONCE when the host's wait page shows instead (its text is on the page, or a response
+// already showed it). Before, the robot waited the full 30 s for a login screen that a wait page never shows: 4 tries x 4 checks = 14 minutes.
+// Resolves 'found', 'wait' (the host's wait page) or 'timeout' (nothing of both: a real problem with the site).
+export const HOST_WAIT_TEXT = /One moment, please/;
+export async function waitForSelectorOrHostWait(page, selector, { timeoutMs = 30000, pollMs = 400, hostWait = () => false, visible = false } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (hostWait()) return 'wait';
+    const loc = page.locator(selector);
+    if (visible ? await loc.isVisible().catch(() => false) : (await loc.count().catch(() => 0)) > 0) return 'found';
+    const text = await page.content().catch(() => '');
+    if (HOST_WAIT_TEXT.test(text)) return 'wait';
+    await page.waitForTimeout(pollMs);
+  }
+  return 'timeout';
+}
 // Runs one check (one login in one browser). Problems WITHOUT the host's wait page count at once. With it, the check is repeated
 // (up to `tries` times in total, `waitMs` apart); if it never gets through, the run fails and says the wait page was the reason.
 export async function withHostRetry(run, { who = '', tries = HOST_RETRIES, waitMs = HOST_RETRY_WAIT_MS, log = console.log, sleep = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
@@ -80,11 +97,15 @@ async function checkRole(browser, cfg, role, log, engine = 'chromium') {
   page.on('requestfailed', r => { const u = r.url(); if (u.startsWith(cfg.site) && !isHarmless(r.failure()?.errorText || '')) problems.push(`${who}: request failed: ${u}`); });
   try {
     await page.goto(cfg.site + '/', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForSelector('#gatePhone', { timeout: 30000 });
+    const gate = await waitForSelectorOrHostWait(page, '#gatePhone', { hostWait: () => hostWait });
+    if (gate === 'wait') { hostWait = true; throw new Error('the wait page of the host is shown instead of the login screen'); }
+    if (gate === 'timeout') throw new Error('the login screen did not appear within 30 s');
     await page.fill('#gatePhone', cfg.phone);
     await page.fill('#gateCode', role.code);
     await page.click('#gateSubmit');
-    await page.waitForSelector('button.navtab[data-tab="myweek"]', { state: 'visible', timeout: 30000 });
+    const week = await waitForSelectorOrHostWait(page, 'button.navtab[data-tab="myweek"]', { hostWait: () => hostWait, visible: true });
+    if (week === 'wait') { hostWait = true; throw new Error('the wait page of the host came up after the login'); }
+    if (week === 'timeout') throw new Error('the app did not open after the login within 30 s');
     log(`${who}: logged in`);
     const beheerVisible = await page.isVisible('#navBeheer');
     if (beheerVisible !== role.beheer) problems.push(`${who}: Beheer tab ${beheerVisible ? 'is' : 'is not'} visible`);
@@ -104,15 +125,28 @@ async function checkRole(browser, cfg, role, log, engine = 'chromium') {
   return { problems, hostWait };
 }
 
-export async function runSmoke(env = process.env, log = console.log) {
+// A check that the wait page blocked on every try says so with this sentence (see withHostRetry).
+export const isHostBlockedProblem = m => /got in the way \d+ times in a row/.test(m);
+
+// deps (for tests): pw = the playwright module, check = replaces checkRole, sleep = replaces the pause between tries.
+export async function runSmoke(env = process.env, log = console.log, deps = {}) {
   const cfg = readSmokeConfig(env);
   const engines = readEngines(env);
-  const pw = await loadPlaywright();
+  const pw = deps.pw || await loadPlaywright();
+  const check = deps.check || checkRole;
   const problems = [];
+  let blocked = false;   // the host still showed its wait page after every try: the next checks come from the same address and would meet it too
   for (const engine of engines) {
+    if (blocked) { for (const role of cfg.roles) problems.push(`${engine} ${role.name}: not tried, the host was still showing its wait page at the previous check`); continue; }
     const browser = await pw[engine].launch(engine === 'chromium' && env.CHROMIUM_PATH ? { executablePath: env.CHROMIUM_PATH } : {});
-    try { for (const role of cfg.roles) problems.push(...await withHostRetry(() => checkRole(browser, cfg, role, log, engine), { who: `${engine} ${role.name}`, log })); }
-    finally { await browser.close(); }
+    try {
+      for (const role of cfg.roles) {
+        if (blocked) { problems.push(`${engine} ${role.name}: not tried, the host was still showing its wait page at the previous check`); continue; }
+        const p = await withHostRetry(() => check(browser, cfg, role, log, engine), { who: `${engine} ${role.name}`, log, ...(deps.sleep ? { sleep: deps.sleep } : {}) });
+        problems.push(...p);
+        if (p.some(isHostBlockedProblem)) blocked = true;
+      }
+    } finally { await browser.close(); }
   }
   return problems;
 }

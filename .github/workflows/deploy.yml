@@ -93,7 +93,7 @@ jobs:
     needs: deploy-test
     if: ${{ !inputs.skip_smoke }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
