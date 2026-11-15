@@ -3,7 +3,7 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { adjustMainPadding, esc, hapticTap, installCardHtml, phIcon, showToast, twoStepConfirm, updateStatusLine, wireInstallCard } from './ui-common.js';
 import { fam } from './rides.js';
-import { cleanCode, isRealCoordinator, isValidInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
+import { cleanCode, isRealCoordinator, isStrongInviteCode, myDisplayInfo, myFamilyId, needsGate, normalizePhone, recomputeCanEdit } from './coordinator.js';
 import { logError } from './error-log.js';
 import { clearAutoReset, resetSession, shouldAutoReset } from './session-reset.js';
 import { activateTab, afterLinksChanged, renderAll } from './app.js';
@@ -449,7 +449,7 @@ export async function submitGate(){
   const msg=document.getElementById('gateMsg');
   const say=t=>{ if(msg) msg.textContent=t; };
   if(!phone||!code){ say(t('profile.vul_alle_velden_in')); return; }
-  if(!isValidInviteCode(code)){ say(t('profile.code_klopt_niet_controleer_en')); return; }
+  if(!isStrongInviteCode(code)){ say(t('profile.code_klopt_niet_controleer_en')); return; }
   const btn=document.getElementById('gateSubmit'); if(btn) btn.disabled=true;
   try{
     let inv;

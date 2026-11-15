@@ -4,3 +4,8 @@
 - **By hand:** Actions -> *Databaseregels* -> Run workflow: *vergelijken* (changes nothing, shows the lines that differ) or *publiceren*, for *test* or *live*.
 - **Keys (once per project, GitHub secrets `RULES_KEY_TEST` and `RULES_KEY_LIVE`):** in the Google Cloud console of that project: IAM & Admin -> Service accounts -> Create service account (name `rules-publisher`) -> role **Firebase Rules Admin** (nothing else) -> open the account -> Keys -> Add key -> JSON. Put the whole content of the downloaded file in the GitHub secret (repo Settings -> Secrets and variables -> Actions) and delete the file. A key only works for its own project: the script refuses a test key for live and the other way round.
 - **Rules tests:** `firebase/rules-test/*.test.mjs` run against Google's Firestore emulator with `bash scripts/run-rules-tests.sh` (Java 21 or newer) and in CI in `.github/workflows/rules-tests.yml`, on every pull request that touches `firebase/` (and by hand). They are not part of `npm test`. *Live rules controleren* (`rules-live-check.yml`) compares the published rules with the file every day.
+
+## Uitnodigingscodes: minimaal 8 tekens
+- Nieuwe codes zijn 10 cijfers. Sinds v275 werkt een code korter dan 8 tekens niet meer voor ouders: de poort in de app weigert hem (`isStrongInviteCode`) en de databaseregels weigeren het opzoeken (`invites/{code}` get) en het aanmaken van een koppeling (`validInviteLink`).
+- De coördinator kan een oud, kort codedocument nog wel lezen, aanpassen en verwijderen (opruimen in Beheer).
+- Na het mergen moeten de regels opnieuw gepubliceerd worden (plakken in de Firebase-console, of de sleutels `RULES_KEY_TEST`/`RULES_KEY_LIVE` instellen). Tests: `firebase/rules-test/secrets-rules.test.mjs`.
