@@ -3,9 +3,10 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { effectivePlanningDate, startOfWeek } from './dates.js';
 import { db } from './data.js';
+import { logError } from './error-log.js';
 import { renderMyWeek } from './ui-myweek.js';
 import { renderMatchesTab } from './ui-matches.js';
-import { fam, playerSeats, familyRiding, seats } from './rides.js';
+import { fam, playerSeats, familyRiding } from './rides.js';
 import { ensureDistances, hasApiKey, fetchWithTimeout } from './distance.js';
 import { normalizeLocations } from './locations.js';
 import { isMemberNow } from './coordinator.js';
@@ -190,7 +191,7 @@ export async function loadAllMatches(){
   results.forEach((r,i)=>{ if(!r.ok) failed.push({label:feeds[i].label, error:r.error}); else combined = combined.concat(r.events); });
   if(combined.length || !S.matchFetchFailedTeams.length){
     S.matches = combined; S.matchesSource='live'; S.matchesFetchedAt=Date.now(); S.matchesFeedsSig=feedsSignature(feeds); S.matchFetchFailedTeams=failed;
-    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), feedsSig:feedsSignature(feeds), partial:failed.length>0, matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){} }
+    if(db){ try{ await db.doc("settings/matchCache").set({fetchedAt:Date.now(), feedsSig:feedsSignature(feeds), partial:failed.length>0, matches:combined.map(e=>({calendarId:e.calendarId,eventId:e.eventId,teamLabel:e.teamLabel,summary:e.summary,location:e.location,startMs:e.start.getTime()}))}); }catch(e){ logError({ where:'matches', code:'cache-'+((e&&e.code)||'error'), message:e && e.message }); } }   // the cache is only a speed-up: the matches on screen are fine
   }
   renderMyWeek(); renderMatchesTab();
   calculateMatchDistances(combined);

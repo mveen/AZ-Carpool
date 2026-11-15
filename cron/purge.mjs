@@ -10,8 +10,8 @@
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json): reads the data, writes rideLog, deletes deviations.
 process.env.TZ = 'Europe/Amsterdam';   // the week, Friday 19:00 and the shift times are Amsterdam time, whatever time zone the host is in
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';

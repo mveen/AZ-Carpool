@@ -183,7 +183,7 @@ export async function logPassedShifts(){
   });
   let n = 0;
   for(const [id, doc] of docs){
-    try{ await db.doc("rideLog/"+id).set(doc); S.rideLog[id] = doc; n++; }catch(e){}
+    try{ await db.doc("rideLog/"+id).set(doc); S.rideLog[id] = doc; n++; }catch(e){ logError({ where:'ridelog', code:'set-'+((e&&e.code)||'error'), message:e && e.message }); }   // the next run tries this ride again
   }
   if(n) renderBeheer();
   return n;
@@ -358,7 +358,7 @@ export async function savePeriodDoc(raw, editing){
       const rest = {...S.periodsColl}; delete rest[editing]; S.periodsColl = rest;
     }
     // A period that only lived in the old settings/period document moves over as soon as it is saved.
-    if(S.legacyPeriod && (S.legacyPeriod.firstDay===editing || S.legacyPeriod.firstDay===v.firstDay)){ try{ await db.doc("settings/period").delete(); S.legacyPeriod = null; }catch(e){} }
+    if(S.legacyPeriod && (S.legacyPeriod.firstDay===editing || S.legacyPeriod.firstDay===v.firstDay)){ try{ await db.doc("settings/period").delete(); S.legacyPeriod = null; }catch(e){ logError({ where:'period', code:'legacy-delete-'+((e&&e.code)||'error'), message:e && e.message }); } }
     rebuildPeriods();
     return res;
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return { ...res, ok:false, errors:[] }; }

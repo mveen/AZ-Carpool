@@ -14,6 +14,7 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleCoordinatorState, sampleParentState, oneP } from './test-support.js';
 import { createFakeFirestore } from './fake-db.js';
+import { _resetErrorLogForTests, _queuedForTests } from '../error-log.js';
 import { S } from '../state.js';
 import {
   createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, resetPurgeMemory, purgeStaleMatchCarpools, purgeStalePracticeMatches, saveDeviationCars, saveInviteCode,
@@ -730,6 +731,14 @@ await testAsync('saving a period that only lived in the old settings/period docu
   const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': A }); sampleCoordinatorState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
   assert.equal((await savePeriodDoc({ ...A, name: 'Bijgewerkt' }, '2026-10-26')).ok, true);
   assert.equal(fake.get('periods/2026-10-26').name, 'Bijgewerkt'); assert.equal(fake.get('settings/period'), undefined); assert.equal(S.legacyPeriod, null); assert.equal(S.periods['2026-10-26'].name, 'Bijgewerkt');
+});
+const loggedErrors = fake => [..._queuedForTests(), ...fake.collection('errorLog').map(([, d]) => d)];   // an entry is queued first and moves to the database when the app is signed in
+await testAsync('when the old settings/period document cannot be removed the save still works, and the error log says so', async () => {
+  _resetErrorLogForTests(); const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': A }); sampleCoordinatorState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
+  fake.failWrites('settings/period', 'unavailable', 'unavailable');
+  assert.equal((await savePeriodDoc({ ...A, name: 'Bijgewerkt' }, '2026-10-26')).ok, true);
+  assert.equal(fake.get('periods/2026-10-26').name, 'Bijgewerkt'); assert.ok(fake.get('settings/period'), 'the old document is still there'); assert.ok(S.legacyPeriod);
+  const e = loggedErrors(fake).filter(x => x.where === 'period'); assert.equal(e.length, 1); assert.equal(e[0].code, 'legacy-delete-unavailable');
 });
 await testAsync('a refused write is reported and nothing changes', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ periods: {}, periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periods/', 'permission-denied');
