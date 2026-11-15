@@ -27,6 +27,10 @@ import { skipReason } from './lib/run-window.mjs';
 // Reads cost quota (Firestore free plan: 50,000 a day for the whole app). So: no runs at night (an entry that was made at night waits and goes out
 // from 05:00), and only read what a run really needs.
 export const PUSH_QUIET = { fromHour: 0, toHour: 5 };
+// Quota: a notification lives 14 days, and a queue entry stays until it expires, but a push is only worth sending for a few days. So a run reads
+// only the entries made in the last PUSH_LOOKBACK_MS (a handful instead of everything of the last two weeks) and, in a second query, the expired
+// ones, which it deletes (an empty answer costs one read). An entry older than the look-back that was never sent is simply not sent any more.
+export const PUSH_LOOKBACK_MS = 3 * 24 * 3600 * 1000;
 
 // The app modules this job reuses (and everything they import). scripts/build-cron.mjs copies them to <cron folder>/app/.
 export const PUSH_APP_MODULES = ['push.js', 'notif-text.js', 'ritbeurs.js', 'dates.js', 'state.js'];
@@ -43,6 +47,13 @@ async function readCollection(firestore, path) {
   const out = [];
   for (const doc of await firestore.listDocuments(path)) {
     if (!doc.createTime) continue;   // an "empty" parent that only holds sub-collections
+    out.push({ id: lastPart(doc.name), data: decodeFields(doc.fields), updateTime: doc.updateTime });
+  }
+  return out;
+}
+async function readQuery(firestore, collectionId, filters) {
+  const out = [];
+  for (const doc of await firestore.queryDocuments(collectionId, filters)) {
     out.push({ id: lastPart(doc.name), data: decodeFields(doc.fields), updateTime: doc.updateTime });
   }
   return out;
@@ -72,7 +83,7 @@ export async function ensureVapid({ firestore, file, subject, now = Date.now(), 
 export async function runUncovered({ firestore, app, now = Date.now(), log = console.log }) {
   const sw = await readDoc(firestore, 'settings/ritbeurs');
   if (!app.normalizeRitbeurs(sw && sw.data).on) return 0;
-  const offers = await readCollection(firestore, 'offers');
+  const offers = await readQuery(firestore, 'offers', [{ field: 'status', op: '==', value: 'open' }]);   // only the open ones are read
   app.refreshWeekKey();
   const weekKey = app.S.currentWeekKey;
   // Only an offer that is open, from this week, not announced yet and past its 18:00 deadline needs anything else. Without one (almost always)
@@ -109,7 +120,12 @@ export async function runPush({ firestore, app, send = sendPush, vapidFile, subj
   const announced = await runUncovered({ firestore, app, now, log });
 
   // The queue first: when it is empty (almost always) there is nothing to send, and the devices and the families are not read at all.
-  const queue = await readCollection(firestore, 'pushQueue');
+  const [recent, expired] = await Promise.all([
+    readQuery(firestore, 'pushQueue', [{ field: 'createdAt', op: '>=', value: now - PUSH_LOOKBACK_MS }]),
+    readQuery(firestore, 'pushQueue', [{ field: 'expiresAt', op: '<=', value: now }]),
+  ]);
+  const seenKeys = new Set(recent.map(q => q.id));
+  const queue = [...recent, ...expired.filter(q => !seenKeys.has(q.id))];
   const looked = queue.length > 0;
   let fams = {}, devices = {};
   if (looked) {

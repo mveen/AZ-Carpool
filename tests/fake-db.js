@@ -17,6 +17,7 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
   const writes = [];
   let failure = null, readFailure = null, signOuts = 0, interference = null;
   const versions = new Map();   // path -> how often it was written (a transaction that read it re-runs when this changed)
+  const docsRead = [];   // per getDocs() call: how many documents it returned (what a real database bills)
   const bump = path => versions.set(path, (versions.get(path) || 0) + 1);
   const seg = p => p.split('/');
 
@@ -30,9 +31,18 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
     const has = store.has(path);
     return { id: seg(path).pop(), exists: () => has, data: () => has ? clone(store.get(path)) : undefined, metadata: { hasPendingWrites: false } };
   }
+  // The comparison of one where(): '==', '<', '<=', '>', '>=' and 'in'. (A missing field never matches, as in Firestore.)
+  function matches(v, f) {
+    if (v === undefined) return false;
+    switch (f.op) {
+      case '==': return v === f.value; case '<': return v < f.value; case '<=': return v <= f.value;
+      case '>': return v > f.value; case '>=': return v >= f.value; case 'in': return f.value.includes(v);
+      default: throw new Error('fake where: operator ' + f.op);
+    }
+  }
   function collSnap(path, filters = []) {
     const n = seg(path).length + 1;
-    return { docs: [...store.keys()].filter(k => k.startsWith(path + '/') && seg(k).length === n && filters.every(f => (store.get(k) || {})[f.field] === f.value)).sort().map(docSnap) };
+    return { docs: [...store.keys()].filter(k => k.startsWith(path + '/') && seg(k).length === n && filters.every(f => matches((store.get(k) || {})[f.field], f))).sort().map(docSnap) };
   }
   function checkFail(path) {
     if (failure && path.startsWith(failure.prefix)) { const f = failure; failure = null; throw Object.assign(new Error(f.message), f.code ? { code: f.code } : {}); }
@@ -48,10 +58,10 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
   const api = {
     collection: (db, p) => ({ kind: 'coll', path: p }),
     query: (ref, ...filters) => ({ ...ref, filters }),
-    where: (field, op, value) => { if (op !== '==') throw new Error('fake where: only =='); return { field, value }; },
+    where: (field, op, value) => ({ field, op, value }),
     doc: (db, ...s) => ({ kind: 'doc', path: s.join('/') }),
     getDoc: async r => { checkReadFail(r.path); return docSnap(r.path); },
-    getDocs: async r => collSnap(r.path),
+    getDocs: async r => { const snap = collSnap(r.path, r.filters); docsRead.push(snap.docs.length); return snap; },
     setDoc: async (r, data, opts) => {
       checkFail(r.path);
       const v = clone(data); Object.keys(v).forEach(k => { if (v[k] && v[k].__deleteField) delete v[k]; });
@@ -103,7 +113,7 @@ export function createFakeFirestore(seed = {}, { uid = 'test-uid' } = {}) {
   };
   return {
     sdk: api, firestoreDb: {}, auth: {}, store, writes,
-    listenerCount: () => listeners.length,
+    listenerCount: () => listeners.length, docsRead,
     failWrites: (prefix, message = 'permission-denied', code = message === 'permission-denied' ? 'permission-denied' : undefined) => { failure = { prefix, message, code }; },
     failReads: (prefix, code = 'permission-denied') => { readFailure = { prefix, code }; },   // the next getDoc under that prefix throws, like Firestore does
     signOutCount: () => signOuts,

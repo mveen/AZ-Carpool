@@ -341,6 +341,13 @@ await testAsync('db.collection(..).whereEqual: only the documents with that valu
   await tick(); assert.deepEqual(seen, ['a']);
   await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'x/c'), { w: 1 }); await tick(); assert.deepEqual(seen, ['a', 'c']);
 });
+await testAsync('db.collection(..).where: only the documents that match a comparison are read (get) or sent (live)', async () => {
+  const fake = useFakeDb({ 'x/a': { w: 'W39' }, 'x/b': { w: 'W40' }, 'x/c': { w: 'W41' } });
+  assert.deepEqual((await db.collection('x').where('w', '<', 'W40').get()).docs.map(d => d.id), ['a']);
+  assert.deepEqual((await db.collection('x').where('w', '>=', 'W40').get()).docs.map(d => d.id), ['b', 'c']);
+  let seen = null; db.collection('x').where('w', '>', 'W40').onSnapshot(s => { seen = s.docs.map(d => d.id); });
+  await tick(); assert.deepEqual(seen, ['c']);
+});
 await testAsync('db.signOut forgets the anonymous account; an older SDK without signOut does not break it', async () => {
   let fake = useFakeDb({}); await db.signOut(); assert.equal(fake.signOutCount(), 1);
   fake = useFakeDb({}); delete fake.sdk.signOut; await db.signOut();

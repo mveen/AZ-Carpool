@@ -36,7 +36,7 @@ import { deadlineMs, isWorkday, mergePeriods, periodEntryId, periodEntryState, p
 // initDb() was given: the real Firestore adapter in production (see index.html),
 // or an in-memory fake in the tests (fake-db.js).
 //   db.doc(path)            -> { get, set, update, delete, onSnapshot }
-//   db.collection(path)     -> { get, onSnapshot, doc }
+//   db.collection(path)     -> { get, onSnapshot, doc, where(field,op,value) -> { get, onSnapshot }, whereEqual }
 //   db.batch()              -> { set(path,data,opts), update(path,data), delete(path), commit() }
 //   db.deleteField(), db.signIn(), db.calendarApiKey, db.setListenerSink(array|null)
 // The OpenRouteService key is NOT here: it lives in the database (settings/apiKeys, the coordinator only) -> S.orsApiKey.
@@ -65,6 +65,8 @@ export function createFirestoreDb({ sdk, firestoreDb, auth, calendarApiKey }){
       get: ()=>getDocs(ref).then(wrapQuerySnap),
       onSnapshot: (onNext,onErr)=>track(onSnapshot(ref, s=>onNext(wrapQuerySnap(s)), onErr)),
       // A listener on only the documents whose field equals a value: the server sends (and bills) just those.
+      // The same for any single comparison: op is '==', '<', '<=', '>', '>=' or 'in'. get() reads (and bills) only the matching documents.
+      where: (field,op,value)=>{ const q = query(ref, where(field,op,value)); return { get: ()=>getDocs(q).then(wrapQuerySnap), onSnapshot: (onNext,onErr)=>track(onSnapshot(q, s=>onNext(wrapQuerySnap(s)), onErr)) }; },
       whereEqual: (field,value)=>{ const q = query(ref, where(field,'==',value)); return { onSnapshot: (onNext,onErr)=>track(onSnapshot(q, s=>onNext(wrapQuerySnap(s)), onErr)) }; },
       doc: (id)=>docRef(path+'/'+id)
     };

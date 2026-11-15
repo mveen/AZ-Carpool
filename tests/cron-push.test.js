@@ -30,12 +30,14 @@ function fakeFirestore(seed = {}) {
   const data = new Map(Object.entries(seed).map(([k, v]) => [k, structuredClone(v)]));
   const version = new Map([...data.keys()].map(k => [k, 'v0']));
   let n = 0;
-  const calls = { set: [], del: [], commits: [] };
+  const calls = { set: [], del: [], commits: [], queried: [] };
   const root = 'projects/az-carpool/databases/(default)/documents';
   const raw = k => ({ name: `${root}/${k}`, fields: encodeFields(data.get(k)), createTime: 't', updateTime: version.get(k) });
   const fs = {
     data, version, calls,
     listDocuments: async c => [...data.keys()].filter(k => k.startsWith(c + '/') && k.split('/').length === c.split('/').length + 1).sort().map(raw),
+    // The same filters as queryDocuments of cron/lib/firestore-rest.mjs; reads counts the documents a call returned (what the database bills).
+    queryDocuments: async (c, filters) => { const out = [...data.keys()].filter(k => k.startsWith(c + '/') && k.split('/').length === 2 && filters.every(f => { const v = data.get(k)[f.field]; return v !== undefined && ({ '==': v === f.value, '<=': v <= f.value, '>=': v >= f.value, '<': v < f.value, '>': v > f.value })[f.op]; })).sort().map(raw); calls.queried.push([c, out.length]); return out; },
     getDocument: async p => data.has(p) ? raw(p) : null,
     setDocument: async (p, d) => { calls.set.push(p); data.set(p, decodeFields(encodeFields(d))); version.set(p, 'v' + ++n); },
     deleteDocument: async p => { calls.del.push(p); data.delete(p); version.delete(p); return true; },
@@ -357,7 +359,7 @@ await test('a run in test mode announces and sends in one go; with the switch on
 
 console.log('\n=== reads (quota) ===');
 // The free plan allows 50,000 reads a day for the whole app, so a run must not read what it does not need.
-const spied = fs => { const reads = []; const l = fs.listDocuments, g = fs.getDocument; fs.listDocuments = async c => { reads.push(c); return l(c); }; fs.getDocument = async p => { reads.push(p); return g(p); }; fs.reads = reads; return fs; };
+const spied = fs => { const reads = []; const l = fs.listDocuments, g = fs.getDocument, q = fs.queryDocuments; fs.listDocuments = async c => { reads.push(c); return l(c); }; fs.queryDocuments = async (c, f) => { reads.push(c); return q(c, f); }; fs.getDocument = async p => { reads.push(p); return g(p); }; fs.reads = reads; return fs; };
 await test('an empty queue: devices and families are not read, the status still says the server is alive (without device counts)', async () => {
   const db = base({ 'settings/ritbeurs': { on: true } }); delete db['testNotifications/n1']; delete db['pushQueue/testNotifications__n1'];
   const fs = spied(fakeFirestore(db)), send = sender();
@@ -407,6 +409,30 @@ await test('without its settings it stops with exit code 1 and one clear line; t
   if (!(r.status === 0 && /quiet hours/.test(r.stdout))) { assert.equal(r.status, 1); assert.match(r.stderr, /^PUSH FAILED: /m); }   // at night (Amsterdam time) the job sleeps and exits 0
   assert.deepEqual(PUSH_APP_MODULES, ['push.js', 'notif-text.js', 'ritbeurs.js', 'dates.js', 'state.js']);
   assert.match(readFileSync(join(here, '..', 'cron', 'run.sh'), 'utf8'), /push\)\s+exec "\$best" "\$here\/push\.mjs"/);
+});
+
+console.log('=== quota: only what a run needs is read ===');
+await test('the queue: an entry older than the look-back is not read, a recent one is, an expired one is read once and deleted', async () => {
+  const n = notif('f1');
+  const old = { ...queueEntry('testNotifications/n1', 'f1', n), createdAt: T10 - 5 * DAY, expiresAt: T10 + 9 * DAY };
+  const gone = { ...queueEntry('testNotifications/n1', 'f1', n), createdAt: T10 - 20 * DAY, expiresAt: T10 - 6 * DAY };
+  const fs = fakeFirestore(base({ 'pushQueue/old': old, 'pushQueue/gone': gone })), send = sender();
+  await withFakeNowAsync(new Date(T10).toISOString(), () => runPush({ firestore: fs, app, send, vapidFile: join(tmp, 'k-quota', 'push-vapid.json'), subject: 's', now: T10, log: () => {}, warn: () => {} }));
+  assert.equal(fs.data.has('pushQueue/gone'), false, 'the expired entry is removed');
+  assert.ok(fs.data.has('pushQueue/old'), 'a not yet expired entry stays');
+  assert.equal(fs.data.get('pushQueue/old').sentTo, undefined, 'but it is not sent any more');
+  assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'pushQueue'), [['pushQueue', 1], ['pushQueue', 1]], 'two queries: recent (only the entry of the test data, not the 5 days old one) and expired (one)');
+});
+await test('the queue: a recent entry is read once and sent as before', async () => {
+  const fs = fakeFirestore(base()), send = sender();
+  const r = await withFakeNowAsync(new Date(T10).toISOString(), () => runPush({ firestore: fs, app, send, vapidFile: join(tmp, 'k-quota2', 'push-vapid.json'), subject: 's', now: T10, log: () => {}, warn: () => {} }));
+  assert.equal(r.sent, 1);
+  assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'pushQueue'), [['pushQueue', 1], ['pushQueue', 0]]);
+});
+await test('the offers: only the open ones are read', async () => {
+  const fs = fakeFirestore(base({ 'settings/ritbeurs': { on: true }, 'offers/a': { status: 'open', weekKey: '2026-W40' }, 'offers/b': { status: 'taken' }, 'offers/c': { status: 'withdrawn' } }));
+  await unc(fs, T10);
+  assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'offers'), [['offers', 1]]);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

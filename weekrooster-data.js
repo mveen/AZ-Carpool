@@ -452,7 +452,8 @@ export async function purgeStaleWeekRequests() {
   if (!db || !isRealCoordinator()) return 0;
   let n = 0;
   try {
-    const snap = await db.collection('weekRequests').get();
+    // Only the older weeks are asked for (the server sends and bills just those), not the whole collection every few minutes.
+    const snap = await db.collection('weekRequests').where('weekKey', '<', S.currentWeekKey).get();
     for (const d of snap.docs) {
       const r = d.data();
       if (r && typeof r.weekKey === 'string' && r.weekKey < S.currentWeekKey) { await db.doc('weekRequests/' + d.id).delete(); n++; }
