@@ -273,6 +273,12 @@ await testAsync('purgeStaleWeekRequests: only the real coordinator, only OLDER w
   assert.equal(await purgeStaleWeekRequests(), 1);
   assert.equal(fake.get('weekRequests/2026-W39_Do_f3'), undefined); assert.ok(fake.get('weekRequests/2026-W40_Do_f3')); assert.ok(fake.get('weekRequests/2026-W41_Ma_f3'));
 });
+await testAsync('purgeStaleWeekRequests (quota): the database is asked for the OLDER weeks only, so the current and later requests are not read', async () => {
+  const seedDocs = { 'weekRequests/2026-W39_Do_f3': advDoc('Do', 'f3', { weekKey: '2026-W39' }), 'weekRequests/2026-W40_Do_f3': advDoc('Do', 'f3'), 'weekRequests/2026-W41_Ma_f3': advDoc('Ma', 'f3', { weekKey: '2026-W41' }) };
+  const fake = useFakeDb({ ...sampleDbSeed(), ...seedDocs }); sampleCoordinatorState({});
+  assert.equal(await purgeStaleWeekRequests(), 1);
+  assert.deepEqual(fake.docsRead, [1], 'one document came back, not three');
+});
 console.log('=== one batch, and back to the fixed rooster ===');
 await testAsync('"rijdt niet mee" and its cars are saved in one batch: a refused deviation saves no request either', async () => {
   const fake = await asDay({}, {});

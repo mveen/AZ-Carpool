@@ -166,3 +166,14 @@ await test('commit() says false when a precondition fails (changed, missing or a
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+
+await test('queryDocuments: asks the server for only the matching documents (one filter, or several as AND) and skips the empty answer', async () => {
+  const { fs, calls } = client(() => json(200, [{ document: docOf('pushQueue/a') }, { readTime: 'x' }]));
+  const docs = await fs.queryDocuments('pushQueue', [{ field: 'createdAt', op: '>=', value: 5 }]);
+  assert.equal(docs.length, 1); assert.equal(docs[0].name, `${ROOT}/pushQueue/a`);
+  assert.equal(calls[0].url, `https://firestore.googleapis.com/v1/${ROOT}:runQuery`); assert.equal(calls[0].init.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { structuredQuery: { from: [{ collectionId: 'pushQueue' }], where: { fieldFilter: { field: { fieldPath: 'createdAt' }, op: 'GREATER_THAN_OR_EQUAL', value: { integerValue: '5' } } } } });
+  await fs.queryDocuments('offers', [{ field: 'status', op: '==', value: 'open' }, { field: 'weekKey', op: '<', value: 'W1' }]);
+  assert.equal(JSON.parse(calls[1].init.body).structuredQuery.where.compositeFilter.op, 'AND');
+  await assert.rejects(() => fs.queryDocuments('x', [{ field: 'a', op: '!=', value: 1 }]), /unknown operator/);
+});

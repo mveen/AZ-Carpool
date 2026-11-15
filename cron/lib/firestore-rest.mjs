@@ -94,6 +94,18 @@ export function createFirestore({ projectId, getToken, fetchFn = fetch, sleep = 
       } while (pageToken);
       return docs;
     },
+    // Only the documents of a top-level collection that match ALL the filters: [{ field, op, value }] with op '==', '<', '<=', '>' or '>='.
+    // The server sends (and bills) just those documents; a query without results costs one read. Single-field filters need no extra index.
+    async queryDocuments(collectionId, filters) {
+      const OPS = { '==': 'EQUAL', '<': 'LESS_THAN', '<=': 'LESS_THAN_OR_EQUAL', '>': 'GREATER_THAN', '>=': 'GREATER_THAN_OR_EQUAL' };
+      const fieldFilters = filters.map(f => {
+        if (!OPS[f.op]) throw new Error('queryDocuments: unknown operator ' + f.op);
+        return { fieldFilter: { field: { fieldPath: f.field }, op: OPS[f.op], value: encodeValue(f.value) } };
+      });
+      const where = fieldFilters.length === 1 ? fieldFilters[0] : { compositeFilter: { op: 'AND', filters: fieldFilters } };
+      const r = await call('POST', `${base}:runQuery`, { structuredQuery: { from: [{ collectionId }], where } });
+      return (r || []).filter(x => x.document).map(x => x.document);
+    },
     // null when the document does not exist.
     async getDocument(path) {
       try { return await call('GET', `${base}/${segments(path)}`); }
