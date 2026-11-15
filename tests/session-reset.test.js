@@ -74,6 +74,15 @@ await testAsync('without usable storage it never restarts by itself', async () =
   assert.doesNotThrow(() => clearAutoReset(null));
 });
 
+await testAsync('resetSession switches the "resetting" flag on (the problem log skips the two reports a reset causes)', async () => {
+  const { isResetting, _resetResettingForTests } = await import('../session-reset.js');
+  _resetResettingForTests(); assert.equal(isResetting(), false);
+  useFakeDb({}); resetState({ me: 'u1' });
+  await resetSession({ win: { location: { reload() {} } }, nav: {}, cacheApi: null, idb: null });
+  assert.equal(isResetting(), true);
+  _resetResettingForTests(); assert.equal(isResetting(), false);
+});
+
 import { assertNoUnusedImports } from './test-support.js';
 await testAsync('session-reset.js imports nothing it does not use', async () => assertNoUnusedImports('session-reset.js'));
 

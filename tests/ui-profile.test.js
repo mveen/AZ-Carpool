@@ -52,7 +52,7 @@ test('an unlinked parent sees the gate form when a coordinator exists', () => {
   renderGateOrApp();
   const s = text(dom.html('tab-gate'));
   assert.match(s, /Toegang tot AZ Carpool/); assert.match(s, /Toegang aanvragen/);
-  assert.match(dom.html('tab-gate'), /id="gatePhone"/); assert.match(dom.html('tab-gate'), /id="gateCode"/);
+  assert.match(dom.html('tab-gate'), /Je eigen telefoonnummer/); assert.match(dom.html('tab-gate'), /Dat is niet het nummer van de coördinator/); assert.match(dom.html('tab-gate'), /id="gatePhone"/); assert.match(dom.html('tab-gate'), /id="gateCode"/);
 });
 test('a linked parent gets the tabs, not the gate', () => {
   useFakeDb({}); sampleParentState({ linksLoaded: true, coordinatorExists: true });
@@ -156,7 +156,7 @@ await testAsync('no network: "Geen verbinding", no restart, no accusation about 
 await testAsync('a number that does not belong to the code is still told so, and logged without the number', async () => {
   const fake = gateSetup(); fake.failWrites('links/', 'permission-denied'); fillGate('0621708024', 'CODE1234');
   await submitGate(); await settle();
-  assert.match(dom.el('gateMsg').textContent, /hoort niet bij deze code/); assert.equal(fake.signOutCount(), 0);
+  assert.match(dom.el('gateMsg').textContent, /hoort niet bij deze code/); assert.match(dom.el('gateMsg').textContent, /eigen telefoonnummer/); assert.equal(fake.signOutCount(), 0);
   const e = logged(fake).find(x => x.code === 'link-denied'); assert.ok(e);
   assert.match(e.msg, /phone digits 10 \| tel …024$/); assert.doesNotMatch(JSON.stringify(logged(fake)), /0621708024|CODE1234/);
 });

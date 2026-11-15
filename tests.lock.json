@@ -1,7 +1,7 @@
 {
   "app.js": {
-    "module": "af5ab4453ecabac2bdd85da413b0311159fcea5b480d34d7fcedabcdc637ec64",
-    "test": "49a4df3f6d5c1f2970ffceb05c5d9a76eaaefbe2396281ee8f9d2ff65fbe3ca9"
+    "module": "07b158dc49dcf78a5aa7c36da30f33784f2f14a9d2ebc3b420761fb2ef1cf8a2",
+    "test": "f10826ad4b403bb2a730005e286a289471aa2099088f4df8086c75a144a4e263"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "bd3b62155880deefeebebbdb40953295cba99d8409c1ebcedc7883154a8af31b",
-    "test": "9961e9adddf01ada9ee780d08651790f3428eb01c2306c4ee9f59fcc7c8c5cb3"
+    "module": "7c4b466b67aff795606dc5138c7490606449476e895804852cc73e68e912a18f",
+    "test": "9696c5e5e5909b46fb76523817f258e48a937c9a99055102e67eaedb3f9c92a9"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -73,7 +73,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "043a2e5c70f804a17268ae3834431eb0e843791a83153953590e8367d3938ea6"
+    "test": "1904d0a78d9d7abde167c1a9405c60a3b00c1860b174d03e3cb400f9ebb5dcae"
   },
   "locations.js": {
     "module": "0fe899cf4c5bfbc94ec77199ceb6ef72f6371d40b9995ed7f6f2a24cf7152d0d",
@@ -164,8 +164,8 @@
     "test": "72128f940bec263b43ba7c32379801947e5088ebfd05fa999c99c732effde253"
   },
   "session-reset.js": {
-    "module": "6d707723aafa09f5c8344a35df2a46d7a1f28c3cf686d0a0affe0b79fd436c65",
-    "test": "149fc7ea3bb3a93b7406bc205facda92faf15b7df81cf9dab1aa6bbea27ec36d"
+    "module": "b429b1e0640a4ebe49c11318247cfe229bc500cc899d295789b9bccca2cfeb07",
+    "test": "a7497403b1a41e09c7f0f9e83d1d5a060befce9dce935c16d3f29fe4e7d3ccc9"
   },
   "state.js": {
     "module": "be05ec4a3f537dda8e2ecf1efa7722e9b4140d18fbf165266e0c9949d6e5ba89",
@@ -176,8 +176,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "ad744cb0797efb31ddaf6d149cc81c4b7ef7a03cb72991d81383544985092f61",
-    "test": "043a2e5c70f804a17268ae3834431eb0e843791a83153953590e8367d3938ea6"
+    "module": "b8350bd2a02dc85d37971cb06003a64417bb4aa7fa2f08dffee92b2091e9642e",
+    "test": "1904d0a78d9d7abde167c1a9405c60a3b00c1860b174d03e3cb400f9ebb5dcae"
   },
   "ui-agenda.js": {
     "module": "66aac878ed9496ccfd12650fee1353d5dea82edae5a30a2d2b1ce4e3286b6a92",
@@ -244,8 +244,8 @@
     "test": "db6584290fd304e084b76ba27a8f0779c8b2f37ffe871145f702edb178fa0633"
   },
   "ui-profile.js": {
-    "module": "4b1595bf7e33f9576852f4f43fcef368987af13961a06c6651ecd340025ec47f",
-    "test": "3778f97e29919bdc6f3b5b00bd71cea255f4acb5c6c3b68ea62ba69288190008"
+    "module": "9e7dbddf1602aba671496c2fbda987aa1d619bbfa1ce551864008c33e6b90959",
+    "test": "6d38a2d8e05d11e5f2c0c643200c1d4575493d908feb747e1f8f09e23391c126"
   },
   "ui-push-device.js": {
     "module": "9ff878d5ef2286bfe389f35a7b1e74d170413aeb6953cdf2338b28058db8e68d",
