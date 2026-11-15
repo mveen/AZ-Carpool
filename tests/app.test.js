@@ -14,7 +14,7 @@ async function testAsync(name, fn) {
 import { installFakeDom, sampleCoordinatorState, sampleParentState, resetState, useFakeDb, sampleDbSeed, withFakeNow, withFakeNowAsync, NOW } from './test-support.js';
 import { S } from '../state.js';
 import { recomputeCanEdit } from '../coordinator.js';
-import { getWithRetry, syncCoordinatorNav, bootstrap, init, activateTab, openTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover, handleAuthChange } from '../app.js';
+import { getWithRetry, readCoordinator, refreshCoordinatorConfig, syncCoordinatorNav, bootstrap, init, activateTab, openTab, chooseDefaultTab, renderAll, afterLinksChanged, checkWeekRollover, handleAuthChange } from '../app.js';
 
 const dom = installFakeDom();
 const status = () => dom.doc.getElementById('whoami').innerHTML;
@@ -182,6 +182,42 @@ await testAsync('init recovers when the first coordinator read is "unavailable" 
   const { START_RETRY_DELAYS_MS: delays } = await import('../app.js'); const saved = [...delays]; delays.fill(0);   // no real waiting in the test
   try { await withFakeNowAsync(NOW, () => init()); } finally { saved.forEach((v, i) => { delays[i] = v; }); }
   assert.equal(S.appReady, true); assert.ok(failed >= 1);
+});
+await testAsync('a browser that is not linked yet gets permission-denied for config/coordinator: that means "there is one", the app still starts', async () => {
+  installNav(); resetState({ appReady: false });
+  const { initDb, createFirestoreDb } = await import('../data.js'); const { createFakeFirestore } = await import('./fake-db.js');
+  const fake = createFakeFirestore(sampleDbSeed(), { uid: 'newcomer' });
+  const inner = createFirestoreDb({ sdk: fake.sdk, firestoreDb: fake.firestoreDb, auth: fake.auth, calendarApiKey: 'k' });
+  let reads = 0;
+  initDb({ ...inner, doc: p => { const d = inner.doc(p); return p === 'config/coordinator' ? { ...d, get: async () => { reads++; throw Object.assign(new Error('Missing or insufficient permissions.'), { code: 'permission-denied' }); } } : d; } });
+  await withFakeNowAsync(NOW, () => init());
+  assert.equal(S.appReady, true); assert.equal(S.coordinatorExists, true); assert.equal(S.coordinatorConfig, null); assert.equal(reads, 1, 'permission-denied is not retried');
+  assert.equal(S.canEdit, false);
+});
+await testAsync('readCoordinator still fails on other errors (the connection screen stays for a real problem)', async () => {
+  const { initDb } = await import('../data.js');
+  initDb({ doc: () => ({ get: async () => { throw Object.assign(new Error('x'), { code: 'internal' }); } }) });
+  await assert.rejects(readCoordinator(), e => e.code === 'internal');
+});
+await testAsync('once the browser is linked the coordinator config is read again, once per family (a family coordinator gets coordinator rights)', async () => {
+  installNav(); const fake = useFakeDb({ ...sampleDbSeed(), 'config/coordinator': { familyId: 'f3' } }, { uid: 'p9' });
+  sampleParentState({ me: 'p9', links: { p9: { familyId: 'f3' } }, coordinatorExists: true, coordinatorConfig: null, canEdit: false });
+  assert.equal(recomputeCanEdit() || S.canEdit, false);
+  await withFakeNowAsync(NOW, () => refreshCoordinatorConfig());
+  assert.deepEqual(S.coordinatorConfig, { familyId: 'f3' }); assert.equal(S.canEdit, true);
+  S.coordinatorConfig = null; S.canEdit = false;
+  await withFakeNowAsync(NOW, () => refreshCoordinatorConfig());
+  assert.equal(S.coordinatorConfig, null, 'not read a second time for the same family');
+  assert.ok(fake);
+});
+await testAsync('refreshCoordinatorConfig does nothing without a link, without a coordinator, or when the config is already known', async () => {
+  installNav(); useFakeDb({ ...sampleDbSeed(), 'config/coordinator': { familyId: 'f4' } }, { uid: 'p8' });
+  sampleParentState({ me: 'p8', links: {}, coordinatorExists: true, coordinatorConfig: null });
+  await refreshCoordinatorConfig(); assert.equal(S.coordinatorConfig, null, 'not linked');
+  sampleParentState({ me: 'p8', links: { p8: { familyId: 'f4' } }, coordinatorExists: false, coordinatorConfig: null });
+  await refreshCoordinatorConfig(); assert.equal(S.coordinatorConfig, null, 'no coordinator');
+  sampleParentState({ me: 'p8', links: { p8: { familyId: 'f4' } }, coordinatorExists: true, coordinatorConfig: { uid: 'x' } });
+  await refreshCoordinatorConfig(); assert.deepEqual(S.coordinatorConfig, { uid: 'x' }, 'already known');
 });
 test('index.html opens Firestore with automatic long-polling detection and a persistent offline copy (fewer reads), with plain fallbacks', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
