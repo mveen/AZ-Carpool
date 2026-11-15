@@ -1179,3 +1179,33 @@ label.label--tight{margin-top:var(--space-3)}
 .mt-3{margin-top:var(--space-3)}
 .mt-4{margin-top:var(--space-4)}
 .unlinkBar{border-top:1px solid var(--line);margin-top:var(--space-6);padding-top:var(--space-1)}
+
+/* ---------- Ritlog (Beheer): replaces the inline styles of ui-ride-log.js ---------- */
+.mt-0{margin-top:0}
+.mt-5{margin-top:var(--space-5)}
+.cardActions--roomy{margin-top:var(--space-4)}
+.rideLogTable thead th:first-child,.rideLogTable th[scope="row"]{text-align:left}
+.rideLogTable th[scope="row"]{font-weight:700}
+.rideLogOpen{display:flex;align-items:center;gap:var(--space-2);width:100%;min-height:var(--hit-min);padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.rideLogOpen__text{flex:1;min-width:0}
+.rideLogOpen__name,.rideLogOpen__parent{display:block}
+.rideLogOpen__parent{font-weight:400}
+.rideLogBar{display:block;height:4px;border-radius:var(--radius-pill);background:var(--accent);opacity:.55;margin-top:3px}   /* the width is data (share of the busiest family): the one inline style left */
+.rideLogModes{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:var(--space-3)}
+.rideLogStep{margin:var(--space-4) 0}
+.rideLogPeriod{font-size:16px}
+.rideLogBack{align-self:flex-start}
+.rideLogList{list-style:none;margin:0;padding:0}
+.rideLogShift{display:flex;align-items:center;gap:var(--space-4);min-height:60px;border-bottom:1px solid var(--line)}
+.rideLogShift.rideLogRemoved{opacity:.85}
+.rideLogShift__text{flex:1;min-width:0}
+.rideLogShift__main,.rideLogShift__sub{display:block}
+.rideLogShift__main{font-size:14px}
+.pill.rideLogDir{box-sizing:border-box;width:56px;flex-shrink:0;text-align:center;margin:0;font-size:12px;font-weight:700;padding:var(--space-1) var(--space-4)}
+.pill.rideLogDir--heen{background:var(--info-soft);color:var(--text-1)}
+.pill.rideLogDir--terug{background:var(--warn-soft);color:var(--warn-ink)}
+.rideLogDay{font-weight:800;padding:var(--space-4) 0 var(--space-2);border-bottom:1px solid var(--line)}
+.rideLogHead{font-weight:700;padding-bottom:var(--space-2);border-bottom:1px solid var(--line)}
+.rideLogRemovedBox{margin-top:var(--space-5);padding:var(--space-5);border-radius:var(--radius-control);border:1px dashed var(--control-line)}
+.rideLogRemovedBox__head{font-weight:700;margin-bottom:var(--space-1)}
+.rideLogRemovedBox__note{margin:var(--space-2) 0 0}
