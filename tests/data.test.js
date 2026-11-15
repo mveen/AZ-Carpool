@@ -1154,7 +1154,7 @@ test('Afwijkend weekrooster: leaving (stopDataListeners) closes the request list
   const { stopDataListeners } = await import('../data.js');
   const { syncWeekRequests } = await import('../weekrooster-data.js');
   useFakeDb(sampleDbSeed()); sampleParentState({}); syncWeekRequests();
-  assert.equal(S.weekRequestsUnsubs.length, 10);
+  assert.equal(S.weekRequestsUnsubs.length, 1);
   stopDataListeners();
   assert.deepEqual(S.weekRequestsUnsubs, []); assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, '');
   const src = (await import('node:fs')).readFileSync(new URL('../data.js', import.meta.url), 'utf8');

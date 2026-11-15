@@ -38,14 +38,14 @@ await testAsync('with nobody linked no listener is opened and nothing is read', 
   [sampleParentState, sampleCoordinatorState].forEach(make => { make({ links: {} }); syncWeekRequests(); assert.equal(S.weekRequestsUnsubs.length, 0); assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, ''); });
   assert.equal(fake.writes.length, 0);
 });
-await testAsync('the own requests (10 days: this and next week) are read, live, and only the own ones', async () => {
+await testAsync('the own requests (ONE listener; this and next week kept) are read, live, and only the own ones, an older week of the family is ignored', async () => {
   const doc = { weekKey: '2026-W40', day: 'Do', familyId: 'f2', rides: true, heen: '11:00', terug: '18:00', status: 'pending', createdAt: 1, updatedAt: 1 };
-  const fake = useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f2': doc, 'weekRequests/2026-W40_Do_f3': { ...doc, familyId: 'f3' } });
+  const fake = useFakeDb({ ...sampleDbSeed(), 'weekRequests/2026-W40_Do_f2': doc, 'weekRequests/2026-W40_Do_f3': { ...doc, familyId: 'f3' }, 'weekRequests/2026-W38_Do_f2': { ...doc, weekKey: '2026-W38' } });
   sampleParentState({}); syncWeekRequests();
-  assert.equal(S.weekRequestsUnsubs.length, 10); assert.equal(S.weekRequestsKey, 'f2|2026-W40');
+  assert.equal(S.weekRequestsUnsubs.length, 1, 'one listener instead of ten'); assert.equal(S.weekRequestsKey, 'f2|2026-W40');
   await new Promise(r => setImmediate(r));
   assert.deepEqual(Object.keys(S.weekRequests), ['2026-W40_Do_f2']);
-  syncWeekRequests(); assert.equal(S.weekRequestsUnsubs.length, 10, 'same person and week: listeners are kept');
+  syncWeekRequests(); assert.equal(S.weekRequestsUnsubs.length, 1, 'same person and week: the listener is kept');
   await fake.sdk.setDoc(fake.sdk.doc(fake.firestoreDb, 'weekRequests/2026-W41_Ma_f2'), { ...doc, weekKey: '2026-W41', day: 'Ma' });
   assert.ok(S.weekRequests['2026-W41_Ma_f2'], 'a new request shows up at once');
   stopWeekRequests(); assert.equal(S.weekRequestsUnsubs.length, 0); assert.deepEqual(S.weekRequests, {}); assert.equal(S.weekRequestsKey, '');

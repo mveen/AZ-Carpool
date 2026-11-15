@@ -339,7 +339,7 @@ test('afterLinksChanged offers the home-screen sheet at the end (the feature tog
 test('Afwijkend weekrooster: every redraw keeps the request listeners in step with who is looking', () => {
   useFakeDb(sampleDbSeed()); sampleParentState({ links: {} });
   withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0, 'nobody linked: nothing is read');
-  S.links = { p1: { familyId: 'f2' } }; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 10);
+  S.links = { p1: { familyId: 'f2' } }; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 1);
   S.links = {}; withFakeNow(NOW, () => renderAll()); assert.equal(S.weekRequestsUnsubs.length, 0);
 });
 
