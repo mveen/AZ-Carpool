@@ -1169,6 +1169,7 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 /* ---------- Mijn gezin / toegang: helpers that replace the last inline styles of ui-profile.js ---------- */
 .gateBox{max-width:420px;margin:calc(var(--space-9) + var(--space-3)) auto 0}
 .hiddenCheck{display:none}
+.hiddenInput{display:none}
 .devAlert--flush{margin:var(--space-3) 0 0}
 .rowflex--start{justify-content:flex-start;flex-wrap:wrap;margin-top:var(--space-3)}
 .rowflex--tight{gap:var(--space-2)}
@@ -1209,3 +1210,22 @@ label.label--tight{margin-top:var(--space-3)}
 .rideLogRemovedBox{margin-top:var(--space-5);padding:var(--space-5);border-radius:var(--radius-control);border:1px dashed var(--control-line)}
 .rideLogRemovedBox__head{font-weight:700;margin-bottom:var(--space-1)}
 .rideLogRemovedBox__note{margin:var(--space-2) 0 0}
+
+/* ---------- Beheer, part 1 (availability table, rules, priority, back-up): replaces inline styles of ui-beheer.js ---------- */
+.mt-2{margin-top:var(--space-2)}
+.mt-6{margin-top:var(--space-6)}
+.my-2{margin:var(--space-2) 0}
+.textBody{font-size:14px}
+.scrollX{overflow-x:auto}
+.divider{border:none;border-top:1px solid var(--line);margin:var(--space-5) 0}
+.rowflex--left{justify-content:flex-start}
+.rowflex--wrap{flex-wrap:wrap}
+.iconRow{display:flex;gap:var(--space-1)}
+th.availWho{text-align:left}
+th.availSub{font-size:12px;color:var(--text-muted)}
+.availBackup{color:var(--text-muted);font-weight:500}
+table.avail td.availCell{text-align:center}
+.availRow{border-top:1px solid var(--line)}
+.rowflex.ruleRow{padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
+.rowflex.prioRow{padding:var(--space-3) var(--space-2);border-bottom:1px solid var(--line)}
+.backupErrors{margin:var(--space-2) 0 var(--space-3) var(--space-8);padding:0;font-size:14px}
