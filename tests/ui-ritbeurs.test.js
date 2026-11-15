@@ -336,6 +336,17 @@ test('on: the switch is on and the card says how many families have a phone swit
   const html = ritbeursCardHtml(); const n = Object.keys(S.families).length;
   assert.match(html, /id="pushLiveOn" checked>/); assert.match(text(html), new RegExp(`Aan: 2 van ${n} gezinnen hebben een telefoon aangemeld`));
 });
+test('on: two folds list the families with and without a phone; escaped; absent while the switch is off', () => {
+  sampleCoordinatorState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } });
+  S.families = { ...S.families, f3: { ...S.families.f3, parentName: '<b>Els</b>' } };
+  S.push.devices = { a: { familyId: 'f3' }, d: { owner: 'coordinator' } };
+  const html = ritbeursCardHtml(); const n = Object.keys(S.families).length;
+  assert.match(html, /<details class="fold" id="pushFamOn"><summary>Met push-meldingen \(1\)<\/summary>/);
+  assert.match(html, new RegExp(`<details class="fold" id="pushFamOff"><summary>Zonder push-meldingen \\(${n - 1}\\)<\\/summary>`));
+  const on = html.match(/id="pushFamOn">[\s\S]*?<\/details>/)[0]; assert.match(on, /&lt;b&gt;Els&lt;\/b&gt;/); assert.doesNotMatch(on, /<b>Els/);
+  assert.doesNotMatch(html.match(/id="pushFamOff">[\s\S]*?<\/details>/)[0], /Els/);
+  S.pushSettings = { mode: 'uit', live: false }; assert.doesNotMatch(ritbeursCardHtml(), /pushFamOn|pushFamOff/);
+});
 test('on, but the server does not report itself: a warning; with a fresh report no warning', () => {
   sampleCoordinatorState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } });
   const now = new Date(NOW).getTime();

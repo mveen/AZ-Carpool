@@ -9,7 +9,7 @@ function test(name, fn) {
 }
 import {
   DEVICE_GRACE_MS, MAX_FAILS, STATUS_FRESH_MS, TEST_NOTIFICATION_MS, buildLivePayload, buildPayload, bufferToBase64Url, categoryOf, cleanLabel, deviceDoc, deviceId, deviceLabelFromUA,
-  deviceWants, devicesFor, entryPlan, familiesWithPush, isPushEndpoint, isTestCopy, normalizePush, parseOpenLink, parsePushLink, previewState, pushSettingsDoc, queueDoc, queueKey, recipientLabel,
+  deviceWants, devicesFor, entryPlan, familiesWithPush, pushFamilySplit, isPushEndpoint, isTestCopy, normalizePush, parseOpenLink, parsePushLink, previewState, pushSettingsDoc, queueDoc, queueKey, recipientLabel,
   routeEntry, serverState, urlBase64ToUint8Array,
 } from '../push.js';
 
@@ -213,3 +213,14 @@ test('?open=ritbeurs is read; anything else is not', () => {
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
+
+test('pushFamilySplit: families with a phone vs without, sorted by name; test devices, empty familyId and broken entries do not count', () => {
+  const families = { f1: { parentName: 'Jan Jansen', girlName: 'Eline' }, f2: { parentName: 'Anna Bos', girlName: 'Saar' }, f3: { girlName: 'Noor' }, f4: { parentName: 'Kees' }, f5: null };
+  const devices = { a: { familyId: 'f1' }, b: { familyId: 'f1' }, c: { owner: 'coordinator' }, d: { owner: 'coordinator', familyId: '' }, e: { familyId: 'f3' }, g: { familyId: 'unknown' } };
+  const r = pushFamilySplit(devices, families);
+  assert.deepEqual(r.on.map(e => e.id), ['f1', 'f3']);
+  assert.deepEqual(r.off.map(e => e.id), ['f2', 'f4']);
+  assert.equal(r.on[0].label, 'Jan Jansen (ouder van Eline)'); assert.equal(r.on[1].label, 'Ouder van Noor'); assert.equal(r.off[1].label, 'Kees');
+  assert.equal(r.on.length + r.off.length, 4);
+  assert.deepEqual(pushFamilySplit(null, null), { on: [], off: [] });
+});
