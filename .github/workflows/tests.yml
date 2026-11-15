@@ -1,9 +1,9 @@
 name: Tests
 
+# Only on pull requests: after the merge, deploy.yml runs the same tests (and lint) on main before anything is uploaded, so a second run here
+# on the same commit would only cost minutes.
 on:
   pull_request:
-  push:
-    branches: [main]
 
 permissions:
   contents: read

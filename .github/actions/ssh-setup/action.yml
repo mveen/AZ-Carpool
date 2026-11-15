@@ -1,0 +1,26 @@
+name: SSH key for the host
+description: >-
+  Puts the deploy key on the runner, pins the server identity of mijn.host (.github/deploy/known_hosts) and checks that the key is usable.
+  Needs a checkout first. One place for what deploy.yml, deploy-test.yml and rollback.yml all did by hand.
+inputs:
+  deploy-key:
+    description: The private key (the secret DEPLOY_KEY)
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Put the key and the pinned server identity in place
+      shell: bash
+      env:
+        DEPLOY_KEY: ${{ inputs.deploy-key }}
+        # Next to this action, not in the working folder: rollback.yml checks the old version out in another folder.
+        KNOWN_HOSTS: ${{ github.action_path }}/../../deploy/known_hosts
+      run: |
+        install -d -m 700 ~/.ssh
+        printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
+        chmod 600 ~/.ssh/deploy_key
+        cp "$KNOWN_HOSTS" ~/.ssh/known_hosts
+        # Diagnostics (nothing secret): does the key file look like a private key, and which server identity is pinned?
+        head -1 ~/.ssh/deploy_key | grep -q 'BEGIN OPENSSH PRIVATE KEY' || { echo "::error::DEPLOY_KEY does not start with -----BEGIN OPENSSH PRIVATE KEY-----"; exit 1; }
+        ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_KEY is not a valid private key (copy it again with: pbcopy < ~/.ssh/azcarpool_deploy)"; exit 1; }
+        ssh-keygen -lf ~/.ssh/known_hosts

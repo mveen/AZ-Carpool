@@ -1,7 +1,8 @@
 name: Lint
 
 # ESLint with two rules (no-undef, no-unused-vars): a misspelled name or a forgotten import fails here instead of on a phone.
-# See eslint.config.mjs and scripts/run-lint.sh. Not part of `npm test`.
+# See eslint.config.mjs and scripts/run-lint.sh. Not part of `npm test` (deploy.yml runs the same lint before it uploads anything).
+# The second job checks the pipeline itself: actionlint over the workflows and shellcheck over every .sh (scripts/run-workflow-lint.sh).
 on:
   pull_request:
   push:
@@ -21,3 +22,10 @@ jobs:
         with:
           node-version: 22
       - run: bash scripts/run-lint.sh
+
+  workflows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - run: bash scripts/run-workflow-lint.sh

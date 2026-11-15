@@ -42,6 +42,7 @@ fi
 
 if [ "$mode" = cron ]; then
   # Code only: private to the account owner. No secrets or data live here, so --delete is safe.
+  # shellcheck disable=SC2054 # the comma belongs to rsync's --chmod value
   opts=(-rlt --human-readable --itemize-changes --chmod=D700,F600)
   if [ -n "${RSYNC_SSH:-}" ]; then opts+=(-e "$RSYNC_SSH"); fi
   echo "== cron jobs"
@@ -50,6 +51,7 @@ if [ "$mode" = cron ]; then
   exit 0
 fi
 
+# shellcheck disable=SC2054 # the comma belongs to rsync's --chmod value
 opts=(-rlt --human-readable --itemize-changes --chmod=D755,F644 --exclude=/.well-known/ --exclude=/cgi-bin/ --exclude=/agenda/ --exclude=/.deploy-target)
 if [ -n "${RSYNC_SSH:-}" ]; then opts+=(-e "$RSYNC_SSH"); fi
 

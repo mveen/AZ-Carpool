@@ -1,0 +1,91 @@
+name: Rollback azcarpool.nl
+
+# Only by hand: Actions -> Rollback azcarpool.nl -> Run workflow -> fill in the tag or commit (SHA) that must be on the live site again.
+# Pick a commit of main that was live before (the Deploy azcarpool.nl runs list them) or a tag. It builds that version, uploads it to the LIVE
+# site and checks that the site serves it. On purpose it does NOT run the tests or go past the test site (when live is broken, speed counts),
+# does NOT publish database rules and does NOT touch the cron jobs. Try the version on the test site first when there is time.
+# The pipeline tools (upload and check scripts, SSH setup) always come from the version this workflow runs from (main, in tools/); only the app
+# comes from the version you ask for (in src/), so an old version does not need to know about today's pipeline.
+# Phones switch back by themselves: the old service-worker.js has another CACHE_NAME than the one on the site now. See README (Rollback).
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Tag or commit (SHA) to put back on the live site'
+        type: string
+        required: true
+
+# The same group as the deploy: a rollback never runs at the same time as a deploy.
+concurrency:
+  group: deploy-azcarpool
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Not secret. The server's public identity is pinned in .github/deploy/known_hosts for exactly this host and port.
+  SSH_HOST: h70.mijn.host
+  SSH_PORT: '26'
+  SITE: https://azcarpool.nl
+  TARGET_DIR: domains/azcarpool.nl/public_html/
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: The pipeline tools (from the version this workflow runs from)
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          path: tools
+      - name: The app version to put back
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ inputs.ref }}
+          path: src
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+
+      - name: Does this version have a build script?
+        working-directory: src
+        run: |
+          # Very old versions (before the build step existed) cannot be built here: say so, instead of a confusing error later.
+          test -f scripts/build-deploy.mjs || { echo "::error::This version has no scripts/build-deploy.mjs: it cannot be rolled back with this workflow. Pick a newer commit."; exit 1; }
+          echo "Rolling back to $(git rev-parse --short HEAD): $(git log -1 --format=%s)"
+
+      - name: Build the upload folder
+        working-directory: src
+        run: npm run build:deploy
+
+      - name: Check that the secrets are set
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          missing=0
+          for name in DEPLOY_USER DEPLOY_KEY; do
+            if [ -z "${!name}" ]; then echo "::error::GitHub secret $name is not set (repo Settings -> Secrets and variables -> Actions)"; missing=1; fi
+          done
+          exit $missing
+
+      - name: Set up the SSH key
+        uses: ./tools/.github/actions/ssh-setup
+        with:
+          deploy-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Upload to mijn.host
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          export RSYNC_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
+          DEPLOY_CHECK_SITE="$SITE" bash tools/scripts/deploy-rsync.sh src/dist/ "$user@$SSH_HOST:$TARGET_DIR"
+
+      - name: Check that the old version is live again
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+        run: |
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          SITE_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519 $user@$SSH_HOST" REMOTE_DIR="$TARGET_DIR" bash tools/.github/scripts/check-site.sh live "$SITE" src/dist

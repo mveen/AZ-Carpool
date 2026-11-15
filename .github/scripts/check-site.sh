@@ -10,14 +10,17 @@
 #
 #   SITE_SSH     the ssh command up to and including user@host (e.g. "ssh -p 26 -i key ... user@host"); without it there is no fallback
 #   REMOTE_DIR   the web folder on the host (e.g. domains/azcarpool.nl/public_html/)
-#   CHECK_TRIES  how often to ask the site per file (default 6), CHECK_WAIT seconds in between (default 10)
+#   CHECK_TRIES  how often to ask the site per file for the NEW version (default 6), CHECK_WAIT seconds in between (default 10)
+#   CHECK_WAIT_TRIES  how often to ask the site per file while it answers with the wait page (default 2) before reading on the host instead.
+#                The wait page lasts minutes, so asking 6 times only cost 50 s per file (about 160 s per deploy); once one file had to be read on
+#                the host, the other files go there after a single ask.
 set -euo pipefail
 
 target="${1:?usage: check-site.sh <live|test> <site> <upload-folder>}"
 site="${2:?usage: check-site.sh <live|test> <site> <upload-folder>}"; site="${site%/}"
 dist="${3:?usage: check-site.sh <live|test> <site> <upload-folder>}"; dist="${dist%/}"
 case "$target" in live|test) ;; *) echo "::error::first argument must be live or test (got $target)"; exit 2 ;; esac
-tries="${CHECK_TRIES:-6}"; pause="${CHECK_WAIT:-10}"
+tries="${CHECK_TRIES:-6}"; pause="${CHECK_WAIT:-10}"; wait_tries="${CHECK_WAIT_TRIES:-2}"
 remote="${REMOTE_DIR:-}"; remote="${remote%/}"
 tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
 used_host=0
@@ -27,12 +30,14 @@ is_wait_page() { grep -q 'One moment, please' "$1" 2>/dev/null; }
 # fetch <path> <file>: the file as the site serves it, in <file>; the answer line (status, size, type) in <file>.info.
 # When the site keeps answering with the wait page: the file as it is on the host (then <file>.info says "host").
 fetch() {
-  local path="$1" out="$2" attempt
-  for attempt in $(seq 1 "$tries"); do
+  local path="$1" out="$2" attempt n="$wait_tries"
+  # The host's wait page is not per file: once one file had to be read on the host, ask the site only once more for the others.
+  if [ "$used_host" = 1 ]; then n=1; fi
+  for attempt in $(seq 1 "$n"); do
     curl -s -o "$out" --max-time 20 -H 'Cache-Control: no-cache' -w 'HTTP %{http_code}, %{size_download} bytes, type %{content_type}' "$site/$path" > "$out.info" || true
     if ! is_wait_page "$out"; then return 0; fi
-    echo "   $site/$path: the wait page of the host (try $attempt of $tries)"
-    [ "$attempt" = "$tries" ] || sleep "$pause"
+    echo "   $site/$path: the wait page of the host (try $attempt of $n)"
+    [ "$attempt" = "$n" ] || sleep "$pause"
   done
   if [ -z "${SITE_SSH:-}" ] || [ -z "$remote" ]; then
     echo "::error::$site keeps answering with the wait page of the host (its bot check), and there is no SSH fallback configured"; return 1

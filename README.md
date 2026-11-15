@@ -91,7 +91,7 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `scripts/` | What those commands run: local preview, building the upload folders (`dist/`, `dist-test/`, `dist-cron/`, never in git), the upload itself (`deploy-rsync.sh`), test data, the robot smoke test, the Firebase SDK copy | `build-deploy.test.js`, `check-live-rules.test.js`, `build-cron.test.js`, `deploy-rsync.test.js`, `deploy-test-env.test.js`, `seed-test-data.test.js`, `smoke-test.test.js` |
 | `cron/` | The five server jobs on the host (see *Cron jobs on the host*) | `cron-*.test.js` |
 | `deploy/` | Extra files for the host: `robots.txt`, the test database config (`deploy/test/firebase-config.js`), the page `uitleg-weekrooster/` | |
-| `.github/` | The workflows (tests, deploy, deploy test, deploy restart, host probe), the `CACHE_NAME` check, the pinned identity of the host, Dependabot | |
+| `.github/` | The workflows (tests, lint, deploy, deploy test, restart, rollback, uptime), shared actions (`actions/`), the `CACHE_NAME` check, the pinned identity of the host, Dependabot | |
 | `DESIGN.md`, `CLAUDE.md`, `docs/` | The design system, the working rules for this repo, and the notes per feature (`docs/functies/`, see below) plus older audits | `docs.test.js` |
 | `firebase-config.js` | Firebase config + Google Calendar API key (fill in once). **No secret keys**: the OpenRouteService key is in the database (Beheer → *API-sleutels*) | never overwrite |
 | `firebase-sdk/` | The Firebase SDK (app, auth, firestore), served by the site itself instead of Google's server. A monthly check on GitHub (`.github/workflows/firebase-version.yml`) opens an issue when a newer version exists; it changes nothing by itself. Made by `node scripts/vendor-firebase.mjs` (version in that file); never edit by hand. Upgrade: run it with the new version, set `FIREBASE_VERSION`, bump `CACHE_NAME`, put the branch on the test site (the robot checks Chromium and WebKit) | `vendor-firebase.test.js` |
@@ -123,7 +123,8 @@ The detailed notes per feature live in `docs/functies/`, moved there unchanged f
 | Inloggen (gate) en het foutlogboek | [`docs/functies/inloggen-en-foutlogboek.md`](docs/functies/inloggen-en-foutlogboek.md) | *Inloggen (gate) and the error log (v88)* |
 | Wachttijd speelsters | [`docs/functies/wachttijd-speelsters.md`](docs/functies/wachttijd-speelsters.md) | *Wachttijd speelsters (Beheer)* |
 | Back-up en terugzetten | [`docs/functies/back-up-en-terugzetten.md`](docs/functies/back-up-en-terugzetten.md) | *Back-up (host and the owner's Mac), restore* |
-| Wachtpagina van de host | [`docs/functies/wachtpagina-host.md`](docs/functies/wachtpagina-host.md) | *Test environment* (wait page, restart, probe, robot tunnel) |
+| Wachtpagina van de host | [`docs/functies/wachtpagina-host.md`](docs/functies/wachtpagina-host.md) | *Test environment* (wait page, restart, robot tunnel) |
+| De pipeline: snelheid, bewaking, terugdraaien | [`docs/functies/pipeline.md`](docs/functies/pipeline.md) | *Deploy*, *Rollback* (parallel tests, uptime, rollback, lint) |
 | Planningslogica, reads en quota | [`docs/functies/planningslogica.md`](docs/functies/planningslogica.md) | *Planningslogica (standard rooster and period rooster)* |
 
 ## Run the tests
@@ -132,7 +133,7 @@ The detailed notes per feature live in `docs/functies/`, moved there unchanged f
 
 It prints one line per test file (PASS/FAIL with counts), then a rule check, then a total. It exits with an error if anything fails. Tests need Node 20 or newer (GitHub runs them on Node 22) and no other packages.
 
-**`rsync` must be installed**, otherwise 9 upload tests are skipped (`deploy-rsync.test.js`, `deploy-test-env.test.js`) and the count in `test-count.js` comes out 9 lower than on GitHub, which then fails. A Mac has it; in a fresh cloud session run `apt-get update && apt-get install -y rsync` first.
+**Install `rsync`** (a Mac has it; cloud: `apt-get update && apt-get install -y rsync`), otherwise 9 upload tests are skipped: `npm run lock` then refuses and `npm test` skips the count check. Test files run in parallel (`TEST_JOBS=1`: one by one).
 
 Besides the test file per module there are tests for the whole: `planning-scenarios.test.js`, `design-rules.test.js` (the design rules), `docs.test.js` (this README stays a map), `service-worker.test.js`, and the tests of the scripts and cron jobs.
 
@@ -162,7 +163,7 @@ Live is `https://azcarpool.nl/` on mijn.host. Nobody uploads files by hand any m
 
 1. Work on a branch and open a pull request. `.github/workflows/tests.yml` runs `npm test` and checks that `CACHE_NAME` in `service-worker.js` was raised (`.github/scripts/check-cache-bump.sh`).
 2. The owner merges the pull request into `main`. Nothing reaches `main` without the owner.
-3. `.github/workflows/deploy.yml` then runs by itself: *tests -> upload to `test.azcarpool.nl` -> robot smoke test there -> upload to live -> upload the cron jobs and their self-test*. If a step fails, everything after it is skipped and live stays as it was. The workflow checks that the site serves the new `CACHE_NAME`. (`.github/scripts/check-site.sh`: when the host answers the robot with its wait page, a bot check, the files are read on the host itself over SSH instead.)
+3. `.github/workflows/deploy.yml` then runs by itself: *tests + lint -> upload to `test.azcarpool.nl` -> robot smoke test there -> upload to live -> upload the cron jobs and their self-test*. If a step fails, everything after it is skipped and live stays as it was. The workflow checks that the site serves the new `CACHE_NAME`. (`.github/scripts/check-site.sh`: when the host answers the robot with its wait page, a bot check, the files are read on the host itself over SSH instead.)
 4. **Database rules go live by themselves** once the two rules keys are set (see *Database rules* below): the pipeline publishes `firebase/firestore.rules` to the test database before the test upload and to the live database before the live upload, only when they differ. Until a key is set, that step is skipped with a notice and the rules must still be pasted into the Firebase console (Firestore -> Rules -> Publish). *Live rules controleren* compares the published rules with the file every day and goes red when they differ.
 5. **Always bump `CACHE_NAME` in `service-worker.js` (and `APP_VERSION` in `constants.js`) on every change to app files.** Open apps (phone, home screen) check for a changed `service-worker.js` each time they come to the foreground (tab switch, back from another app) and reload themselves once when a new one takes over. No change to that file means no automatic update.
 6. Secrets (API keys, service account keys, the deploy key) are never in the repo: the OpenRouteService key is in the database (Beheer -> *API-sleutels*), the cron keys are on the host, the deploy key and smoke-test codes are GitHub secrets.
@@ -183,7 +184,7 @@ A second copy of the app with its own database, so trying things never touches l
 - **Refresh only the planning (`--planning`):** `npm run seed:test -- --planning --backup backups/firestore-DATE.jsonl.gz` (dry run) and add `--key backups/test-key.json --write` to apply. Test users stay as they are (phone numbers, invite codes, links, sessions, `config/coordinator`: nobody logs in again). The old inbox notifications of the test families are removed (live notifications are never copied, so what is there belongs to the old test planning). Replaced: shifts (`groups`), `deviations`, `weekRequests` (requests with their status), `periods`, `periodEntries`, `periodCars`, `periodBackups`, `offers`, `matchCarpools`, `practiceMatches`, `backupMoments` and every `settings/` document that the full copy also takes (not the API key, push, notice or maintenance). Per family only `availability`, `schedule` (the daughter's times) and `timeChanges` are updated. A family that exists in live but not in test is reported and skipped. Same checks and the same fixed test project as the full copy.
   - **Re-seeding keeps these codes** with `--fixed-code`: `npm run seed:test -- --backup ... --key ... --write --fixed-code eline=CODE --fixed-code evi=CODE`. Each smoke run creates a `links/` document in the test database (harmless).
   - **Wait page of the host:** mijn.host sometimes answers with its own bot check ("One moment, please...") instead of the site; a robot browser does not get past it. The smoke test recognises it at once (`isHostWaitPage`, `waitForSelectorOrHostWait`: no 30 s wait for a login screen that never comes), waits 20 s and repeats that login, up to 4 times; when that fails, the remaining checks are skipped (same address, same wall) so a blocked run ends after about 2 minutes; the robot job stops after 12 minutes at most; real app errors are never retried. If it fails on this, run the workflow again later.
-  - **More on the wait page** (restart after it, the read-only probe, the robot through a tunnel and its one-time setup): [`docs/functies/wachtpagina-host.md`](docs/functies/wachtpagina-host.md).
+  - **More on the wait page** (restart after it, the robot through a tunnel and its one-time setup): [`docs/functies/wachtpagina-host.md`](docs/functies/wachtpagina-host.md).
   - By hand: `SMOKE_PHONE=... SMOKE_CODE_COORD=... SMOKE_CODE_PARENT=... node scripts/smoke-test.mjs` (needs `npm i --no-save playwright` and `npx playwright install chromium webkit`; `SMOKE_BROWSERS=chromium` runs one browser only).
 
 ### Database rules (`firebase/firestore.rules`)
@@ -203,7 +204,7 @@ Five jobs run on the mijn.host account (the code is outside the web folder; only
 
 ## Rollback
 1. On GitHub open the pull request that caused the problem and press *Revert*; merge the revert pull request. The deploy workflow puts the previous version live (tests, test site and smoke test included). Raise `CACHE_NAME` in the revert, otherwise phones keep the broken version.
-2. In an emergency: Actions -> *Deploy azcarpool.nl* -> *Run workflow* with *skip_smoke* ticked goes live without the robot test.
+2. Fast: Actions -> *Rollback azcarpool.nl* with a tag/commit that was live: builds and uploads it without tests ([`pipeline.md`](docs/functies/pipeline.md)). Or *Deploy azcarpool.nl* with *skip_smoke* ticked (no robot test).
 3. The tag `v1-stable` is the app before the v2 redesign (last resort).
 
 ## Access model (since the Sept 2026 security fix)

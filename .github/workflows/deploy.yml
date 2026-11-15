@@ -1,7 +1,7 @@
 name: Deploy azcarpool.nl
 
 # Runs after every merge to main (and by hand: Actions -> Deploy azcarpool.nl -> Run workflow).
-# Order: tests -> put it on the TEST site -> robot smoke test on the test site -> only then LIVE.
+# Order: tests + lint (side by side) -> put it on the TEST site -> robot smoke test on the test site -> only then LIVE.
 # If a step fails, everything after it is skipped: live stays exactly as it was.
 # By hand you can tick "skip_smoke" to go live even when the robot is red (emergency only).
 # GitHub Pages is switched off (2026-11-14): this workflow is the only way the app reaches azcarpool.nl.
@@ -39,8 +39,20 @@ jobs:
       - name: Run tests (never upload a broken app)
         run: npm test
 
+  # ESLint (a misspelled name or a forgotten import) is part of the gate too: it runs next to the tests, so it costs no extra time.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      - name: Lint (never upload an app with an undefined name)
+        run: bash scripts/run-lint.sh
+
   deploy-test:
-    needs: tests
+    needs: [tests, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -77,18 +89,16 @@ jobs:
           done
           exit $missing
 
+      - name: Set up the SSH key
+        uses: ./.github/actions/ssh-setup
+        with:
+          deploy-key: ${{ secrets.DEPLOY_KEY }}
+
       - name: Upload to the test site
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          cp .github/deploy/known_hosts ~/.ssh/known_hosts
-          head -1 ~/.ssh/deploy_key | grep -q 'BEGIN OPENSSH PRIVATE KEY' || { echo "::error::DEPLOY_KEY does not start with -----BEGIN OPENSSH PRIVATE KEY-----"; exit 1; }
-          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_KEY is not a valid private key"; exit 1; }
           export RSYNC_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
           DEPLOY_CHECK_SITE="$SITE" bash scripts/deploy-rsync.sh dist-test/ "$user@$SSH_HOST:$TARGET_DIR"
 
@@ -110,10 +120,8 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 22
-      - name: Install the robot browsers (Chromium and WebKit, the Safari engine)
-        run: |
-          npm install --no-save --no-package-lock playwright@1.56.0
-          npx playwright install --with-deps chromium webkit
+      - name: Robot browsers (Chromium and WebKit, the Safari engine; cached)
+        uses: ./.github/actions/playwright
       - name: Open the tunnel to the test site (own restricted key; skipped without the TUNNEL_KEY secret)
         env:
           TUNNEL_KEY: ${{ secrets.TUNNEL_KEY }}
@@ -172,20 +180,16 @@ jobs:
           done
           exit $missing
 
+      - name: Set up the SSH key
+        uses: ./.github/actions/ssh-setup
+        with:
+          deploy-key: ${{ secrets.DEPLOY_KEY }}
+
       - name: Upload to mijn.host
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
-          install -d -m 700 ~/.ssh
-          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          cp .github/deploy/known_hosts ~/.ssh/known_hosts
-          # Diagnostics (nothing secret): does the key file look like a private key, and which server identity is pinned?
-          head -1 ~/.ssh/deploy_key | grep -q 'BEGIN OPENSSH PRIVATE KEY' || { echo "::error::DEPLOY_KEY does not start with -----BEGIN OPENSSH PRIVATE KEY-----"; exit 1; }
-          ssh-keygen -y -f ~/.ssh/deploy_key > /dev/null || { echo "::error::DEPLOY_KEY is not a valid private key (copy it again with: pbcopy < ~/.ssh/azcarpool_deploy)"; exit 1; }
-          ssh-keygen -lf ~/.ssh/known_hosts
           export RSYNC_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519"
           DEPLOY_CHECK_SITE="$SITE" bash scripts/deploy-rsync.sh dist/ "$user@$SSH_HOST:$TARGET_DIR"
 
@@ -208,4 +212,5 @@ jobs:
           export RSYNC_SSH="ssh $SSH_OPTS"
           bash scripts/deploy-rsync.sh dist-cron/ "$user@$SSH_HOST:azcarpool-cron/"
           # Does the host have a suitable Node.js, can it log in to Google with the uploaded keys?
+          # shellcheck disable=SC2086 # SSH_OPTS is a list of options: it must be split into words
           ssh $SSH_OPTS "$user@$SSH_HOST" "bash azcarpool-cron/run.sh selftest"

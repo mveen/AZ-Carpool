@@ -42,8 +42,8 @@ await test('browser noise is ignored, real errors are not', () => {
 });
 
 console.log('=== the pipeline ===');
-await test('order: tests -> test site -> smoke -> live', () => {
-  assert.match(job('deploy-test'), /needs: tests/);
+await test('order: tests + lint -> test site -> smoke -> live', () => {
+  assert.match(job('deploy-test'), /needs: \[tests, lint\]/);
   assert.match(job('smoke'), /needs: deploy-test/);
   assert.match(job('deploy-live'), /needs: \[deploy-test, smoke\]/);
 });
@@ -82,9 +82,11 @@ await test('the refused Google helper script in Safari is not an app error, any 
   assert.ok(!isHarmless('Refused to load https://evil.example/x.js because it does not appear in the script-src directive of the Content Security Policy.'));
   assert.ok(!isHarmless('Refused to load https://test.azcarpool.nl/app.js because it does not appear in the script-src directive of the Content Security Policy.'));
 });
-await test('both workflows install both browsers', () => {
+await test('both workflows install both browsers, through the one shared (cached) action', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
-  for (const f of [y, t]) assert.match(f, /playwright install --with-deps chromium webkit/);
+  const action = readFileSync(join(repo, '.github/actions/playwright/action.yml'), 'utf8');
+  assert.match(action, /playwright install --with-deps chromium webkit/);
+  for (const f of [y, t]) { assert.match(f, /uses: \.\/\.github\/actions\/playwright/); assert.doesNotMatch(f, /playwright install/); }
 });
 await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets (and never the deploy key)', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
