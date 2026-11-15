@@ -255,7 +255,7 @@ export function showConnectionError(err){
       <div class="card">
         <h2>${t('common.geen_verbinding')}</h2>
         <p class="muted">${t('common.kan_geen_verbinding_maken_met')}</p>
-        <p class="muted mt-3">${t('common.foutmelding')} ${err&&err.message? err.message : String(err)}</p>
+        <p class="muted mt-3">${t('common.foutmelding')} ${esc(err&&err.message? err.message : String(err))}</p>
         <button class="btn" id="retryConnection" type="button">${t('common.opnieuw_proberen')}</button>
       </div>
     </div>`;
