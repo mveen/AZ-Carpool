@@ -837,5 +837,16 @@ test('the calendar card shows each feed with its bus choice, escapes names and l
   assert.match(card, /AZ &lt;b&gt;O13/);
 });
 
+// Inline styles of ui-beheer.js are being replaced by classes, part by part (it had 79). It may only go down.
+test('ui-beheer.js: availability table, rules, priority and back-up use classes from components.css, not inline styles', () => {
+  const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  const css = fsV206.readFileSync(new URL('../components.css', import.meta.url), 'utf8');
+  assert.ok((src.match(/style="/g) || []).length <= 54, 'inline styles in ui-beheer.js grew');
+  for (const c of ['availWho', 'availSub', 'availBackup', 'availCell', 'availRow', 'scrollX', 'ruleRow', 'prioRow', 'iconRow', 'divider', 'backupErrors', 'textBody', 'rowflex--left', 'rowflex--wrap', 'hiddenInput', 'mt-2', 'mt-6', 'my-2']) {
+    assert.ok(css.includes('.' + c), c + ' missing in components.css');
+    assert.ok(src.includes(c.replace(/^rowflex--/, '')) || src.includes(c), c + ' not used in ui-beheer.js');
+  }
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
