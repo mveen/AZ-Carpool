@@ -10,3 +10,11 @@
 - Nieuwe codes zijn 10 cijfers. Sinds v275 werkt een code korter dan 8 tekens niet meer voor ouders: de poort in de app weigert hem (`isStrongInviteCode`) en de databaseregels weigeren het opzoeken (`invites/{code}` get) en het aanmaken van een koppeling (`validInviteLink`).
 - De coördinator kan een oud, kort codedocument nog wel lezen, aanpassen en verwijderen (opruimen in Beheer).
 - Na het mergen moeten de regels opnieuw gepubliceerd worden (plakken in de Firebase-console, of de sleutels `RULES_KEY_TEST`/`RULES_KEY_LIVE` instellen). Tests: `firebase/rules-test/secrets-rules.test.mjs`.
+
+## Wie de coördinator is: alleen voor leden (v278)
+- `config/coordinator` bevat een browser-uid of een gezins-id, en een gezins-id bevat de naam van de dochter (`manual-<naam>-…`). Daarom mag alleen een lid het lezen (`allow get: signedIn() && (!exists(coordPath()) || isMember())`). Zolang het document nog niet bestaat mag iedereen kijken: dat is het scherm waar je de coördinatorrol claimt.
+- Een bezoeker die nog niet gekoppeld is krijgt `permission-denied` zodra er een coördinator is. De app (`readCoordinator` in `app.js`) leest dat als "er is een coördinator", zonder inhoud. Na het koppelen leest `refreshCoordinatorConfig` het document alsnog, één keer per gezin, zodat een coördinatorgezin direct coördinatorrechten krijgt.
+- Volgorde bij het uitrollen: de pipeline publiceert de regels vóór de bestanden van de site. Een nog niet gekoppelde bezoeker met de oude app in de cache ziet daardoor kort "niet verbonden" tot de app ververst. Gekoppelde ouders merken niets. Tests: `firebase/rules-test/coordinator-rules.test.mjs` en de vier tests in `tests/app.test.js` (permission-denied bij het starten, andere fouten blijven fouten, opnieuw lezen na koppelen).
+
+## GitHub Actions vastgezet op commit (v278)
+- `actions/checkout`, `actions/setup-node` en `actions/setup-java` staan in alle workflows op de volledige commit-hash, met de versie als commentaar (`# v7`). Een tag kan verschuiven; een hash niet. Dependabot (`.github/dependabot.yml`, wekelijks) werkt hash en commentaar samen bij.

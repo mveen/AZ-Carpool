@@ -56,7 +56,10 @@ service cloud.firestore {
     // First person to create this doc becomes coordinator (first-run only). It can never
     // be deleted again, otherwise the "claim coordinator" screen would reopen for anyone.
     match /config/coordinator {
-      allow read: if signedIn();   // needed before linking, to know whether to show the claim screen
+      // Who the coordinator is (a browser uid, or a family id that contains the daughter's name) is for members only. Before linking, anybody may
+      // look while the document does not exist (that is the claim screen); once it exists a stranger is refused, and the app reads that refusal as
+      // "there is a coordinator" (app.js readCoordinator). A browser that has just been linked reads it again (refreshCoordinatorConfig).
+      allow get: if signedIn() && (!exists(coordPath()) || isMember());
       allow create: if signedIn() && !exists(coordPath());
       allow update: if isCoordinator();
       allow delete: if false;

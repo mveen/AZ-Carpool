@@ -58,6 +58,32 @@ export async function getWithRetry(read, delays = START_RETRY_DELAYS_MS) {
   }
 }
 
+// config/coordinator names the coordinator (a browser uid or a family id, and a family id contains the daughter's name), so the database rules let only
+// members read it, plus anybody while it does not exist yet (the claim screen). A browser that is not linked yet is refused when a coordinator exists:
+// that refusal means "there is one", and the content is read again by refreshCoordinatorConfig() once the browser is linked.
+export async function readCoordinator(){
+  try{
+    const snap = await getWithRetry(() => db.doc("config/coordinator").get(), START_RETRY_DELAYS_MS);
+    return { exists: snap.exists, config: snap.exists? snap.data() : null };
+  }catch(e){
+    if(e && e.code === 'permission-denied') return { exists: true, config: null };
+    throw e;
+  }
+}
+let coordinatorRefreshedFor = null;
+export async function refreshCoordinatorConfig(){
+  if(!S.coordinatorExists || S.coordinatorConfig || !S.me) return;
+  const link = S.links && S.links[S.me];
+  if(!link || !link.familyId || coordinatorRefreshedFor === link.familyId) return;   // only a linked browser can read it: once per family
+  coordinatorRefreshedFor = link.familyId;
+  try{
+    const coord = await readCoordinator();
+    if(!coord.config) return;
+    S.coordinatorConfig = coord.config;
+    recomputeCanEdit(); syncCoordinatorNav(); renderAll();
+  }catch(e){ logError({ where:'start', code:'coordinator-'+((e&&e.code)||'error'), message:e && e.message }); }
+}
+
 // The SDK's sign-in is shared by all tabs of this browser. When it is gone or another one (another tab signed out, or the browser data was wiped while this
 // page was open), every reading from here on is refused and the screen would quietly show defaults. So say it, and write it down.
 export function handleAuthChange(uid){
@@ -85,9 +111,9 @@ export async function init(){
     return;
   }
   try{
-    const coordSnap = await getWithRetry(() => db.doc("config/coordinator").get(), START_RETRY_DELAYS_MS);
-    S.coordinatorExists = coordSnap.exists;
-    S.coordinatorConfig = coordSnap.exists? coordSnap.data() : null;
+    const coord = await readCoordinator();
+    S.coordinatorExists = coord.exists;
+    S.coordinatorConfig = coord.config;
     S.appReady = true;
   }catch(e){
     logError({ where:'start', code:'coordinator-'+((e&&e.code)||'error'), message:e && e.message });
@@ -112,6 +138,7 @@ export async function init(){
 
 export function afterLinksChanged(){
   S.linksLoaded = true;
+  refreshCoordinatorConfig();   // a browser that just got linked can now read who the coordinator is
   recomputeCanEdit();
   syncCoordinatorNav();
   syncListeners();

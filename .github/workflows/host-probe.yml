@@ -19,7 +19,7 @@ jobs:
       SSH_HOST: h70.mijn.host
       SSH_PORT: '26'
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Probe the host (read-only)
         env:
           DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
