@@ -47,14 +47,14 @@ test('the family editor opens for the chosen family, with an invite code field',
   useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
   withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
-  const html = dom.html('coordEditArea');
+  const html = dom.html('coordEditSlot-f2');
   assert.match(html, /id="coord_parentName"/); assert.match(html, /value="Piet Pieters"/); assert.match(html, /id="coord_inviteCode"[^>]*value="CODE1234"/);
 });
 test('the family editor has a WhatsApp login-intro icon after the phone field, using the invite code', () => {
   useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
   withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
-  const html = dom.html('coordEditArea');
+  const html = dom.html('coordEditSlot-f2');
   assert.match(html, /class="waIntro" data-waintro="1"/); assert.doesNotMatch(html, /<button[^>]*waIntro/);
   assert.match(decodeURIComponent(html), /CODE1234/);
 });
@@ -62,6 +62,44 @@ test('the editor for a new family starts empty', () => {
   sampleCoordinatorState({ coordEditId: null });
   withFakeNow(NOW, () => renderCoordEditor());
   assert.match(text(dom.html('coordEditArea')), /Nieuw gezin toevoegen/);
+});
+
+test('Wijzig opens the panel right under that family\'s own row, not at the bottom of the card', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  const item = html.match(/<div class="famItem famItem--open" data-famitem="f2">[\s\S]*?<div class="famEditSlot" id="coordEditSlot-f2">/);
+  assert.ok(item, 'slot of f2 sits inside the open family item');
+  assert.doesNotMatch(item[0], /data-famitem="f3"/);   // no other family between the row and its panel
+  assert.match(dom.html('coordEditSlot-f2'), /id="coord_parentName"/);
+  assert.equal(dom.html('coordEditArea').trim(), '');   // nothing at the bottom
+});
+test('the row of the open family offers Sluiten, the others still Wijzig; only one panel is open', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: {}, inviteByFamily: {} });
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  assert.match(html, /data-coordedit="f2" aria-expanded="true">Sluiten</);
+  assert.match(html, /data-coordedit="f3" aria-expanded="false">Wijzig</);
+  assert.equal((html.match(/class="famItem famItem--open"/g) || []).length, 1);
+  assert.match(dom.html('coordEditSlot-f2'), /id="coord_parentName"/);
+  assert.equal(dom.html('coordEditSlot-f3').trim(), '');   // other rows stay closed
+});
+test('the family panel has no Opslaan/Annuleer buttons: changes are saved at once', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: {}, inviteByFamily: {} });
+  withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
+  const s = text(dom.html('coordEditSlot-f2'));
+  assert.doesNotMatch(s, /Opslaan|Annuleer/);
+  assert.match(s, /Wijzigingen worden automatisch opgeslagen/);
+});
+test('a new family still opens below the list', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: null });
+  withFakeNow(NOW, () => renderBeheer());
+  assert.match(text(dom.html('coordEditArea')), /Nieuw gezin toevoegen/);
+  assert.doesNotMatch(dom.html('tab-beheer'), /famItem--open/);
 });
 
 console.log('\n=== overview cards ===');

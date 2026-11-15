@@ -979,6 +979,17 @@ div.settingsRow{cursor:default}
 .famTags{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-2)}
 .famTags:empty{display:none}
 .famMissing{font:var(--type-caption);margin-top:var(--space-1)}
+/* Beheer > Gezinnen: the edit panel opens in the slot right under the family's own row */
+.famRow{padding:var(--space-4) 0;border-bottom:1px solid var(--line);gap:var(--space-3)}
+.famRow__main{flex:1;min-width:0}
+.famRow__actions{display:flex;gap:var(--space-2);flex-shrink:0}
+.famItem--open{border:2px solid var(--accent);border-radius:var(--radius-panel);padding:0 var(--space-3);margin:var(--space-3) calc(-1 * var(--space-3))}
+.famItem--open .famRow{border-bottom:0}
+.famEditSlot:empty{display:none}
+.famEditSlot{padding-bottom:var(--space-3)}
+.famEdit{margin-top:0;border-color:var(--accent)}
+.famEdit__coord{margin:var(--space-4) 0;padding:var(--space-4);border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page)}
+.famEdit__coordText{font:var(--type-small)}
 /* Beheer > Gemelde problemen */
 .errRow{padding:var(--space-4) 0;border-bottom:1px solid var(--line)}
 .errRow__what{font:var(--type-card-title)}

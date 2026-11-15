@@ -591,19 +591,23 @@ function familiesCardHtml(claimed, dupGroups){
     const isCoord = S.coordinatorConfig && S.coordinatorConfig.familyId===id;
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
     const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !S.inviteByFamily[id]? 'code' : ''].filter(Boolean);
+    const open = S.coordEditId===id;   // the edit panel opens right under this row (renderCoordEditor fills the slot)
     return `
-    <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--line);gap:8px">
-      <div style="flex:1;min-width:0">
+    <div class="famItem${open?' famItem--open':''}" data-famitem="${id}">
+    <div class="rowflex famRow">
+      <div class="famRow__main">
         <div class="famName">${esc(fd.girlName||'(naam?)')}</div>
         <div class="muted">${esc(fd.parentName||'(ouder?)')}</div>
         <div class="famTags">${claimed[id]?`<span class="tag tag--ok">${t('beheer.gekoppeld')}</span>`:''}${isCoord?`<span class="tag tag--accent">${t('beheer.coordinator_tag')}</span>`:''}${fd.familyType==='flex'?`<span class="tag tag--flex">${t('flex.badge')}</span>`:''}</div>
         ${missing.length? `<div class="fitbad famMissing">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
-      <span style="display:flex;gap:6px;flex-shrink:0">
-        <button type="button" class="btn small secondary" data-coordedit="${id}">${t('beheer.wijzig')}</button>
+      <span class="famRow__actions">
+        <button type="button" class="btn small secondary" data-coordedit="${id}" aria-expanded="${open}">${t(open? 'beheer.sluiten' : 'beheer.wijzig')}</button>
         <button type="button" class="iconbtn" data-imptest="${id}" aria-label="Test de app als ${esc(fd.parentName||t('beheer.deze_ouder'))}" title="${t('beheer.testweergave_als_deze_ouder')}">${phIcon('eye')}</button>
         <button type="button" class="iconbtn danger" data-coorddel="${id}" aria-label="Verwijder ${esc(fd.girlName||'gezin')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button>
       </span>
+    </div>
+    <div class="famEditSlot" id="coordEditSlot-${id}"></div>
     </div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_gezinnen_toegevoegd')}</p>`;
   return `<div class="card" id="familiesCard">
@@ -862,8 +866,15 @@ export function renderBeheer(){
       renderShiftPriorityRows(S.selectedShiftKey);
     }
     const cn=document.getElementById('coordNew');
-    if(cn) cn.onclick = ()=>{ S.coordEditId=null; renderCoordEditor(); };
-    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{ S.coordEditId=b.dataset.coordedit; renderCoordEditor(); });
+    if(cn) cn.onclick = ()=>{ S.coordEditId=null; renderBeheer(); };
+    // Wijzig opens the panel under that family's row; the same button (now "Sluiten") closes it again, and opening another family moves it.
+    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{
+      hapticTap();
+      S.coordEditId = S.coordEditId===b.dataset.coordedit? undefined : b.dataset.coordedit;
+      renderBeheer();
+      const item = S.coordEditId!==undefined && document.querySelector('[data-famitem="'+S.coordEditId+'"]');
+      if(item && item.scrollIntoView) item.scrollIntoView({block:'start'});
+    });
     document.querySelectorAll('[data-coorddel]').forEach(b=>b.onclick=()=>twoStepConfirm(b,t('beheer.zeker_nogmaals_klikken'),async ()=>{
       try{
         const fid=b.dataset.coorddel;
@@ -915,8 +926,10 @@ export function renderBeheer(){
 }
 
 export function renderCoordEditor(){
-  const area=document.getElementById('coordEditArea');
+  // An existing family's form sits in the slot under its own row; "new family" keeps the area below the list.
+  const area=document.getElementById(S.coordEditId? 'coordEditSlot-'+S.coordEditId : 'coordEditArea');
   if(!area)return;
+  ['coordEditArea', ...Object.keys(S.families||{}).map(id=>'coordEditSlot-'+id)].forEach(id=>{ const a=document.getElementById(id); if(a && a!==area) a.innerHTML=''; });
   if(S.coordEditId===undefined){area.innerHTML='';return;}
   const isNew = S.coordEditId===null;
   const f = isNew? null : fam(S.coordEditId);
@@ -924,21 +937,21 @@ export function renderCoordEditor(){
   const isCoordThis = !isNew && S.coordinatorConfig && S.coordinatorConfig.familyId===S.coordEditId;
   const selfLinkedThis = !isNew && !!(S.links[S.me] && S.links[S.me].familyId===S.coordEditId);
   const coordToggleHtml = isNew? '' : `
-    <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page)">
-      <span style="font-size:14px">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
+    <div class="rowflex famEdit__coord">
+      <span class="famEdit__coordText">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
       <button type="button" class="btn small secondary" id="coordToggleBtn">${isCoordThis? t('beheer.coordinator_intrekken') : (selfLinkedThis? t('beheer.maak_coordinator') : phIcon('warning')+t('beheer.maak_coordinator_2'))}</button>
     </div>`;
-  area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
+  area.innerHTML = `<div class="card famEdit">
     <h2>${isNew? t('beheer.nieuw_gezin_toevoegen_2') : t('beheer.bewerken')+esc((f.girlName||f.parentName)||'')}</h2>
     ${coordToggleHtml}
     <label>${t('beheer.uitnodigingscode_meerdere_mensen_kunnen_dezelfde')}</label>
-    <div class="rowflex" style="gap:6px">
-      <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
+    <div class="rowflex rowflex--tight">
+      <input type="text" id="coord_inviteCode" class="fieldGrow" value="${esc(currentCode)}">
       <button type="button" class="btn small secondary" id="genCodeBtn">${phIcon('dice')} ${t('beheer.nieuwe_code')}</button>
     </div>
     ${familyFormHtml('coord', f)}
     <button type="button" class="btn secondary" id="coordCancel">${t('beheer.sluiten')}</button>
-    <p class="muted" style="margin-top:8px">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
+    <p class="muted mt-3">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
   </div>`;
   const card=area.querySelector('.card');
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
