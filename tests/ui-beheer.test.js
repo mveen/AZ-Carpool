@@ -847,5 +847,14 @@ test('ui-beheer.js: availability table, rules, priority and back-up use classes 
   }
 });
 
+test('ui-beheer.js part 2: Periode, Locaties, API-sleutels and dag-coördinatoren use classes; the progress bar width is the one data-driven inline style up there', () => {
+  const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  const css = fsV206.readFileSync(new URL('../components.css', import.meta.url), 'utf8');
+  assert.ok((src.match(/style="/g) || []).length <= 24, 'inline styles in ui-beheer.js grew');
+  assert.match(src, /<span style="width:\$\{pct\}%"><\/span>/);
+  for (const c of ['dayCoordLabel', 'periodField', 'periodHint', 'btn.mt-4', 'label--flush', 'fieldGrow']) assert.ok(css.includes(c), c + ' missing in components.css');
+  for (const c of ['dayCoordLabel', 'periodField', 'periodHint', 'mt-4', 'label--flush', 'fieldGrow']) assert.ok(src.includes(c), c + ' not used in ui-beheer.js');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

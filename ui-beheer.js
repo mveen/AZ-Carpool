@@ -244,9 +244,9 @@ export function dayCoordinatorsCardHtml(){
   const fams = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||'', locale()));
   const rows = DAYS.map(([k,label])=>{
     const cur = S.dayCoordinators[k]||'';
-    return `<div class="rowflex" style="align-items:center;gap:8px;margin-top:6px">
-      <label style="margin:0;width:96px" for="dayCoord_${k}">${label}</label>
-      <select id="dayCoord_${k}" class="dayCoordSel" data-coordday="${k}" style="flex:1">
+    return `<div class="rowflex mt-2">
+      <label class="dayCoordLabel" for="dayCoord_${k}">${label}</label>
+      <select id="dayCoord_${k}" class="dayCoordSel" data-coordday="${k}">
         <option value="">${t('dayCoord.none')}</option>
         ${fams.map(([id,f])=>`<option value="${id}" ${id===cur?'selected':''}>${esc(f.parentName||id)} (${esc(f.girlName||'?')})</option>`).join('')}
       </select>
@@ -392,23 +392,23 @@ function periodRowHtml(p, nowMs){
 function periodFormCardHtml(){
   const dr = S.periodDraft, v = normalizePeriod(dr.value);
   const locked = !!dr.editing && (periodHasData(dr.editing).entries>0 || periodHasData(dr.editing).rooster>0);
-  const field = (id,labelKey,type,val,extra='') => `<div style="margin-top:10px;flex:1"><label for="${id}" style="margin-top:0">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
+  const field = (id,labelKey,type,val,extra='') => `<div class="periodField"><label for="${id}" class="label--flush">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
   return `<div class="periodItem periodForm" id="periodDraftForm">
       <h3 class="periodFormTitle">${t(dr.editing? 'period.form.editTitle' : 'period.form.addTitle')}</h3>
       ${field('periodName','period.name','text',v.name,`maxlength="${PERIOD_NAME_MAX}" placeholder="${esc(t('period.namePlaceholder'))}"`)}
-      <div class="rowflex" style="gap:8px">
+      <div class="rowflex">
         ${field('periodFirst','period.firstDay','date',v.firstDay, locked? 'disabled' : '')}
         ${field('periodLast','period.lastDay','date',v.lastDay)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}${locked? ' '+t('period.firstDayLockedHint') : ''}</p>
+      <p class="muted periodHint">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}${locked? ' '+t('period.firstDayLockedHint') : ''}</p>
       <h4 class="periodFormGroup">${t('period.form.groupFill')}</h4>
       ${field('periodOpens','period.opensOn','date',v.opensOn)}
-      <p class="muted" style="margin-top:3px">${t('period.opensHint')}</p>
-      <div class="rowflex" style="gap:8px">
+      <p class="muted periodHint">${t('period.opensHint')}</p>
+      <div class="rowflex">
         ${field('periodDlDate','period.deadlineDate','date',v.deadlineDate)}
         ${field('periodDlTime','period.deadlineTime','time',v.deadlineTime)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>
+      <p class="muted periodHint">${t('period.deadlineHint')}</p>
       <div class="periodFormActions">
         <button type="button" class="btn small" id="periodDraftSave">${t('period.save')}</button>
         <button type="button" class="btn small secondary" id="periodDraftCancel">${t('period.cancel')}</button>
@@ -423,7 +423,7 @@ export function periodsCardHtml(nowMs){
       <h2>${t('period.title')}</h2>
       <p class="muted">${t('period.intro')}</p>
       ${list.length? list.map(p => periodRowHtml(p, nowMs)).join('') : (S.periodDraft? '' : `<p class="muted" id="periodPhase">${t('period.phase.none')}</p>`)}
-      ${S.periodDraft? (editingListed? '' : periodFormCardHtml()) : `<button type="button" class="btn small secondary" id="periodAdd" data-plistadd style="margin-top:10px">${t('period.add')}</button>`}
+      ${S.periodDraft? (editingListed? '' : periodFormCardHtml()) : `<button type="button" class="btn small secondary mt-4" id="periodAdd" data-plistadd>${t('period.add')}</button>`}
     </div>`;
 }
 
@@ -475,34 +475,34 @@ export function locationsCardHtml(){
     const gps = parseCoordinates(p.address);
     const hint = gps? `<p class="addrHint">${t('loc.gpsRecognized',{p1:gps.lat+', '+gps.lon})}</p>` : '';
     const remove = p.id===BUSSTATION_ID? '' : `<button type="button" class="iconbtn danger locRemove" data-locremove="${p.id}" aria-label="${esc(t('loc.removePlace',{name:p.name}))}" title="${esc(t('loc.removePlace',{name:p.name}))}">${phIcon('trash')}</button>`;
-    return `<div class="grid2" style="margin-top:6px">
-      <div><label style="margin-top:0" for="locName_${p.id}">${t('loc.placeName')}</label><input type="text" class="locInput" id="locName_${p.id}" value="${esc(p.name)}"></div>
-      <div><label style="margin-top:0" for="locAddr_${p.id}">${t('loc.placeAddress')}</label>
-        <div class="rowflex" style="gap:6px"><input type="text" class="locInput" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="${esc(t('loc.addressPlaceholder'))}" style="flex:1;min-width:0">${remove}</div>${hint}</div>
+    return `<div class="grid2 mt-2">
+      <div><label class="label--flush" for="locName_${p.id}">${t('loc.placeName')}</label><input type="text" class="locInput" id="locName_${p.id}" value="${esc(p.name)}"></div>
+      <div><label class="label--flush" for="locAddr_${p.id}">${t('loc.placeAddress')}</label>
+        <div class="rowflex rowflex--tight"><input type="text" class="locInput fieldGrow" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="${esc(t('loc.addressPlaceholder'))}">${remove}</div>${hint}</div>
     </div>`;
   }).join('');
   const opts = sel => cfg.places.map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
   const add = cfg.places.length<MAX_PLACES
-    ? `<button type="button" class="btn small secondary" id="locAdd" style="margin-top:10px">+ ${t('loc.addPlace')}</button>`
-    : `<p class="muted" style="margin-top:10px">${t('loc.maxPlaces',{p1:MAX_PLACES})}</p>`;
+    ? `<button type="button" class="btn small secondary mt-4" id="locAdd">+ ${t('loc.addPlace')}</button>`
+    : `<p class="muted mt-4">${t('loc.maxPlaces',{p1:MAX_PLACES})}</p>`;
   return `<div class="card" id="locationsCard">
       <h2>${t('loc.beheerTitle')}</h2>
       <p class="muted">${t('loc.beheerIntro',{p1:MAX_PLACES})}</p>
       ${placeRows}
       ${add}
-      <div class="grid2" style="margin-top:10px">
-        <div><label style="margin-top:0" for="locDestName">${t('loc.destination')}</label><input type="text" class="locInput" id="locDestName" value="${esc(cfg.destination.name)}"></div>
-        <div><label style="margin-top:0" for="locDestAddr">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locDestAddr" value="${esc(cfg.destination.address)}" placeholder="Straat 1, Alkmaar"></div>
+      <div class="grid2 mt-4">
+        <div><label class="label--flush" for="locDestName">${t('loc.destination')}</label><input type="text" class="locInput" id="locDestName" value="${esc(cfg.destination.name)}"></div>
+        <div><label class="label--flush" for="locDestAddr">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locDestAddr" value="${esc(cfg.destination.address)}" placeholder="Straat 1, Alkmaar"></div>
       </div>
-      <div class="grid2" style="margin-top:10px">
-        <div><label style="margin-top:0" for="locDefHeen">${t('loc.defaultHeen')}</label><select class="locInput" id="locDefHeen">${opts(cfg.defaults.heen)}</select></div>
-        <div><label style="margin-top:0" for="locDefTerug">${t('loc.defaultTerug')}</label><select class="locInput" id="locDefTerug">${opts(cfg.defaults.terug)}</select></div>
+      <div class="grid2 mt-4">
+        <div><label class="label--flush" for="locDefHeen">${t('loc.defaultHeen')}</label><select class="locInput" id="locDefHeen">${opts(cfg.defaults.heen)}</select></div>
+        <div><label class="label--flush" for="locDefTerug">${t('loc.defaultTerug')}</label><select class="locInput" id="locDefTerug">${opts(cfg.defaults.terug)}</select></div>
       </div>
-      <p class="muted" style="margin-top:10px">${t('loc.shiftHint')}</p>
-      <p class="muted" style="margin-top:10px"><strong>${t('loc.fixedTitle')}</strong> ${t('loc.fixedHint')}</p>
+      <p class="muted mt-4">${t('loc.shiftHint')}</p>
+      <p class="muted mt-4"><strong>${t('loc.fixedTitle')}</strong> ${t('loc.fixedHint')}</p>
       <div class="grid2">
-        <div><label style="margin-top:0" for="locFixAFC">${t('loc.fixedAFC')}</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
-        <div><label style="margin-top:0" for="locFixATC">${t('loc.fixedATC')}</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
+        <div><label class="label--flush" for="locFixAFC">${t('loc.fixedAFC')}</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
+        <div><label class="label--flush" for="locFixATC">${t('loc.fixedATC')}</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
       </div>
     </div>`;
 }
@@ -519,9 +519,9 @@ export function apiKeysCardHtml(){
       <h2>${t('apikeys.titel')}</h2>
       <p class="muted">${t('apikeys.uitleg')}</p>
       ${status}
-      <label style="margin-top:0" for="apiKeyOrs">${t('apikeys.ors_label')}</label>
+      <label class="label--flush" for="apiKeyOrs">${t('apikeys.ors_label')}</label>
       <input type="password" id="apiKeyOrs" autocomplete="off" spellcheck="false" placeholder="${esc(t('apikeys.ors_placeholder'))}">
-      <div class="rowflex" style="gap:6px;margin-top:8px">
+      <div class="rowflex rowflex--tight mt-3">
         <button type="button" class="btn small secondary" id="apiKeyOrsSave">${t('apikeys.opslaan')}</button>
         ${has? `<button type="button" class="btn small danger" id="apiKeyOrsClear">${t('apikeys.verwijderen')}</button>` : ''}
       </div>

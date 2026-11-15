@@ -1229,3 +1229,10 @@ table.avail td.availCell{text-align:center}
 .rowflex.ruleRow{padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
 .rowflex.prioRow{padding:var(--space-3) var(--space-2);border-bottom:1px solid var(--line)}
 .backupErrors{margin:var(--space-2) 0 var(--space-3) var(--space-8);padding:0;font-size:14px}
+
+/* ---------- Beheer, part 2 (Periode, Locaties, API-sleutels, dag-coördinatoren) ---------- */
+.btn.mt-4{margin-top:var(--space-4)}
+label.dayCoordLabel{margin:0;width:96px}
+.periodField{margin-top:var(--space-4);flex:1}
+.periodHint{margin-top:3px}
+.dayCoordSel{flex:1}
