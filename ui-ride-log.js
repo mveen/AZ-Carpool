@@ -30,10 +30,10 @@ const periodLabel = v => v.mode === 'month' ? new Date(v.year, v.month - 1, 1).t
 export function rideLogRowsHtml(rows, showYear, yearTotals){
   const max = Math.max(1, ...rows.map(r => r.total));
   return `<table class="avail rideLogTable">
-      <thead><tr><th scope="col" style="text-align:left">${t('ridelog.col_family')}</th><th scope="col">${t('ridelog.col_heen')}</th><th scope="col">${t('ridelog.col_terug')}</th><th scope="col">${t('ridelog.col_total')}</th>${showYear? `<th scope="col">${t('ridelog.col_year')}</th>` : ''}</tr></thead>
+      <thead><tr><th scope="col">${t('ridelog.col_family')}</th><th scope="col">${t('ridelog.col_heen')}</th><th scope="col">${t('ridelog.col_terug')}</th><th scope="col">${t('ridelog.col_total')}</th>${showYear? `<th scope="col">${t('ridelog.col_year')}</th>` : ''}</tr></thead>
       <tbody>${rows.map(r=>`<tr>
-        <th scope="row" style="text-align:left;font-weight:700"><button type="button" class="rideLogOpen" data-rlfam="${esc(r.key)}" aria-label="${esc(t('ridelog.open_family', { p1: r.name }))}" style="display:flex;align-items:center;gap:6px;width:100%;min-height:44px;padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer">
-          <span style="flex:1;min-width:0"><span style="display:block">${esc(r.name)}</span>${r.parent? `<span class="muted" style="display:block;font-weight:400">${esc(r.parent)}</span>` : ''}<span class="rideLogBar" aria-hidden="true" style="display:block;height:4px;border-radius:2px;background:var(--accent);opacity:.55;width:${Math.round(r.total/max*100)}%;margin-top:3px"></span></span>${phIcon('chevron-right')}</button></th>
+        <th scope="row"><button type="button" class="rideLogOpen" data-rlfam="${esc(r.key)}" aria-label="${esc(t('ridelog.open_family', { p1: r.name }))}">
+          <span class="rideLogOpen__text"><span class="rideLogOpen__name">${esc(r.name)}</span>${r.parent? `<span class="muted rideLogOpen__parent">${esc(r.parent)}</span>` : ''}<span class="rideLogBar" aria-hidden="true" style="width:${Math.round(r.total/max*100)}%"></span></span>${phIcon('chevron-right')}</button></th>
         <td>${r.heen}</td><td>${r.terug}</td><td><strong class="${r.total? '' : 'fitbad'}">${r.total}</strong></td>${showYear? `<td>${yearTotals[r.key] || 0}</td>` : ''}
       </tr>`).join('')}</tbody>
     </table>`;
@@ -42,18 +42,18 @@ export function rideLogRowsHtml(rows, showYear, yearTotals){
 // Month / year switch and the step buttons: the same on every screen of the card.
 function periodControlsHtml(v){
   const isMonth = v.mode === 'month';
-  return `<div class="rowflex" style="gap:8px;justify-content:flex-start;flex-wrap:wrap">
+  return `<div class="rideLogModes">
         <button type="button" class="btn small ${isMonth? '' : 'secondary'}" data-rlmode="month" aria-pressed="${isMonth}">${t('ridelog.per_month')}</button>
         <button type="button" class="btn small ${isMonth? 'secondary' : ''}" data-rlmode="year" aria-pressed="${!isMonth}">${t('ridelog.per_year')}</button>
       </div>
-      <div class="rowflex" style="gap:8px;margin:10px 0;align-items:center;justify-content:space-between">
+      <div class="rowflex rideLogStep">
         <button type="button" class="iconbtn" data-rlstep="-1" aria-label="${t('ridelog.prev')}" title="${t('ridelog.prev')}">${phIcon('chevron-left')}</button>
-        <strong style="font-size:16px" id="rideLogLabel" aria-live="polite">${esc(periodLabel(v))}</strong>
+        <strong class="rideLogPeriod" id="rideLogLabel" aria-live="polite">${esc(periodLabel(v))}</strong>
         <button type="button" class="iconbtn" data-rlstep="1" aria-label="${t('ridelog.next')}" title="${t('ridelog.next')}">${phIcon('chevron-right')}</button>
       </div>`;
 }
 
-const backHtml = () => `<button type="button" class="btn small secondary" data-rlback style="align-self:flex-start">${phIcon('chevron-left')} ${t('ridelog.title')}</button>`;
+const backHtml = () => `<button type="button" class="btn small secondary rideLogBack" data-rlback>${phIcon('chevron-left')} ${t('ridelog.title')}</button>`;
 
 // One shift of the list: the day (only on the all-shifts screen the family is the main line), heen / terug, and the remove or restore button.
 function shiftRowHtml(r, withFamily){
@@ -62,9 +62,9 @@ function shiftRowHtml(r, withFamily){
   const dir = dirText(r.direction);
   const ref = `data-rlid="${esc(r.id)}" data-rlidx="${r.index}" data-rlfid="${esc(r.familyId)}"`;
   const label = esc(t('ridelog.remove_label', { p1: r.name, p2: dayLabel(r.date), p3: dir }));
-  return `<li class="rideLogShift${r.removed? ' rideLogRemoved' : ''}" style="display:flex;align-items:center;gap:10px;min-height:60px;border-bottom:1px solid var(--line)${r.removed? ';opacity:.85' : ''}">
-      <span class="pill" style="box-sizing:border-box;width:56px;flex-shrink:0;text-align:center;margin:0;font-size:12px;font-weight:700;padding:4px 10px;border-radius:9999px;background:${r.direction === 'heen' ? 'var(--info-soft)' : 'var(--warn-soft)'};color:${r.direction === 'heen' ? 'var(--text-1)' : 'var(--warn-ink)'}">${esc(dir)}</span>
-      <span style="flex:1;min-width:0"><strong style="display:block;font-size:14px">${main}</strong><span class="muted" style="display:block">${esc(sub)}</span></span>
+  return `<li class="rideLogShift${r.removed? ' rideLogRemoved' : ''}">
+      <span class="pill rideLogDir rideLogDir--${r.direction === 'heen' ? 'heen' : 'terug'}">${esc(dir)}</span>
+      <span class="rideLogShift__text"><strong class="rideLogShift__main">${main}</strong><span class="muted rideLogShift__sub">${esc(sub)}</span></span>
       ${r.removed
         ? `<button type="button" class="btn small secondary" data-rlrestore ${ref}>${t('ridelog.restore')}</button>`
         : `<button type="button" class="iconbtn danger" data-rlremove ${ref} aria-label="${label}" title="${t('ridelog.remove')}">${phIcon('trash')}</button>`}
@@ -73,19 +73,19 @@ function shiftRowHtml(r, withFamily){
 
 function shiftListHtml(rows, withFamily, byDay){
   if(!rows.length) return `<p class="muted">${t('ridelog.none_in_period')}</p>`;
-  if(!byDay) return `<ul style="list-style:none;margin:0;padding:0">${rows.map(r => shiftRowHtml(r, withFamily)).join('')}</ul>`;
+  if(!byDay) return `<ul class="rideLogList">${rows.map(r => shiftRowHtml(r, withFamily)).join('')}</ul>`;
   const days = [];
   rows.forEach(r => { const last = days[days.length - 1]; if(last && last.date === r.date) last.rows.push(r); else days.push({ date: r.date, rows: [r] }); });
-  return days.map(d => `<div><div class="muted" style="font-weight:800;padding:10px 0 6px;border-bottom:1px solid var(--line)">${esc(dayLabel(d.date))}</div>
-      <ul style="list-style:none;margin:0;padding:0">${d.rows.map(r => shiftRowHtml(r, true)).join('')}</ul></div>`).join('');
+  return days.map(d => `<div><div class="muted rideLogDay">${esc(dayLabel(d.date))}</div>
+      <ul class="rideLogList">${d.rows.map(r => shiftRowHtml(r, true)).join('')}</ul></div>`).join('');
 }
 
 function removedHtml(rows, withFamily){
   if(!rows.length) return '';
-  return `<div style="margin-top:12px;padding:12px;border-radius:var(--radius-control);border:1px dashed var(--control-line)">
-      <div class="muted" style="font-weight:700;margin-bottom:4px">${t('ridelog.removed_head', { p1: rows.length })}</div>
-      <ul style="list-style:none;margin:0;padding:0">${rows.map(r => shiftRowHtml(r, withFamily)).join('')}</ul>
-      <p class="muted" style="margin:6px 0 0">${t('ridelog.removed_note')}</p>
+  return `<div class="rideLogRemovedBox">
+      <div class="muted rideLogRemovedBox__head">${t('ridelog.removed_head', { p1: rows.length })}</div>
+      <ul class="rideLogList">${rows.map(r => shiftRowHtml(r, withFamily)).join('')}</ul>
+      <p class="muted rideLogRemovedBox__note">${t('ridelog.removed_note')}</p>
     </div>`;
 }
 
@@ -97,11 +97,11 @@ function familyScreenHtml(v, logs, families){
   const name = row ? row.name : '?';
   return `<div class="card" id="rideLogCard" data-rlscreen="family">
       ${backHtml()}
-      <h2 style="margin-top:12px">${esc(name)}</h2>
-      ${row && row.parent? `<p class="muted" style="margin-top:0">${esc(row.parent)}</p>` : ''}
+      <h2 class="mt-5">${esc(name)}</h2>
+      ${row && row.parent? `<p class="muted mt-0">${esc(row.parent)}</p>` : ''}
       ${periodControlsHtml(v)}
       <p id="rideLogSummary"><strong>${t('ridelog.family_summary', { p1: row ? row.total : 0, p2: row ? row.heen : 0, p3: row ? row.terug : 0 })}</strong></p>
-      <div class="muted" style="font-weight:700;padding-bottom:6px;border-bottom:1px solid var(--line)">${t('ridelog.list_head')}</div>
+      <div class="muted rideLogHead">${t('ridelog.list_head')}</div>
       ${shiftListHtml(active, false, false)}
       ${removedHtml(removed, false)}
     </div>`;
@@ -112,7 +112,7 @@ function allScreenHtml(v, logs, families){
   const active = shiftList(logs, families, p), removed = shiftList(logs, families, p, true);
   return `<div class="card" id="rideLogCard" data-rlscreen="all">
       ${backHtml()}
-      <h2 style="margin-top:12px">${t('ridelog.all_title')}</h2>
+      <h2 class="mt-5">${t('ridelog.all_title')}</h2>
       ${periodControlsHtml(v)}
       <p id="rideLogSummary"><strong>${t('ridelog.all_summary', { p1: active.length })}</strong></p>
       ${shiftListHtml(active, true, true)}
@@ -137,14 +137,14 @@ export function rideLogCardHtml(now = new Date()){
       ${empty? `<p class="muted">${t('ridelog.empty')}</p>` : ''}
       <p id="rideLogSummary">${t('ridelog.summary',{p1:s.total,p2:num(s.average),p3:s.min,p4:s.max})}${s.idle? ` <span class="fitbad">${t('ridelog.idle',{p1:s.idle})}</span>` : ''}</p>
       ${rows.length? `<p class="muted">${t('ridelog.hint')}</p>${rideLogRowsHtml(rows, isMonth, yearTotals)}` : `<p class="muted">${t('beheer.nog_geen_gezinnen_toegevoegd')}</p>`}
-      <div class="cardActions" style="margin-top:10px">
+      <div class="cardActions cardActions--roomy">
         <button type="button" class="btn small secondary" data-rlall>${phIcon('list')} ${t('ridelog.all_button')}</button>
       </div>
-      <div class="cardActions" style="margin-top:10px">
+      <div class="cardActions cardActions--roomy">
         <button type="button" class="btn small secondary" id="rideLogExportYear">${phIcon('download')} ${t('ridelog.export_year',{p1:v.year})}</button>
         <button type="button" class="btn small secondary" id="rideLogExportAll">${phIcon('download')} ${t('ridelog.export_all')}</button>
       </div>
-      <select id="rideLogYear" aria-label="${t('ridelog.pick_year')}" style="margin-top:10px">${years.map(y=>`<option value="${y}"${y===v.year? ' selected' : ''}>${y}</option>`).join('')}</select>
+      <select id="rideLogYear" aria-label="${t('ridelog.pick_year')}" class="mt-4">${years.map(y=>`<option value="${y}"${y===v.year? ' selected' : ''}>${y}</option>`).join('')}</select>
     </div>`;
 }
 
