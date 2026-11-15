@@ -591,7 +591,9 @@ function familiesCardHtml(claimed, dupGroups){
     const isCoord = S.coordinatorConfig && S.coordinatorConfig.familyId===id;
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
     const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !S.inviteByFamily[id]? 'code' : ''].filter(Boolean);
+    const open = S.coordEditId===id;   // the edit panel opens right under this row (renderCoordEditor fills the slot)
     return `
+    <div class="famItem${open?' famItem--open':''}" data-famitem="${id}">
     <div class="rowflex famRow">
       <div class="fieldGrow">
         <div class="famName">${esc(fd.girlName||'(naam?)')}</div>
@@ -600,10 +602,12 @@ function familiesCardHtml(claimed, dupGroups){
         ${missing.length? `<div class="fitbad famMissing">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
       <span class="iconRow iconRow--fixed">
-        <button type="button" class="btn small secondary" data-coordedit="${id}">${t('beheer.wijzig')}</button>
+        <button type="button" class="btn small secondary" data-coordedit="${id}" aria-expanded="${open}">${t(open? 'beheer.sluiten' : 'beheer.wijzig')}</button>
         <button type="button" class="iconbtn" data-imptest="${id}" aria-label="Test de app als ${esc(fd.parentName||t('beheer.deze_ouder'))}" title="${t('beheer.testweergave_als_deze_ouder')}">${phIcon('eye')}</button>
         <button type="button" class="iconbtn danger" data-coorddel="${id}" aria-label="Verwijder ${esc(fd.girlName||'gezin')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button>
       </span>
+    </div>
+    <div class="famEditSlot" id="coordEditSlot-${id}"></div>
     </div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_gezinnen_toegevoegd')}</p>`;
   return `<div class="card" id="familiesCard">
@@ -862,8 +866,15 @@ export function renderBeheer(){
       renderShiftPriorityRows(S.selectedShiftKey);
     }
     const cn=document.getElementById('coordNew');
-    if(cn) cn.onclick = ()=>{ S.coordEditId=null; renderCoordEditor(); };
-    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{ S.coordEditId=b.dataset.coordedit; renderCoordEditor(); });
+    if(cn) cn.onclick = ()=>{ S.coordEditId=null; renderBeheer(); };
+    // Wijzig opens the panel under that family's row; the same button (now "Sluiten") closes it again, and opening another family moves it.
+    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{
+      hapticTap();
+      S.coordEditId = S.coordEditId===b.dataset.coordedit? undefined : b.dataset.coordedit;
+      renderBeheer();
+      const item = S.coordEditId!==undefined && document.querySelector('[data-famitem="'+S.coordEditId+'"]');
+      if(item && item.scrollIntoView) item.scrollIntoView({block:'start'});
+    });
     document.querySelectorAll('[data-coorddel]').forEach(b=>b.onclick=()=>twoStepConfirm(b,t('beheer.zeker_nogmaals_klikken'),async ()=>{
       try{
         const fid=b.dataset.coorddel;
@@ -915,8 +926,10 @@ export function renderBeheer(){
 }
 
 export function renderCoordEditor(){
-  const area=document.getElementById('coordEditArea');
+  // An existing family's form sits in the slot under its own row; "new family" keeps the area below the list.
+  const area=document.getElementById(S.coordEditId? 'coordEditSlot-'+S.coordEditId : 'coordEditArea');
   if(!area)return;
+  ['coordEditArea', ...Object.keys(S.families||{}).map(id=>'coordEditSlot-'+id)].forEach(id=>{ const a=document.getElementById(id); if(a && a!==area) a.innerHTML=''; });
   if(S.coordEditId===undefined){area.innerHTML='';return;}
   const isNew = S.coordEditId===null;
   const f = isNew? null : fam(S.coordEditId);
