@@ -42,16 +42,17 @@ await test('browser noise is ignored, real errors are not', () => {
 });
 
 console.log('=== the pipeline ===');
-await test('order: tests + lint -> test site -> smoke -> live', () => {
-  assert.match(job('deploy-test'), /needs: \[tests, lint\]/);
+await test('order: test site -> smoke (side by side with tests + lint); live waits for tests, lint, test site and smoke', () => {
+  assert.doesNotMatch(job('deploy-test'), /needs:/);
   assert.match(job('smoke'), /needs: deploy-test/);
-  assert.match(job('deploy-live'), /needs: \[deploy-test, smoke\]/);
+  assert.match(job('deploy-live'), /needs: \[tests, lint, deploy-test, smoke\]/);
 });
 await test('live is only reached when the smoke test is green, or was skipped on purpose by hand', () => {
   const j = job('deploy-live');
   assert.match(j, /needs\.smoke\.result == 'success'/);
   assert.match(j, /needs\.smoke\.result == 'skipped' && inputs\.skip_smoke/);
   assert.match(j, /needs\.deploy-test\.result == 'success'/);
+  assert.match(j, /needs\.tests\.result == 'success'/); assert.match(j, /needs\.lint\.result == 'success'/);
   assert.match(job('smoke'), /if: \$\{\{ !inputs\.skip_smoke \}\}/);
   assert.match(y, /skip_smoke:[\s\S]*?default: false/);
 });

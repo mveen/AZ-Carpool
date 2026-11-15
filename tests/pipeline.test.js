@@ -54,9 +54,17 @@ await test('the Playwright version is written in one place only, and its browser
 });
 
 console.log('=== the gate, and not testing twice ===');
-await test('lint is part of the deploy gate: it runs next to the tests and the test site waits for both', () => {
+await test('lint is part of the deploy gate: it runs next to the tests, and LIVE waits for tests, lint, the test site and the smoke test', () => {
   const y = read('.github/workflows/deploy.yml');
-  assert.match(job(y, 'lint'), /bash scripts\/run-lint\.sh/); assert.doesNotMatch(job(y, 'lint'), /needs:/); assert.match(job(y, 'deploy-test'), /needs: \[tests, lint\]/);
+  assert.match(job(y, 'lint'), /bash scripts\/run-lint\.sh/); assert.doesNotMatch(job(y, 'lint'), /needs:/); assert.doesNotMatch(job(y, 'tests'), /needs:/);
+  const live = job(y, 'deploy-live');
+  assert.match(live, /needs: \[tests, lint, deploy-test, smoke\]/); assert.match(live, /needs\.tests\.result == 'success'/); assert.match(live, /needs\.lint\.result == 'success'/);
+});
+await test('the test site chain starts at once (no wait for the tests); nothing that touches live comes before the tests are green', () => {
+  const y = read('.github/workflows/deploy.yml');
+  assert.doesNotMatch(job(y, 'deploy-test'), /needs:/);
+  const beforeLive = y.slice(0, y.indexOf('\n  deploy-live:\n'));
+  assert.doesNotMatch(beforeLive.replace(/#[^\n]*/g, ''), /domains\/azcarpool\.nl|RULES_KEY_LIVE|build:deploy\n|azcarpool-cron/);
 });
 await test('after a merge the tests run once (in deploy.yml), on pull requests in tests.yml: no push trigger in tests.yml', () => {
   const t = read('.github/workflows/tests.yml');
