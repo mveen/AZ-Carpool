@@ -164,9 +164,6 @@ await test('commit() says false when a precondition fails (changed, missing or a
   await assert.rejects(client(() => json(200, {})).fs.commit([{ nothing: 'a' }]), /unknown write/);
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
-
 await test('queryDocuments: asks the server for only the matching documents (one filter, or several as AND) and skips the empty answer', async () => {
   const { fs, calls } = client(() => json(200, [{ document: docOf('pushQueue/a') }, { readTime: 'x' }]));
   const docs = await fs.queryDocuments('pushQueue', [{ field: 'createdAt', op: '>=', value: 5 }]);
@@ -177,3 +174,6 @@ await test('queryDocuments: asks the server for only the matching documents (one
   assert.equal(JSON.parse(calls[1].init.body).structuredQuery.where.compositeFilter.op, 'AND');
   await assert.rejects(() => fs.queryDocuments('x', [{ field: 'a', op: '!=', value: 1 }]), /unknown operator/);
 });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);

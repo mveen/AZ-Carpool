@@ -411,11 +411,8 @@ await test('without its settings it stops with exit code 1 and one clear line; t
   assert.match(readFileSync(join(here, '..', 'cron', 'run.sh'), 'utf8'), /push\)\s+exec "\$best" "\$here\/push\.mjs"/);
 });
 
-console.log(`\n${passed} passed, ${failed} failed`);
-process.exit(failed ? 1 : 0);
-
 console.log('=== quota: only what a run needs is read ===');
-await testAsync('the queue: an entry older than the look-back is not read, a recent one is, an expired one is read once and deleted', async () => {
+await test('the queue: an entry older than the look-back is not read, a recent one is, an expired one is read once and deleted', async () => {
   const n = notif('f1');
   const old = { ...queueEntry('testNotifications/n1', 'f1', n), createdAt: T10 - 5 * DAY, expiresAt: T10 + 9 * DAY };
   const gone = { ...queueEntry('testNotifications/n1', 'f1', n), createdAt: T10 - 20 * DAY, expiresAt: T10 - 6 * DAY };
@@ -424,16 +421,19 @@ await testAsync('the queue: an entry older than the look-back is not read, a rec
   assert.equal(fs.data.has('pushQueue/gone'), false, 'the expired entry is removed');
   assert.ok(fs.data.has('pushQueue/old'), 'a not yet expired entry stays');
   assert.equal(fs.data.get('pushQueue/old').sentTo, undefined, 'but it is not sent any more');
-  assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'pushQueue'), [['pushQueue', 0], ['pushQueue', 1]], 'two queries: recent (none) and expired (one)');
+  assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'pushQueue'), [['pushQueue', 1], ['pushQueue', 1]], 'two queries: recent (only the entry of the test data, not the 5 days old one) and expired (one)');
 });
-await testAsync('the queue: a recent entry is read once and sent as before', async () => {
+await test('the queue: a recent entry is read once and sent as before', async () => {
   const fs = fakeFirestore(base()), send = sender();
   const r = await withFakeNowAsync(new Date(T10).toISOString(), () => runPush({ firestore: fs, app, send, vapidFile: join(tmp, 'k-quota2', 'push-vapid.json'), subject: 's', now: T10, log: () => {}, warn: () => {} }));
   assert.equal(r.sent, 1);
   assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'pushQueue'), [['pushQueue', 1], ['pushQueue', 0]]);
 });
-await testAsync('the offers: only the open ones are read', async () => {
+await test('the offers: only the open ones are read', async () => {
   const fs = fakeFirestore(base({ 'settings/ritbeurs': { on: true }, 'offers/a': { status: 'open', weekKey: '2026-W40' }, 'offers/b': { status: 'taken' }, 'offers/c': { status: 'withdrawn' } }));
   await unc(fs, T10);
   assert.deepEqual(fs.calls.queried.filter(([c]) => c === 'offers'), [['offers', 1]]);
 });
+
+console.log(`\n${passed} passed, ${failed} failed`);
+process.exit(failed ? 1 : 0);
