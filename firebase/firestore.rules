@@ -136,11 +136,15 @@ service cloud.firestore {
     }
     // lastUpdateDeviation and matchCache must be writable by any member (the Dagafwijking
     // and match-carpool features), so they get their own rules ahead of the general one.
+    // Shape checks on what any member writes (types of the core fields only, no list of allowed fields: new optional fields must stay possible).
+    // The coordinator can still write these two documents through the general settings rule below (rules from different match blocks are OR-ed).
     match /settings/lastUpdateDeviation {
-      allow read, write: if isMember();
+      allow read: if isMember();
+      allow write: if isMember() && request.resource.data.at is number && request.resource.data.by is string;
     }
     match /settings/matchCache {
-      allow read, write: if isMember();
+      allow read: if isMember();
+      allow write: if isMember() && request.resource.data.fetchedAt is number && request.resource.data.matches is list;
     }
     // Calculated distances of away matches (US-21): every member reads them. They are written by the daily server job (cron/match-calendars.mjs,
     // service account, outside these rules) and by the coordinator's own app; a parent's browser never calculates or writes them.
@@ -227,9 +231,15 @@ service cloud.firestore {
     // ---- Deviations (Dagafwijking): any member may read/write ----------------------
     // Deletes are refused until the deviation's own `expiresAt`, so a stale browser tab still
     // living in last week can never wipe this week's changes.
+    // A write must keep the shape the Rooster and the weekly purge rely on (day, direction, the cars, the expiry), so one bad write cannot break the
+    // screens for everybody. Only the types of those fields are checked; other (optional) fields are free.
+    function validDeviation() {
+      let d = request.resource.data;
+      return d.day is string && d.direction in ['heen', 'terug'] && d.cars is list && d.expiresAt is number;
+    }
     match /deviations/{docId} {
       allow read: if isMember();
-      allow create, update: if isMember();
+      allow create, update: if isMember() && validDeviation();
       allow delete: if isMember() && (
         !('expiresAt' in resource.data) || request.time.toMillis() >= resource.data.expiresAt
       );
@@ -439,8 +449,10 @@ service cloud.firestore {
       allow delete: if isCoordinator();
     }
 
+    // The cars of a match carpool must stay a list (the Wedstrijden tab loops over them); other fields are free.
     match /matchCarpools/{matchSlug} {
-      allow read, write: if isMember();
+      allow read, delete: if isMember();
+      allow create, update: if isMember() && request.resource.data.cars is list;
     }
 
     // Practice matches (oefenwedstrijden): every linked parent (and the coordinator) can add, change and remove them.
