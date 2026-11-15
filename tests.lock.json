@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "eb68ad79fcc6fb4c31d23f359bc95399f5d8d59c19d1b7e8c4a8572137cd5e69",
-    "test": "d16653858a2fbc15ae2e8d2e5ccd8cd6d34e5858474678746c8840ff8d18a8e5"
+    "module": "7c4b466b67aff795606dc5138c7490606449476e895804852cc73e68e912a18f",
+    "test": "9696c5e5e5909b46fb76523817f258e48a937c9a99055102e67eaedb3f9c92a9"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -73,7 +73,7 @@
   },
   "i18n.js": {
     "module": "390c21eee47838028d4de4c3f18685b01ab345b1e4a56759af18153c183990c0",
-    "test": "b117aee8cbce16ec48111251faff27e48c7b5231e3b2daab191a58f539bc1657"
+    "test": "1904d0a78d9d7abde167c1a9405c60a3b00c1860b174d03e3cb400f9ebb5dcae"
   },
   "locations.js": {
     "module": "0fe899cf4c5bfbc94ec77199ceb6ef72f6371d40b9995ed7f6f2a24cf7152d0d",
@@ -176,8 +176,8 @@
     "test": "8fbe64a0a2d0b0a5621c0c8b80be83878b766274a5bad435a691cb6c9cbc8e72"
   },
   "texts-nl.js": {
-    "module": "de0064d472565c813a0d3f0e3256db6bc08c76413b12bb92e3aed52885b26c33",
-    "test": "b117aee8cbce16ec48111251faff27e48c7b5231e3b2daab191a58f539bc1657"
+    "module": "b8350bd2a02dc85d37971cb06003a64417bb4aa7fa2f08dffee92b2091e9642e",
+    "test": "1904d0a78d9d7abde167c1a9405c60a3b00c1860b174d03e3cb400f9ebb5dcae"
   },
   "ui-agenda.js": {
     "module": "66aac878ed9496ccfd12650fee1353d5dea82edae5a30a2d2b1ce4e3286b6a92",
@@ -244,8 +244,8 @@
     "test": "db6584290fd304e084b76ba27a8f0779c8b2f37ffe871145f702edb178fa0633"
   },
   "ui-profile.js": {
-    "module": "4b1595bf7e33f9576852f4f43fcef368987af13961a06c6651ecd340025ec47f",
-    "test": "c283753e8a569e200af23d1bcd7fb04e81d75c17b3646b71f61d26b67ab0c870"
+    "module": "9e7dbddf1602aba671496c2fbda987aa1d619bbfa1ce551864008c33e6b90959",
+    "test": "6d38a2d8e05d11e5f2c0c643200c1d4575493d908feb747e1f8f09e23391c126"
   },
   "ui-push-device.js": {
     "module": "9ff878d5ef2286bfe389f35a7b1e74d170413aeb6953cdf2338b28058db8e68d",

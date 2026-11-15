@@ -52,7 +52,7 @@ test('an unlinked parent sees the gate form when a coordinator exists', () => {
   renderGateOrApp();
   const s = text(dom.html('tab-gate'));
   assert.match(s, /Toegang tot AZ Carpool/); assert.match(s, /Toegang aanvragen/);
-  assert.match(dom.html('tab-gate'), /id="gatePhone"/); assert.match(dom.html('tab-gate'), /id="gateCode"/);
+  assert.match(dom.html('tab-gate'), /Je eigen telefoonnummer/); assert.match(dom.html('tab-gate'), /Dat is niet het nummer van de coördinator/); assert.match(dom.html('tab-gate'), /id="gatePhone"/); assert.match(dom.html('tab-gate'), /id="gateCode"/);
 });
 test('a linked parent gets the tabs, not the gate', () => {
   useFakeDb({}); sampleParentState({ linksLoaded: true, coordinatorExists: true });

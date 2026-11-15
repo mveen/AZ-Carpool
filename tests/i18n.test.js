@@ -587,6 +587,11 @@ test('the gate tells a parent to use their OWN number, not the coordinator\'s', 
   const nl = readSrcFile(new URL('../texts-nl.js', import.meta.url), 'utf8');
   assert.match(nl, /Vul je eigen telefoonnummer in: het nummer dat de coördinator van jou heeft, niet dat van de coördinator zelf/);
 });
+test('the gate intro and the label say it is your OWN number, not the coordinator\'s', () => {
+  const nl = readSrcFile(new URL('../texts-nl.js', import.meta.url), 'utf8');
+  assert.match(nl, /Vul je eigen telefoonnummer in en de code die je van de coördinator hebt gekregen\. Dat is niet het nummer van de coördinator\./);
+  assert.match(nl, /"profile\.gate_eigen_telefoonnummer": "Je eigen telefoonnummer"/);
+});
 test('no text says "meisje", "meid" or "meiden": it is speelster or dochter', () => {
   assert.deepEqual(Object.entries(nl).filter(([, v]) => /\b(meisjes?|meid|meiden)\b/i.test(String(v))).map(([k]) => k), []);
 });

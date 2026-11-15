@@ -412,7 +412,7 @@ export function renderGate(){
     <div class="card">
       <h2>${t('profile.toegang_tot_az_carpool')}</h2>
       <p class="muted">${t('profile.vul_je_telefoonnummer_en_de')}</p>
-      <label>${t('profile.telefoonnummer')}</label>
+      <label>${t('profile.gate_eigen_telefoonnummer')}</label>
       <input type="tel" id="gatePhone" inputmode="tel" autocomplete="tel" placeholder="06-12345678">
       <label>${t('profile.code')}</label>
       <input type="text" id="gateCode" inputmode="numeric" autocomplete="one-time-code" maxlength="32" placeholder="${t('profile.code_van_de_coordinator')}">
