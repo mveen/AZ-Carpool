@@ -7,6 +7,11 @@ import { fixedVenue, parseCoordinates } from './locations.js';
 
 export const ORS_BASE = 'https://api.openrouteservice.org';
 const AALSMEER = { lon: 4.7605, lat: 52.2625 }; // bias for the address search
+// The search is limited to the countries where matches are played (the Netherlands, Belgium, Germany): without it a street + number +
+// postcode can match a place far away (Noorddammerweg 48-C, 1187 ZT Amstelveen came out as Konglerudtoppen 48 in Oslo, 1396 km away).
+export const GEOCODE_COUNTRY = 'NL,BE,DE';
+// No match is further away than this (one way, from Aalsmeer). A longer route is a wrong place, so it is never shown ("locatie onbekend").
+export const MAX_PLAUSIBLE_KM = 300;
 
 // What to show for one match. PURE.
 //   isHome: true/false/null (null = unknown)   location: calendar location text
@@ -20,6 +25,8 @@ export function distanceInfo({ location, stored, fixedKm }) {
     return km ? { kind: 'fixed', km } : { kind: 'fixedMissing', venue };
   }
   if (!loc) return { kind: 'unknown' };
+  // A stored result that is too long to be true (an older wrong place) counts as not calculated yet, so it is calculated again.
+  if (stored && stored.loc === loc && !stored.unknown && stored.km > MAX_PLAUSIBLE_KM) return { kind: 'pending' };
   if (stored && stored.loc === loc) return stored.unknown ? { kind: 'unknown' } : { kind: 'km', km: stored.km };
   return { kind: 'pending' };
 }
@@ -57,7 +64,7 @@ async function getJson(fetchFn, url) {
 export async function geocode(fetchFn, apiKey, text) {
   const gps = parseCoordinates(text);
   if (gps) return { lon: gps.lon, lat: gps.lat };
-  const url = `${ORS_BASE}/geocode/search?api_key=${encodeURIComponent(apiKey)}&text=${encodeURIComponent(text)}&size=1`
+  const url = `${ORS_BASE}/geocode/search?api_key=${encodeURIComponent(apiKey)}&text=${encodeURIComponent(text)}&size=1&boundary.country=${GEOCODE_COUNTRY}`
     + `&focus.point.lon=${AALSMEER.lon}&focus.point.lat=${AALSMEER.lat}`;
   const data = await getJson(fetchFn, url);
   const c = data && data.features && data.features[0] && data.features[0].geometry && data.features[0].geometry.coordinates;
@@ -76,6 +83,7 @@ export async function routeKm({ fetchFn, apiKey, originText, destinationText }) 
     const data = await getJson(fetchFn, url);
     const m = data && data.features && data.features[0] && data.features[0].properties && data.features[0].properties.summary && data.features[0].properties.summary.distance;
     if (typeof m !== 'number') return { ok: false, reason: 'notfound' };
+    if (m / 1000 > MAX_PLAUSIBLE_KM) return { ok: false, reason: 'notfound' };   // a wrong place: no number is better than a wrong one
     return { ok: true, km: roundKm(m / 1000) };
   } catch (e) { return { ok: false, reason: 'error', error: (e && e.message) || String(e) }; }
 }

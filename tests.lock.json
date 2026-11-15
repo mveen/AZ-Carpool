@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "bb2dbdd26f59e3db0fe3432cedd8f2565ecf485c246566a157162dc40eb58bfc",
-    "test": "617aaac3fc6bf2e40c70db52f3974946839ca35f9fe02559c2b8417283e8202c"
+    "module": "b5a4ca92df289a648e8252e70f4540196979992f70f60b7faac70100bce3eba7",
+    "test": "d75712ad09334cda6336e0aebe5fc038b2c89e2f532e21269a41149627554b38"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -36,8 +36,8 @@
     "test": "133a70d5e24b7e4a96c644ed185006686178f74f4f41c9956b125431f65565e7"
   },
   "distance.js": {
-    "module": "9705c36d96cb9f9b9d7734104cf8e1d157c490608e28be5c974e449805ec90ce",
-    "test": "aafb80b05b1eb8258a0267643f9853b6d80fe81f0434047791bec9ed7028a05e"
+    "module": "a088a8eaabad7d744472dcfa36e7aa98cfe35a306741683efc5f16e170531135",
+    "test": "27409e777e31e49d3f1b44f4d31823829a3fb83ffd24a5a31fd9aa93a426f0aa"
   },
   "driver-car-data.js": {
     "module": "d86e43e34b28d46d3d2af5e503965c1ef9bed42307b47c4257c78eb51db1f1d2",
