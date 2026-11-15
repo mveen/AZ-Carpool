@@ -540,6 +540,21 @@ export default [
     tab: 'schedule',
   },
   {
+    id: 'beheer-wachttijd-speelsters',
+    title: 'Beheer: bekijken hoe lang de speelsters wachten (Wachttijd speelsters)',
+    keywords: 'wachttijd wachten speelsters klacht klagen gemiddeld totaal week maand jaar eerlijk langer wachten',
+    coordinatorOnly: true,
+    body: [
+      'Onder Gezinnen, bij Wachttijd speelsters, zie je hoe lang elke speelster wacht. Zo kun je zien of een klacht over meer wachten dan een ander terecht is.',
+      'Heen wacht een speelster op de rest van haar tijd nadat de auto is aangekomen. Terug wacht ze vanaf haar eindtijd tot de auto vertrekt. Alleen shifts die zijn vastgelegd sinds deze functie bestaat tellen mee, dus oudere ritten staan er niet in.',
+      '• Kies Per week, Per maand of Per jaar en blader met Vorige en Volgende.',
+      '• De speelster die het langst wacht staat bovenaan, met het aantal ritten, het totaal en het gemiddelde per rit.',
+      '• Een zin boven de tabel zegt of iemand duidelijk langer wacht dan de rest: minstens 10 minuten per rit boven het gemiddelde, vanaf 3 ritten.',
+      'Het gemiddelde per rit is eerlijker dan het totaal, want wie vaker meerijdt heeft vanzelf meer totaal.',
+    ],
+    tab: 'beheer',
+  },
+  {
     id: 'beheer-gereden-shifts',
     title: 'Beheer: bekijken hoe vaak elk gezin heeft gereden (Gereden shifts)',
     keywords: 'gereden shifts geteld teller telling rijbeurten eerlijk verdelen export csv excel jaar maand verwijder shift terugzetten rijfrequentie',

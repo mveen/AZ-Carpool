@@ -47,6 +47,8 @@ Since the modularisation, `index.html` is only a thin page: the app itself lives
 | `family-backup.js` | Back-up / restore of the families as one CSV file: build, read, check, plan the overwrite (pure functions) | `family-backup.test.js` |
 | `ride-log.js` | Gereden shifts: the log of rides that took place (one document per shift), counts per family per month / year, the list of rides behind the counts, removing a ride (`removed` on the car: it stays in the log, so it is not logged again, but does not count), CSV export (pure functions) | `ride-log.test.js` |
 | `ui-ride-log.js` | The Beheer card "Gereden shifts": month / year view, the rides of one family, all rides by date, remove / restore a ride one by one (bottom sheet to confirm), export buttons | `ui-ride-log.test.js` |
+| `wait-log.js` | Wachttijd speelsters: the waiting of each player per week / month / year from the ride log (`waits` on the cars), the team summary, "waits clearly more than the rest", minutes as text (pure functions); the waiting itself is measured by `carWaits` in `rides.js` | `wait-log.test.js` |
+| `ui-wait-log.js` | The Beheer card "Wachttijd speelsters": week / month / year view with a table per player and one sentence on whether somebody waits clearly more | `ui-wait-log.test.js` |
 | `ui-period.js` | Periode, parent side: task card, form and "doorgegeven" card in Wijzigen, badge on the Wijzigen tab | `ui-period.test.js` |
 | `ui-period-rooster.js` | Periode, Rooster tab: overview for the coordinator, the temporary rooster (third view) and its edits | `ui-period-rooster.test.js` |
 | `flex.js` | Flex signup: join a car, drive yourself, sign off, departure time (pure functions) | `flex.test.js` |
@@ -118,6 +120,7 @@ The detailed notes per feature live in `docs/functies/`, moved there unchanged f
 | Help | [`docs/functies/help.md`](docs/functies/help.md) | *Help ("?" in the header)* |
 | Push-meldingen (test en live) | [`docs/functies/push-meldingen.md`](docs/functies/push-meldingen.md) | *Push-meldingen (test en live)* |
 | Inloggen (gate) en het foutlogboek | [`docs/functies/inloggen-en-foutlogboek.md`](docs/functies/inloggen-en-foutlogboek.md) | *Inloggen (gate) and the error log (v88)* |
+| Wachttijd speelsters | [`docs/functies/wachttijd-speelsters.md`](docs/functies/wachttijd-speelsters.md) | *Wachttijd speelsters (Beheer)* |
 | Back-up en terugzetten | [`docs/functies/back-up-en-terugzetten.md`](docs/functies/back-up-en-terugzetten.md) | *Back-up (host and the owner's Mac), restore* |
 | Planningslogica, reads en quota | [`docs/functies/planningslogica.md`](docs/functies/planningslogica.md) | *Planningslogica (standard rooster and period rooster)* |
 

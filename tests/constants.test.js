@@ -203,5 +203,6 @@ test('v247: terug without the bus shows the opponent and a rough time', () => { 
 
 test('v248: match rides in Mijn week are weekday-style cards (violet), without a switch', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 248); });
 
+test('v266: the version was bumped with the Wachttijd speelsters card', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 266); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

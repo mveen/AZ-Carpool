@@ -1181,6 +1181,12 @@ label.label--tight{margin-top:var(--space-3)}
 .mt-4{margin-top:var(--space-4)}
 .unlinkBar{border-top:1px solid var(--line);margin-top:var(--space-6);padding-top:var(--space-1)}
 
+/* Beheer, Wachttijd speelsters: the table reads from the left, the figures stay centred like the other Beheer tables */
+.waitLogTable thead th:first-child,.waitLogTable tbody th{text-align:left}
+.waitLogTable tbody th{font-weight:700}
+.waitLogSub{display:block;font-weight:400}
+.waitLogControls{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:flex-start}
+.waitLogStep{margin:var(--space-3) 0;align-items:center}
 /* ---------- Ritlog (Beheer): replaces the inline styles of ui-ride-log.js ---------- */
 .mt-0{margin-top:0}
 .mt-5{margin-top:var(--space-5)}
