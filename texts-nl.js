@@ -349,7 +349,7 @@ export default {
   "profile.vul_alle_velden_in": "Vul alle velden in.",
   "profile.code_klopt_niet_controleer_en": "Code klopt niet. Controleer en probeer opnieuw.",
   "profile.toegang_verleend": "Toegang verleend ✓",
-  "profile.dit_telefoonnummer_hoort_niet_bij": "Dit telefoonnummer hoort niet bij deze code. Gebruik het nummer dat de coördinator van je heeft.",
+  "profile.dit_telefoonnummer_hoort_niet_bij": "Dit telefoonnummer hoort niet bij deze code. Vul je eigen telefoonnummer in: het nummer dat de coördinator van jou heeft, niet dat van de coördinator zelf.",
   "profile.probleem_met_inloggen_opnieuw_beginnen": "Lukt het inloggen niet? Opnieuw beginnen",
   "profile.even_opnieuw_verbinden": "Even opnieuw verbinden…",
   "heal.sluit_tabs": "De opgeslagen gegevens in deze browser zijn in de war. Sluit andere tabbladen van AZ Carpool en ververs de pagina.",

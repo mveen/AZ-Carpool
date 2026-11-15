@@ -23,7 +23,14 @@ export async function clearOfflineCopy(idb = globalThis.indexedDB) {
   return n;
 }
 
+// While "Opnieuw beginnen" runs, the sign-out and the closing database make the app report two problems of their own ("signed-out", "links-aborted").
+// They are expected then, so app.js asks isResetting() and leaves them out of the problem log. The flag stays on: the page reloads right after.
+let resetting = false;
+export function isResetting() { return resetting; }
+export function _resetResettingForTests() { resetting = false; }
+
 export async function resetSession({ win = globalThis.window, nav = globalThis.navigator, cacheApi = globalThis.caches, idb = globalThis.indexedDB } = {}) {
+  resetting = true;
   try { await db.signOut(); } catch (e) { /* carry on: the rest still helps */ }
   try { if (cacheApi && cacheApi.keys) for (const k of await cacheApi.keys()) await cacheApi.delete(k); } catch (e) { /* ignore */ }
   try { await clearOfflineCopy(idb); } catch (e) { /* ignore */ }
