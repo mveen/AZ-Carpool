@@ -29,7 +29,7 @@ await check('family cannot offer for another family', setDoc(doc(as('u1'), 'offe
 await check('offer with extra field refused', setDoc(doc(as('u1'), 'offers/o3'), { ...offer('f1'), extra: 1 }), false);
 await check('offer created already taken refused', setDoc(doc(as('u1'), 'offers/o4'), { ...offer('f1'), status: 'taken' }), false);
 // first yes wins: two batches
-const take = (u, f) => { const d = as(u); const b = writeBatch(d); b.update(doc(d, 'offers/o1'), { status: 'taken', takenBy: f, takenAt: 5 }); b.set(doc(d, 'deviations/Do_heen'), { day: 'Do', cars: [] }); b.set(doc(d, `families/f1/notifications/taken_o1_f1`), notif('f1')); return b.commit(); };
+const take = (u, f) => { const d = as(u); const b = writeBatch(d); b.update(doc(d, 'offers/o1'), { status: 'taken', takenBy: f, takenAt: 5 }); b.set(doc(d, 'deviations/Do_heen'), { day: 'Do', direction: 'heen', weekKey: '2026-W47', expiresAt: 1790000000000, cars: [] }); b.set(doc(d, `families/f1/notifications/taken_o1_f1`), notif('f1')); return b.commit(); };
 await check('offerer cannot take own ride', take('u1', 'f1'), false);
 await check('taking as someone else refused (takenBy mismatch)', take('u3', 'f2'), false);
 await check('first taker wins (batch)', take('u2', 'f2'));

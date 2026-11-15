@@ -96,7 +96,7 @@ await check('a parent can delete its own withdrawn request', (async () => { awai
 
 console.log('--- existing rules untouched');
 await reset();
-await check('deviations: a member can still write', setDoc(doc(as('u4'), 'deviations/Do_heen'), { day: 'Do', cars: [], weekKey: WK }));
+await check('deviations: a member can still write', setDoc(doc(as('u4'), 'deviations/Do_heen'), { day: 'Do', direction: 'heen', cars: [], weekKey: WK, expiresAt: 4102444800000 }));
 await check('settings: a parent still cannot write', setDoc(doc(as('u4'), 'settings/other'), { a: 1 }), false);
 await check('settings: the coordinator still can', setDoc(doc(as('coord'), 'settings/other'), { a: 1 }));
 await check('families: a family still updates its own', updateDoc(doc(as('u4'), 'families/f4'), { parentName: 'x' }));
