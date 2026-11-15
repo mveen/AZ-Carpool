@@ -10,7 +10,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
-import { hasApiKey, distanceInfo, roundKm, geocode, routeKm, ensureDistances, forgetAttempts, fetchWithTimeout, ORS_BASE } from '../distance.js';
+import { hasApiKey, distanceInfo, roundKm, geocode, routeKm, ensureDistances, forgetAttempts, fetchWithTimeout, ORS_BASE, MAX_PLAUSIBLE_KM } from '../distance.js';
 
 const fixedKm = { AFC: 36, ATC: null };
 
@@ -40,6 +40,10 @@ test('AFC and ATC use the fixed distance from Beheer, never a calculated one', (
 test('a home match at another place is calculated like an away match (pending until stored)', () => {
   assert.deepEqual(distanceInfo({ isHome: true, location: 'Sportpark Aalsmeer', fixedKm }), { kind: 'pending' });
   assert.deepEqual(distanceInfo({ isHome: true, location: 'Sportpark Aalsmeer', stored: { loc: 'Sportpark Aalsmeer', km: 3.2 }, fixedKm }), { kind: 'km', km: 3.2 });
+});
+test('a stored distance that is too long to be true (an older wrong place) is calculated again', () => {
+  assert.deepEqual(distanceInfo({ isHome: false, location: 'Noorddammerweg 48-C, 1187 ZT Amstelveen', stored: { loc: 'Noorddammerweg 48-C, 1187 ZT Amstelveen', km: 1396 }, fixedKm }), { kind: 'pending' });
+  assert.deepEqual(distanceInfo({ isHome: false, location: 'Ver weg', stored: { loc: 'Ver weg', km: MAX_PLAUSIBLE_KM }, fixedKm }), { kind: 'km', km: MAX_PLAUSIBLE_KM });
 });
 test('roundKm: one decimal below 100 km, whole km above', () => {
   assert.equal(roundKm(42.349), 42.3); assert.equal(roundKm(120.4), 120);
@@ -73,6 +77,17 @@ await testAsync('routeKm: geocodes both places, asks for the car route and retur
   assert.deepEqual(r, { ok: true, km: 42.3 });
   assert.equal(f.urls.length, 3);
   assert.match(f.urls[2], /\/v2\/directions\/driving-car\?api_key=K&start=4\.76,52\.26&end=5\.06,52\.64$/);
+});
+await testAsync('the address search is limited to the Netherlands (a street + number + postcode must not land in Oslo)', async () => {
+  const f = fakeOrs({});
+  await geocode(f.fetchFn, 'K', 'Noorddammerweg 48-C, 1187 ZT Amstelveen');
+  assert.match(f.urls[0], /&boundary\.country=NL(&|$)/);
+});
+await testAsync('routeKm: a route longer than any real match is a wrong place: "notfound", never a number', async () => {
+  const far = await routeKm({ fetchFn: fakeOrs({ meters: 1396000 }).fetchFn, apiKey: 'K', originText: 'A', destinationText: 'B' });
+  assert.deepEqual(far, { ok: false, reason: 'notfound' });
+  const near = await routeKm({ fetchFn: fakeOrs({ meters: 299000 }).fetchFn, apiKey: 'K', originText: 'A', destinationText: 'B' });
+  assert.deepEqual(near, { ok: true, km: 299 });
 });
 await testAsync('routeKm: an address that is not found is a final "notfound"', async () => {
   const f = fakeOrs({ geo: { B: null } });
