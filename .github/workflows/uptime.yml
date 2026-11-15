@@ -1,0 +1,24 @@
+name: Uptime azcarpool.nl
+
+# Every hour (and by hand): is the live site up and complete? Read-only: it only fetches public files (scripts/uptime-check.mjs).
+# Red = the site (or a file of the app) is not served. GitHub mails the owner about a failed scheduled run. The wait page of the host (its bot
+# check) is not an outage: that gives a green run with a notice. Without this, a broken site is found by a parent, not by the pipeline.
+on:
+  schedule:
+    - cron: '23 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  uptime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 22
+      - name: Is the live site up and complete?
+        run: node scripts/uptime-check.mjs

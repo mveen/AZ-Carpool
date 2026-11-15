@@ -35,7 +35,8 @@ await test('tests run before the upload, and the server identity is pinned in th
   assert.equal(kh.length, 1);
   assert.match(kh[0], /^\[h70\.mijn\.host\]:26 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5[A-Za-z0-9+/]{48}$/);
   assert.match(y, /SSH_HOST: h70\.mijn\.host/); assert.match(y, /SSH_PORT: '26'/);
-  assert.match(y, /cp \.github\/deploy\/known_hosts/);
+  assert.match(y, /uses: \.\/\.github\/actions\/ssh-setup/);
+  assert.match(readFileSync(join(repo, '.github/actions/ssh-setup/action.yml'), 'utf8'), /cp "\$KNOWN_HOSTS"/);
   assert.ok(y.indexOf('npm test') < y.indexOf('deploy-rsync.sh'));
   assert.match(y, /StrictHostKeyChecking=yes/);
   assert.match(y, /permissions:\s*\n\s*contents: read/);

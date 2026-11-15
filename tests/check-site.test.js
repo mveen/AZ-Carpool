@@ -38,7 +38,7 @@ const files = (site, { version = 'v9', project = 'az-carpool-test', banner = tru
   'firebase-config.js': `export const firebaseConfig = { projectId: "${project}" };\n`,
 });
 // One situation: what the site serves (web), what is on the host, and how often the wait page comes first.
-function setup({ target = 'live', dist = {}, web = {}, host = {}, wait = 0, ssh = true, jsType } = {}) {
+function setup({ target = 'live', dist = {}, web = {}, host = {}, wait = 0, ssh = true, jsType, waitTries = '3' } = {}) {
   const site = target === 'live' ? 'https://azcarpool.nl' : 'https://test.azcarpool.nl';
   const remote = target === 'live' ? 'domains/azcarpool.nl/public_html' : 'domains/test.azcarpool.nl/public_html';
   const dir = mkdtempSync(join(tmpdir(), 'az-cs-'));
@@ -47,12 +47,13 @@ function setup({ target = 'live', dist = {}, web = {}, host = {}, wait = 0, ssh 
   put('dist', { ...base, ...dist }); put('web', { ...base, ...web }); put('host/' + remote, { ...base, ...host });
   mkdirSync(join(dir, 'bin')); writeFileSync(join(dir, 'wait.html'), WAIT);
   for (const [n, src] of [['curl', CURL], ['ssh', SSH]]) { writeFileSync(join(dir, 'bin', n), src); chmodSync(join(dir, 'bin', n), 0o755); }
-  const env = { ...process.env, PATH: join(dir, 'bin') + ':' + process.env.PATH, FAKE_DIR: dir, FAKE_SITE: site, FAKE_WAIT: String(wait), CHECK_TRIES: '3', CHECK_WAIT: '0', REMOTE_DIR: remote + '/' };
+  const env = { ...process.env, PATH: join(dir, 'bin') + ':' + process.env.PATH, FAKE_DIR: dir, FAKE_SITE: site, FAKE_WAIT: String(wait), CHECK_TRIES: '3', CHECK_WAIT: '0', CHECK_WAIT_TRIES: waitTries, REMOTE_DIR: remote + '/' };
   if (ssh) env.SITE_SSH = 'ssh -p 26 user@host'; else delete env.SITE_SSH;
   if (jsType) env.FAKE_JS_TYPE = jsType;
   const r = spawnSync('bash', [script, target, site, join(dir, 'dist')], { encoding: 'utf8', env });
+  let curlCalls = 0; try { curlCalls = +readFileSync(join(dir, 'count'), 'utf8'); } catch (e) { /* site not asked */ }
   let sshLog = ''; try { sshLog = readFileSync(join(dir, 'ssh.log'), 'utf8'); } catch (e) { /* ssh not used */ }
-  return { ...r, out: r.stdout + r.stderr, sshLog };
+  return { ...r, out: r.stdout + r.stderr, sshLog, curlCalls };
 }
 const old = { 'service-worker.js': "const CACHE_NAME = 'az-carpool-v8';\n" };
 
@@ -93,6 +94,14 @@ await test('the wait page every time: the files are read on the host itself, and
   assert.match(r.out, /Attempt 1, live: CACHE_NAME = 'az-carpool-v9' \(read on the host\)/);
   assert.match(r.out, /OK: the host holds CACHE_NAME = 'az-carpool-v9' \(checked on the host itself/);
   assert.deepEqual(r.sshLog.trim().split('\n'), ["ssh: cat 'domains/azcarpool.nl/public_html/service-worker.js'", "ssh: cat 'domains/azcarpool.nl/public_html/index.html'", "ssh: cat 'domains/azcarpool.nl/public_html/app.js'"]);
+});
+await test('by default the site is asked only twice per file while it answers with the wait page, then the host is read (a deploy no longer waits minutes for it)', () => {
+  const r = setup({ wait: 2, waitTries: '' }); assert.equal(r.status, 0, r.out);
+  assert.match(r.out, /the wait page of the host \(try 2 of 2\)/); assert.match(r.out, /checked on the host itself/); assert.match(r.sshLog, /service-worker\.js/);
+});
+await test('once one file had to be read on the host, the other files are asked on the site only once', () => {
+  const r = setup({ wait: 999, waitTries: '' }); assert.equal(r.status, 0, r.out);
+  assert.equal(r.curlCalls, 4, 'service worker twice, then start page and app.js once each: ' + r.curlCalls);
 });
 await test('the wait page every time and the host holds the OLD version: fails at once (the upload did not arrive)', () => {
   const r = setup({ wait: 999, host: old }); assert.equal(r.status, 1); assert.match(r.out, /does not serve the new service worker/); assert.doesNotMatch(r.out, /Attempt 2/);

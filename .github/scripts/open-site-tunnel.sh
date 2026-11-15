@@ -4,7 +4,7 @@
 # ("One moment, please...", a bot check) to the GitHub computer for minutes. This makes the robot's browsers reach the test site from the
 # INSIDE of the host instead: an SSH port forward from this computer's port 443 to the site's own address, made BY the host. The browsers
 # still ask for https://test.azcarpool.nl (the name points to this computer in /etc/hosts), so the real certificate and the real server
-# settings are used, and the robot test itself does not change. Tried on 2026-11-15 with the read-only probe (host-probe.yml): the
+# settings are used, and the robot test itself does not change. Tried on 2026-11-15 with a read-only probe (host-probe.yml, removed afterwards; see docs/functies/wachtpagina-host.md): the
 # forward to the server's own public address returned the real file with the valid certificate. NOT yet proven: that this also gets past
 # the wait page (the host was not blocking during the probe); the log of the first blocked run says it ("through the tunnel the host answered").
 #
