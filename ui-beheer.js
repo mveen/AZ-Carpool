@@ -580,18 +580,8 @@ export async function removeLocationPlace(id){
   return writeLocations({ ...cur, places:cur.places.filter(p=>p.id!==id) }, 'loc.saved');
 }
 
-export function renderBeheer(){
-  const box=document.getElementById('tab-beheer');
-  if(!box) return;
-  if(!S.canEdit){ box.innerHTML = `<div class="card"><p class="muted">${t('beheer.deze_pagina_is_alleen_voor')}</p></div>`; return; }
-
-  const claimed = {}; Object.entries(S.links).forEach(([uid,l])=>claimed[l.familyId]=true);
-  const byName={};
-  Object.entries(S.families).forEach(([id,fd])=>{
-    const key=(fd.girlName||'').trim().toLowerCase();
-    if(key) (byName[key]=byName[key]||[]).push([id,fd]);
-  });
-  const dupGroups = Object.values(byName).filter(list=>list.length>1);
+// The four cards of Beheer that used to be written inside renderBeheer (the other cards have their own *CardHtml functions).
+function familiesCardHtml(claimed, dupGroups){
   const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
       <div class="fitbad">${phIcon('warning')} ${t('beheer.mogelijk_dubbele_gezinnen_controleer_en')}</div>
       ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn danger" data-coorddel="${id}" style="margin-left:4px;min-width:30px;min-height:30px" aria-label="${t('beheer.verwijder')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
@@ -615,53 +605,17 @@ export function renderBeheer(){
       </span>
     </div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_gezinnen_toegevoegd')}</p>`;
-
-  // ---- attention strip: things the coordinator should look at, each linking to its card ----
-  const noCode = Object.keys(S.families).filter(id=>!S.inviteByFamily[id]).length;
-  const noPhone = Object.values(S.families).filter(fd=>!fd.parentPhone1&&!fd.parentPhone2).length;
-  const attn = [];
-  if(noCode) attn.push(['familiesCard', t('beheer.attn_zonder_code',{p1:noCode})]);
-  if(noPhone) attn.push(['familiesCard', t('beheer.attn_zonder_telefoon',{p1:noPhone})]);
-  dupGroups.forEach(list=>attn.push(['familiesCard', t('beheer.attn_dubbel',{p1:esc(list[0][1].girlName),p2:list.length})]));
-  (S.matchFetchFailedTeams||[]).forEach(f=>attn.push(['feedsCard', t('beheer.attn_kalender_mislukt',{p1:esc(f.label)})]));
-  const recentProblems = errorLogEntries().filter(e=>e.at > Date.now()-24*60*60*1000).length;
-  if(recentProblems) attn.push(['errorLogCard', t('beheer.attn_problemen',{p1:recentProblems})]);
-  const attnHtml = attn.length? `<div class="begAttn" role="status">
-      <div class="begAttnHead">${phIcon('warning')} ${t('beheer.attn_titel',{p1:attn.length})}</div>
-      ${attn.map(([id,txt])=>`<button type="button" class="begAttnItem" data-goto="${id}"><span>${txt}</span>${phIcon('chevron-right')}</button>`).join('')}
-    </div>` : '';
-
-  // Puts a phIcon name on a card built elsewhere; foldCards shows it in the summary.
-  const ic = (icon, html)=>html.replace(/^(\s*)<div class="card/, `$1<div data-icon="${icon}" class="card`);
-  const sections = [
-    ['gezinnen', 'beheer.chip_gezinnen', 'beheer.sec_gezinnen', [
-      ic('users', `<div class="card" id="familiesCard">
+  return `<div class="card" id="familiesCard">
         <h2>${t('beheer.gezinnen_beheren')}</h2>
         <p class="muted">${t('beheer.vul_of_wijzig_gegevens_namens')}</p>
         ${dupWarning}
         ${rows}
         <button type="button" class="btn secondary" id="coordNew">${t('beheer.nieuw_gezin_toevoegen')}</button>
         <div id="coordEditArea"></div>
-      </div>`),
-      ic('heart', `<div class="card" id="prefsCard">
-        <h2>${t('beheer.reisvoorkeuren')}</h2>
-        <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
-        ${renderPrefsCard()}
-      </div>`),
-      ic('list', `<div class="card" id="priorityCard">
-        <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
-        ${renderPriorityCard()}
-      </div>`),
-      ic('user', dayCoordinatorsCardHtml()),
-      ic('calendar', `<div class="card" id="availabilityCard">
-        <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
-        ${renderAvailabilityTable()}
-      </div>`),
-      ic('chart', rideLogCardHtml()),
-    ]],
-    ['periodes', 'beheer.chip_periodes', 'beheer.sec_periodes', [
-      ic('map-pin', locationsCardHtml()),
-      ic('gear', `<div class="card" id="planningCard">
+      </div>`;
+}
+function planningCardHtml(){
+  return `<div class="card" id="planningCard">
         <h2>${t('beheer.planning_instellingen')}</h2>
         <p class="muted">${t('beheer.deze_regels_bepalen_hoe_combinaties')}</p>
         <div class="grid4">
@@ -670,16 +624,10 @@ export function renderBeheer(){
           <div><label>${t('beheer.marge_reisvookeuren_min')}</label><input type="number" id="setPrefWindow" min="0" step="5" value="${S.settings.prefWindowMinutes}"></div>
           <div><label>${t('beheer.max_wachttijd_om_met_eigen')}</label><input type="number" id="setParentPrefWindow" min="0" step="5" value="${S.settings.parentPrefWindowMinutes}"></div>
         </div>
-      </div>`),
-      ic('clock', periodsCardHtml()),
-    ]],
-    ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
-      ic('car', ritbeursCardHtml()),
-      ic('bell', pushCardHtml()),
-      ic('info', noticeCardHtml()),
-      ic('info', dayChangeNoticeCardHtml()),
-      ic('wrench', maintenanceCardHtml()),
-      ic('bell', `<div class="card" id="notifCard">
+      </div>`;
+}
+function notifCardHtml(){
+  return `<div class="card" id="notifCard">
         <h2>${t('beheer.meldingen_bij_gewijzigde_tijden')}</h2>
         <p class="muted">${t('beheer.als_een_ouder_de_aankomst')}</p>
         ${('Notification' in window)
@@ -689,10 +637,10 @@ export function renderBeheer(){
                 ? `<p class="fitbad">${t('beheer.browsermeldingen_zijn_geblokkeerd_zet_ze')}</p>`
                 : `<button type="button" class="btn small secondary" id="enableNotifBtn">${t('beheer.browsermeldingen_aanzetten')}</button>`)
           : `<p class="muted">${t('beheer.deze_browser_ondersteunt_geen_meldingen')}</p>`}
-      </div>`),
-    ]],
-    ['koppelingen', 'beheer.chip_koppelingen', 'beheer.sec_koppelingen', [
-      ic('soccer', `<div class="card" id="feedsCard">
+      </div>`;
+}
+function feedsCardHtml(){
+  return `<div class="card" id="feedsCard">
         <h2>${t('beheer.wedstrijdkalenders_google_calendar')}</h2>
         <p class="muted">${t('beheer.deze_agenda_s_voeden_wedstrijden')}</p>
         ${activeMatchFeeds().map((f,i)=>`
@@ -715,24 +663,11 @@ export function renderBeheer(){
           <button type="button" class="btn small secondary" id="refreshMatchesBtn">${phIcon('refresh')} ${t('beheer.nu_verversen')}</button>
         </div>
         ${S.matchFetchFailedTeams.length? `<p class="muted" style="margin-top:6px">${t('beheer.mislukt')}${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : ''}
-      </div>`),
-      ic('key', apiKeysCardHtml()),
-      ic('download', familyBackupCardHtml()),
-      ic('warning', errorLogCardHtml()),
-    ]],
-  ];
+      </div>`;
+}
 
-  // One section is shown at a time; the choice survives a redraw (data changes redraw Beheer).
-  const secIcons = { gezinnen:'users', periodes:'clock', berichten:'bell', koppelingen:'key' };
-  if(!sections.some(([id])=>id===begActive)) begActive = sections[0][0];
-  const secTitle = id => t((sections.find(x=>x[0]===id)||sections[0])[2]);
-  box.innerHTML = `${attnHtml}
-    <nav class="begChips" aria-label="${t('beheer.onderdelen')}"><div class="begSeg">${sections.map(([id,chip])=>`<button type="button" class="begChip${id===begActive?' on':''}" data-sec="${id}" aria-pressed="${id===begActive}">${phIcon(secIcons[id],{size:'1.8em'})}<span>${t(chip)}</span></button>`).join('')}</div></nav>
-    <div class="begHead"><h2 id="begTitle">${secTitle(begActive)}</h2><button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button></div>
-    ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"${id===begActive?'':' hidden'}>${cards.join('')}</section>`).join('')}`;
-
-  foldCards(box);
-
+// Chips, "open all" button and the shortcuts of the attention strip: they all switch the section that is shown.
+function wireBeheerSections(box, sections, secTitle){
   const showSec = id => {
     begActive = id;
     document.querySelectorAll('.begChip').forEach(x=>{ const on = x.dataset.sec===id; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); });
@@ -762,6 +697,89 @@ export function renderBeheer(){
     card.open=true; if(card.dataset.fold) S.folds[card.dataset.fold]=true;
     card.scrollIntoView({block:'start'});
   });
+}
+
+export function renderBeheer(){
+  const box=document.getElementById('tab-beheer');
+  if(!box) return;
+  if(!S.canEdit){ box.innerHTML = `<div class="card"><p class="muted">${t('beheer.deze_pagina_is_alleen_voor')}</p></div>`; return; }
+
+  const claimed = {}; Object.entries(S.links).forEach(([uid,l])=>claimed[l.familyId]=true);
+  const byName={};
+  Object.entries(S.families).forEach(([id,fd])=>{
+    const key=(fd.girlName||'').trim().toLowerCase();
+    if(key) (byName[key]=byName[key]||[]).push([id,fd]);
+  });
+  const dupGroups = Object.values(byName).filter(list=>list.length>1);
+  // ---- attention strip: things the coordinator should look at, each linking to its card ----
+  const noCode = Object.keys(S.families).filter(id=>!S.inviteByFamily[id]).length;
+  const noPhone = Object.values(S.families).filter(fd=>!fd.parentPhone1&&!fd.parentPhone2).length;
+  const attn = [];
+  if(noCode) attn.push(['familiesCard', t('beheer.attn_zonder_code',{p1:noCode})]);
+  if(noPhone) attn.push(['familiesCard', t('beheer.attn_zonder_telefoon',{p1:noPhone})]);
+  dupGroups.forEach(list=>attn.push(['familiesCard', t('beheer.attn_dubbel',{p1:esc(list[0][1].girlName),p2:list.length})]));
+  (S.matchFetchFailedTeams||[]).forEach(f=>attn.push(['feedsCard', t('beheer.attn_kalender_mislukt',{p1:esc(f.label)})]));
+  const recentProblems = errorLogEntries().filter(e=>e.at > Date.now()-24*60*60*1000).length;
+  if(recentProblems) attn.push(['errorLogCard', t('beheer.attn_problemen',{p1:recentProblems})]);
+  const attnHtml = attn.length? `<div class="begAttn" role="status">
+      <div class="begAttnHead">${phIcon('warning')} ${t('beheer.attn_titel',{p1:attn.length})}</div>
+      ${attn.map(([id,txt])=>`<button type="button" class="begAttnItem" data-goto="${id}"><span>${txt}</span>${phIcon('chevron-right')}</button>`).join('')}
+    </div>` : '';
+
+  // Puts a phIcon name on a card built elsewhere; foldCards shows it in the summary.
+  const ic = (icon, html)=>html.replace(/^(\s*)<div class="card/, `$1<div data-icon="${icon}" class="card`);
+  const sections = [
+    ['gezinnen', 'beheer.chip_gezinnen', 'beheer.sec_gezinnen', [
+      ic('users', familiesCardHtml(claimed, dupGroups)),
+      ic('heart', `<div class="card" id="prefsCard">
+        <h2>${t('beheer.reisvoorkeuren')}</h2>
+        <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
+        ${renderPrefsCard()}
+      </div>`),
+      ic('list', `<div class="card" id="priorityCard">
+        <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
+        ${renderPriorityCard()}
+      </div>`),
+      ic('user', dayCoordinatorsCardHtml()),
+      ic('calendar', `<div class="card" id="availabilityCard">
+        <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
+        ${renderAvailabilityTable()}
+      </div>`),
+      ic('chart', rideLogCardHtml()),
+    ]],
+    ['periodes', 'beheer.chip_periodes', 'beheer.sec_periodes', [
+      ic('map-pin', locationsCardHtml()),
+      ic('gear', planningCardHtml()),
+      ic('clock', periodsCardHtml()),
+    ]],
+    ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
+      ic('car', ritbeursCardHtml()),
+      ic('bell', pushCardHtml()),
+      ic('info', noticeCardHtml()),
+      ic('info', dayChangeNoticeCardHtml()),
+      ic('wrench', maintenanceCardHtml()),
+      ic('bell', notifCardHtml()),
+    ]],
+    ['koppelingen', 'beheer.chip_koppelingen', 'beheer.sec_koppelingen', [
+      ic('soccer', feedsCardHtml()),
+      ic('key', apiKeysCardHtml()),
+      ic('download', familyBackupCardHtml()),
+      ic('warning', errorLogCardHtml()),
+    ]],
+  ];
+
+  // One section is shown at a time; the choice survives a redraw (data changes redraw Beheer).
+  const secIcons = { gezinnen:'users', periodes:'clock', berichten:'bell', koppelingen:'key' };
+  if(!sections.some(([id])=>id===begActive)) begActive = sections[0][0];
+  const secTitle = id => t((sections.find(x=>x[0]===id)||sections[0])[2]);
+  box.innerHTML = `${attnHtml}
+    <nav class="begChips" aria-label="${t('beheer.onderdelen')}"><div class="begSeg">${sections.map(([id,chip])=>`<button type="button" class="begChip${id===begActive?' on':''}" data-sec="${id}" aria-pressed="${id===begActive}">${phIcon(secIcons[id],{size:'1.8em'})}<span>${t(chip)}</span></button>`).join('')}</div></nav>
+    <div class="begHead"><h2 id="begTitle">${secTitle(begActive)}</h2><button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button></div>
+    ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"${id===begActive?'':' hidden'}>${cards.join('')}</section>`).join('')}`;
+
+  foldCards(box);
+
+  wireBeheerSections(box, sections, secTitle);
 
   try{
     const saveSettingsAuto = async ()=>{

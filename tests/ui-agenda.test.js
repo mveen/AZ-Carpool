@@ -215,5 +215,8 @@ await testAsync('when the device does not allow copying, the user is told instea
   assert.match(dom.el('toast').innerHTML, /Kopiëren lukt niet/);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-agenda.js imports nothing it does not use', () => assertNoUnusedImports('ui-agenda.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

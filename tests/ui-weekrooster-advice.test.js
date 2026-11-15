@@ -506,5 +506,11 @@ await testAsync('On the way back someone whose car leaves before she is done is 
 });
 test('ui-weekrooster-advice.js imports nothing it does not use', () => assertNoUnusedImports('ui-weekrooster-advice.js'));
 
+import fsV207 from 'node:fs';
+test('the sheets that only show something do not keep an unused handle (lint rule no-unused-vars)', () => {
+  const src = fsV207.readFileSync(new URL('../ui-weekrooster-advice.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/^\s+overlay\(/gm) || []).length, 3, 'the three sheets (remove title, time title, undo) open without keeping a handle');
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

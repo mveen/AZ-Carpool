@@ -1,0 +1,23 @@
+name: Lint
+
+# ESLint with two rules (no-undef, no-unused-vars): a misspelled name or a forgotten import fails here instead of on a phone.
+# See eslint.config.mjs and scripts/run-lint.sh. Not part of `npm test`.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bash scripts/run-lint.sh

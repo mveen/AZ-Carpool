@@ -262,7 +262,6 @@ export function updateMatchCarCapacityWarning(slug){
 function carpoolInfo(m, slug){
   return {matchSlug:slug, calendarId:m.calendarId||'', eventId:m.eventId||'', teamLabel:matchLabel(m), summary:m.summary, location:m.location||'', startMs:m.start.getTime()};
 }
-function carpoolDoc(m, slug, cars){ return {...carpoolInfo(m, slug), cars}; }
 
 // The log of a match carpool, for the coordinator only: who added, changed or removed which car (newest first, see match-cars.js).
 function logLineText(e){

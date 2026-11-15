@@ -14,6 +14,7 @@ import { installFakeDom, useFakeDb, sampleDbSeed, sampleCoordinatorState, sample
 import { S } from '../state.js';
 import { logPassedShifts, setRideRemoved } from '../data.js';
 import { tally } from '../ride-log.js';
+import { _resetErrorLogForTests, _queuedForTests } from '../error-log.js';
 import { rideLogCardHtml, rideLogView, stepRideLog, exportRideLog, wireRideLogCard, showRideLogScreen, askRemoveRide, changeRide } from '../ui-ride-log.js';
 
 const dom = installFakeDom();
@@ -92,6 +93,16 @@ test('the export makes a download with the year CSV and shows a toast', () => {
 });
 
 console.log('=== writing the log ===');
+const loggedErrors = fake => [..._queuedForTests(), ...fake.collection('errorLog').map(([, d]) => d)];   // an entry is queued first and moves to the database when the app is signed in
+await testAsync('a shift that cannot be stored is left for the next run and shows up in the error log, the others are stored', async () => {
+  _resetErrorLogForTests(); const fake = useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: true, deviationsLoaded: true });
+  fake.failWrites('rideLog/2026-09-21_heen', 'unavailable', 'unavailable');
+  const n = await logPassedShifts();
+  assert.equal(n, 4); assert.equal(fake.get('rideLog/2026-09-21_heen'), undefined); assert.ok(fake.get('rideLog/2026-09-21_terug'));
+  const e = loggedErrors(fake).filter(x => x.where === 'ridelog'); assert.equal(e.length, 1); assert.equal(e[0].code, 'set-unavailable');
+  assert.equal(await logPassedShifts(), 1, 'the next run stores the shift that failed');
+});
 await testAsync('the coordinator\'s app stores every shift of last week and this week that has taken place, once', async () => {
   const fake = useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ rideLog: {}, rideLogLoaded: true, deviationsLoaded: true });

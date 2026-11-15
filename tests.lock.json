@@ -12,16 +12,16 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "c03b2a7c18881c3d17274b31ed9782b8f1157d856f39eb0cc8474bc0074f1a19",
-    "test": "10621351de565f739f6b06e871cb3ddfc3500068165d87575eb143d972f30cec"
+    "module": "bd3b62155880deefeebebbdb40953295cba99d8409c1ebcedc7883154a8af31b",
+    "test": "9961e9adddf01ada9ee780d08651790f3428eb01c2306c4ee9f59fcc7c8c5cb3"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
     "test": "88f8a7468d4de0bd6f9e155fb8ca961bb66e842867e3387516f74d9a37d60f1b"
   },
   "data.js": {
-    "module": "5db388b71c7df43fb1eb61437add45e7e725aefb4d157850203b88719a5a4aee",
-    "test": "d25dc5a3423e78bfafb715e744512498c99a4e1e7643eec72436c196b6b9fe22"
+    "module": "e335e19c52372d628cea9a089abec1300e04944fbe71d77391d6be42231cfd74",
+    "test": "9b2bb300390d9376456335766be35510557862a5b396c2c96f821f83de13bc02"
   },
   "dates.js": {
     "module": "ed5a2dd1459bb0f037672976b5b45e4feb5cfb2ae8524ed77a93cec890de6a46",
@@ -96,8 +96,8 @@
     "test": "14adb0d43f03a033e1328de0c9459d6dd6620e3e5acce0e8ae865d7aa809f9e8"
   },
   "matches.js": {
-    "module": "4c00ee2f0502693d65e46279967fec80446d8f5d43e8a28d366bc7e69e386d3e",
-    "test": "fe673ff14e0ccc6eff3602a6fa6ebc7d9e377d181122bfa276a9bfb02b2a5290"
+    "module": "85d6b24e1acad17563e4ac09d0be5eecfade41cc33e0d7afd137863eb4fe4931",
+    "test": "05299ce926fb0b4fb5fbf000f8d2a3fa910347dce0112d36cb067d5d2167de8c"
   },
   "message-texts.js": {
     "module": "a8ef6e13933f2e030ca333894376837c68085fa3b0a45edd0bf3f06a511cdafc",
@@ -180,12 +180,12 @@
     "test": "043a2e5c70f804a17268ae3834431eb0e843791a83153953590e8367d3938ea6"
   },
   "ui-agenda.js": {
-    "module": "6bd90dcb72daa2304d8199e0de0d43e294c635b88e6699bfda559a2f824c8872",
-    "test": "a2fcb51f00216c17eb995b61969f177796b30199f13e739306509b8febfeabc8"
+    "module": "66aac878ed9496ccfd12650fee1353d5dea82edae5a30a2d2b1ce4e3286b6a92",
+    "test": "a278b6bac0a8d3b98109c445fa5b9ed106f8333271358c04148f8029e1f2c345"
   },
   "ui-beheer.js": {
-    "module": "8d0de706d3953d06d9fdf1e66d94a8c7026885eef7e96eea62c2de35b2b7425b",
-    "test": "98dd24e08e2c71dbd3454e947ad7d198741ac56e637c5bc3f1fc558e746fdbbc"
+    "module": "5074ec0868a3d716226a2cbba92c7646717bc8f79af965a8cb8d06187e0d045b",
+    "test": "04f7de2f2f62bb9e40cc804f46b053ee6689cf33c66b1459dd7f0b02e250315c"
   },
   "ui-common.js": {
     "module": "7f484729c8284e081e62e7e6db1af28c4c53b388118b238d56957039eda18c43",
@@ -220,8 +220,8 @@
     "test": "8f030fa18a1071da21144733234d50cb6eeddc646cc4c7903658ba24bc7c356f"
   },
   "ui-matches.js": {
-    "module": "9822bc614f7c24895e17c0a5b374cf008e2780adb36114af1577646d16cd79b8",
-    "test": "69dfa4a5d6d2efe78687f7cef1caeef9bfd9fd47ce8018b51cebde11bba86acd"
+    "module": "4ad6c7d8c9a04c4160c014322bc7320c97418da30d6d9857d573461facf31cd6",
+    "test": "f055328b310a03f7ad4c3b1f0714f6ce391acdef759252ba405d95ec8d980022"
   },
   "ui-myweek.js": {
     "module": "cb28e3ea4cd6447402d06fedec33d0f2b7f742363d89d91bdc698c7f0f846df8",
@@ -257,7 +257,7 @@
   },
   "ui-ride-log.js": {
     "module": "9254e7d73e707d3f067eea194f2a4d98605334f23127c9e60df397ab6efc8c1d",
-    "test": "c73fa767eff4cfa7e95b67d9ff5b56b2041a4573f8e4a8a86b91fda28d918620"
+    "test": "e346f659464cf8f12e62c9e055e65682c4d71d8c62a3dc151a6e9f0cbe34f757"
   },
   "ui-ritbeurs.js": {
     "module": "b71b583c421a14a313bb3fbbf9a82720b608fa4a202ab7d9b3c3cd26a73f848d",
@@ -272,8 +272,8 @@
     "test": "4a2b339e189c7d3e906adf39e124430ab6a0c9230e4457ff0041410a03b61096"
   },
   "ui-weekrooster-advice.js": {
-    "module": "15fa4f746abdb1ce3bc5f12b782b1c5859a2c031edb0268e83fc5d75045c6da5",
-    "test": "4391dbb018d3bfc530079e47ce60c9ec08a3f9bc7ccb80f7c53deb30a2480e91"
+    "module": "53837f79773eda6cfa6832f1651990df6da6836fd09c77959369d67fc1576e79",
+    "test": "f85f7b55d8d84226c6ed6f9c7600d42183f929567045a383eeaade65dcf31b58"
   },
   "ui-weekrooster-earlier.js": {
     "module": "123254924e2ff6bdd76ce25b31f2612828412112cd06d1510956a5e8a9cf1baa",

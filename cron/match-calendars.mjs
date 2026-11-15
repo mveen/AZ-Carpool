@@ -7,8 +7,8 @@
 // from settings/apiKeys. Only the coordinator and this job (service account) can read that key; parents never see it.
 // Needs: the service account with "Cloud Datastore User" (reads settings/matchFeeds, apiKeys, locations, practiceMatches; writes settings/matchCache, matchDistances).
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { loadConfig, secretsDir, isMainModule, codeDir } from './lib/setup.mjs';

@@ -471,7 +471,7 @@ function askRemove(dir, id) {
   const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
   const here = cars.find(c => c.girlIds.includes(id)); if (!here) return;
   const last = here.girlIds.length === 1;
-  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.removeTitle', { p1: rawGirl(id) }))}</h3>
+  overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.removeTitle', { p1: rawGirl(id) }))}</h3>
     <p class="sheet__sub">${esc(t('weekrooster.flow.removeText', { p1: rawGirl(id), p2: t(dir === 'heen' ? 'dir.heenShort' : 'dir.terugShort').toLowerCase() }))}${last ? ' ' + esc(t('weekrooster.flow.removeLast', { p1: rawParent(here.driverFamilyId) })) : ''}</p>
     <div class="sheet__actions"><button type="button" class="btn secondary" id="wrRemoveNo">${esc(t('weekrooster.flow.removeNo'))}</button><button type="button" class="btn" id="wrRemoveYes">${esc(t('weekrooster.flow.removeYes'))}</button></div>`);
   document.getElementById('wrRemoveNo').onclick = () => { hapticTap(); closeSheet(); };
@@ -542,7 +542,7 @@ function askTime(dir, driverId, id) {
   const f = flowState(), adv = adviceOf(f), d = adv.directions[dir], cars = currentCars(adv, f, dir);
   const target = cars.find(c => c.driverFamilyId === driverId); if (!target) return;
   const guess = (target.girlIds.map(g => timeAfter(d.ctx, g)).filter(Boolean).sort()[0]) || '';
-  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.timeTitle', { p1: rawGirl(id) }))}</h3>
+  overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.timeTitle', { p1: rawGirl(id) }))}</h3>
     <label class="devField"><span>${esc(t(dir === 'heen' ? 'weekrooster.flow.timeHeen' : 'weekrooster.flow.timeTerug'))}</span><input type="time" class="devInput timeBig" id="wrAddTime" value="${esc(guess)}"></label>
     <div class="sheet__actions"><button type="button" class="btn secondary" id="wrTimeNo">${esc(t('weekrooster.flow.removeNo'))}</button><button type="button" class="btn" id="wrTimeYes">${esc(t('weekrooster.flow.timeAdd'))}</button></div>`);
   document.getElementById('wrTimeNo').onclick = () => { hapticTap(); closeSheet(); };
@@ -580,7 +580,7 @@ function wireEdit(box) {
 
 function askUndo(done) {
   const day = dayLabel(done.day).toLowerCase();
-  const ov = overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.undoSure'))}</h3>
+  overlay(`<h3 id="sheetTitle">${esc(t('weekrooster.flow.undoSure'))}</h3>
     <p class="sheet__sub">${esc(done.n === 1 ? t('weekrooster.flow.undoTextOne', { p1: day }) : t('weekrooster.flow.undoTextMany', { p1: day, p2: done.n }))}</p>
     <div class="sheet__actions"><button type="button" class="btn secondary" id="wrUndoNo">${esc(t('weekrooster.flow.undoNo'))}</button><button type="button" class="btn" id="wrUndoYes">${esc(t('weekrooster.flow.undoYes'))}</button></div>`);
   document.getElementById('wrUndoNo').onclick = () => { hapticTap(); closeSheet(); };

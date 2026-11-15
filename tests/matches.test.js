@@ -13,6 +13,7 @@ async function testAsync(name, fn) {
   try { await fn(); passed++; console.log('  ✓', name); }
   catch (e) { failed++; console.log('  ✗', name, '\n     ', e.message); }
 }
+import { _resetErrorLogForTests, _queuedForTests } from '../error-log.js';
 import { installFakeDom, resetState, useFakeDb, withFakeNow, withFakeNowAsync, NOW, sampleFamilies } from './test-support.js';
 import { S } from '../state.js';
 import {
@@ -182,6 +183,16 @@ const okBody = { items: [
 await testAsync('loadAllMatches waits until the calendars from Beheer have arrived', async () => {
   resetState({ matchFeedsLoaded: false }); stubFetch(() => { throw new Error('should not fetch'); });
   await loadAllMatches(); assert.deepEqual(S.matches, []);
+});
+const loggedErrors = fake => [..._queuedForTests(), ...fake.collection('errorLog').map(([, d]) => d)];   // an entry is queued first and moves to the database when the app is signed in
+await testAsync('when the cache in the database cannot be written the matches are still shown, and the error log says so', async () => {
+  _resetErrorLogForTests(); const fake = useFakeDb({});
+  resetState({ matchFeeds: feeds, matchFeedsLoaded: true });
+  stubFetch(() => ({ ok: true, json: async () => okBody }));
+  fake.failWrites('settings/matchCache', 'unavailable', 'unavailable');
+  await withFakeNowAsync(NOW, () => loadAllMatches());
+  assert.equal(S.matches.length, 1); assert.equal(S.matchesSource, 'live'); assert.equal(fake.get('settings/matchCache'), undefined);
+  const e = loggedErrors(fake).filter(x => x.where === 'matches'); assert.equal(e.length, 1); assert.equal(e[0].code, 'cache-unavailable');
 });
 await testAsync('loadAllMatches keeps valid events, calls the API with the key, and caches them in the database', async () => {
   const fake = useFakeDb({});
