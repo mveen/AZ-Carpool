@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES, isHostWaitPage, withHostRetry, HOST_RETRIES, HOST_RETRY_WAIT_MS, waitForSelectorOrHostWait, runSmoke, isHostBlockedProblem } from '../scripts/smoke-test.mjs';
+import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES, isHostWaitPage, withHostRetry, HOST_RETRIES, HOST_RETRY_WAIT_MS, waitForSelectorOrHostWait, runSmoke, isHostBlockedProblem, openTab } from '../scripts/smoke-test.mjs';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { transformBackup, checkFixedCodes } from '../scripts/seed-test-data.mjs';
 
@@ -200,6 +200,29 @@ await test('a wait page that goes away on a later try still lets the whole run p
   const pw = fakePw(); let n = 0; const calls = [];
   const problems = await runSmoke(smokeEnv, () => {}, { pw, sleep: async () => {}, check: async (b, c, role, l, engine) => { calls.push(engine + ' ' + role.name); n++; return n === 1 ? { problems: ['Timeout'], hostWait: true } : { problems: [], hostWait: false }; } });
   assert.deepEqual(problems, []); assert.equal(calls.length, 5);   // 1 blocked try + 4 checks
+});
+console.log('=== opening a tab ===');
+const tabPage = ({ showsAfterClicks = 1 } = {}) => { let clicks = 0; const calls = [];
+  return { calls, get clicks() { return clicks; },
+    click: async sel => { clicks++; calls.push(sel); },
+    waitForSelector: async () => { if (clicks >= showsAfterClicks) return; throw new Error('timeout'); },
+    evaluate: async () => ({ visible: ['tab-myweek'], active: ['myweek'], hidden: [] }) }; };
+await test('a tab that shows after the first click is clicked once and says nothing', async () => {
+  const logs = []; const pg = tabPage({ showsAfterClicks: 1 });
+  await openTab(pg, 'deviation', m => logs.push(m), 'webkit parent');
+  assert.equal(pg.clicks, 1); assert.deepEqual(logs, []);
+});
+await test('a click that did not register gets ONE second click, and the log says so', async () => {
+  const logs = []; const pg = tabPage({ showsAfterClicks: 2 });
+  await openTab(pg, 'deviation', m => logs.push(m), 'webkit parent');
+  assert.equal(pg.clicks, 2);
+  assert.ok(logs.some(m => /clicking again/.test(m)) && logs.some(m => /after the second click/.test(m)));
+  assert.ok(pg.calls.every(c => c === 'button.navtab[data-tab="deviation"]'));
+});
+await test('a tab that never shows fails with its NAME and what the page looked like, after exactly two clicks', async () => {
+  const pg = tabPage({ showsAfterClicks: 99 });
+  await assert.rejects(() => openTab(pg, 'deviation', () => {}, 'webkit parent'), e => /tab deviation never showed/.test(e.message) && /visible: \[tab-myweek\]/.test(e.message) && /active nav: \[myweek\]/.test(e.message));
+  assert.equal(pg.clicks, 2);
 });
 await test('the smoke job has time for the retries', () => { assert.match(job('smoke'), /timeout-minutes: 12/); });
 

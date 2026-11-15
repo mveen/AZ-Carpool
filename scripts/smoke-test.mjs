@@ -82,6 +82,23 @@ async function loadPlaywright() {
   catch (e) { if (process.env.PLAYWRIGHT_MODULE) return await import(process.env.PLAYWRIGHT_MODULE); throw e; }
 }
 
+// Opens a tab and waits until it shows. A click that did not register (seen in WebKit on the deviation tab: the app redraws that button) gets ONE
+// second click after 5 s, and says so in the log; a tab that still does not show fails with its NAME and what the page looked like.
+export async function openTab(page, tab, log = () => {}, who = '') {
+  const sel = `#tab-${tab}`;
+  await page.click(`button.navtab[data-tab="${tab}"]`);
+  try { await page.waitForSelector(sel, { state: 'visible', timeout: 5000 }); return; } catch {}
+  log(`${who}: tab ${tab} did not show within 5 s, clicking again`);
+  await page.click(`button.navtab[data-tab="${tab}"]`);
+  try { await page.waitForSelector(sel, { state: 'visible', timeout: 10000 }); log(`${who}: tab ${tab} showed after the second click`); return; } catch {}
+  const seen = await page.evaluate(() => ({
+    visible: [...document.querySelectorAll('[id^="tab-"]')].filter(e => e.offsetParent !== null).map(e => e.id),
+    active: [...document.querySelectorAll('button.navtab')].filter(b => /active|selected/.test(b.className)).map(b => b.dataset.tab),
+    hidden: [...document.querySelectorAll('button.navtab')].filter(b => b.offsetParent === null).map(b => b.dataset.tab),
+  })).catch(() => null);
+  throw new Error(`tab ${tab} never showed (after 2 clicks, 15 s)` + (seen ? `; visible: [${seen.visible}], active nav: [${seen.active}], hidden nav: [${seen.hidden}]` : ''));
+}
+
 async function checkRole(browser, cfg, role, log, engine = 'chromium') {
   const problems = [];
   let hostWait = false;
@@ -110,8 +127,7 @@ async function checkRole(browser, cfg, role, log, engine = 'chromium') {
     const beheerVisible = await page.isVisible('#navBeheer');
     if (beheerVisible !== role.beheer) problems.push(`${who}: Beheer tab ${beheerVisible ? 'is' : 'is not'} visible`);
     for (const tab of role.beheer ? [...TABS, 'beheer'] : TABS) {
-      await page.click(`button.navtab[data-tab="${tab}"]`);
-      await page.waitForSelector(`#tab-${tab}`, { state: 'visible', timeout: 15000 });
+      await openTab(page, tab, log, who);
       await page.waitForTimeout(800);
       const text = ((await page.textContent(`#tab-${tab}`)) || '').trim();
       if (text.length < 5) problems.push(`${who}: tab ${tab} is empty`);
