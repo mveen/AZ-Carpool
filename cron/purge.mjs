@@ -10,8 +10,8 @@
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json): reads the data, writes rideLog, deletes deviations.
 process.env.TZ = 'Europe/Amsterdam';   // the week, Friday 19:00 and the shift times are Amsterdam time, whatever time zone the host is in
 import { existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';
@@ -81,6 +81,7 @@ export async function runPurge({ firestore, app, now = Date.now(), log = console
   const docs = app.newLogDocs({
     weekKeys: [app.getISOWeekKey(lastWeek), S.currentWeekKey], families: S.families, logged: S.rideLog, nowMs: now, isoOf: app.weekKeyDayIso,
     carsOf: (weekKey, day, direction) => app.effectiveCars(day, direction, { ...S, currentWeekKey: weekKey }),
+    waitsOf: (weekKey, day, direction, car) => app.carWaits(day, direction, car, { ...S, currentWeekKey: weekKey }),
   });
   for (const [id, doc] of docs) await firestore.setDocument('rideLog/' + id, doc);
 

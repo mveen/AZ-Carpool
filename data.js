@@ -23,10 +23,9 @@ import { renderDeviationTab } from './ui-deviation.js';
 import { renderMatchesTab } from './ui-matches.js';
 import { calculateMatchDistances, currentMatchList, refreshMatchesIfStale } from './matches.js';
 import { readFamilyForm } from './ui-profile.js';
-import { computeDepartureTime, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
+import { computeDepartureTime, carWaits, computeRideDeparture, effectiveCars, eligibleDrivers, girlsFor, groupsFor, isFlex, ownCarWarning, planOptions, planPeriodRooster, planPeriodShift } from './rides.js';
 import { carStdId, normalizeLocations } from './locations.js';
 import { applyOv, keepOv, keepTimes, ovIds } from './ov.js';
-import { impactGate } from './impact.js';
 import { logError, purgeOldErrorLogs } from './error-log.js';
 import { newLogDocs, withCarRemoved } from './ride-log.js';
 import { PERIOD_BACKUP_MAX, autoBackupId, backupId, backupsFor, buildPeriodBackup, countManual, planRestore, validBackup } from './period-backup.js';
@@ -181,10 +180,11 @@ export async function logPassedShifts(){
   const docs = newLogDocs({
     weekKeys, families: S.families, logged: S.rideLog, nowMs: Date.now(), isoOf: weekKeyDayIso,
     carsOf: (weekKey, day, direction) => effectiveCars(day, direction, { ...S, currentWeekKey: weekKey }),
+    waitsOf: (weekKey, day, direction, car) => carWaits(day, direction, car, { ...S, currentWeekKey: weekKey }),
   });
   let n = 0;
   for(const [id, doc] of docs){
-    try{ await db.doc("rideLog/"+id).set(doc); S.rideLog[id] = doc; n++; }catch(e){}
+    try{ await db.doc("rideLog/"+id).set(doc); S.rideLog[id] = doc; n++; }catch(e){ logError({ where:'ridelog', code:'set-'+((e&&e.code)||'error'), message:e && e.message }); }   // the next run tries this ride again
   }
   if(n) renderBeheer();
   return n;
@@ -359,7 +359,7 @@ export async function savePeriodDoc(raw, editing){
       const rest = {...S.periodsColl}; delete rest[editing]; S.periodsColl = rest;
     }
     // A period that only lived in the old settings/period document moves over as soon as it is saved.
-    if(S.legacyPeriod && (S.legacyPeriod.firstDay===editing || S.legacyPeriod.firstDay===v.firstDay)){ try{ await db.doc("settings/period").delete(); S.legacyPeriod = null; }catch(e){} }
+    if(S.legacyPeriod && (S.legacyPeriod.firstDay===editing || S.legacyPeriod.firstDay===v.firstDay)){ try{ await db.doc("settings/period").delete(); S.legacyPeriod = null; }catch(e){ logError({ where:'period', code:'legacy-delete-'+((e&&e.code)||'error'), message:e && e.message }); } }
     rebuildPeriods();
     return res;
   }catch(e){ showToast(t('data.mislukt')+(e&&e.message||e)); return { ...res, ok:false, errors:[] }; }
@@ -800,10 +800,8 @@ export async function writeDeviation(day,direction,cars,extra){
   recordLastUpdate('Deviation');
 }
 
-// opts.skipGate: the impact preview (US-07) already looked at this change and the user confirmed it.
-export async function saveDeviationCars(day,direction,cars,opts){
+export async function saveDeviationCars(day,direction,cars){
   if(!db){showToast(t('data.geen_verbinding_met_opslag'));return false;}
-  if(!(opts&&opts.skipGate) && await impactGate(day,direction,cars, ()=>saveDeviationCars(day,direction,cars,{skipGate:true}), renderDeviationTab)) return false;
   try{
     refreshWeekKey();
     // "Rijdt niet mee" marks (US-06, both directions) live on the deviation and survive other edits, unless the girl is in a car again.

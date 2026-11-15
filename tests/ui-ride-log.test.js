@@ -1,6 +1,7 @@
 // Run with: node ui-ride-log.test.js
 // Gereden shifts: the Beheer card (month / year view, stepping, export) and the coordinator's app writing the log (logPassedShifts).
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -14,6 +15,7 @@ import { installFakeDom, useFakeDb, sampleDbSeed, sampleCoordinatorState, sample
 import { S } from '../state.js';
 import { logPassedShifts, setRideRemoved } from '../data.js';
 import { tally } from '../ride-log.js';
+import { _resetErrorLogForTests, _queuedForTests } from '../error-log.js';
 import { rideLogCardHtml, rideLogView, stepRideLog, exportRideLog, wireRideLogCard, showRideLogScreen, askRemoveRide, changeRide } from '../ui-ride-log.js';
 
 const dom = installFakeDom();
@@ -92,6 +94,16 @@ test('the export makes a download with the year CSV and shows a toast', () => {
 });
 
 console.log('=== writing the log ===');
+const loggedErrors = fake => [..._queuedForTests(), ...fake.collection('errorLog').map(([, d]) => d)];   // an entry is queued first and moves to the database when the app is signed in
+await testAsync('a shift that cannot be stored is left for the next run and shows up in the error log, the others are stored', async () => {
+  _resetErrorLogForTests(); const fake = useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: true, deviationsLoaded: true });
+  fake.failWrites('rideLog/2026-09-21_heen', 'unavailable', 'unavailable');
+  const n = await logPassedShifts();
+  assert.equal(n, 4); assert.equal(fake.get('rideLog/2026-09-21_heen'), undefined); assert.ok(fake.get('rideLog/2026-09-21_terug'));
+  const e = loggedErrors(fake).filter(x => x.where === 'ridelog'); assert.equal(e.length, 1); assert.equal(e[0].code, 'set-unavailable');
+  assert.equal(await logPassedShifts(), 1, 'the next run stores the shift that failed');
+});
 await testAsync('the coordinator\'s app stores every shift of last week and this week that has taken place, once', async () => {
   const fake = useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ rideLog: {}, rideLogLoaded: true, deviationsLoaded: true });
@@ -235,6 +247,14 @@ await testAsync('a parent cannot remove a ride', async () => {
   sampleParentState({ rideLog: { '2026-09-28_heen': doc('2026-09-28', 'heen', 'f1') } });
   assert.equal(await setRideRemoved('2026-09-28_heen', 0, 'f1', true), false);
   assert.equal(fake.get('rideLog/2026-09-28_heen').cars[0].removed, undefined);
+});
+
+test('ui-ride-log.js keeps one inline style (the data-driven width of the bar); everything else is a class in components.css', () => {
+  const src = readFileSync(new URL('../ui-ride-log.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../components.css', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 1);
+  assert.match(src, /class="rideLogBar" aria-hidden="true" style="width:\$\{Math\.round\(r\.total\/max\*100\)\}%"/);
+  for (const c of ['rideLogOpen', 'rideLogBar', 'rideLogModes', 'rideLogStep', 'rideLogShift', 'rideLogList', 'rideLogDay', 'rideLogHead', 'rideLogRemovedBox', 'rideLogDir--heen', 'rideLogDir--terug', 'cardActions--roomy', 'mt-0', 'mt-5']) assert.ok(css.includes('.' + c), c + ' missing in components.css');
 });
 
 test('design v2: ui-ride-log.js only uses variables from tokens.css in its inline styles', async () => {

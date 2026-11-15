@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { FIREBASE_VERSION, FIREBASE_FILES, VENDOR_DIR, localise } from '../scripts/vendor-firebase.mjs';
+import { FIREBASE_VERSION, FIREBASE_FILES, VENDOR_DIR, localise, isNewer } from '../scripts/vendor-firebase.mjs';
 
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -61,6 +61,19 @@ test('imports from gstatic become imports from the folder; nothing else changes;
   const src = 'import{a as b}from"https://www.gstatic.com/firebasejs/1.2.3/firebase-app.js";const n="https://www.gstatic.com/firebasejs/1.2.3/firebase-app.js";export{b};\n//# sourceMappingURL=x.js.map\n';
   assert.equal(localise(src, '1.2.3'), 'import{a as b}from"./firebase-app.js";const n="https://www.gstatic.com/firebasejs/1.2.3/firebase-app.js";export{b};\n');
   assert.throws(() => localise('import{a}from"https://www.gstatic.com/firebasejs/9.9.9/firebase-app.js";', '1.2.3'), /another server/);
+});
+
+console.log('=== the monthly check for a newer version ===');
+test('newer means really newer: numbers are compared as numbers, equal or older is not newer', () => {
+  assert.equal(isNewer('13.3.0', '13.3.1'), true); assert.equal(isNewer('13.9.2', '13.10.0'), true); assert.equal(isNewer('13.3.0', '14.0.0'), true);
+  assert.equal(isNewer('13.3.0', '13.3.0'), false); assert.equal(isNewer('13.3.0', '13.2.9'), false); assert.equal(isNewer('13.3.0', '12.99.99'), false);
+  assert.throws(() => isNewer('13.3.0', '14.0.0-beta.1'), /must look like/);
+});
+test('the workflow runs monthly, only opens an issue (never changes the app), and not a second one while one is open', () => {
+  const y = readFileSync(join(repo, '.github/workflows/firebase-version.yml'), 'utf8');
+  assert.match(y, /cron: '\d+ \d+ \d+ \* \*'/); assert.match(y, /vendor-firebase\.mjs --check/);
+  assert.match(y, /contents: read/); assert.match(y, /issues: write/); assert.doesNotMatch(y, /contents: write|git push|pull-requests: write/);
+  assert.ok(y.indexOf('gh issue list') < y.indexOf('gh issue create'));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

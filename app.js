@@ -23,7 +23,7 @@ import { initShell, updateHeader } from './ui-shell.js';
 import { initSwipeTabs } from './swipe-tabs.js';
 import { applyPendingPushOpen, queuePushOpen, queuePushOpenFromUrl } from './ui-push.js';
 import { maybeShowInstallPrompt } from './ui-install-prompt.js';
-import { installFirestoreHeal } from './session-reset.js';
+import { installFirestoreHeal, isResetting } from './session-reset.js';
 import { flushErrorLog, installGlobalErrorLogging, loadQueuedErrors, logError } from './error-log.js';
 
 // Values that need functions from other modules are set here, before anything else runs.
@@ -62,6 +62,7 @@ export async function getWithRetry(read, delays = START_RETRY_DELAYS_MS) {
 // page was open), every reading from here on is refused and the screen would quietly show defaults. So say it, and write it down.
 export function handleAuthChange(uid){
   if(!S.me || uid === S.me) return false;
+  if(isResetting()) return false;   // "Opnieuw beginnen" signs out on purpose: not a problem
   logError({ where:'auth', code: uid ? 'other-user' : 'signed-out', message:'sign-in of this browser changed while the app was open' });
   setStatus(t('app.uitgelogd'), true);
   return true;
@@ -104,7 +105,7 @@ export async function init(){
       if(s.exists && s.pending) return; // wait until the server has accepted a new link (rules check the code)
       if(s.exists) S.links[S.me]=s.data(); else delete S.links[S.me];
       afterLinksChanged();
-    }, err=>{ logError({ where:'start', code:'links-'+((err&&err.code)||'error'), message:err && err.message }); S.linksLoaded=true; setStatus(t('app.fout_bij_laden_koppeling')+(err&&err.message||err), true); renderAll(); });
+    }, err=>{ if(!isResetting()) logError({ where:'start', code:'links-'+((err&&err.code)||'error'), message:err && err.message }); S.linksLoaded=true; setStatus(t('app.fout_bij_laden_koppeling')+(err&&err.message||err), true); renderAll(); });
   }catch(e){ setStatus(t('app.kon_niet_live_verbinden')+(e&&e.message||e), true); }
   adjustMainPadding();
 }
@@ -204,7 +205,7 @@ export function bootstrap(){
       const d = e && e.data;
       if(d && d.type === 'push-open') queuePushOpen(d.forFamilyId, d.open);   // the app was already open when a push was tapped
     });
-    navigator.serviceWorker.register('https://mveen.github.io/AZ-Carpool/service-worker.js')
+    navigator.serviceWorker.register('https://azcarpool.nl/service-worker.js')
       .then(reg=>{ swReg = reg; checkForAppUpdate(); })
       .catch(()=>{});
   }

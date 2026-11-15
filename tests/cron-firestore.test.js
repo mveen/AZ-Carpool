@@ -114,6 +114,14 @@ await test('setDocument replaces exactly one document in one commit (no update m
   assert.equal(calls[0].url, 'https://firestore.googleapis.com/v1/projects/az-carpool/databases/(default)/documents:commit');
   assert.deepEqual(JSON.parse(calls[0].init.body), { writes: [{ update: { name: `${ROOT}/settings/matchCache`, fields: { fetchedAt: { integerValue: '5' }, partial: { booleanValue: false } } } }] });
 });
+await test('setDocumentRaw writes fields that are already in Firestore\'s own format unchanged (for putting a back-up back)', async () => {
+  const { fs, calls } = client(() => json(200, {}));
+  const fields = { at: { timestampValue: '2026-11-01T10:00:00Z' }, n: { integerValue: '5' }, m: { mapValue: { fields: { x: { doubleValue: 1.5 } } } } };
+  await fs.setDocumentRaw('families/f 1', fields);
+  assert.deepEqual(JSON.parse(calls[0].init.body), { writes: [{ update: { name: `${ROOT}/families/f 1`, fields } }] });
+  await fs.setDocumentRaw('settings/empty');
+  assert.deepEqual(JSON.parse(calls[1].init.body).writes[0].update.fields, {});
+});
 await test('deleteDocument deletes one document; with updateTime only that version (changed or gone = false, other errors still fail)', async () => {
   const a = client(() => json(200, {}));
   assert.equal(await a.fs.deleteDocument('deviations/Di_heen'), true);

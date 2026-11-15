@@ -2,6 +2,7 @@
 // The Wijzigen tab: one-off changes for this week, open to every parent, plus the match carpools and the
 // "Deel update via WhatsApp" button.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -653,6 +654,16 @@ test('with three cars the ··· menu stays (several cars to move to), with the 
   useFakeDb({ ...sampleDbSeed(), 'deviations/Ma_heen': dev1(cars).Ma_heen });
   const html = renderOpen(sampleCoordinatorState, { deviationDay: 'Ma', deviations: dev1(cars) });
   assert.match(html, /devKidMore/); assert.match(html, /devKidTime/);
+});
+
+test('Wijzigen saves straight away: the impact-preview gate (skipGate) is gone', async () => {
+  const { readFileSync } = await import('node:fs');
+  assert.doesNotMatch(readFileSync(new URL('../ui-deviation.js', import.meta.url), 'utf8'), /skipGate/);
+});
+
+test('ui-deviation.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-deviation.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

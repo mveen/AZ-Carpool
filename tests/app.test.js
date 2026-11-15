@@ -315,7 +315,7 @@ await testAsync('init picks up ?pushas=<family> from the address and removes it 
     for (let i = 0; i < 6; i++) await new Promise(r => setImmediate(r));   // the links, then the families, arrive
     assert.deepEqual(calls, [[null, '', '/']]);
     assert.equal(S.impersonateFamilyId, 'f6'); assert.equal(S.push.pendingOpen, '');
-  } finally { globalThis.history = had; globalThis.location = { hash: '', href: 'https://mveen.github.io/AZ-Carpool/', search: '' }; }
+  } finally { globalThis.history = had; globalThis.location = { hash: '', href: 'https://azcarpool.nl/', search: '' }; }
 });
 test('the service worker message "push-open" (the app was already open) is wired to the same request', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
@@ -345,7 +345,7 @@ test('Afwijkend weekrooster: every redraw keeps the request listeners in step wi
 
 test('v221: init installs the Firestore self-repair before the global error log', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
-  assert.match(src, /import \{ installFirestoreHeal \} from '\.\/session-reset\.js'/);
+  assert.match(src, /import \{ installFirestoreHeal, isResetting \} from '\.\/session-reset\.js'/);
   assert.ok(src.indexOf('installFirestoreHeal(window') > 0 && src.indexOf('installFirestoreHeal(window') < src.indexOf('installGlobalErrorLogging(window)'));
 });
 
@@ -356,6 +356,22 @@ test('v224: a changed or lost sign-in is reported (log + status line); the same 
   assert.equal(handleAuthChange(null), true);
   assert.match(localStorage.getItem('az-error-queue'), /auth/); assert.match(localStorage.getItem('az-error-queue'), /signed-out/);
   resetState({}); assert.equal(handleAuthChange(null), false, 'before sign-in there is nothing to lose');
+});
+await testAsync('a sign-out caused by "Opnieuw beginnen" is expected: not logged, not reported', async () => {
+  const sr = await import('../session-reset.js');
+  installNav(); localStorage.removeItem('az-error-queue'); (await import('../error-log.js'))._resetErrorLogForTests();
+  resetState({ me: 'u1' });
+  useFakeDb({});
+  await sr.resetSession({ win: { location: { reload: () => {} } }, nav: {}, cacheApi: null, idb: null });
+  assert.equal(sr.isResetting(), true);
+  assert.equal(handleAuthChange(null), false);
+  assert.doesNotMatch(String(localStorage.getItem('az-error-queue')), /signed-out/);
+  sr._resetResettingForTests();
+  assert.equal(handleAuthChange(null), true, 'outside a reset it is still reported');
+});
+test('the links listener skips its error log during a reset (source check)', () => {
+  const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  assert.match(src, /if\(!isResetting\(\)\) logError\(\{ where:'start', code:'links-'/);
 });
 test('v224: init subscribes to sign-in changes right after sign-in', () => {
   const src = fs.readFileSync(new URL('../app.js', import.meta.url), 'utf8');

@@ -1,6 +1,7 @@
 // Run with: node ui-notice.test.js
 // The notice bar (everyone) and the Beheer card (coordinator): what is shown, what is saved, what is refused.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 import fs from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -118,6 +119,11 @@ test('readNoticeForm reads all four fields', () => {
 test('design v2: the notice bar preview uses the megaphone, not the info icon', () => {
   const src = fs.readFileSync(new URL('../ui-notice.js', import.meta.url), 'utf8');
   assert.match(src, /phIcon\('megaphone-fill'/);
+});
+
+test('ui-notice.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-notice.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

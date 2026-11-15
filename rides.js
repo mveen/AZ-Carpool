@@ -96,6 +96,22 @@ export function girlsForRide(day,direction, st=S){
   return Object.entries(st.families).filter(([id,f])=>!isFlex(f) && rideTime(id,day,direction, st));
 }
 
+// How long each girl of a car waits on a shift, in minutes: { girlId: minutes } (only girls that have a time). Same measure as the advice
+// (weekrooster-impact.js, evaluateCars): heen she arrives at departure + travel time and waits for what is left to her time; terug she
+// waits from her time until the car leaves. Nobody waits less than 0 (a girl who would be late did not wait). Departure = the time set on the car.
+export function carWaits(day,direction,car, st=S){
+  const lead = st.settings.travelLeadMinutes||60, heen = direction!=='terug';
+  const dep = pureTimeToMinutes(car.departureTime) != null ? pureTimeToMinutes(car.departureTime) : pureTimeToMinutes(computeRideDeparture(day,direction,car.girlIds||[], st));
+  const out = {};
+  if(dep==null) return out;
+  (car.girlIds||[]).forEach(id=>{
+    const tm = pureTimeToMinutes(rideTime(id,day,direction, st));
+    if(tm==null) return;
+    out[id] = Math.max(0, heen ? tm-(dep+lead) : dep-tm);
+  });
+  return out;
+}
+
 export function computeRideDeparture(day,direction,girlIds, st=S){
   const minutesList = girlIds.map(id=>pureTimeToMinutes(rideTime(id,day,direction, st)));
   return pureComputeDepartureTime(direction, minutesList, st.settings.travelLeadMinutes||60);
@@ -357,16 +373,4 @@ export function planPeriodShift(iso,direction, st=S){
 export function planPeriodRooster(st=S, p){
   if(!p) return [];
   return periodWorkdays(p.firstDay, p.lastDay).flatMap(iso => ['heen','terug'].map(direction => ({ iso, direction, ...planPeriodShift(iso,direction, st) })));
-}
-
-// The families as the planning must see them for one shift of the current planning week: with the handed-in times where the temporary
-// rooster applies (the impact preview plans with family.schedule), else the families themselves.
-export function shiftFamilies(day,direction, st=S){
-  const ps = periodShift(day,direction, st);
-  if(!ps) return st.families;
-  return Object.fromEntries(Object.entries(st.families).map(([id,f])=>{
-    const time = periodTimeFor(id, ps.iso, direction, st);
-    const schedule = {...(f.schedule||{}), [day]: {...((f.schedule||{})[day]||{}), [direction]: time}};
-    return [id, {...f, schedule}];
-  }));
 }

@@ -14,13 +14,14 @@ async function testAsync(name, fn) {
 }
 import { installFakeDom, resetState, useFakeDb, withFakeNowAsync, NOW, WEEK_KEY, sampleDbSeed, sampleCoordinatorState, sampleParentState, oneP } from './test-support.js';
 import { createFakeFirestore } from './fake-db.js';
+import { _resetErrorLogForTests, _queuedForTests } from '../error-log.js';
 import { S } from '../state.js';
 import {
   createFirestoreDb, initDb, db, saveAvatar, recordLastUpdate, purgeStaleDeviations, resetPurgeMemory, purgeStaleMatchCarpools, purgeStalePracticeMatches, saveDeviationCars, saveInviteCode,
   markTimeChangesSeen, createGroupWithDriver, useOption, createGroupCustom, doToggleCoord, saveCoordFamily,
   migrateLegacyFamilySecrets, staleSessionPaths, purgeStaleSessions, recordSession, resetSessionThrottle, syncListeners, startDataListeners, stopDataListeners, savePeriodEntry,
   savePeriodShift, clearDeviation, restoreFamilies, makePeriodRooster, replanPeriodShift, deletePeriodRooster, savePeriodDoc, deletePeriodCompletely, periodHasData, migrateLegacyPeriod, rebuildPeriods,
-  createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
+  logPassedShifts, createPeriodBackup, restorePeriodBackup, deletePeriodBackup, periodBackupList, replanStandardShift, cycleShiftPlace,
 } from '../data.js';
 
 const dom = installFakeDom();
@@ -731,6 +732,14 @@ await testAsync('saving a period that only lived in the old settings/period docu
   assert.equal((await savePeriodDoc({ ...A, name: 'Bijgewerkt' }, '2026-10-26')).ok, true);
   assert.equal(fake.get('periods/2026-10-26').name, 'Bijgewerkt'); assert.equal(fake.get('settings/period'), undefined); assert.equal(S.legacyPeriod, null); assert.equal(S.periods['2026-10-26'].name, 'Bijgewerkt');
 });
+const loggedErrors = fake => [..._queuedForTests(), ...fake.collection('errorLog').map(([, d]) => d)];   // an entry is queued first and moves to the database when the app is signed in
+await testAsync('when the old settings/period document cannot be removed the save still works, and the error log says so', async () => {
+  _resetErrorLogForTests(); const fake = useFakeDb({ ...sampleDbSeed(), 'settings/period': A }); sampleCoordinatorState({ periods: oneP(A), periodsColl: {}, legacyPeriod: A, periodEntries: {}, periodEntriesLoaded: true });
+  fake.failWrites('settings/period', 'unavailable', 'unavailable');
+  assert.equal((await savePeriodDoc({ ...A, name: 'Bijgewerkt' }, '2026-10-26')).ok, true);
+  assert.equal(fake.get('periods/2026-10-26').name, 'Bijgewerkt'); assert.ok(fake.get('settings/period'), 'the old document is still there'); assert.ok(S.legacyPeriod);
+  const e = loggedErrors(fake).filter(x => x.where === 'period'); assert.equal(e.length, 1); assert.equal(e[0].code, 'legacy-delete-unavailable');
+});
 await testAsync('a refused write is reported and nothing changes', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleCoordinatorState({ periods: {}, periodEntries: {}, periodEntriesLoaded: true }); fake.failWrites('periods/', 'permission-denied');
   const res = await savePeriodDoc(A, ''); assert.equal(res.ok, false); assert.match(toast(), /permission-denied/); assert.deepEqual(S.periods, {});
@@ -1164,10 +1173,10 @@ await testAsync('marking public transport keeps the one-off times of a deviation
 await testAsync('saveDeviationCars marks a change made by "Toch zelf wijzigen" (selfBy, selfAt) and leaves a planner\'s change unmarked', async () => {
   const fake = useFakeDb(sampleDbSeed()); sampleParentState(); const cars = [{ driverFamilyId: 'f3', girlIds: ['f1', 'f4'], reserveFamilyIds: [], departureTime: '09:00' }];
   S.wrEdit = { day: 'Di', override: true };
-  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars));
   assert.equal(fake.get('deviations/Di_heen').selfBy, 'f2'); assert.equal(typeof fake.get('deviations/Di_heen').selfAt, 'number');
   S.wrEdit = { day: 'Di', override: false };
-  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars, { skipGate: true }));
+  await withFakeNowAsync(NOW, () => saveDeviationCars('Di', 'heen', cars));
   assert.equal('selfBy' in fake.get('deviations/Di_heen'), false); S.wrEdit = null;
 });
 console.log('=== writeDeviation (also used by the driver\'s "Tijd en plek") ===');
@@ -1251,6 +1260,14 @@ test('the matchFeeds snapshot redraws the Wedstrijden tab too (the bus default o
   const src = fs.readFileSync(new URL('../data.js', import.meta.url), 'utf8');
   const block = src.slice(src.indexOf('db.doc("settings/matchFeeds").onSnapshot'), src.indexOf('db.doc("settings/locations")'));
   assert.match(block, /renderMatchesTab\(\)/);
+});
+
+await testAsync('logPassedShifts stores the waiting of each girl with every logged car (Wachttijd speelsters)', async () => {
+  const fake = useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ rideLog: {}, rideLogLoaded: true, deviationsLoaded: true });
+  await logPassedShifts();
+  const cars = fake.collection('rideLog').flatMap(([, d]) => d.cars);
+  assert.ok(cars.length > 0 && cars.every(c => c.waits && Object.keys(c.waits).length === c.girls));
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

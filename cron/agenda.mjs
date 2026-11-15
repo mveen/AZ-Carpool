@@ -8,8 +8,8 @@
 // Needs: the service account with "Cloud Datastore User" (calendar-key.json). Writes only inside the agenda folder.
 process.env.TZ = 'Europe/Amsterdam';   // the shift times are Amsterdam time, whatever time zone the host is in
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, unlinkSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { dirname, join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { readServiceAccount, tokenProvider } from './lib/google-auth.mjs';
 import { createFirestore, decodeFields } from './lib/firestore-rest.mjs';
 import { agendaDir, dataDir, loadConfig, secretsDir, codeDir, isMainModule } from './lib/setup.mjs';

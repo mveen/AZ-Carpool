@@ -979,6 +979,12 @@ div.settingsRow{cursor:default}
 .famTags{display:flex;flex-wrap:wrap;gap:var(--space-2);margin-top:var(--space-2)}
 .famTags:empty{display:none}
 .famMissing{font:var(--type-caption);margin-top:var(--space-1)}
+/* Beheer > Gezinnen: the edit panel opens in the slot right under the family's own row */
+.famItem--open{border:2px solid var(--accent);border-radius:var(--radius-panel);padding:0 var(--space-3);margin:var(--space-3) calc(-1 * var(--space-3))}
+.famItem--open .famRow{border-bottom:0}
+.famEditSlot:empty{display:none}
+.famEditSlot{padding-bottom:var(--space-3)}
+.famEditSlot .card.coordFormCard{margin-top:0}
 /* Beheer > Gemelde problemen */
 .errRow{padding:var(--space-4) 0;border-bottom:1px solid var(--line)}
 .errRow__what{font:var(--type-card-title)}
@@ -1165,3 +1171,116 @@ input.is-invalid,select.is-invalid{border-color:var(--warn-edge);background:var(
 .feedBus__row{display:flex;align-items:center;justify-content:space-between;gap:var(--space-4)}
 .feedBus__title{font:var(--type-body)}
 .feedBus__sub{font:var(--type-caption);color:var(--text-muted)}
+
+/* ---------- Mijn gezin / toegang: helpers that replace the last inline styles of ui-profile.js ---------- */
+.gateBox{max-width:420px;margin:calc(var(--space-9) + var(--space-3)) auto 0}
+.hiddenCheck{display:none}
+.hiddenInput{display:none}
+.devAlert--flush{margin:var(--space-3) 0 0}
+.rowflex--start{justify-content:flex-start;flex-wrap:wrap;margin-top:var(--space-3)}
+.rowflex--tight{gap:var(--space-2)}
+.fieldGrow{flex:1;min-width:0}
+.muted--note{margin:var(--space-2) 0 0}
+label.label--flush{margin-top:0}
+label.label--tight{margin-top:var(--space-3)}
+.mt-3{margin-top:var(--space-3)}
+.mt-4{margin-top:var(--space-4)}
+.unlinkBar{border-top:1px solid var(--line);margin-top:var(--space-6);padding-top:var(--space-1)}
+
+/* Beheer, Wachttijd speelsters: the table reads from the left, the figures stay centred like the other Beheer tables */
+.waitLogTable thead th:first-child,.waitLogTable tbody th{text-align:left}
+.waitLogTable tbody th{font-weight:700}
+.waitLogSub{display:block;font-weight:400}
+.waitLogControls{display:flex;flex-wrap:wrap;gap:var(--space-2);justify-content:flex-start}
+.waitLogStep{margin:var(--space-3) 0;align-items:center}
+/* ---------- Ritlog (Beheer): replaces the inline styles of ui-ride-log.js ---------- */
+.mt-0{margin-top:0}
+.mt-5{margin-top:var(--space-5)}
+.cardActions--roomy{margin-top:var(--space-4)}
+.rideLogTable thead th:first-child,.rideLogTable th[scope="row"]{text-align:left}
+.rideLogTable th[scope="row"]{font-weight:700}
+.rideLogOpen{display:flex;align-items:center;gap:var(--space-2);width:100%;min-height:var(--hit-min);padding:0;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.rideLogOpen__text{flex:1;min-width:0}
+.rideLogOpen__name,.rideLogOpen__parent{display:block}
+.rideLogOpen__parent{font-weight:400}
+.rideLogBar{display:block;height:4px;border-radius:var(--radius-pill);background:var(--accent);opacity:.55;margin-top:3px}   /* the width is data (share of the busiest family): the one inline style left */
+.rideLogModes{display:flex;flex-wrap:wrap;justify-content:flex-start;gap:var(--space-3)}
+.rideLogStep{margin:var(--space-4) 0}
+.rideLogPeriod{font-size:16px}
+.rideLogBack{align-self:flex-start}
+.rideLogList{list-style:none;margin:0;padding:0}
+.rideLogShift{display:flex;align-items:center;gap:var(--space-4);min-height:60px;border-bottom:1px solid var(--line)}
+.rideLogShift.rideLogRemoved{opacity:.85}
+.rideLogShift__text{flex:1;min-width:0}
+.rideLogShift__main,.rideLogShift__sub{display:block}
+.rideLogShift__main{font-size:14px}
+.pill.rideLogDir{box-sizing:border-box;width:56px;flex-shrink:0;text-align:center;margin:0;font-size:12px;font-weight:700;padding:var(--space-1) var(--space-4)}
+.pill.rideLogDir--heen{background:var(--info-soft);color:var(--text-1)}
+.pill.rideLogDir--terug{background:var(--warn-soft);color:var(--warn-ink)}
+.rideLogDay{font-weight:800;padding:var(--space-4) 0 var(--space-2);border-bottom:1px solid var(--line)}
+.rideLogHead{font-weight:700;padding-bottom:var(--space-2);border-bottom:1px solid var(--line)}
+.rideLogRemovedBox{margin-top:var(--space-5);padding:var(--space-5);border-radius:var(--radius-control);border:1px dashed var(--control-line)}
+.rideLogRemovedBox__head{font-weight:700;margin-bottom:var(--space-1)}
+.rideLogRemovedBox__note{margin:var(--space-2) 0 0}
+
+/* ---------- Beheer, part 1 (availability table, rules, priority, back-up): replaces inline styles of ui-beheer.js ---------- */
+.mt-2{margin-top:var(--space-2)}
+.mt-6{margin-top:var(--space-6)}
+.my-2{margin:var(--space-2) 0}
+.textBody{font-size:14px}
+.scrollX{overflow-x:auto}
+.divider{border:none;border-top:1px solid var(--line);margin:var(--space-5) 0}
+.rowflex--left{justify-content:flex-start}
+.rowflex--wrap{flex-wrap:wrap}
+.iconRow{display:flex;gap:var(--space-1)}
+th.availWho{text-align:left}
+th.availSub{font-size:12px;color:var(--text-muted)}
+.availBackup{color:var(--text-muted);font-weight:500}
+table.avail td.availCell{text-align:center}
+.availRow{border-top:1px solid var(--line)}
+.rowflex.ruleRow{padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
+.rowflex.prioRow{padding:var(--space-3) var(--space-2);border-bottom:1px solid var(--line)}
+.backupErrors{margin:var(--space-2) 0 var(--space-3) var(--space-8);padding:0;font-size:14px}
+
+/* ---------- Beheer, part 2 (Periode, Locaties, API-sleutels, dag-coördinatoren) ---------- */
+.btn.mt-4{margin-top:var(--space-4)}
+label.dayCoordLabel{margin:0;width:96px}
+.periodField{margin-top:var(--space-4);flex:1}
+.periodHint{margin-top:3px}
+.dayCoordSel{flex:1}
+
+/* ---------- Beheer part 3 + the other screens: the last inline styles (only data-driven ones stay) ---------- */
+.m-0{margin:0}
+.mb-4{margin-bottom:var(--space-4)}
+.flex1{flex:1}
+.rowflex--top{align-items:flex-start}
+.rowflex--baseline{align-items:baseline}
+.rowflex--end{align-items:flex-end}
+.iconRow.iconRow--fixed{gap:var(--space-2);flex-shrink:0}
+.iconbtn.iconbtn--small{margin-left:var(--space-1);min-width:30px;min-height:30px}
+.btn.btn--block{width:100%}
+.btn.btn--chip{padding:2px var(--space-3);min-height:26px;margin-right:var(--space-2)}
+.btn.mt-3{margin-top:var(--space-3)}
+label.label--sm{margin-top:var(--space-2)}
+label.label--roomy{margin-top:var(--space-4)}
+.rowflex.famRow{padding:var(--space-4) 0;border-bottom:1px solid var(--line)}
+.rowflex.coordToggleRow{margin:var(--space-4) 0;padding:var(--space-4);border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page)}
+.card.coordFormCard{margin-top:var(--space-4);border-color:var(--accent)}
+.timeChangeHint{margin:var(--space-1) 0 var(--space-2)}
+.flexRow{padding:var(--space-2) 0;border-bottom:1px solid var(--line)}
+select.flexCarSel{width:auto}
+.muted--tight{margin:0 0 var(--space-1)}
+.muted--top1{margin:var(--space-1) 0 0}
+.muted--top3{margin:var(--space-3) 0 0}
+.muted--strong{font-weight:700}
+.muted--sugg{margin:var(--space-4) 0 var(--space-1)}
+.noticePreviewEmpty{padding:var(--space-2) var(--space-5)}
+.periodDir{margin-bottom:var(--space-5)}
+.periodTimesHead{margin:var(--space-2) 0 2px}
+.periodDoneTitle{margin:var(--space-4) 0 2px;font-size:14px}
+.devAlert .devAlertBody.devAlertBody--strong{font-weight:700}
+.dayFormCard.dayFormCard--warn{border-color:var(--warn-icon)}
+.fitbad.fitbad--note{margin:0 0 var(--space-2)}
+.group.group--dashed{border-style:dashed}
+.h-tight{margin-bottom:var(--space-2)}
+label.girlLbl{margin:0;flex:1}

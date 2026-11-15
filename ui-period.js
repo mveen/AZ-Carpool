@@ -64,8 +64,8 @@ function taskCardHtml(tk){
   return `<div class="devAlert" id="periodTask_${p.firstDay}" data-periodtask="${p.firstDay}">
       <p class="devAlertTitle">${t('period.task.title')}</p>
       <p class="devAlertBody">${esc(t(S.canEdit? 'period.task.bodyCoord' : 'period.task.body',{p1:p.name, p2:isoRangeLabel(p.firstDay,p.lastDay), p3:girl}))}</p>
-      <p class="devAlertBody" style="font-weight:700">${esc(locked? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>
-      <p class="devAlertBody" style="font-size:12px">${t('period.task.standardStays')}</p>
+      <p class="devAlertBody devAlertBody--strong">${esc(locked? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>
+      <p class="devAlertBody">${t('period.task.standardStays')}</p>
       <button type="button" class="btn small" id="periodOpen_${p.firstDay}" data-periodopen="${p.firstDay}">${t('period.task.button')}</button>
     </div>`;
 }
@@ -77,7 +77,7 @@ function doneCardHtml(tk){
   return `<details class="periodDone" id="periodDone_${p.firstDay}">
       <summary><p class="periodDoneTitle">${phIcon('check')} ${t('period.done.title')} <span class="periodDoneName">· ${esc(p.name)}</span></p></summary>
       <p class="devAlertBody">${esc(t(tk.canEdit? 'period.done.body' : 'period.done.locked', { p1:p.name, p2:girl, p3:deadlineLabel(p) }))}</p>
-      <h3 style="margin:10px 0 2px;font-size:14px">${esc(t('period.done.yours',{p1:p.name}))}</h3>
+      <h3 class="periodDoneTitle">${esc(t('period.done.yours',{p1:p.name}))}</h3>
       ${rows}
       ${tk.canEdit? `<button type="button" class="btn small secondary" id="periodEdit_${p.firstDay}" data-periodedit="${p.firstDay}">${t('period.done.edit')}</button>` : ''}
     </details>`;
@@ -99,7 +99,7 @@ export function periodFormHtml(){
           <label class="periodRide" for="periodRide_${iso}"><input type="checkbox" class="periodRideInput" id="periodRide_${iso}" ${d.out? '' : 'checked'}> <span>${t(d.out? 'period.form.notRides' : 'period.form.rides')}</span></label>
         </div>
         ${d.out
-          ? `<p class="muted" style="margin:0">${esc(t('period.form.notRidesDay',{p1:girl}))}</p>`
+          ? `<p class="muted m-0">${esc(t('period.form.notRidesDay',{p1:girl}))}</p>`
           : `<div class="grid2">${timeInput('heen')}${timeInput('terug')}</div>`}
       </div>`;
   }).join('');
@@ -108,9 +108,9 @@ export function periodFormHtml(){
       <p class="muted">${esc(t('period.form.sub',{p1:p.name, p2:isoRangeLabel(p.firstDay,p.lastDay), p3:isoDayLabel(p.deadlineDate)+' '+p.deadlineTime}))}</p>
       ${onBehalf}
       <p class="muted">${t('period.form.hint')}</p>
-      <div class="grid2" style="margin-top:8px"><span class="muted" style="font-size:12px">${t('period.form.heen')}</span><span class="muted" style="font-size:12px">${t('period.form.terug')}</span></div>
+      <div class="grid2 mt-3"><span class="muted">${t('period.form.heen')}</span><span class="muted">${t('period.form.terug')}</span></div>
       ${rows}
-      <div class="rowflex" style="gap:6px;margin-top:12px">
+      <div class="rowflex rowflex--tight mt-5">
         <button type="button" class="btn small secondary" id="periodCancel">${t('period.form.cancel')}</button>
         <button type="button" class="btn small" id="periodSubmit">${t('period.form.submit')}</button>
       </div>
@@ -146,7 +146,7 @@ export function periodBehalfRows(firstDay){
 function behalfCardHtml(firstDay, withIntro){
   const p = normalizePeriod(S.periods[firstDay]), pr = periodBehalfRows(firstDay), left = pr.total - pr.done;
   const intro = withIntro? `<p class="muted">${esc(t('period.coord.intro',{p1:p.name, p2:isoRangeLabel(p.firstDay,p.lastDay)}))}</p>
-      <p class="muted" style="font-weight:700">${esc(periodTaskFor(myFamilyId(), firstDay).phase==='closed'? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>` : '';
+      <p class="muted muted--strong">${esc(periodTaskFor(myFamilyId(), firstDay).phase==='closed'? t('period.task.deadlinePassed') : t('period.task.deadline',{p1:deadlineLabel(p)}))}</p>` : '';
   const rows = pr.rows.map(r => {
     const key = firstDay+'|'+r.id;
     const open = S.periodView===key && r.done;
@@ -155,7 +155,7 @@ function behalfCardHtml(firstDay, withIntro){
         `<div class="periodSummary"><span>${esc(cap(isoDayLabel(iso)))}</span><span class="muted">${esc(periodDaySummary(r.family, iso, entry.days[iso]))}</span></div>`).join('')}
         <button type="button" class="btn small secondary" data-periodfill="${esc(key)}">${t('period.done.edit')}</button></div>` : '';
     return `<div class="periodBehalfRow" data-periodfamily="${esc(key)}">
-        <div class="periodBehalfName"><strong>${esc(girlOf(r.family))}</strong><div class="muted" style="font-size:12px">${esc(r.family.parentName||'')}</div></div>
+        <div class="periodBehalfName"><strong>${esc(girlOf(r.family))}</strong><div class="muted">${esc(r.family.parentName||'')}</div></div>
         <span class="periodPill${r.done? ' done' : ' todo'}">${t(r.done? 'period.coord.done' : 'period.coord.notYet')}</span>
         <button type="button" class="btn small secondary" ${r.done? `data-periodview="${esc(key)}"` : `data-periodfill="${esc(key)}"`}>${t(r.done? (open? 'period.coord.hide' : 'period.coord.view') : 'period.coord.fill')}</button>
       </div>${detail}`;

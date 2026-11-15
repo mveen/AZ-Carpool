@@ -21,13 +21,13 @@ const have = c => spawnSync('sh', ['-c', `command -v ${c}`]).status === 0;
 const run = (src, dest) => spawnSync('bash', [script, src, dest], { encoding: 'utf8' });
 
 console.log('=== the workflow ===');
-await test('deploys after a merge to main, never in parallel, with only the deploy secrets (user and key), the three smoke-test logins and the two rules keys, and the fixed azcarpool.nl folder', () => {
+await test('deploys after a merge to main, never in parallel, with only the deploy secrets (user and key), the three smoke-test logins and the restricted tunnel key, the two rules keys, and the fixed azcarpool.nl folder', () => {
   const y = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8');
   assert.match(y, /push:\s*\n\s*branches: \[main\]/);
   assert.match(y, /workflow_dispatch:/);
   assert.match(y, /cancel-in-progress: false/);
   assert.match(y, /TARGET_DIR: domains\/azcarpool\.nl\/public_html\//);
-  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER', 'RULES_KEY_LIVE', 'RULES_KEY_TEST', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
+  assert.deepEqual([...new Set([...y.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_KEY', 'DEPLOY_USER', 'RULES_KEY_LIVE', 'RULES_KEY_TEST', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
 });
 await test('tests run before the upload, and the server identity is pinned in the repo and checked (no blind trust, no copy-paste secret)', () => {
   const y = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8');
@@ -117,7 +117,8 @@ if (!have('rsync') || !have('bash')) {
       assert.match(sh, /grep -E '\^\[<>\]f\\\+\{9\} '/); assert.match(sh, /sleep "\$gap"/); assert.match(sh, /DEPLOY_CHECK_GAP:-0\.5/);
     });
     await test('when the version check after an upload fails, the workflows show what the site answered instead', () => {
-      for (const f of ['deploy.yml', 'deploy-test.yml']) assert.match(readFileSync(join(repo, '.github/workflows', f), 'utf8'), /The site answered: HTTP %\{http_code\}/, f);
+      assert.match(readFileSync(join(repo, '.github/scripts/check-site.sh'), 'utf8'), /The site answered: \$\(cat "\$tmp\/sw\.info"\)/);
+      for (const f of ['deploy.yml', 'deploy-test.yml']) assert.match(readFileSync(join(repo, '.github/workflows', f), 'utf8'), /check-site\.sh/, f);
     });
     await test('both workflows switch the check on for the website uploads (not for the cron folder)', () => {
       const live = readFileSync(join(repo, '.github/workflows/deploy.yml'), 'utf8'), t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');

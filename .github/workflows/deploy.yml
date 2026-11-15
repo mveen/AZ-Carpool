@@ -4,7 +4,7 @@ name: Deploy azcarpool.nl
 # Order: tests -> put it on the TEST site -> robot smoke test on the test site -> only then LIVE.
 # If a step fails, everything after it is skipped: live stays exactly as it was.
 # By hand you can tick "skip_smoke" to go live even when the robot is red (emergency only).
-# GitHub Pages is not touched by this: it keeps deploying from main on its own.
+# GitHub Pages is switched off (2026-11-14): this workflow is the only way the app reaches azcarpool.nl.
 on:
   push:
     branches: [main]
@@ -93,30 +93,18 @@ jobs:
           DEPLOY_CHECK_SITE="$SITE" bash scripts/deploy-rsync.sh dist-test/ "$user@$SSH_HOST:$TARGET_DIR"
 
       - name: Check that the new version is on the test site
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          expected=$(grep -oE "CACHE_NAME *= *'[^']+'" dist-test/service-worker.js | head -1)
-          echo "Expected: $expected"
-          for attempt in 1 2 3 4 5 6; do
-            now=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
-            echo "Attempt $attempt, test site: ${now:-nothing}"
-            if [ "$now" = "$expected" ]; then break; fi
-            if [ "$attempt" = 6 ]; then
-              # What did the site answer instead? (status, size, type and the first characters: enough to see a block page or an old file)
-              curl -s -o /tmp/sw-answer --max-time 20 -H 'Cache-Control: no-cache' -w 'The site answered: HTTP %{http_code}, %{size_download} bytes, type %{content_type}\n' "$SITE/service-worker.js" || true
-              head -c 300 /tmp/sw-answer | tr -d '\r' || true; echo
-              echo "::error::$SITE does not serve the new service worker"; exit 1
-            fi
-            sleep 10
-          done
-          curl -fsS --max-time 20 "$SITE/" | grep -q 'class="envBar"' || { echo "::error::the test banner is missing: this is not the test build"; exit 1; }
-          if curl -fsS --max-time 20 "$SITE/firebase-config.js" | grep -q 'projectId: "az-carpool"'; then echo "::error::the test site points to the LIVE database"; exit 1; fi
-          echo "OK: $SITE serves $expected"
+          # Asks the site; when the host answers the robot with its wait page (bot check), the files are read on the host itself.
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          SITE_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519 $user@$SSH_HOST" REMOTE_DIR="$TARGET_DIR" bash .github/scripts/check-site.sh test "$SITE" dist-test
 
   smoke:
     needs: deploy-test
     if: ${{ !inputs.skip_smoke }}
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -126,6 +114,13 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.0
           npx playwright install --with-deps chromium webkit
+      - name: Open the tunnel to the test site (own restricted key; skipped without the TUNNEL_KEY secret)
+        env:
+          TUNNEL_KEY: ${{ secrets.TUNNEL_KEY }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_HOST: h70.mijn.host
+          SSH_PORT: '26'
+        run: bash .github/scripts/open-site-tunnel.sh test.azcarpool.nl
       - name: Smoke test the test site (coordinator and parent)
         env:
           SMOKE_SITE: https://test.azcarpool.nl
@@ -195,26 +190,12 @@ jobs:
           DEPLOY_CHECK_SITE="$SITE" bash scripts/deploy-rsync.sh dist/ "$user@$SSH_HOST:$TARGET_DIR"
 
       - name: Check that the new version is live
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          expected=$(grep -oE "CACHE_NAME *= *'[^']+'" dist/service-worker.js | head -1)
-          echo "Expected: $expected"
-          for attempt in 1 2 3 4 5 6; do
-            live=$(curl -fsS --max-time 20 -H 'Cache-Control: no-cache' "$SITE/service-worker.js" | grep -oE "CACHE_NAME *= *'[^']+'" | head -1 || true)
-            echo "Attempt $attempt, live: ${live:-nothing}"
-            if [ "$live" = "$expected" ]; then break; fi
-            if [ "$attempt" = 6 ]; then
-              # What did the site answer instead? (status, size, type and the first characters: enough to see a block page or an old file)
-              curl -s -o /tmp/sw-answer --max-time 20 -H 'Cache-Control: no-cache' -w 'The site answered: HTTP %{http_code}, %{size_download} bytes, type %{content_type}\n' "$SITE/service-worker.js" || true
-              head -c 300 /tmp/sw-answer | tr -d '\r' || true; echo
-              echo "::error::$SITE does not serve the new service worker"; exit 1
-            fi
-            sleep 10
-          done
-          curl -fsS --max-time 20 "$SITE/" | grep -q "$SITE/app.js" || { echo "::error::start page does not point to $SITE/app.js"; exit 1; }
-          type=$(curl -fsSI --max-time 20 "$SITE/app.js" | tr -d '\r' | grep -i '^content-type:' || true)
-          echo "app.js: $type"
-          echo "$type" | grep -qi 'javascript' || { echo "::error::app.js is not served as JavaScript"; exit 1; }
-          echo "OK: $SITE serves $expected"
+          # Asks the site; when the host answers the robot with its wait page (bot check), the files are read on the host itself.
+          user=$(printf '%s' "$DEPLOY_USER" | tr -d '[:space:]')
+          SITE_SSH="ssh -p $SSH_PORT -i $HOME/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts -o HostKeyAlgorithms=ssh-ed25519 $user@$SSH_HOST" REMOTE_DIR="$TARGET_DIR" bash .github/scripts/check-site.sh live "$SITE" dist
 
       # The cron jobs (nightly back-up, daily match calendars) live outside the web folder, in ~/azcarpool-cron/.
       # Their key files are NOT in GitHub: they are put on the host by hand, once (see README).

@@ -10,9 +10,9 @@ async function test(name, fn) {
 
 const handlers = {}, store = new Map();
 const shown = [], opened = [], order = []; let openClients = [];
-const SCOPE = 'https://mveen.github.io/AZ-Carpool/';
+const SCOPE = 'https://azcarpool.nl/';
 globalThis.self = {
-  location: { origin: 'https://mveen.github.io' }, addEventListener: (type, fn) => { handlers[type] = fn; }, skipWaiting() {},
+  location: { origin: 'https://azcarpool.nl' }, addEventListener: (type, fn) => { handlers[type] = fn; }, skipWaiting() {},
   navigator: { userAgent: 'Mozilla/5.0 (Linux; Android 14) Chrome/126.0 Mobile Safari/537.36' },
   registration: { scope: SCOPE, showNotification: async (title, options) => { shown.push({ title, options }); } },
   clients: { claim() {}, matchAll: async () => { order.push('matchAll'); return openClients; }, openWindow: async url => { order.push('openWindow'); opened.push(url); } },
@@ -40,7 +40,7 @@ const reset = () => { store.clear(); network = async () => new Response('ok'); }
 console.log('=== what is kept ===');
 await test('the app\'s own files are cached, the Firebase SDK (own folder firebase-sdk/) included', async () => {
   reset();
-  for (const u of ['https://mveen.github.io/AZ-Carpool/app.js', 'https://mveen.github.io/AZ-Carpool/firebase-sdk/firebase-app.js']) {
+  for (const u of ['https://azcarpool.nl/app.js', 'https://azcarpool.nl/firebase-sdk/firebase-app.js']) {
     const r = await run(u); assert.ok(r.responded && r.cached, u);
   }
 });
@@ -54,29 +54,29 @@ await test('Firestore, Google Calendar and OpenRouteService requests are left al
     const r = await run(u); assert.equal(r.responded, false, u); assert.equal(r.cached, false, u);
   }
 });
-await test('only GET is handled', async () => { reset(); const r = await run('https://mveen.github.io/AZ-Carpool/app.js', 'POST'); assert.equal(r.responded, false); });
+await test('only GET is handled', async () => { reset(); const r = await run('https://azcarpool.nl/app.js', 'POST'); assert.equal(r.responded, false); });
 
 console.log('=== errors and offline ===');
 await test('an error response (404, 500) is passed on but never cached', async () => {
   reset();
   for (const status of [404, 500]) {
     network = async () => new Response('nope', { status });
-    const r = await run('https://mveen.github.io/AZ-Carpool/app.js');
+    const r = await run('https://azcarpool.nl/app.js');
     assert.equal(r.res.status, status); assert.equal(r.cached, false, 'status ' + status);
   }
 });
 await test('a failed good copy is not replaced by a later error; offline gives the last good copy', async () => {
   reset();
-  await run('https://mveen.github.io/AZ-Carpool/app.js');
-  network = async () => new Response('nope', { status: 500 }); await run('https://mveen.github.io/AZ-Carpool/app.js');
+  await run('https://azcarpool.nl/app.js');
+  network = async () => new Response('nope', { status: 500 }); await run('https://azcarpool.nl/app.js');
   network = async () => { throw new TypeError('offline'); };
-  const r = await run('https://mveen.github.io/AZ-Carpool/app.js');
+  const r = await run('https://azcarpool.nl/app.js');
   assert.equal(await r.res.text(), 'ok');
 });
 
 await test('a cached file is served at once and refreshed from the network in the background', async () => {
   reset();
-  const u = 'https://mveen.github.io/AZ-Carpool/app.js';
+  const u = 'https://azcarpool.nl/app.js';
   await run(u);
   network = async () => new Response('new');
   const r = await run(u);
@@ -85,7 +85,7 @@ await test('a cached file is served at once and refreshed from the network in th
 });
 await test('nothing cached and offline: the request fails like before', async () => {
   reset(); network = async () => { throw new TypeError('offline'); };
-  await assert.rejects(run('https://mveen.github.io/AZ-Carpool/app.js'));
+  await assert.rejects(run('https://azcarpool.nl/app.js'));
 });
 
 console.log('\n=== push (test phase) ===');

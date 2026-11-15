@@ -64,7 +64,7 @@ export function installFakeDom() {
   globalThis.window.open = (...a) => { opened.push(a); return null; };
   globalThis.window.addEventListener = () => {};
   globalThis.localStorage = { getItem: k => (store.has(k) ? store.get(k) : null), setItem: (k, v) => store.set(k, String(v)), removeItem: k => store.delete(k) };
-  globalThis.location = { hash: '', href: 'https://mveen.github.io/AZ-Carpool/' };
+  globalThis.location = { hash: '', href: 'https://azcarpool.nl/' };
   globalThis.matchMedia = () => ({ matches: false });
   return { doc, opened, el: id => doc.getElementById(id), html: id => doc.getElementById(id).innerHTML, reset: () => { byId.clear(); opened.length = 0; store.clear(); } };
 }

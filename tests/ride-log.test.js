@@ -155,5 +155,10 @@ test('a family that is no longer in the app still shows with the name stored in 
   assert.deepEqual([r[0].name, r[0].parent], ['Oud gezin', '']);
 });
 
+test('a document can carry the waiting per girl (optional, so older documents stay as they are)', () => {
+  const base = { iso: '2026-09-28', day: 'Ma', direction: 'heen', weekKey: '2026-W40', families: fams, nowMs: NOW, cars: [car('f1')] };
+  assert.deepEqual(buildRideLogDoc({ ...base, waitsOf: () => ({ g0: 12, g1: 0 }) }).cars[0].waits, { g0: 12, g1: 0 });
+  assert.equal('waits' in buildRideLogDoc(base).cars[0], false);
+});
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

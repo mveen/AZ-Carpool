@@ -143,7 +143,7 @@ export function openShare(){
     <div class="sheet__handle"></div>
     <h3 id="sheetTitle">${esc(t('shell.share_title'))}</h3><p class="sheet__sub">${esc(t('shell.share_sub'))}</p>
     <div class="sharePreview">${esc(text)}</div>
-    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-network')}${esc(t('shell.share_button'))}</button>
+    <button type="button" class="btn btn--block" id="doShare">${phIcon('share-network')}${esc(t('shell.share_button'))}</button>
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
@@ -282,8 +282,11 @@ export function initShell(onNavigate, onViewChange){
     const ft = e.target && e.target.closest ? e.target.closest('[data-famtype]') : null;
     if(ft){
       const sel = document.getElementById(ft.dataset.famtypefor);
+      const changed = !!sel && sel.value !== ft.dataset.famtype;
       if(sel) sel.value = ft.dataset.famtype;
       document.querySelectorAll('[data-famtypefor="' + ft.dataset.famtypefor + '"]').forEach(x => x.classList.toggle('active', x === ft));
+      // Setting .value from code fires no 'change' event, and the Beheer family card saves on 'change': without this the choice was never stored.
+      if(changed && sel.dispatchEvent) sel.dispatchEvent(new Event('change', { bubbles: true }));
     }
   });
 }

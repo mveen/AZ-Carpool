@@ -40,23 +40,23 @@ export function noticeCardHtml(){
       <label for="noticeText">${t('notice.text')}</label>
       <input type="text" class="noticeInput" id="noticeText" maxlength="${NOTICE_MAX}" autocomplete="off" value="${esc(text)}" placeholder="${esc(t('notice.placeholder'))}">
       <div class="muted noticeCount" id="noticeCount">${text.length} / ${NOTICE_MAX}</div>
-      <label style="margin-top:10px">${t('notice.off.label')}</label>
-      <div class="rowflex" style="gap:8px">
+      <label class="label--roomy">${t('notice.off.label')}</label>
+      <div class="rowflex">
         <input type="date" class="noticeInput" id="noticeOffDate" aria-label="${esc(t('notice.off.date'))}" value="${esc(v.offDate || '')}">
         <input type="time" class="noticeInput" id="noticeOffTime" aria-label="${esc(t('notice.off.time'))}" value="${esc(v.offTime || '')}">
       </div>
-      <p class="muted" style="margin-top:3px">${t('notice.off.hint')}</p>
+      <p class="muted periodHint">${t('notice.off.hint')}</p>
       <label>${t('notice.preview')}</label>
       <div class="noticePreview" id="noticePreview">${noticePreviewHtml(text)}</div>
-      <div class="rowflex" style="gap:8px;margin-top:10px;justify-content:space-between;align-items:center">${status}</div>
-      <button type="button" class="btn" id="noticeSave" style="width:100%">${t('notice.save')}</button>
+      <div class="rowflex mt-4">${status}</div>
+      <button type="button" class="btn btn--block" id="noticeSave">${t('notice.save')}</button>
     </div>`;
 }
 
 function noticePreviewHtml(text){
   return text
-    ? `<div class="noticeBar" style="display:flex">${phIcon('megaphone-fill', { size:'14px' })}<span>${esc(text)}</span></div>`
-    : `<div class="muted" style="padding:6px 12px;font-size:12px">${t('notice.preview.empty')}</div>`;
+    ? `<div class="noticeBar">${phIcon('megaphone-fill', { size:'14px' })}<span>${esc(text)}</span></div>`
+    : `<div class="muted noticePreviewEmpty">${t('notice.preview.empty')}</div>`;
 }
 
 export function readNoticeForm(){

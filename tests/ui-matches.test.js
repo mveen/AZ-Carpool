@@ -830,5 +830,8 @@ test('the change log names the leg of a heen or terug car', () => {
   coordState({ matchCarpools: { [SLUG]: { ...carpool, cars, log } } }); assert.match(text(render()), /voegde een auto toe: Kees de Vries terug 15:45 \(Lois\)/);
 });
 
+import { assertNoUnusedImports } from './test-support.js';
+test('ui-matches.js imports nothing it does not use', () => assertNoUnusedImports('ui-matches.js'));
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

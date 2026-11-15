@@ -7,8 +7,8 @@ import { t } from './i18n.js';
 import { S } from './state.js';
 import { db } from './data.js';
 import { APP_URL } from './constants.js';
-import { esc, phIcon, showToast, closeSheet } from './ui-common.js';
-import { fam, plainGirlName } from './rides.js';
+import { esc, showToast, closeSheet } from './ui-common.js';
+import { plainGirlName } from './rides.js';
 import { myFamilyId } from './coordinator.js';
 import { TOKEN_RE, newCalendarToken } from './calendar-feed.js';
 

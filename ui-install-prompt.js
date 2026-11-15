@@ -1,20 +1,17 @@
 // ui-install-prompt.js — a one-time sheet that offers to put the app on the home screen.
 //
-// FEATURE TOGGLE (temporary): the sheet is OFF in every deployment until INSTALL_PROMPT_ENABLED below is set to true.
-// To try it on ONE phone first, add  ?installprompt=1  to the address once (this device only; ?installprompt=0 switches it off,
-// and =1 also forgets earlier answers so it can be tried again). Nothing goes into the database: what was shown is remembered
+// FEATURE TOGGLE: the sheet is a lasting part of the app (owner's decision, 2026-11-14: never remove it). It was rolled out to everyone on 2026-11-14 (INSTALL_PROMPT_ENABLED below is true); set it to false to switch it off for all phones again.
+// To see it again on ONE phone, add  ?installprompt=1  to the address once (this device only; it forgets earlier answers so it can be tried again; =0 only forgets this device's switch: while the toggle is true the sheet stays on). Nothing goes into the database: what was shown is remembered
 // per device, because installing is per device too.
 //
-// AFTER THE ROLLOUT, remove the toggle but keep the feature: delete INSTALL_PROMPT_ENABLED, PREVIEW_KEY, applyPreviewParam(),
+// AFTER THE ROLLOUT the toggle may go, the feature stays: delete INSTALL_PROMPT_ENABLED, PREVIEW_KEY, applyPreviewParam(),
 // previewOn() and isEnabled() (and the 'off' line in blockedReason()), plus the preview tests at the end of
 // tests/ui-install-prompt.test.js. No database field, Beheer card or CSS to clean up.
-// To remove the WHOLE feature instead: delete this file, its test, the 'installprompt.*' texts, its line in service-worker.js
-// (ASSETS), its README row, and the import plus the two maybeShowInstallPrompt() calls in app.js.
 import { t } from './i18n.js';
 import { S } from './state.js';
 import { closeSheet, esc, isIOSDevice, isStandaloneDisplay, phIcon } from './ui-common.js';
 
-export const INSTALL_PROMPT_ENABLED = false;   // <- the toggle. Off at deployment; set to true to roll out.
+export const INSTALL_PROMPT_ENABLED = true;   // <- the toggle. Rolled out to everyone on 2026-11-14; set to false to switch the sheet off for all phones again.
 
 const STORE_KEY = 'install-prompt';            // per device: { v:1, n: times shown, until: ms, done: bool }
 const PREVIEW_KEY = 'install-prompt-preview';  // per device switch set by ?installprompt=1
@@ -41,7 +38,7 @@ function previewOn(){
   applyPreviewParam();
   try{ return localStorage.getItem(PREVIEW_KEY) === '1'; }catch(e){ return false; }
 }
-export function isEnabled(){ return INSTALL_PROMPT_ENABLED || previewOn(); }
+export function isEnabled(){ const preview = previewOn(); return INSTALL_PROMPT_ENABLED || preview; }   // previewOn() first: ?installprompt=1 must also forget earlier answers while the toggle is on
 
 // ---------- what was shown before (this device only) ----------
 function storageWorks(){

@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES } from '../scripts/smoke-test.mjs';
+import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES, isHostWaitPage, withHostRetry, HOST_RETRIES, HOST_RETRY_WAIT_MS, waitForSelectorOrHostWait, runSmoke, isHostBlockedProblem } from '../scripts/smoke-test.mjs';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { transformBackup, checkFixedCodes } from '../scripts/seed-test-data.mjs';
 
@@ -62,9 +62,10 @@ await test('the test job uploads to the test folder only, the live job to the li
   assert.match(l, /TARGET_DIR: domains\/azcarpool\.nl\/public_html\//); assert.match(l, /build:deploy\n/);
   assert.ok(!/test\.azcarpool\.nl/.test(l));
 });
-await test('the smoke job gets only the smoke secrets and never the deploy key', () => {
+await test('the smoke job gets only the smoke secrets, the account name and the restricted tunnel key, and NEVER the deploy key', () => {
   const j = job('smoke');
-  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
+  assert.ok(!/DEPLOY_KEY/.test(j));
+  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_USER', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
   assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
 });
 
@@ -85,11 +86,12 @@ await test('both workflows install both browsers', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
   for (const f of [y, t]) assert.match(f, /playwright install --with-deps chromium webkit/);
 });
-await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets', () => {
+await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets (and never the deploy key)', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
   const j = t.slice(t.indexOf('\n  smoke:\n')); assert.ok(t.includes('\n  smoke:\n'));
+  assert.ok(!/DEPLOY_KEY/.test(j));
   assert.match(j, /needs: deploy\n/); assert.match(j, /node scripts\/smoke-test\.mjs/); assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
-  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
+  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_USER', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
 });
 
 console.log('=== fixed codes in the test data ===');
@@ -113,6 +115,93 @@ await test('refuses unknown families, short codes, live codes and duplicates', (
   assert.throws(() => checkFixedCodes({ eline: '1111111111' }, fam, new Set(['1111111111'])), /live app/);
   assert.throws(() => checkFixedCodes({ eline: 'abcdefghij', evi: 'abcdefghij' }, fam), /same/);
 });
+
+console.log('=== the wait page of the host (bot check) ===');
+await test('the wait page of the host is recognised, an ordinary file or error is not', () => {
+  assert.ok(isHostWaitPage({ url: 'https://test.azcarpool.nl/z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f', headers: { server: 'LiteSpeed' } }));
+  assert.ok(isHostWaitPage({ url: 'https://test.azcarpool.nl/z0f76a1d14fd21a8fb5fd0d03e0fdc3d3cedae52f?x=1' }));
+  assert.ok(isHostWaitPage({ url: 'https://test.azcarpool.nl/app.js', headers: { server: 'openresty/1.31.1.1', 'cf-edge-cache': 'no-cache' } }));
+  assert.ok(!isHostWaitPage({ url: 'https://test.azcarpool.nl/app.js', headers: { server: 'LiteSpeed' } }));
+  assert.ok(!isHostWaitPage({ url: 'https://test.azcarpool.nl/zebra.js', headers: { server: 'LiteSpeed' } }));
+  assert.ok(!isHostWaitPage({ url: 'https://test.azcarpool.nl/missing.js', headers: { server: 'openresty' } }), 'openresty alone is not enough');
+  assert.ok(!isHostWaitPage({}));
+});
+const noSleep = { sleep: async () => {}, log: () => {}, who: 'chromium parent' };
+await test('a clean check runs once', async () => {
+  let n = 0; assert.deepEqual(await withHostRetry(async () => { n++; return { problems: [], hostWait: false }; }, noSleep), []); assert.equal(n, 1);
+});
+await test('a real app error is NOT retried: it fails at once', async () => {
+  let n = 0; const p = await withHostRetry(async () => { n++; return { problems: ['tab myweek is empty'], hostWait: false }; }, noSleep);
+  assert.equal(n, 1); assert.deepEqual(p, ['tab myweek is empty']);
+});
+await test('with the wait page of the host the check is repeated, and a later clean try makes it pass', async () => {
+  let n = 0; const lines = [], waits = [];
+  const p = await withHostRetry(async () => { n++; return n < 3 ? { problems: ['Timeout'], hostWait: true } : { problems: [], hostWait: false }; }, { who: 'webkit parent', log: l => lines.push(l), sleep: async ms => { waits.push(ms); } });
+  assert.deepEqual(p, []); assert.equal(n, 3); assert.equal(waits.length, 2); assert.match(lines[0], /webkit parent: the wait page of the host/);
+});
+await test('a real error on the try after the wait page still fails', async () => {
+  let n = 0; const p = await withHostRetry(async () => { n++; return n === 1 ? { problems: ['Timeout'], hostWait: true } : { problems: ['page error: x'], hostWait: false }; }, noSleep);
+  assert.equal(n, 2); assert.deepEqual(p, ['page error: x']);
+});
+await test('the wait page every time: the run fails after the last try and names the cause', async () => {
+  let n = 0; const p = await withHostRetry(async () => { n++; return { problems: ['Timeout'], hostWait: true }; }, noSleep);
+  assert.equal(n, HOST_RETRIES); assert.match(p[0], /wait page of the host/); assert.match(p[0], /not an app error/); assert.equal(p[1], 'Timeout');
+});
+await test('the wait page seen but nothing went wrong: no retry needed', async () => {
+  let n = 0; assert.deepEqual(await withHostRetry(async () => { n++; return { problems: [], hostWait: true }; }, noSleep), []); assert.equal(n, 1);
+});
+console.log('=== fast with the wait page: no more 14 minutes ===');
+const fakePage = ({ gateAfterMs = null, text = '' } = {}) => {
+  const t0 = Date.now(), up = () => gateAfterMs !== null && Date.now() - t0 >= gateAfterMs;
+  return { locator: () => ({ count: async () => (up() ? 1 : 0), isVisible: async () => up() }), content: async () => text, waitForTimeout: ms => new Promise(r => setTimeout(r, ms)) };
+};
+await test('the login screen is found as soon as it is there', async () => {
+  assert.equal(await waitForSelectorOrHostWait(fakePage({ gateAfterMs: 0 }), '#gatePhone', { timeoutMs: 500, pollMs: 5 }), 'found');
+  assert.equal(await waitForSelectorOrHostWait(fakePage({ gateAfterMs: 30 }), '#gatePhone', { timeoutMs: 500, pollMs: 5 }), 'found');
+  assert.equal(await waitForSelectorOrHostWait(fakePage({ gateAfterMs: 0 }), 'button', { timeoutMs: 500, pollMs: 5, visible: true }), 'found');
+});
+await test('the wait page of the host is recognised at once, not after the full 30 s timeout', async () => {
+  const t0 = Date.now();
+  assert.equal(await waitForSelectorOrHostWait(fakePage({ text: '<html><body>One moment, please...</body></html>' }), '#gatePhone', { timeoutMs: 5000, pollMs: 5 }), 'wait');
+  assert.ok(Date.now() - t0 < 1000, 'took ' + (Date.now() - t0) + ' ms');
+  assert.equal(await waitForSelectorOrHostWait(fakePage(), '#gatePhone', { timeoutMs: 5000, pollMs: 5, hostWait: () => true }), 'wait');   // a response already showed it
+});
+await test('a page with neither the login screen nor the wait page times out (a real problem, not retried as the wait page)', async () => {
+  assert.equal(await waitForSelectorOrHostWait(fakePage({ text: '<html>error</html>' }), '#gatePhone', { timeoutMs: 60, pollMs: 5 }), 'timeout');
+});
+await test('the pause between tries is 20 s (was 30 s) and the robot job gives up after 12 minutes (was 25), so a stuck robot cannot block the queue', () => {
+  assert.equal(HOST_RETRY_WAIT_MS, 20000);
+  assert.match(job('smoke'), /timeout-minutes: 12/);
+  assert.match(readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8').slice(readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8').indexOf('\n  smoke:\n')), /timeout-minutes: 12/);
+});
+const smokeEnv = { SMOKE_PHONE: '0612345678', SMOKE_CODE_COORD: 'aaaaaaaaaa', SMOKE_CODE_PARENT: 'bbbbbbbbbb' };
+const fakePw = () => { const launched = []; const mk = e => ({ launch: async () => { launched.push(e); return { close: async () => {} }; } }); return { launched, chromium: mk('chromium'), webkit: mk('webkit') }; };
+await test('blocked by the wait page on every try: the other three checks are NOT tried (they would meet it too), and the run names the cause', async () => {
+  const pw = fakePw(); const calls = [];
+  const problems = await runSmoke(smokeEnv, () => {}, { pw, sleep: async () => {}, check: async (b, c, role, l, engine) => { calls.push(engine + ' ' + role.name); return { problems: ['Timeout'], hostWait: true }; } });
+  assert.equal(calls.length, HOST_RETRIES);               // only the first check, with its tries
+  assert.ok(calls.every(c => c === 'chromium coordinator'));
+  assert.deepEqual(pw.launched, ['chromium']);            // the second browser is not even started
+  assert.ok(problems.some(isHostBlockedProblem));
+  assert.equal(problems.filter(m => /not tried/.test(m)).length, 3);
+  for (const who of ['chromium parent', 'webkit coordinator', 'webkit parent']) assert.ok(problems.some(m => m.startsWith(who + ': not tried')), who);
+});
+await test('a green run still checks all four (two browsers x two logins)', async () => {
+  const pw = fakePw(); const calls = [];
+  const problems = await runSmoke(smokeEnv, () => {}, { pw, sleep: async () => {}, check: async (b, c, role, l, engine) => { calls.push(engine + ' ' + role.name); return { problems: [], hostWait: false }; } });
+  assert.deepEqual(problems, []); assert.deepEqual(calls, ['chromium coordinator', 'chromium parent', 'webkit coordinator', 'webkit parent']);
+});
+await test('a real app error does NOT stop the other checks: they all still run and report', async () => {
+  const pw = fakePw(); const calls = [];
+  const problems = await runSmoke(smokeEnv, () => {}, { pw, sleep: async () => {}, check: async (b, c, role, l, engine) => { calls.push(engine + ' ' + role.name); return { problems: calls.length === 1 ? ['chromium coordinator: tab myweek is empty'] : [], hostWait: false }; } });
+  assert.equal(calls.length, 4); assert.deepEqual(problems, ['chromium coordinator: tab myweek is empty']);
+});
+await test('a wait page that goes away on a later try still lets the whole run pass', async () => {
+  const pw = fakePw(); let n = 0; const calls = [];
+  const problems = await runSmoke(smokeEnv, () => {}, { pw, sleep: async () => {}, check: async (b, c, role, l, engine) => { calls.push(engine + ' ' + role.name); n++; return n === 1 ? { problems: ['Timeout'], hostWait: true } : { problems: [], hostWait: false }; } });
+  assert.deepEqual(problems, []); assert.equal(calls.length, 5);   // 1 blocked try + 4 checks
+});
+await test('the smoke job has time for the retries', () => { assert.match(job('smoke'), /timeout-minutes: 12/); });
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

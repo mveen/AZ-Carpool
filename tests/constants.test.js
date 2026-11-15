@@ -104,11 +104,28 @@ test('v241: this version is at least v241', () => { assert.ok(Number(APP_VERSION
 test('v243: this version is at least v243', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 243); });
 test('v249: this version is at least v249', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 249); });
 test('v250: this version is at least v250', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 250); });
+test('v265: this version is at least v265', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 265); });
+test('v266: this version is at least v266', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 266); });
+test('v267: this version is at least v267', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 267); });
+test('v269: this version is at least v269', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 269); });
+test('v270: this version is at least v270', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 270); });
+test('v268: this version is at least v268', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 268); });
 test('v251: this version is at least v251', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 251); });
 test('v252: this version is at least v252', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 252); });
 test('v253: this version is at least v253', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 253); });
 test('v254: this version is at least v254', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 254); });
 test('v255: this version is at least v255', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 255); });
+test('v256: this version is at least v256', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 256); });
+test('v257: this version is at least v257', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 257); });
+test('v258: this version is at least v258', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 258); });
+test('v259: this version is at least v259', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 259); });
+test('v260: this version is at least v260', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 260); });
+test('v261: this version is at least v261', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 261); });
+test('v262: this version is at least v262', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 262); });
+test('v263: this version is at least v263', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 263); });
+test('v264: this version is at least v264', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 264); });
+test('v271: this version is at least v271', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 271); });
+test('v272: this version is at least v272', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 272); });
 
 
 test('the menu icon used by the Firefox explanation exists (Phosphor dots-three-vertical)', () => { assert.match(PH_PATHS['dots-three-vertical'], /^<path d="M140,128/); });
@@ -191,5 +208,6 @@ test('v247: terug without the bus shows the opponent and a rough time', () => { 
 
 test('v248: match rides in Mijn week are weekday-style cards (violet), without a switch', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 248); });
 
+test('v266: the version was bumped with the Wachttijd speelsters card', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 266); });
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

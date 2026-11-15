@@ -11,9 +11,9 @@ import { ritbeursCardHtml, wireRitbeursCard } from './ui-ritbeurs.js';
 import { weekroosterActionCount } from './ui-weekrooster-rooster.js';
 import { pushCardHtml, wirePushCard } from './ui-push.js';
 import { rideLogCardHtml, wireRideLogCard } from './ui-ride-log.js';
+import { waitLogCardHtml, wireWaitLogCard } from './ui-wait-log.js';
 import { PERIOD_BACKUP_MAX, changesSince } from './period-backup.js';
 import { esc, foldCards, foldHtml, hapticTap, locationsCfg, phIcon, showToast, twoStepConfirm } from './ui-common.js';
-import { impactCardHtml, wireImpactCard } from './impact.js';
 import { BUSSTATION_ID, MAX_PLACES, newPlace, normalizeLocations, parseCoordinates } from './locations.js';
 import { hasApiKey } from './distance.js';
 import { createPeriodBackup, db, deletePeriodBackup, deletePeriodCompletely, doToggleCoord, markTimeChangesSeen, periodBackupList, periodHasData, restorePeriodBackup, restoreFamilies, saveCoordFamily, savePeriodDoc } from './data.js';
@@ -30,21 +30,21 @@ import { renderMyWeek } from './ui-myweek.js';
 export function renderAvailabilityTable(){
   const rows = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
   if(!rows.length) return `<p class="muted">${t('beheer.nog_geen_gezinnen')}</p>`;
-  const head = `<tr><th style="text-align:left">${t('beheer.ouder')}</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
-    <tr><th></th>${DAYS.map(()=>`<th style="font-size:12px;color:var(--text-muted)">H</th><th style="font-size:12px;color:var(--text-muted)">T</th>`).join('')}</tr>`;
+  const head = `<tr><th class="availWho">${t('beheer.ouder')}</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
+    <tr><th></th>${DAYS.map(()=>`<th class="availSub">H</th><th class="availSub">T</th>`).join('')}</tr>`;
   const body = rows.map(([id,f])=>{
     const cells = DAYS.map(([k])=>{
       const a=(f.availability&&f.availability[k])||{};
       // Standaard = solid green cell; back-up = plain grey number.
       const cellFor = (isDefault,isBackup) => isDefault
         ? `<span class="availStd">${seats(f)}</span>`
-        : isBackup ? `<span style="color:var(--text-muted);font-weight:500">${seats(f)}</span>` : t('beheer.span_class_muted_span');
-      return `<td style="text-align:center">${cellFor(a.heen,a.backupHeen)}</td><td style="text-align:center">${cellFor(a.terug,a.backupTerug)}</td>`;
+        : isBackup ? `<span class="availBackup">${seats(f)}</span>` : t('beheer.span_class_muted_span');
+      return `<td class="availCell">${cellFor(a.heen,a.backupHeen)}</td><td class="availCell">${cellFor(a.terug,a.backupTerug)}</td>`;
     }).join('');
-    return `<tr style="border-top:1px solid var(--line)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
+    return `<tr class="availRow"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
   }).join('');
-  return `<div style="overflow-x:auto"><table class="avail">${head}${body}</table></div>
-    <p class="muted" style="margin-top:6px"><span class="availStd">4</span> ${t('beheer.groen_vlak_standaard_beschikbaar')} <span style="color:var(--text-muted);font-weight:500">4</span> ${t('beheer.grijs_cijfer_back_up_indien')}</p>`;
+  return `<div class="scrollX"><table class="avail">${head}${body}</table></div>
+    <p class="muted mt-2"><span class="availStd">4</span> ${t('beheer.groen_vlak_standaard_beschikbaar')} <span class="availBackup">4</span> ${t('beheer.grijs_cijfer_back_up_indien')}</p>`;
 }
 
 export function renderPrefsCard(){
@@ -55,7 +55,7 @@ export function renderPrefsCard(){
       : r.type==='ownCar'
         ? t('beheer.eigen_ouder_regel', { p1: girlName(r.girlId) })
         : t('beheer.voorkeur_met',{p1:girlName(r.girlId),p2:(r.withAny||[]).map(id=>girlName(id)).join(t('beheer.of'))});
-    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="font-size:14px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
+    return `<div class="rowflex ruleRow"><span class="textBody">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_voorkeuren')}</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
@@ -64,11 +64,11 @@ export function renderPrefsCard(){
   const ownCarSelect = `<select id="ownCarGirlSelect">${ownGirls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
   const preferChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefWithPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   return `${ruleRows}
-    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
+    <hr class="divider">
     <p class="muted"><strong>${t('beheer.samen_reizen')}</strong> ${t('beheer.moeten_altijd_samen_in_1')}</p>
     <div>${togetherChecks || t('beheer.span_class_muted_nog_geen')}</div>
     <button type="button" class="btn small secondary" id="addTogetherPref">${t('beheer.toevoegen')}</button>
-    <p class="muted" style="margin-top:14px"><strong>${t('beheer.voorkeur')}</strong> ${t('beheer.moet_met_minstens_een_van')}</p>
+    <p class="muted mt-6"><strong>${t('beheer.voorkeur')}</strong> ${t('beheer.moet_met_minstens_een_van')}</p>
     <label>${t('beheer.wie')}</label>${preferSelect}
     <label>${t('beheer.bij_voorkeur_met_kies_een')}</label><div>${preferChecks || t('beheer.span_class_muted_nog_geen')}</div>
     <button type="button" class="btn small secondary" id="addPreferPref">${t('beheer.toevoegen')}</button>
@@ -85,7 +85,7 @@ export function renderPriorityCard(){
   const options = shifts.map(([key,label])=>`<option value="${key}" ${key===S.selectedShiftKey?'selected':''}>${label}</option>`).join('');
   return `<p class="muted">${t('beheer.bepaal_per_shift_in_welke')}</p>
     <label>${t('beheer.shift')}</label><select id="shiftPrioritySelect">${options}</select>
-    <div id="shiftPriorityRows" style="margin-top:8px"></div>`;
+    <div id="shiftPriorityRows" class="mt-3"></div>`;
 }
 
 export function renderShiftPriorityRows(shiftKeyVal){
@@ -95,9 +95,9 @@ export function renderShiftPriorityRows(shiftKeyVal){
   const rows = sortByShiftPriority(day,direction, availableDrivers(day,direction));
   if(!rows.length){ div.innerHTML=`<p class="muted">${t('beheer.geen_beschikbare_chauffeurs_voor_deze')}</p>`; return; }
   div.innerHTML = rows.map(([id,f],i)=>`
-    <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--line)">
+    <div class="rowflex prioRow">
       <span>${i+1}. ${driverNameHtml(id)} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} ${t(isStandaardDriver(f,day,direction)?'beheer.pl':'beheer.pl_back_up')}</span></span>
-      <span style="display:flex;gap:4px">
+      <span class="iconRow">
         <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>${phIcon('arrow-up')}</button>
         <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>${phIcon('arrow-down')}</button>
       </span>
@@ -130,20 +130,20 @@ export function familyBackupCardHtml(){
   if(pendingBackup && pendingBackup.errors){
     const shown = pendingBackup.errors.slice(0, MAX_SHOWN_ERRORS).map(e=>`<li>${esc(e.line? t('backup.line',{p1:e.line,p2:t(e.key,e.params)}) : t(e.key,e.params))}</li>`).join('');
     const more = pendingBackup.errors.length - MAX_SHOWN_ERRORS;
-    pending = `<div class="group warning" id="backupPending" style="margin-top:10px">
+    pending = `<div class="group warning mt-4" id="backupPending">
       <div class="fitbad">${phIcon('warning')} ${t('backup.errors_title')}</div>
-      <ul style="margin:6px 0 8px 18px;padding:0;font-size:14px">${shown}${more>0? `<li>${t('backup.errors_more',{p1:more})}</li>` : ''}</ul>
+      <ul class="backupErrors">${shown}${more>0? `<li>${t('backup.errors_more',{p1:more})}</li>` : ''}</ul>
       <button type="button" class="btn small secondary" id="backupCancel">${t('backup.cancel')}</button>
     </div>`;
   } else if(pendingBackup){
     const plan = pendingBackup.plan;
     const fresh = plan.items.filter(i=>i.isNew).length;
     const coordName = plan.coordinatorFamilyId && plan.items.find(i=>i.id===plan.coordinatorFamilyId);
-    pending = `<div class="group" id="backupPending" style="margin-top:10px">
+    pending = `<div class="group mt-4" id="backupPending">
       <div><strong>${t('backup.preview_title',{p1:esc(pendingBackup.fileName)})}</strong></div>
-      <p style="margin:6px 0">${t('backup.preview_summary',{p1:plan.items.length-fresh,p2:fresh})}${plan.untouched.length? ' '+t('backup.preview_untouched',{p1:plan.untouched.length}) : ''}</p>
-      ${coordName? `<p class="fitbad" style="margin:6px 0">${phIcon('warning')} ${t('backup.preview_coordinator',{p1:esc(coordName.data.parentName||coordName.data.girlName)})}</p>` : ''}
-      <div class="rowflex" style="gap:8px;justify-content:flex-start">
+      <p class="my-2">${t('backup.preview_summary',{p1:plan.items.length-fresh,p2:fresh})}${plan.untouched.length? ' '+t('backup.preview_untouched',{p1:plan.untouched.length}) : ''}</p>
+      ${coordName? `<p class="fitbad my-2">${phIcon('warning')} ${t('backup.preview_coordinator',{p1:esc(coordName.data.parentName||coordName.data.girlName)})}</p>` : ''}
+      <div class="rowflex rowflex--left">
         <button type="button" class="btn small" id="backupConfirm">${t('backup.confirm')}</button>
         <button type="button" class="btn small secondary" id="backupCancel">${t('backup.cancel')}</button>
       </div>
@@ -152,10 +152,10 @@ export function familyBackupCardHtml(){
   return `<div class="card" id="backupCard">
       <h2>${t('backup.title')}</h2>
       <p class="muted">${t('backup.intro')}</p>
-      <div class="rowflex" style="gap:8px;justify-content:flex-start;flex-wrap:wrap">
+      <div class="rowflex rowflex--left rowflex--wrap">
         <button type="button" class="btn secondary" id="backupMake">${t('backup.make')}</button>
         <button type="button" class="btn secondary" id="backupRestore">${t('backup.restore')}</button>
-        <input type="file" id="backupFile" accept=".csv,text/csv,text/plain" style="display:none">
+        <input type="file" id="backupFile" accept=".csv,text/csv,text/plain" class="hiddenInput">
       </div>
       ${pending}
     </div>`;
@@ -245,9 +245,9 @@ export function dayCoordinatorsCardHtml(){
   const fams = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||'', locale()));
   const rows = DAYS.map(([k,label])=>{
     const cur = S.dayCoordinators[k]||'';
-    return `<div class="rowflex" style="align-items:center;gap:8px;margin-top:6px">
-      <label style="margin:0;width:96px" for="dayCoord_${k}">${label}</label>
-      <select id="dayCoord_${k}" class="dayCoordSel" data-coordday="${k}" style="flex:1">
+    return `<div class="rowflex mt-2">
+      <label class="dayCoordLabel" for="dayCoord_${k}">${label}</label>
+      <select id="dayCoord_${k}" class="dayCoordSel" data-coordday="${k}">
         <option value="">${t('dayCoord.none')}</option>
         ${fams.map(([id,f])=>`<option value="${id}" ${id===cur?'selected':''}>${esc(f.parentName||id)} (${esc(f.girlName||'?')})</option>`).join('')}
       </select>
@@ -393,23 +393,23 @@ function periodRowHtml(p, nowMs){
 function periodFormCardHtml(){
   const dr = S.periodDraft, v = normalizePeriod(dr.value);
   const locked = !!dr.editing && (periodHasData(dr.editing).entries>0 || periodHasData(dr.editing).rooster>0);
-  const field = (id,labelKey,type,val,extra='') => `<div style="margin-top:10px;flex:1"><label for="${id}" style="margin-top:0">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
+  const field = (id,labelKey,type,val,extra='') => `<div class="periodField"><label for="${id}" class="label--flush">${t(labelKey)}</label><input type="${type}" id="${id}" class="periodInput" value="${esc(val)}" ${extra}></div>`;
   return `<div class="periodItem periodForm" id="periodDraftForm">
       <h3 class="periodFormTitle">${t(dr.editing? 'period.form.editTitle' : 'period.form.addTitle')}</h3>
       ${field('periodName','period.name','text',v.name,`maxlength="${PERIOD_NAME_MAX}" placeholder="${esc(t('period.namePlaceholder'))}"`)}
-      <div class="rowflex" style="gap:8px">
+      <div class="rowflex">
         ${field('periodFirst','period.firstDay','date',v.firstDay, locked? 'disabled' : '')}
         ${field('periodLast','period.lastDay','date',v.lastDay)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}${locked? ' '+t('period.firstDayLockedHint') : ''}</p>
+      <p class="muted periodHint">${t('period.maxHint',{p1:PERIOD_MAX_WORKDAYS})}${locked? ' '+t('period.firstDayLockedHint') : ''}</p>
       <h4 class="periodFormGroup">${t('period.form.groupFill')}</h4>
       ${field('periodOpens','period.opensOn','date',v.opensOn)}
-      <p class="muted" style="margin-top:3px">${t('period.opensHint')}</p>
-      <div class="rowflex" style="gap:8px">
+      <p class="muted periodHint">${t('period.opensHint')}</p>
+      <div class="rowflex">
         ${field('periodDlDate','period.deadlineDate','date',v.deadlineDate)}
         ${field('periodDlTime','period.deadlineTime','time',v.deadlineTime)}
       </div>
-      <p class="muted" style="margin-top:3px">${t('period.deadlineHint')}</p>
+      <p class="muted periodHint">${t('period.deadlineHint')}</p>
       <div class="periodFormActions">
         <button type="button" class="btn small" id="periodDraftSave">${t('period.save')}</button>
         <button type="button" class="btn small secondary" id="periodDraftCancel">${t('period.cancel')}</button>
@@ -424,7 +424,7 @@ export function periodsCardHtml(nowMs){
       <h2>${t('period.title')}</h2>
       <p class="muted">${t('period.intro')}</p>
       ${list.length? list.map(p => periodRowHtml(p, nowMs)).join('') : (S.periodDraft? '' : `<p class="muted" id="periodPhase">${t('period.phase.none')}</p>`)}
-      ${S.periodDraft? (editingListed? '' : periodFormCardHtml()) : `<button type="button" class="btn small secondary" id="periodAdd" data-plistadd style="margin-top:10px">${t('period.add')}</button>`}
+      ${S.periodDraft? (editingListed? '' : periodFormCardHtml()) : `<button type="button" class="btn small secondary mt-4" id="periodAdd" data-plistadd>${t('period.add')}</button>`}
     </div>`;
 }
 
@@ -476,34 +476,34 @@ export function locationsCardHtml(){
     const gps = parseCoordinates(p.address);
     const hint = gps? `<p class="addrHint">${t('loc.gpsRecognized',{p1:gps.lat+', '+gps.lon})}</p>` : '';
     const remove = p.id===BUSSTATION_ID? '' : `<button type="button" class="iconbtn danger locRemove" data-locremove="${p.id}" aria-label="${esc(t('loc.removePlace',{name:p.name}))}" title="${esc(t('loc.removePlace',{name:p.name}))}">${phIcon('trash')}</button>`;
-    return `<div class="grid2" style="margin-top:6px">
-      <div><label style="margin-top:0" for="locName_${p.id}">${t('loc.placeName')}</label><input type="text" class="locInput" id="locName_${p.id}" value="${esc(p.name)}"></div>
-      <div><label style="margin-top:0" for="locAddr_${p.id}">${t('loc.placeAddress')}</label>
-        <div class="rowflex" style="gap:6px"><input type="text" class="locInput" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="${esc(t('loc.addressPlaceholder'))}" style="flex:1;min-width:0">${remove}</div>${hint}</div>
+    return `<div class="grid2 mt-2">
+      <div><label class="label--flush" for="locName_${p.id}">${t('loc.placeName')}</label><input type="text" class="locInput" id="locName_${p.id}" value="${esc(p.name)}"></div>
+      <div><label class="label--flush" for="locAddr_${p.id}">${t('loc.placeAddress')}</label>
+        <div class="rowflex rowflex--tight"><input type="text" class="locInput fieldGrow" id="locAddr_${p.id}" value="${esc(p.address)}" placeholder="${esc(t('loc.addressPlaceholder'))}">${remove}</div>${hint}</div>
     </div>`;
   }).join('');
   const opts = sel => cfg.places.map(p=>`<option value="${p.id}" ${p.id===sel?'selected':''}>${esc(p.name)}</option>`).join('');
   const add = cfg.places.length<MAX_PLACES
-    ? `<button type="button" class="btn small secondary" id="locAdd" style="margin-top:10px">+ ${t('loc.addPlace')}</button>`
-    : `<p class="muted" style="margin-top:10px">${t('loc.maxPlaces',{p1:MAX_PLACES})}</p>`;
+    ? `<button type="button" class="btn small secondary mt-4" id="locAdd">+ ${t('loc.addPlace')}</button>`
+    : `<p class="muted mt-4">${t('loc.maxPlaces',{p1:MAX_PLACES})}</p>`;
   return `<div class="card" id="locationsCard">
       <h2>${t('loc.beheerTitle')}</h2>
       <p class="muted">${t('loc.beheerIntro',{p1:MAX_PLACES})}</p>
       ${placeRows}
       ${add}
-      <div class="grid2" style="margin-top:10px">
-        <div><label style="margin-top:0" for="locDestName">${t('loc.destination')}</label><input type="text" class="locInput" id="locDestName" value="${esc(cfg.destination.name)}"></div>
-        <div><label style="margin-top:0" for="locDestAddr">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locDestAddr" value="${esc(cfg.destination.address)}" placeholder="Straat 1, Alkmaar"></div>
+      <div class="grid2 mt-4">
+        <div><label class="label--flush" for="locDestName">${t('loc.destination')}</label><input type="text" class="locInput" id="locDestName" value="${esc(cfg.destination.name)}"></div>
+        <div><label class="label--flush" for="locDestAddr">${t('loc.placeAddress')}</label><input type="text" class="locInput" id="locDestAddr" value="${esc(cfg.destination.address)}" placeholder="Straat 1, Alkmaar"></div>
       </div>
-      <div class="grid2" style="margin-top:10px">
-        <div><label style="margin-top:0" for="locDefHeen">${t('loc.defaultHeen')}</label><select class="locInput" id="locDefHeen">${opts(cfg.defaults.heen)}</select></div>
-        <div><label style="margin-top:0" for="locDefTerug">${t('loc.defaultTerug')}</label><select class="locInput" id="locDefTerug">${opts(cfg.defaults.terug)}</select></div>
+      <div class="grid2 mt-4">
+        <div><label class="label--flush" for="locDefHeen">${t('loc.defaultHeen')}</label><select class="locInput" id="locDefHeen">${opts(cfg.defaults.heen)}</select></div>
+        <div><label class="label--flush" for="locDefTerug">${t('loc.defaultTerug')}</label><select class="locInput" id="locDefTerug">${opts(cfg.defaults.terug)}</select></div>
       </div>
-      <p class="muted" style="margin-top:10px">${t('loc.shiftHint')}</p>
-      <p class="muted" style="margin-top:10px"><strong>${t('loc.fixedTitle')}</strong> ${t('loc.fixedHint')}</p>
+      <p class="muted mt-4">${t('loc.shiftHint')}</p>
+      <p class="muted mt-4"><strong>${t('loc.fixedTitle')}</strong> ${t('loc.fixedHint')}</p>
       <div class="grid2">
-        <div><label style="margin-top:0" for="locFixAFC">${t('loc.fixedAFC')}</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
-        <div><label style="margin-top:0" for="locFixATC">${t('loc.fixedATC')}</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
+        <div><label class="label--flush" for="locFixAFC">${t('loc.fixedAFC')}</label><input type="number" class="locInput" id="locFixAFC" min="0" step="0.1" value="${cfg.fixedKm.AFC==null?'':cfg.fixedKm.AFC}"></div>
+        <div><label class="label--flush" for="locFixATC">${t('loc.fixedATC')}</label><input type="number" class="locInput" id="locFixATC" min="0" step="0.1" value="${cfg.fixedKm.ATC==null?'':cfg.fixedKm.ATC}"></div>
       </div>
     </div>`;
 }
@@ -520,9 +520,9 @@ export function apiKeysCardHtml(){
       <h2>${t('apikeys.titel')}</h2>
       <p class="muted">${t('apikeys.uitleg')}</p>
       ${status}
-      <label style="margin-top:0" for="apiKeyOrs">${t('apikeys.ors_label')}</label>
+      <label class="label--flush" for="apiKeyOrs">${t('apikeys.ors_label')}</label>
       <input type="password" id="apiKeyOrs" autocomplete="off" spellcheck="false" placeholder="${esc(t('apikeys.ors_placeholder'))}">
-      <div class="rowflex" style="gap:6px;margin-top:8px">
+      <div class="rowflex rowflex--tight mt-3">
         <button type="button" class="btn small secondary" id="apiKeyOrsSave">${t('apikeys.opslaan')}</button>
         ${has? `<button type="button" class="btn small danger" id="apiKeyOrsClear">${t('apikeys.verwijderen')}</button>` : ''}
       </div>
@@ -581,88 +581,46 @@ export async function removeLocationPlace(id){
   return writeLocations({ ...cur, places:cur.places.filter(p=>p.id!==id) }, 'loc.saved');
 }
 
-export function renderBeheer(){
-  const box=document.getElementById('tab-beheer');
-  if(!box) return;
-  if(!S.canEdit){ box.innerHTML = `<div class="card"><p class="muted">${t('beheer.deze_pagina_is_alleen_voor')}</p></div>`; return; }
-
-  const claimed = {}; Object.entries(S.links).forEach(([uid,l])=>claimed[l.familyId]=true);
-  const byName={};
-  Object.entries(S.families).forEach(([id,fd])=>{
-    const key=(fd.girlName||'').trim().toLowerCase();
-    if(key) (byName[key]=byName[key]||[]).push([id,fd]);
-  });
-  const dupGroups = Object.values(byName).filter(list=>list.length>1);
-  const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
+// The four cards of Beheer that used to be written inside renderBeheer (the other cards have their own *CardHtml functions).
+function familiesCardHtml(claimed, dupGroups){
+  const dupWarning = dupGroups.length? `<div class="group warning">
       <div class="fitbad">${phIcon('warning')} ${t('beheer.mogelijk_dubbele_gezinnen_controleer_en')}</div>
-      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn danger" data-coorddel="${id}" style="margin-left:4px;min-width:30px;min-height:30px" aria-label="${t('beheer.verwijder')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
+      ${dupGroups.map(list=>`<div class="mt-2"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn iconbtn--small danger" data-coorddel="${id}" aria-label="${t('beheer.verwijder')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
   const rows = sortFamEntriesByGirl(Object.entries(S.families)).map(([id,fd])=>{
     const isCoord = S.coordinatorConfig && S.coordinatorConfig.familyId===id;
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
     const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !S.inviteByFamily[id]? 'code' : ''].filter(Boolean);
+    const open = S.coordEditId===id;   // the edit panel opens right under this row (renderCoordEditor fills the slot)
     return `
-    <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--line);gap:8px">
-      <div style="flex:1;min-width:0">
+    <div class="famItem${open?' famItem--open':''}" data-famitem="${id}">
+    <div class="rowflex famRow">
+      <div class="fieldGrow">
         <div class="famName">${esc(fd.girlName||'(naam?)')}</div>
         <div class="muted">${esc(fd.parentName||'(ouder?)')}</div>
         <div class="famTags">${claimed[id]?`<span class="tag tag--ok">${t('beheer.gekoppeld')}</span>`:''}${isCoord?`<span class="tag tag--accent">${t('beheer.coordinator_tag')}</span>`:''}${fd.familyType==='flex'?`<span class="tag tag--flex">${t('flex.badge')}</span>`:''}</div>
         ${missing.length? `<div class="fitbad famMissing">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
-      <span style="display:flex;gap:6px;flex-shrink:0">
-        <button type="button" class="btn small secondary" data-coordedit="${id}">${t('beheer.wijzig')}</button>
+      <span class="iconRow iconRow--fixed">
+        <button type="button" class="btn small secondary" data-coordedit="${id}" aria-expanded="${open}">${t(open? 'beheer.sluiten' : 'beheer.wijzig')}</button>
         <button type="button" class="iconbtn" data-imptest="${id}" aria-label="Test de app als ${esc(fd.parentName||t('beheer.deze_ouder'))}" title="${t('beheer.testweergave_als_deze_ouder')}">${phIcon('eye')}</button>
         <button type="button" class="iconbtn danger" data-coorddel="${id}" aria-label="Verwijder ${esc(fd.girlName||'gezin')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button>
       </span>
+    </div>
+    <div class="famEditSlot" id="coordEditSlot-${id}"></div>
     </div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_gezinnen_toegevoegd')}</p>`;
-
-  // ---- attention strip: things the coordinator should look at, each linking to its card ----
-  const noCode = Object.keys(S.families).filter(id=>!S.inviteByFamily[id]).length;
-  const noPhone = Object.values(S.families).filter(fd=>!fd.parentPhone1&&!fd.parentPhone2).length;
-  const attn = [];
-  if(noCode) attn.push(['familiesCard', t('beheer.attn_zonder_code',{p1:noCode})]);
-  if(noPhone) attn.push(['familiesCard', t('beheer.attn_zonder_telefoon',{p1:noPhone})]);
-  dupGroups.forEach(list=>attn.push(['familiesCard', t('beheer.attn_dubbel',{p1:esc(list[0][1].girlName),p2:list.length})]));
-  (S.matchFetchFailedTeams||[]).forEach(f=>attn.push(['feedsCard', t('beheer.attn_kalender_mislukt',{p1:esc(f.label)})]));
-  const recentProblems = errorLogEntries().filter(e=>e.at > Date.now()-24*60*60*1000).length;
-  if(recentProblems) attn.push(['errorLogCard', t('beheer.attn_problemen',{p1:recentProblems})]);
-  const attnHtml = attn.length? `<div class="begAttn" role="status">
-      <div class="begAttnHead">${phIcon('warning')} ${t('beheer.attn_titel',{p1:attn.length})}</div>
-      ${attn.map(([id,txt])=>`<button type="button" class="begAttnItem" data-goto="${id}"><span>${txt}</span>${phIcon('chevron-right')}</button>`).join('')}
-    </div>` : '';
-
-  // Puts a phIcon name on a card built elsewhere; foldCards shows it in the summary.
-  const ic = (icon, html)=>html.replace(/^(\s*)<div class="card/, `$1<div data-icon="${icon}" class="card`);
-  const sections = [
-    ['gezinnen', 'beheer.chip_gezinnen', 'beheer.sec_gezinnen', [
-      ic('users', `<div class="card" id="familiesCard">
+  return `<div class="card" id="familiesCard">
         <h2>${t('beheer.gezinnen_beheren')}</h2>
         <p class="muted">${t('beheer.vul_of_wijzig_gegevens_namens')}</p>
         ${dupWarning}
         ${rows}
         <button type="button" class="btn secondary" id="coordNew">${t('beheer.nieuw_gezin_toevoegen')}</button>
         <div id="coordEditArea"></div>
-      </div>`),
-      ic('heart', `<div class="card" id="prefsCard">
-        <h2>${t('beheer.reisvoorkeuren')}</h2>
-        <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
-        ${renderPrefsCard()}
-      </div>`),
-      ic('list', `<div class="card" id="priorityCard">
-        <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
-        ${renderPriorityCard()}
-      </div>`),
-      ic('user', dayCoordinatorsCardHtml()),
-      ic('calendar', `<div class="card" id="availabilityCard">
-        <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
-        ${renderAvailabilityTable()}
-      </div>`),
-      ic('chart', rideLogCardHtml()),
-    ]],
-    ['periodes', 'beheer.chip_periodes', 'beheer.sec_periodes', [
-      ic('map-pin', locationsCardHtml()),
-      ic('gear', `<div class="card" id="planningCard">
+      </div>`;
+}
+function planningCardHtml(){
+  return `<div class="card" id="planningCard">
         <h2>${t('beheer.planning_instellingen')}</h2>
         <p class="muted">${t('beheer.deze_regels_bepalen_hoe_combinaties')}</p>
         <div class="grid4">
@@ -671,16 +629,10 @@ export function renderBeheer(){
           <div><label>${t('beheer.marge_reisvookeuren_min')}</label><input type="number" id="setPrefWindow" min="0" step="5" value="${S.settings.prefWindowMinutes}"></div>
           <div><label>${t('beheer.max_wachttijd_om_met_eigen')}</label><input type="number" id="setParentPrefWindow" min="0" step="5" value="${S.settings.parentPrefWindowMinutes}"></div>
         </div>
-      </div>`),
-      ic('clock', periodsCardHtml()),
-    ]],
-    ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
-      ic('car', ritbeursCardHtml()),
-      ic('bell', pushCardHtml()),
-      ic('info', noticeCardHtml()),
-      ic('info', dayChangeNoticeCardHtml()),
-      ic('wrench', maintenanceCardHtml()),
-      ic('bell', `<div class="card" id="notifCard">
+      </div>`;
+}
+function notifCardHtml(){
+  return `<div class="card" id="notifCard">
         <h2>${t('beheer.meldingen_bij_gewijzigde_tijden')}</h2>
         <p class="muted">${t('beheer.als_een_ouder_de_aankomst')}</p>
         ${('Notification' in window)
@@ -690,17 +642,17 @@ export function renderBeheer(){
                 ? `<p class="fitbad">${t('beheer.browsermeldingen_zijn_geblokkeerd_zet_ze')}</p>`
                 : `<button type="button" class="btn small secondary" id="enableNotifBtn">${t('beheer.browsermeldingen_aanzetten')}</button>`)
           : `<p class="muted">${t('beheer.deze_browser_ondersteunt_geen_meldingen')}</p>`}
-      </div>`),
-    ]],
-    ['koppelingen', 'beheer.chip_koppelingen', 'beheer.sec_koppelingen', [
-      ic('soccer', `<div class="card" id="feedsCard">
+      </div>`;
+}
+function feedsCardHtml(){
+  return `<div class="card" id="feedsCard">
         <h2>${t('beheer.wedstrijdkalenders_google_calendar')}</h2>
         <p class="muted">${t('beheer.deze_agenda_s_voeden_wedstrijden')}</p>
         ${activeMatchFeeds().map((f,i)=>`
-          <div class="rowflex" style="margin-top:6px;align-items:flex-end;gap:6px">
-            <div class="grid2" style="flex:1">
-              <div><label style="margin-top:0">${t('beheer.naam')}</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
-              <div><label style="margin-top:0">${t('beheer.calendar_id')}</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="${t('beheer.xxxx_group_v_calendar_google')}"></div>
+          <div class="rowflex rowflex--tight rowflex--end mt-2">
+            <div class="grid2 fieldGrow">
+              <div><label class="label--flush">${t('beheer.naam')}</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
+              <div><label class="label--flush">${t('beheer.calendar_id')}</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="${t('beheer.xxxx_group_v_calendar_google')}"></div>
             </div>
             <button type="button" class="iconbtn danger" data-delfeed="${i}" aria-label="${t('beheer.verwijder_kalender')}" title="${t('beheer.verwijder_kalender')}">${phIcon('trash')}</button>
           </div>
@@ -715,26 +667,12 @@ export function renderBeheer(){
           <button type="button" class="btn small secondary" id="addMatchFeedBtn">${t('beheer.nieuwe_kalender_toevoegen')}</button>
           <button type="button" class="btn small secondary" id="refreshMatchesBtn">${phIcon('refresh')} ${t('beheer.nu_verversen')}</button>
         </div>
-        ${S.matchFetchFailedTeams.length? `<p class="muted" style="margin-top:6px">${t('beheer.mislukt')}${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : ''}
-      </div>`),
-      ic('key', apiKeysCardHtml()),
-      ic('download', familyBackupCardHtml()),
-      ic('chart', impactCardHtml()),
-      ic('warning', errorLogCardHtml()),
-    ]],
-  ];
+        ${S.matchFetchFailedTeams.length? `<p class="muted mt-2">${t('beheer.mislukt')}${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : ''}
+      </div>`;
+}
 
-  // One section is shown at a time; the choice survives a redraw (data changes redraw Beheer).
-  const secIcons = { gezinnen:'users', periodes:'clock', berichten:'bell', koppelingen:'key' };
-  if(!sections.some(([id])=>id===begActive)) begActive = sections[0][0];
-  const secTitle = id => t((sections.find(x=>x[0]===id)||sections[0])[2]);
-  box.innerHTML = `${attnHtml}
-    <nav class="begChips" aria-label="${t('beheer.onderdelen')}"><div class="begSeg">${sections.map(([id,chip])=>`<button type="button" class="begChip${id===begActive?' on':''}" data-sec="${id}" aria-pressed="${id===begActive}">${phIcon(secIcons[id],{size:'1.8em'})}<span>${t(chip)}</span></button>`).join('')}</div></nav>
-    <div class="begHead"><h2 id="begTitle">${secTitle(begActive)}</h2><button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button></div>
-    ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"${id===begActive?'':' hidden'}>${cards.join('')}</section>`).join('')}`;
-
-  foldCards(box);
-
+// Chips, "open all" button and the shortcuts of the attention strip: they all switch the section that is shown.
+function wireBeheerSections(box, sections, secTitle){
   const showSec = id => {
     begActive = id;
     document.querySelectorAll('.begChip').forEach(x=>{ const on = x.dataset.sec===id; x.classList.toggle('on', on); x.setAttribute('aria-pressed', String(on)); });
@@ -764,6 +702,90 @@ export function renderBeheer(){
     card.open=true; if(card.dataset.fold) S.folds[card.dataset.fold]=true;
     card.scrollIntoView({block:'start'});
   });
+}
+
+export function renderBeheer(){
+  const box=document.getElementById('tab-beheer');
+  if(!box) return;
+  if(!S.canEdit){ box.innerHTML = `<div class="card"><p class="muted">${t('beheer.deze_pagina_is_alleen_voor')}</p></div>`; return; }
+
+  const claimed = {}; Object.entries(S.links).forEach(([uid,l])=>claimed[l.familyId]=true);
+  const byName={};
+  Object.entries(S.families).forEach(([id,fd])=>{
+    const key=(fd.girlName||'').trim().toLowerCase();
+    if(key) (byName[key]=byName[key]||[]).push([id,fd]);
+  });
+  const dupGroups = Object.values(byName).filter(list=>list.length>1);
+  // ---- attention strip: things the coordinator should look at, each linking to its card ----
+  const noCode = Object.keys(S.families).filter(id=>!S.inviteByFamily[id]).length;
+  const noPhone = Object.values(S.families).filter(fd=>!fd.parentPhone1&&!fd.parentPhone2).length;
+  const attn = [];
+  if(noCode) attn.push(['familiesCard', t('beheer.attn_zonder_code',{p1:noCode})]);
+  if(noPhone) attn.push(['familiesCard', t('beheer.attn_zonder_telefoon',{p1:noPhone})]);
+  dupGroups.forEach(list=>attn.push(['familiesCard', t('beheer.attn_dubbel',{p1:esc(list[0][1].girlName),p2:list.length})]));
+  (S.matchFetchFailedTeams||[]).forEach(f=>attn.push(['feedsCard', t('beheer.attn_kalender_mislukt',{p1:esc(f.label)})]));
+  const recentProblems = errorLogEntries().filter(e=>e.at > Date.now()-24*60*60*1000).length;
+  if(recentProblems) attn.push(['errorLogCard', t('beheer.attn_problemen',{p1:recentProblems})]);
+  const attnHtml = attn.length? `<div class="begAttn" role="status">
+      <div class="begAttnHead">${phIcon('warning')} ${t('beheer.attn_titel',{p1:attn.length})}</div>
+      ${attn.map(([id,txt])=>`<button type="button" class="begAttnItem" data-goto="${id}"><span>${txt}</span>${phIcon('chevron-right')}</button>`).join('')}
+    </div>` : '';
+
+  // Puts a phIcon name on a card built elsewhere; foldCards shows it in the summary.
+  const ic = (icon, html)=>html.replace(/^(\s*)<div class="card/, `$1<div data-icon="${icon}" class="card`);
+  const sections = [
+    ['gezinnen', 'beheer.chip_gezinnen', 'beheer.sec_gezinnen', [
+      ic('users', familiesCardHtml(claimed, dupGroups)),
+      ic('heart', `<div class="card" id="prefsCard">
+        <h2>${t('beheer.reisvoorkeuren')}</h2>
+        <p class="muted">${t('beheer.wie_er_logistiek_het_beste')}</p>
+        ${renderPrefsCard()}
+      </div>`),
+      ic('list', `<div class="card" id="priorityCard">
+        <h2>${t('beheer.selectievolgorde_per_shift')}</h2>
+        ${renderPriorityCard()}
+      </div>`),
+      ic('user', dayCoordinatorsCardHtml()),
+      ic('calendar', `<div class="card" id="availabilityCard">
+        <h2>${t('beheer.beschikbaarheid_chauffeurs_weekoverzicht')}</h2>
+        ${renderAvailabilityTable()}
+      </div>`),
+      ic('chart', rideLogCardHtml()),
+      ic('clock', waitLogCardHtml()),
+    ]],
+    ['periodes', 'beheer.chip_periodes', 'beheer.sec_periodes', [
+      ic('map-pin', locationsCardHtml()),
+      ic('gear', planningCardHtml()),
+      ic('clock', periodsCardHtml()),
+    ]],
+    ['berichten', 'beheer.chip_berichten', 'beheer.sec_berichten', [
+      ic('car', ritbeursCardHtml()),
+      ic('bell', pushCardHtml()),
+      ic('info', noticeCardHtml()),
+      ic('info', dayChangeNoticeCardHtml()),
+      ic('wrench', maintenanceCardHtml()),
+      ic('bell', notifCardHtml()),
+    ]],
+    ['koppelingen', 'beheer.chip_koppelingen', 'beheer.sec_koppelingen', [
+      ic('soccer', feedsCardHtml()),
+      ic('key', apiKeysCardHtml()),
+      ic('download', familyBackupCardHtml()),
+      ic('warning', errorLogCardHtml()),
+    ]],
+  ];
+
+  // One section is shown at a time; the choice survives a redraw (data changes redraw Beheer).
+  const secIcons = { gezinnen:'users', periodes:'clock', berichten:'bell', koppelingen:'key' };
+  if(!sections.some(([id])=>id===begActive)) begActive = sections[0][0];
+  const secTitle = id => t((sections.find(x=>x[0]===id)||sections[0])[2]);
+  box.innerHTML = `${attnHtml}
+    <nav class="begChips" aria-label="${t('beheer.onderdelen')}"><div class="begSeg">${sections.map(([id,chip])=>`<button type="button" class="begChip${id===begActive?' on':''}" data-sec="${id}" aria-pressed="${id===begActive}">${phIcon(secIcons[id],{size:'1.8em'})}<span>${t(chip)}</span></button>`).join('')}</div></nav>
+    <div class="begHead"><h2 id="begTitle">${secTitle(begActive)}</h2><button type="button" class="begFoldAll" id="begFoldAll">${t('beheer.alles_open')}</button></div>
+    ${sections.map(([id,,title,cards])=>`<section class="begSec" id="begSec-${id}"${id===begActive?'':' hidden'}>${cards.join('')}</section>`).join('')}`;
+
+  foldCards(box);
+
+  wireBeheerSections(box, sections, secTitle);
 
   try{
     const saveSettingsAuto = async ()=>{
@@ -783,6 +805,7 @@ export function renderBeheer(){
     wireNoticeCard();
     wireDayChangeNoticeCard();
     wireRideLogCard();
+    wireWaitLogCard();
     wireMaintenanceCard();
     wireRitbeursCard();
     wirePushCard();
@@ -803,7 +826,6 @@ export function renderBeheer(){
     const orsClear=document.getElementById('apiKeyOrsClear'); if(orsClear) orsClear.onclick=()=>twoStepConfirm(orsClear, t('beheer.zeker_nogmaals_klikken'), ()=>saveOrsApiKey(''));
     const locAdd=document.getElementById('locAdd'); if(locAdd) locAdd.onclick=()=>{ hapticTap(); addLocationPlace(); };
     document.querySelectorAll('[data-locremove]').forEach(btn=>btn.onclick=()=>twoStepConfirm(btn, t('beheer.zeker_nogmaals_klikken'), ()=>removeLocationPlace(btn.dataset.locremove)));
-    wireImpactCard(renderBeheer);
     wireFamilyBackupCard();
     wireErrorLogCard();
     const atp=document.getElementById('addTogetherPref');
@@ -844,8 +866,15 @@ export function renderBeheer(){
       renderShiftPriorityRows(S.selectedShiftKey);
     }
     const cn=document.getElementById('coordNew');
-    if(cn) cn.onclick = ()=>{ S.coordEditId=null; renderCoordEditor(); };
-    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{ S.coordEditId=b.dataset.coordedit; renderCoordEditor(); });
+    if(cn) cn.onclick = ()=>{ S.coordEditId=null; renderBeheer(); };
+    // Wijzig opens the panel under that family's row; the same button (now "Sluiten") closes it again, and opening another family moves it.
+    document.querySelectorAll('[data-coordedit]').forEach(b=>b.onclick=()=>{
+      hapticTap();
+      S.coordEditId = S.coordEditId===b.dataset.coordedit? undefined : b.dataset.coordedit;
+      renderBeheer();
+      const item = S.coordEditId!==undefined && document.querySelector('[data-famitem="'+S.coordEditId+'"]');
+      if(item && item.scrollIntoView) item.scrollIntoView({block:'start'});
+    });
     document.querySelectorAll('[data-coorddel]').forEach(b=>b.onclick=()=>twoStepConfirm(b,t('beheer.zeker_nogmaals_klikken'),async ()=>{
       try{
         const fid=b.dataset.coorddel;
@@ -897,8 +926,10 @@ export function renderBeheer(){
 }
 
 export function renderCoordEditor(){
-  const area=document.getElementById('coordEditArea');
+  // An existing family's form sits in the slot under its own row; "new family" keeps the area below the list.
+  const area=document.getElementById(S.coordEditId? 'coordEditSlot-'+S.coordEditId : 'coordEditArea');
   if(!area)return;
+  ['coordEditArea', ...Object.keys(S.families||{}).map(id=>'coordEditSlot-'+id)].forEach(id=>{ const a=document.getElementById(id); if(a && a!==area) a.innerHTML=''; });
   if(S.coordEditId===undefined){area.innerHTML='';return;}
   const isNew = S.coordEditId===null;
   const f = isNew? null : fam(S.coordEditId);
@@ -906,21 +937,21 @@ export function renderCoordEditor(){
   const isCoordThis = !isNew && S.coordinatorConfig && S.coordinatorConfig.familyId===S.coordEditId;
   const selfLinkedThis = !isNew && !!(S.links[S.me] && S.links[S.me].familyId===S.coordEditId);
   const coordToggleHtml = isNew? '' : `
-    <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page)">
-      <span style="font-size:14px">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
+    <div class="rowflex coordToggleRow">
+      <span class="textBody">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
       <button type="button" class="btn small secondary" id="coordToggleBtn">${isCoordThis? t('beheer.coordinator_intrekken') : (selfLinkedThis? t('beheer.maak_coordinator') : phIcon('warning')+t('beheer.maak_coordinator_2'))}</button>
     </div>`;
-  area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
+  area.innerHTML = `<div class="card coordFormCard">
     <h2>${isNew? t('beheer.nieuw_gezin_toevoegen_2') : t('beheer.bewerken')+esc((f.girlName||f.parentName)||'')}</h2>
     ${coordToggleHtml}
     <label>${t('beheer.uitnodigingscode_meerdere_mensen_kunnen_dezelfde')}</label>
-    <div class="rowflex" style="gap:6px">
-      <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
+    <div class="rowflex rowflex--tight">
+      <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" class="fieldGrow">
       <button type="button" class="btn small secondary" id="genCodeBtn">${phIcon('dice')} ${t('beheer.nieuwe_code')}</button>
     </div>
     ${familyFormHtml('coord', f)}
-    <button type="button" class="btn secondary" id="coordCancel">${t('beheer.sluiten')}</button>
-    <p class="muted" style="margin-top:8px">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
+    ${isNew? `<button type="button" class="btn secondary" id="coordCancel">${t('beheer.sluiten')}</button>
+    <p class="muted mt-3">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>` : ''}
   </div>`;
   const card=area.querySelector('.card');
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
@@ -939,7 +970,7 @@ export function renderCoordEditor(){
       doToggleCoord(S.coordEditId,isCurrently);
     }
   };
-  document.getElementById('coordCancel').onclick = ()=>{ S.coordEditId=undefined; renderBeheer(); };
+  const cc=document.getElementById('coordCancel'); if(cc) cc.onclick = ()=>{ S.coordEditId=undefined; renderBeheer(); };
   const genBtn=document.getElementById('genCodeBtn');
   if(genBtn) genBtn.onclick=()=>{ document.getElementById('coord_inviteCode').value=genCode(); saveCoordFamily(); };
 }
@@ -951,24 +982,24 @@ export function timeChangesCardHtml(){
   if(!pending.length) return '';
   const total = pending.reduce((n,f)=>n+f.changes.length,0);
   const famHtml = pending.map(f=>{
-    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary" data-tcday="${esc(c.day)}" style="padding:2px 8px;min-height:26px;margin-right:6px">${esc(dayUp(c.day))}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
+    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary btn--chip" data-tcday="${esc(c.day)}">${esc(dayUp(c.day))}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
     const when = f.latestAt? new Date(f.latestAt).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     const by = f.changes.find(c=>c.by)?.by || '';
     return `<div class="timeChangeFam">
-      <div class="rowflex" style="align-items:flex-start">
+      <div class="rowflex rowflex--top">
         <div><strong>${esc(f.girlName||f.parentName||f.familyId)}</strong>
-          <div class="muted" style="font-size:12px">${by? t('beheer.door')+esc(by)+' · ' : ''}${when}</div></div>
+          <div class="muted">${by? t('beheer.door')+esc(by)+' · ' : ''}${when}</div></div>
         <button type="button" class="btn small secondary" data-tcseen="${esc(f.familyId)}">${phIcon('check')} ${t('beheer.gezien')}</button>
       </div>
       ${lines}
     </div>`;
   }).join('');
   return `<div class="card timeChangeCard">
-    <div class="rowflex" style="align-items:baseline">
-      <h2 style="margin:0">${phIcon('warning')} ${t('beheer.gewijzigde_tijden')}${total})</h2>
+    <div class="rowflex rowflex--baseline">
+      <h2 class="m-0">${phIcon('warning')} ${t('beheer.gewijzigde_tijden')}${total})</h2>
       ${pending.length>1? `<button type="button" class="btn small secondary" id="tcSeenAll">${t('beheer.alles_gezien')}</button>` : ''}
     </div>
-    <p class="muted" style="margin:4px 0 6px">${t('beheer.deze_ouders_hebben_hun_aankomst')}</p>
+    <p class="muted timeChangeHint">${t('beheer.deze_ouders_hebben_hun_aankomst')}</p>
     ${famHtml}
   </div>`;
 }

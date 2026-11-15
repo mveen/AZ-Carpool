@@ -113,9 +113,10 @@ await test('by hand: Actions -> Databaseregels compares by default and can publi
 });
 await test('the rules tests run against the emulator when a pull request touches firebase/, with the port the tests expect', () => {
   const y = readFileSync(join(repo, '.github/workflows/rules-tests.yml'), 'utf8');
-  assert.match(y, /pull_request:\s*\n\s*paths:\s*\n\s*- 'firebase\/\*\*'/); assert.match(y, /emulators:exec --only firestore/); assert.match(y, /\|\| bad=1; done; exit \$bad/);
-  const cfg = JSON.parse(readFileSync(join(repo, 'firebase/firebase.json'), 'utf8'));
-  assert.equal(cfg.emulators.firestore.port, 8089); assert.equal(cfg.firestore.rules, 'firestore.rules');
+  assert.match(y, /pull_request:\s*\n\s*paths:\s*\n\s*- 'firebase\/\*\*'/); assert.match(y, /run: bash scripts\/run-rules-tests\.sh/);
+  assert.match(readFileSync(join(repo, 'scripts/run-rules-tests.sh'), 'utf8'), /emulators:exec --only firestore/);
+  const cfg = JSON.parse(readFileSync(join(repo, 'firebase.json'), 'utf8'));
+  assert.equal(cfg.emulators.firestore.port, 8089); assert.equal(cfg.firestore.rules, 'firebase/firestore.rules');
   assert.match(readFileSync(join(repo, 'firebase/rules-test/secrets-rules.test.mjs'), 'utf8'), /port: 8089/);
 });
 

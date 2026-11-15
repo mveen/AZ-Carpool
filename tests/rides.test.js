@@ -17,8 +17,8 @@ import {
   fam, seats, playerSeats, familyRiding, girlName, plainGirlName, plainDriverName, famTime, isAvailable, activeDeviation, effectiveCars,
   girlsFor, groupsFor, alreadyGrouped, eligibleDrivers, availableDrivers, sortByShiftPriority, computeDepartureTime,
   planOptions, ownCarWarning, ownCarBrokenNames, unplacedFor, carsCountFor, tripReserveIds, timeToMinutes,
-  baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture, shiftFamilies,
-  shownTime, setAskedTimeOf, periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
+  baseCars, periodShift, periodTimeFor, rideTime, girlsForRide, computeRideDeparture,
+  carWaits, shownTime, setAskedTimeOf, periodRidersFor, periodCarsFor, periodUnplacedFor, periodDeparture, periodEligibleDrivers, planPeriodShift, planPeriodRooster,
 } from '../rides.js';
 
 function state(patch = {}) {
@@ -420,13 +420,6 @@ test('unplacedFor "week": uses the riders of the temporary rooster; "standard" i
   assert.deepEqual(ids(unplacedFor('Do', 'terug', 'standard', st)).includes('f2'), true);
   assert.deepEqual(ids(unplacedFor('Di', 'terug', 'week', st)), ['f1', 'f2', 'f5', 'f6']);   // XCARS has only f4
 });
-test('shiftFamilies: the planning sees the handed-in time for that shift only; nothing else changes and the input is not touched', () => {
-  const st = pst(), before = JSON.stringify(st.families);
-  const fs = shiftFamilies('Di', 'terug', st);
-  assert.equal(fs.f2.schedule.Di.terug, '12:30'); assert.equal(fs.f2.schedule.Di.heen, '10:15'); assert.equal(fs.f2.schedule.Ma.terug, '17:30');
-  assert.equal(fs.f1.schedule.Di.terug, '17:30'); assert.equal(JSON.stringify(st.families), before);
-  assert.equal(shiftFamilies('Ma', 'heen', st), st.families, 'no temporary rooster for this shift: the families themselves');
-});
 test('the temporary rooster by date: riders, cars, unplaced, departure', () => {
   const st = pst();
   assert.deepEqual(ids(periodRidersFor('2026-10-27', 'terug', st)), ['f1', 'f2', 'f4', 'f5', 'f6']);
@@ -538,6 +531,22 @@ test('playerSeats(): the seats next to the driver minus the family riding along;
   assert.equal(playerSeats({ capacity: 4 }, 2), 1); assert.equal(playerSeats({ capacity: 4 }), 3); assert.equal(playerSeats({ capacity: 4 }, 0), 3);
   assert.equal(playerSeats({ capacity: 4 }, 9), 0, 'never negative'); assert.equal(playerSeats({ capacity: 4 }, -2), 3); assert.equal(playerSeats({ capacity: 4 }, 'x'), 3);
   assert.equal(familyRiding(undefined), 0); assert.equal(familyRiding(2.9), 2); assert.equal(familyRiding('2'), 2);
+});
+
+console.log('=== carWaits: the waiting of each girl in a car (written into the ride log) ===');
+test('carWaits heen: she arrives at departure + travel time and waits for what is left to her time', () => {
+  const st = state();   // Ma heen: f1 08:30, f2 08:30, f3 10:15; travel time 60
+  assert.deepEqual(carWaits('Ma', 'heen', { girlIds: ['f1', 'f3'], departureTime: '07:00' }, st), { f1: 30, f3: 135 });
+});
+test('carWaits without a set departure time uses the one the car would get (heen: earliest girl minus travel time)', () => {
+  assert.deepEqual(carWaits('Ma', 'heen', { girlIds: ['f1', 'f3'] }, state()), { f1: 0, f3: 105 });
+});
+test('carWaits terug: she waits from her own time until the car leaves', () => {
+  assert.deepEqual(carWaits('Ma', 'terug', { girlIds: ['f1', 'f2'], departureTime: '17:30' }, state()), { f1: 30, f2: 0 });
+});
+test('carWaits: nobody waits less than 0 (late), and a girl without a time is left out', () => {
+  assert.deepEqual(carWaits('Ma', 'heen', { girlIds: ['f1'], departureTime: '08:00' }, state()), { f1: 0 });
+  assert.deepEqual(carWaits('Wo', 'heen', { girlIds: ['f1'], departureTime: '09:00' }, state()), {});
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

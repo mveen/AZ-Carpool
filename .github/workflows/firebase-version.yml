@@ -1,0 +1,41 @@
+name: Firebase-versie controleren
+
+# Once a month: is there a newer Firebase SDK than the one in firebase-sdk/ (scripts/vendor-firebase.mjs, FIREBASE_VERSION)?
+# If so, ONE issue is opened (or left open when it is already there). Nothing is changed by itself: updating goes through a
+# pull request and the test site, like every other change.
+on:
+  schedule:
+    - cron: '17 6 3 * *'   # the 3rd of each month, 06:17 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Compare with the newest version on npm
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r current latest state < <(node scripts/vendor-firebase.mjs --check)
+          echo "In the app: $current. Newest: $latest ($state)."
+          if [ "$state" != "newer" ]; then exit 0; fi
+          title="Nieuwe Firebase-versie: $latest (de app gebruikt $current)"
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open --search "Nieuwe Firebase-versie in:title" --json number --jq 'length')
+          if [ "$open" != "0" ]; then echo "There is already an open issue about a new Firebase version; nothing to do."; exit 0; fi
+          gh issue create --repo "$GITHUB_REPOSITORY" --title "$title" --body "De maandelijkse controle vond een nieuwere versie van de Firebase-code (inloggen en database) dan de app gebruikt.
+
+          - In de app: **$current**
+          - Nieuwste: **$latest**
+
+          Bijwerken haalt beveiligingsfixes binnen. Het gaat niet vanzelf: vraag Claude *\"werk Firebase bij naar $latest\"*. Dat wordt een pull request die eerst op test.azcarpool.nl komt (\`node scripts/vendor-firebase.mjs $latest\`, nieuw versienummer, robottest).
+
+          Sluit dit issue als het is bijgewerkt of als je deze versie overslaat."

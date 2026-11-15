@@ -2,6 +2,7 @@
 // own site instead of from Google's server (www.gstatic.com).
 //   node scripts/vendor-firebase.mjs            -> the version in FIREBASE_VERSION below
 //   node scripts/vendor-firebase.mjs 13.4.0     -> another version (then also set FIREBASE_VERSION, bump CACHE_NAME, try it on the test site)
+//   node scripts/vendor-firebase.mjs --check    -> is there a newer version? (the monthly check on GitHub, firebase-version.yml)
 // It downloads the official `firebase` package from the npm registry, takes the three browser files and makes ONE change:
 // the files import each other from https://www.gstatic.com/firebasejs/<version>/...; that becomes ./firebase-app.js.
 // Nothing is installed in the repo (no node_modules, no package-lock): the three files are the whole dependency.
@@ -25,6 +26,16 @@ export function localise(text, version) {
   return out;
 }
 
+// PURE. Is `latest` a newer version than `current`? (13.10.0 is newer than 13.9.2; equal or older is not.)
+export function isNewer(current, latest) {
+  const parts = v => { if (!/^\d+\.\d+\.\d+$/.test(String(v))) throw new Error(`version must look like 13.3.0 (got ${v})`); return String(v).split('.').map(Number); };
+  const a = parts(current), b = parts(latest);
+  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return b[i] > a[i];
+  return false;
+}
+// The newest version of the `firebase` package on the npm registry.
+export const latestFirebase = () => execFileSync('npm', ['view', 'firebase', 'version'], { encoding: 'utf8' }).trim();
+
 export function vendorFirebase({ version = FIREBASE_VERSION, rootDir = join(dirname(fileURLToPath(import.meta.url)), '..') } = {}) {
   if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error(`version must look like 13.3.0 (got ${version})`);
   const tmp = mkdtempSync(join(tmpdir(), 'az-firebase-'));
@@ -41,6 +52,11 @@ export function vendorFirebase({ version = FIREBASE_VERSION, rootDir = join(dirn
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  if (process.argv[2] === '--check') {   // used by .github/workflows/firebase-version.yml: prints "current latest newer|same"
+    const latest = latestFirebase();
+    console.log(`${FIREBASE_VERSION} ${latest} ${isNewer(FIREBASE_VERSION, latest) ? 'newer' : 'same'}`);
+    process.exit(0);
+  }
   const r = vendorFirebase({ version: process.argv[2] || FIREBASE_VERSION });
   console.log(`firebase-sdk/ now holds Firebase ${r.version}: ${r.files.join(', ')}`);
 }

@@ -2,6 +2,7 @@
 // The Beheer tab (coordinator only): families, shift priority, travel preferences, availability overview,
 // planning settings, match calendars, and the "Gewijzigde tijden" notifications.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 import fsV206 from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -47,14 +48,14 @@ test('the family editor opens for the chosen family, with an invite code field',
   useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
   withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
-  const html = dom.html('coordEditArea');
+  const html = dom.html('coordEditSlot-f2');
   assert.match(html, /id="coord_parentName"/); assert.match(html, /value="Piet Pieters"/); assert.match(html, /id="coord_inviteCode"[^>]*value="CODE1234"/);
 });
 test('the family editor has a WhatsApp login-intro icon after the phone field, using the invite code', () => {
   useFakeDb(sampleDbSeed());
   sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
   withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
-  const html = dom.html('coordEditArea');
+  const html = dom.html('coordEditSlot-f2');
   assert.match(html, /class="waIntro" data-waintro="1"/); assert.doesNotMatch(html, /<button[^>]*waIntro/);
   assert.match(decodeURIComponent(html), /CODE1234/);
 });
@@ -62,6 +63,46 @@ test('the editor for a new family starts empty', () => {
   sampleCoordinatorState({ coordEditId: null });
   withFakeNow(NOW, () => renderCoordEditor());
   assert.match(text(dom.html('coordEditArea')), /Nieuw gezin toevoegen/);
+});
+
+test('Wijzig opens the panel right under that family\'s own row, not at the bottom of the card', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: { CODE1234: 'f2' }, inviteByFamily: { f2: 'CODE1234' } });
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  const item = html.match(/<div class="famItem famItem--open" data-famitem="f2">[\s\S]*?<div class="famEditSlot" id="coordEditSlot-f2">/);
+  assert.ok(item, 'slot of f2 sits inside the open family item');
+  assert.doesNotMatch(item[0], /data-famitem="f3"/);   // no other family between the row and its panel
+  assert.match(dom.html('coordEditSlot-f2'), /id="coord_parentName"/);
+  assert.equal(dom.html('coordEditArea').trim(), '');   // nothing at the bottom
+});
+test('the row of the open family offers Sluiten, the others still Wijzig; only one panel is open', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: {}, inviteByFamily: {} });
+  withFakeNow(NOW, () => renderBeheer());
+  const html = dom.html('tab-beheer');
+  assert.match(html, /data-coordedit="f2" aria-expanded="true">Sluiten</);
+  assert.match(html, /data-coordedit="f3" aria-expanded="false">Wijzig</);
+  assert.equal((html.match(/class="famItem famItem--open"/g) || []).length, 1);
+  assert.match(dom.html('coordEditSlot-f2'), /id="coord_parentName"/);
+  assert.equal(dom.html('coordEditSlot-f3').trim(), '');   // other rows stay closed
+});
+test('the family panel has no Opslaan/Annuleer buttons: changes are saved at once', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: 'f2', invitesByCode: {}, inviteByFamily: {} });
+  withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
+  const s = text(dom.html('coordEditSlot-f2'));
+  assert.doesNotMatch(s, /Opslaan|Annuleer/);
+  assert.doesNotMatch(dom.html('coordEditSlot-f2'), /id="coordCancel"/);   // closing is done by the button in the family's own row
+  assert.doesNotMatch(s, /Sluiten/);
+});
+test('a new family still opens below the list', () => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ coordEditId: null });
+  withFakeNow(NOW, () => renderBeheer());
+  assert.match(text(dom.html('coordEditArea')), /Nieuw gezin toevoegen/);
+  assert.doesNotMatch(dom.html('tab-beheer'), /famItem--open/);
+  assert.match(dom.html('coordEditArea'), /id="coordCancel"/);   // no row to close it from, so this form keeps its own Sluiten
 });
 
 console.log('\n=== overview cards ===');
@@ -169,10 +210,10 @@ test('the cards are grouped in 4 sections, each with a chip, and every card gets
   const html = dom.html('tab-beheer');
   assert.deepEqual([...html.matchAll(/class="begChip(?: on)?" data-sec="(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
   assert.deepEqual([...html.matchAll(/<section class="begSec" id="begSec-(\w+)"/g)].map(m => m[1]), ['gezinnen', 'periodes', 'berichten', 'koppelingen']);
-  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 20);   // 17 + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
+  assert.equal((html.match(/<div data-icon="[\w-]+" class="card/g) || []).length, 20);   // 17 (incl. "Wachttijd speelsters") + "Meldingen testen" (coordinator only, push-access.js) + "Gemelde problemen" + "Melding dagwijzigingen"
   const sec = id => html.slice(html.indexOf('id="begSec-' + id + '"'));
   assert.ok(sec('gezinnen').indexOf('id="familiesCard"') < sec('gezinnen').indexOf('id="begSec-periodes"'));
-  assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0 && sec('koppelingen').indexOf('id="impactCard"') > 0);
+  assert.ok(sec('koppelingen').indexOf('id="feedsCard"') > 0);
 });
 test('one button opens every menu in Beheer, and closes them all again when all are open', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState(); S.folds = {};
@@ -212,10 +253,10 @@ test('the menus inside each Beheer section are in the order the coordinator chos
     const end = html.indexOf('</section>', start);
     return [...html.slice(start, end).matchAll(/<div data-icon="[\w-]+" class="card[^"]*" id="(\w+)"/g)].map(m => m[1]);
   };
-  assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard']);
+  assert.deepEqual(order('gezinnen'), ['familiesCard', 'prefsCard', 'priorityCard', 'dayCoordCard', 'availabilityCard', 'rideLogCard', 'waitLogCard']);
   assert.deepEqual(order('periodes'), ['locationsCard', 'planningCard', 'periodCard']);
   assert.deepEqual(order('berichten'), ['ritbeursCard', 'pushCard', 'noticeCard', 'dayNoticeCard', 'maintenanceCard', 'notifCard']);
-  assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'impactCard', 'errorLogCard']);
+  assert.deepEqual(order('koppelingen'), ['feedsCard', 'apiKeysCard', 'backupCard', 'errorLogCard']);
 });
 test('the old Beheerderstools card (wipe + PDF seed) is gone', () => {
   useFakeDb(sampleDbSeed()); sampleCoordinatorState();
@@ -331,7 +372,7 @@ test('a Flex family is marked in the family list', () => {
   assert.match(text(html), /Sanne Smit Flex/);
 });
 
-console.log('\n=== places, fixed distances and impact preview (US-15, US-21, US-07) ===');
+console.log('\n=== places and fixed distances (US-15, US-21) ===');
 import { locationsCardHtml, saveLocations } from '../ui-beheer.js';
 test('Beheer has a card with the three places, exact addresses, the destination, defaults and fixed distances', () => {
   sampleCoordinatorState({ locationsDoc: { places: [{ id: 'busstation' }, { id: 'a4-de-hoek' }, { id: 'de-parel', address: 'Parelstraat 1, Aalsmeer' }], fixedKm: { AFC: 36 } } });
@@ -341,10 +382,10 @@ test('Beheer has a card with the three places, exact addresses, the destination,
   assert.match(html, /id="locDestName" value="AFC &#39;34"/); assert.match(html, /id="locFixAFC"[^>]*value="36"/); assert.match(html, /id="locFixATC"[^>]*value=""/);
   assert.match(html, /id="locDefHeen">.*<option value="busstation" selected>/);
 });
-test('the card and the impact-preview switch are part of the Beheer page', () => {
-  useFakeDb(sampleDbSeed()); sampleCoordinatorState({ impactPreview: false });
+test('the places card is part of the Beheer page', () => {
+  useFakeDb(sampleDbSeed()); sampleCoordinatorState();
   withFakeNow(NOW, () => renderBeheer());
-  assert.match(dom.html('tab-beheer'), /id="locationsCard"/); assert.match(dom.html('tab-beheer'), /id="impactToggle" >/);
+  assert.match(dom.html('tab-beheer'), /id="locationsCard"/);
 });
 await testAsync('saveLocations stores one settings/locations document, normalised', async () => {
   const fake = useFakeDb({}); sampleCoordinatorState();
@@ -727,6 +768,7 @@ test('the Gereden shifts card is the last one in the Gezinnen section', () => {
   const html = dom.html('tab-beheer');
   const sec = html.slice(html.indexOf('id="begSec-gezinnen"'), html.indexOf('id="begSec-periodes"'));
   assert.ok(sec.indexOf('id="rideLogCard"') > 0 && sec.indexOf('id="rideLogCard"') > sec.indexOf('id="availabilityCard"'));
+  assert.ok(sec.indexOf('id="waitLogCard"') > sec.indexOf('id="rideLogCard"'), 'Wachttijd speelsters sits right under Gereden shifts');
 });
 
 test('design v2: ui-beheer.js only uses variables from tokens.css in its inline styles', async () => {
@@ -797,6 +839,68 @@ await testAsync('saving the name, the calendar or the words keeps the bus switch
   assert.deepEqual(fake.get('settings/matchFeeds').feeds, [{ calendarId: 'cal1', label: 'Jong AZ', bus: true, busNot: 'Ajax, PSV' }, { calendarId: 'cal2', label: 'AZ O17' }]);
   dom.el('feedBusNot_0').value = '  '; await words[0].onchange();
   assert.deepEqual(fake.get('settings/matchFeeds').feeds[0], { calendarId: 'cal1', label: 'Jong AZ', bus: true });
+});
+
+console.log('=== cards that used to be written inside renderBeheer ===');
+const setNotif = v => { if (v === null) delete globalThis.Notification; else globalThis.Notification = { permission: v }; };
+const drawBeheer = setup => {
+  useFakeDb(sampleDbSeed());
+  sampleCoordinatorState({ links: { p1: { familyId: 'f2' } }, invitesByCode: { CODE1234: 'f3' }, inviteByFamily: { f3: 'CODE1234' } });
+  if (setup) setup();
+  withFakeNow(NOW, () => renderBeheer());
+  return dom.html('tab-beheer');
+};
+test('two families with the same girl name get the duplicate warning, a single family does not', () => {
+  assert.doesNotMatch(drawBeheer(), /Mogelijk dubbele gezinnen/);
+  const html = drawBeheer(() => {
+    const f = { ...S.families }; const ids = Object.keys(f);
+    f.zz1 = { ...f[ids[0]], girlName: f[ids[1]].girlName }; f.zz2 = { ...f[ids[0]], girlName: ' ' + f[ids[1]].girlName.toUpperCase() };
+    S.families = f;
+  });
+  assert.match(html, /Mogelijk dubbele gezinnen/);
+});
+test('the notification card follows the browser permission (and survives a browser without notifications)', () => {
+  const saved = globalThis.Notification;
+  try {
+    const states = ['default', 'granted', 'denied', null].map(v => { setNotif(v); return drawBeheer(); });
+    const cards = states.map(h => h.match(/<div [^>]*id="notifCard"[\s\S]*?(?=<div [^>]*class="card"|<\/section>)/)[0]);
+    assert.equal(new Set(cards).size, 4, 'each permission state looks different');
+  } finally { if (saved === undefined) delete globalThis.Notification; else globalThis.Notification = saved; }
+});
+test('the calendar card shows each feed with its bus choice, escapes names and lists teams that failed', () => {
+  const html = drawBeheer(() => {
+    S.matchFeeds = [{ label: 'B "q"', calendarId: 'b@x', bus: false }, { label: 'C', calendarId: 'c@x', bus: true }, { label: '', calendarId: '' }];
+    S.matchFetchFailedTeams = [{ label: 'AZ <b>O13', error: 'x' }];
+  });
+  const card = html.match(/<div [^>]*id="feedsCard"[\s\S]*?(?=<div [^>]*class="card"|<\/section>)/)[0];
+  assert.match(card, /b@x/); assert.match(card, /c@x/);
+  assert.doesNotMatch(card, /<b>O13/);
+  assert.match(card, /AZ &lt;b&gt;O13/);
+});
+
+// Inline styles of ui-beheer.js are being replaced by classes, part by part (it had 79; 1 left). It may only go down.
+test('ui-beheer.js: availability table, rules, priority and back-up use classes from components.css, not inline styles', () => {
+  const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  const css = fsV206.readFileSync(new URL('../components.css', import.meta.url), 'utf8');
+  assert.ok((src.match(/style="/g) || []).length <= 54, 'inline styles in ui-beheer.js grew');
+  for (const c of ['availWho', 'availSub', 'availBackup', 'availCell', 'availRow', 'scrollX', 'ruleRow', 'prioRow', 'iconRow', 'divider', 'backupErrors', 'textBody', 'rowflex--left', 'rowflex--wrap', 'hiddenInput', 'mt-2', 'mt-6', 'my-2']) {
+    assert.ok(css.includes('.' + c), c + ' missing in components.css');
+    assert.ok(src.includes(c.replace(/^rowflex--/, '')) || src.includes(c), c + ' not used in ui-beheer.js');
+  }
+});
+
+test('ui-beheer.js part 2: Periode, Locaties, API-sleutels and dag-coördinatoren use classes; the progress bar width is the one data-driven inline style up there', () => {
+  const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  const css = fsV206.readFileSync(new URL('../components.css', import.meta.url), 'utf8');
+  assert.ok((src.match(/style="/g) || []).length <= 1, 'inline styles in ui-beheer.js grew');
+  assert.match(src, /<span style="width:\$\{pct\}%"><\/span>/);
+  for (const c of ['dayCoordLabel', 'periodField', 'periodHint', 'btn.mt-4', 'label--flush', 'fieldGrow']) assert.ok(css.includes(c), c + ' missing in components.css');
+  for (const c of ['dayCoordLabel', 'periodField', 'periodHint', 'mt-4', 'label--flush', 'fieldGrow']) assert.ok(src.includes(c), c + ' not used in ui-beheer.js');
+});
+
+test('ui-beheer.js: inline style="..." count is 1 (only the data-driven width of the progress bar stays inline); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 1);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

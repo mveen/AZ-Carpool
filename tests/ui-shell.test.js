@@ -1,6 +1,7 @@
 // Run with: node ui-shell.test.js
 // The frame around every screen: header (title, week line, share button, avatar letters) and the Instellingen sheet.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -146,9 +147,12 @@ test('initShell wires the avatar, the share button, the contact handler and the 
   ov.mounted = false; ov.removed = false;
   handlers[1]({ target: { closest: sel => (sel === '[data-opensettings]' ? {} : null) } }); assert.equal(ov.mounted, true);
   // Vast | Flex switch: sets the hidden select and moves the active mark.
-  const sel = { value: 'vast' }; const flexBtn = { dataset: { famtype: 'flex', famtypefor: 'coord_familyType' }, classList: { toggle() {} } };
+  const fired = []; const sel = { value: 'vast', dispatchEvent: e => fired.push(e) }; const flexBtn = { dataset: { famtype: 'flex', famtypefor: 'coord_familyType' }, classList: { toggle() {} } };
   dom.el('coord_familyType'); dom.doc.getElementById = id => (id === 'coord_familyType' ? sel : dom.el(id)); dom.doc.querySelectorAll = () => [flexBtn];
   handlers[1]({ target: { closest: s => (s === '[data-famtype]' ? flexBtn : null) } }); assert.equal(sel.value, 'flex');
+  // The card saves on 'change', and setting .value from code fires none: the switch must send a bubbling change event itself (once, only when the value changed).
+  assert.equal(fired.length, 1); assert.equal(fired[0].type, 'change'); assert.equal(fired[0].bubbles, true);
+  handlers[1]({ target: { closest: s => (s === '[data-famtype]' ? flexBtn : null) } }); assert.equal(fired.length, 1);
 });
 
 console.log('\n=== Mijn week delen (share sheet) ===');
@@ -362,6 +366,11 @@ test('the context line says where you are: Mijn week is "mijn gezin", Rooster is
   sampleParentState({});
   assert.equal(contextLine('myweek'), 'Week 40 · mijn gezin'); assert.equal(contextLine('schedule'), 'Week 40 · iedereen');
   resetState({}); S.currentWeekKey = ''; assert.equal(contextLine('myweek'), 'AZ Carpool', 'no week known yet');
+});
+
+test('ui-shell.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-shell.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

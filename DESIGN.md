@@ -71,9 +71,13 @@ Source of the design: the Claude Design project "AZ Carpool design system" (prot
 
 Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
-## Components added for "Push-meldingen testen" (Beheer, coordinator only, temporary)
+## Components added for "Push-meldingen testen" (Beheer, coordinator only)
 
 `.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
+
+## Small helpers (replace one-off inline styles)
+
+`.gateBox` (centred 420 px column of the gate screens), `.hiddenCheck` (hidden checkbox), `.devAlert--flush`, `.rowflex--start`, `.rowflex--tight`, `.fieldGrow`, `.muted--note`, `label.label--flush` / `label.label--tight`, `.mt-2` … `.mt-6` (top margin from a space token), `.btn.mt-4`, `.my-2`, `.scrollX`, `.divider`, `.textBody`, `.rowflex--left` / `--wrap`, `.iconRow`, `.unlinkBar`; Beheer: `.availWho/Sub/Cell/Row/Backup`, `.ruleRow`, `.prioRow`, `.backupErrors`, `.dayCoordLabel`, `.periodField`, `.periodHint`. More: `.m-0`, `.mb-4`, `.flex1`, `.rowflex--top/--baseline/--end`, `.btn--block`, `.btn--chip`, `.iconbtn--small`, `.muted--tight/--top1/--top3/--strong`, `.label--sm/--roomy`.; Beheer > Gezinnen: `.famItem` (`--open`) and `.famEditSlot`, the edit panel under the family's own row. Inline `style="..."` is gone from the screens except three data-driven values (the width of the progress bar in Beheer, the width of the bar in the ride log, and the size of the icon svg in `phIcon`); the count may only go down (`INLINE_STYLE_BASELINE` in `tests/design-rules.test.js`, now 3).
 
 ## Avatar choice
 

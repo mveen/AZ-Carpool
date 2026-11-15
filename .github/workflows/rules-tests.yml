@@ -1,11 +1,20 @@
-name: Rules tests
+name: Database rules testen
 
-# The database rules are tried against Google's own Firestore emulator: who may read and write what (firebase/rules-test/).
-# Runs when a pull request touches the rules or their tests, and by hand.
+# Runs the Firestore rules tests (firebase/rules-test/) against the Firestore emulator, with the rules in firebase/firestore.rules.
+# Only when the rules, their tests or this runner change. The rules themselves are still published by hand (README, Deploy, step 4).
 on:
   pull_request:
     paths:
       - 'firebase/**'
+      - 'firebase.json'
+      - 'scripts/run-rules-tests.sh'
+      - '.github/workflows/rules-tests.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'firebase/**'
+      - 'firebase.json'
+      - 'scripts/run-rules-tests.sh'
       - '.github/workflows/rules-tests.yml'
   workflow_dispatch:
 
@@ -13,7 +22,7 @@ permissions:
   contents: read
 
 jobs:
-  rules-tests:
+  rules:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -21,14 +30,9 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Install the emulator and the test helpers (only here, never part of the app)
-        run: npm install --no-save --no-package-lock firebase-tools@15 @firebase/rules-unit-testing@6 firebase@13
-      # Every file runs, also after a failure, so one red test never hides another.
-      - name: Run every rules test against the emulator
-        working-directory: firebase
-        run: |
-          # The emulator needs Java 21; the runner has it installed next to its default Java.
-          if [ -n "${JAVA_HOME_21_X64:-}" ]; then export JAVA_HOME="$JAVA_HOME_21_X64"; export PATH="$JAVA_HOME/bin:$PATH"; fi
-          java -version
-          npx firebase emulators:exec --only firestore --project demo-test \
-            'bad=0; for f in rules-test/*.test.mjs; do echo "== $f"; node "$f" || bad=1; done; exit $bad'
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'   # firebase-tools refuses Java older than 21
+      - name: Run the rules tests on the emulator
+        run: bash scripts/run-rules-tests.sh
