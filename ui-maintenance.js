@@ -77,7 +77,7 @@ export function maintenanceCardHtml(){
       <div class="muted noticeCount" id="maintenanceCount">${text.length} / ${MAINTENANCE_MAX}</div>
       <label>${t('maint.preview')}</label>
       <div class="noticePreview maintPreview" id="maintenancePreview">${maintenancePageHtml(text)}</div>
-      <div class="rowflex" style="gap:8px;margin-top:10px;justify-content:space-between;align-items:center">${status}</div>
+      <div class="rowflex mt-4">${status}</div>
     </div>`;
 }
 

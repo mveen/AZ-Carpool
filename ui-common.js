@@ -251,11 +251,11 @@ export function showConnectionError(err){
   const gateDiv=document.getElementById('tab-gate');
   if(gateDiv){
     gateDiv.style.display='block';
-    gateDiv.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
+    gateDiv.innerHTML = `<div class="gateBox">
       <div class="card">
         <h2>${t('common.geen_verbinding')}</h2>
         <p class="muted">${t('common.kan_geen_verbinding_maken_met')}</p>
-        <p class="muted" style="margin-top:8px">${t('common.foutmelding')} ${err&&err.message? err.message : String(err)}</p>
+        <p class="muted mt-3">${t('common.foutmelding')} ${err&&err.message? err.message : String(err)}</p>
         <button class="btn" id="retryConnection" type="button">${t('common.opnieuw_proberen')}</button>
       </div>
     </div>`;

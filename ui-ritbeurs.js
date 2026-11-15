@@ -324,7 +324,7 @@ export function ritbeursCardHtml(nowMs = Date.now()){
       <p class="muted">${t('ritbeurs.beheer.autosave')}</p>
       <label class="switchRow" for="ritbeursOn"><span>${t('ritbeurs.beheer.show')}</span>
         <input type="checkbox" role="switch" class="switch" id="ritbeursOn"${on ? ' checked' : ''}></label>
-      <div class="rowflex" style="gap:8px;margin-top:10px;align-items:center"><span class="noticeChip ${on ? 'ok' : 'off'}">${t(on ? 'ritbeurs.beheer.status.on' : 'ritbeurs.beheer.status.off')}</span>
+      <div class="rowflex mt-4"><span class="noticeChip ${on ? 'ok' : 'off'}">${t(on ? 'ritbeurs.beheer.status.on' : 'ritbeurs.beheer.status.off')}</span>
       <span class="muted">${esc(on ? t('ritbeurs.beheer.statusAan', { n: open, m: moments }) : t('ritbeurs.beheer.statusUit'))}</span></div>
       ${pushLiveHtml(nowMs)}
     </div>`;

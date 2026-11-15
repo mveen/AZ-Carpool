@@ -2,6 +2,7 @@
 // The Ritbeurs screens: the segment in Wijzigen, open rides, own rides, "Ik kan inspringen", notifications, the badge and the Beheer switches
 // (Ritten ruilen, and the push switch for the parents, off by default).
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -400,5 +401,10 @@ test('v216: every notification card has Negeren (back-up) or Sluiten; a dismisse
   assert.equal(ritbeursBadgeCount(), 1);
   resetDismissedNotifications();
 });
+test('ui-ritbeurs.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-ritbeurs.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
+});
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);

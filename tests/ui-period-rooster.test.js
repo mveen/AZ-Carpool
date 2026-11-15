@@ -2,6 +2,7 @@
 // Step 4 of "periode met andere tijden": the Rooster tab. The overview for the coordinator, the third view with the temporary
 // rooster (day by day), and the coordinator's edits (plan, driver, move a girl).
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -384,6 +385,11 @@ await testAsync('moving the daughter away from her driving parent in the tempora
   assert.equal(toast(), 'Opgeslagen ✓'); assert.ok(fake2);
 });
 test('ui-period-rooster.js imports nothing it does not use', () => assertNoUnusedImports('ui-period-rooster.js'));
+
+test('ui-period-rooster.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-period-rooster.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
+});
 
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) process.exit(1);
