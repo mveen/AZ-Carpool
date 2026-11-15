@@ -117,9 +117,9 @@ export function conclusieCardHtml(day, { collapsed = false } = {}){
   }
   return `<div class="card conclusieCard${forYou?' forYou':''}" id="conclusieCard">
     <h2>${t('conclusie.title', { dayLabel })}</h2>
-    <p class="noteLine" style="margin:0">${forYou? t('conclusie.forYou', { day: dayLabel.toLowerCase() }) : t('conclusie.intro')}</p>
+    <p class="noteLine m-0">${forYou? t('conclusie.forYou', { day: dayLabel.toLowerCase() }) : t('conclusie.intro')}</p>
     <div class="conclusiePreview" aria-label="${t('conclusie.previewLabel')}">${esc(buildConclusieMessage(day))}</div>
-    ${share.replace('id="conclusieBtn"','id="conclusieBtn" style="width:100%"')}
+    ${share}
   </div>`;
 }
 
@@ -135,23 +135,23 @@ export function flexSignupHtml(day,direction,cars){
     const key = `${day}|${direction}|${id}`;
     const head = `<strong>${esc(f.girlName||f.parentName||id)}</strong> <span class="badge flexBadge">${t('flex.badge')}</span>`;
     if(flexIsSignedUp(cars,id)){
-      return `<div class="rowflex flexRow" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="flex:1">${head} · ${t('flex.signedUp')}</span>
+      return `<div class="rowflex flexRow"><span class="flex1">${head} · ${t('flex.signedUp')}</span>
         <button type="button" class="btn small secondary" data-flexoff="${key}">${t('flex.signOff')}</button></div>`;
     }
     const carOptions = `<option value="">${t('flex.chooseCar')}</option>` + freeIdx.map(i=>`<option value="${i}">${t('deviation.auto')} ${driverNameHtml(cars[i].driverFamilyId)}</option>`).join('');
     const canDrive = seats(f)>=1;
-    return `<div class="flexRow" style="padding:6px 0;border-bottom:1px solid var(--line)">
+    return `<div class="flexRow">
       <div>${head}</div>
-      <label style="margin-top:6px" for="flexTime_${key}">${timeLabel}</label>
+      <label class="label--sm" for="flexTime_${key}">${timeLabel}</label>
       <input type="time" id="flexTime_${key}" class="flexTimeInp">
-      <div class="rowflex" style="gap:6px;margin-top:6px;flex-wrap:wrap">
-        ${freeIdx.length? `<select id="flexCar_${key}" class="flexCarSel" style="width:auto">${carOptions}</select>
+      <div class="rowflex rowflex--tight rowflex--wrap mt-2">
+        ${freeIdx.length? `<select id="flexCar_${key}" class="flexCarSel">${carOptions}</select>
         <button type="button" class="btn small" data-flexpass="${key}">${t('flex.rideAlong')}</button>` : `<span class="muted">${t('flex.noFreeSeat')}</span>`}
         ${canDrive? `<button type="button" class="btn small secondary" data-flexdrive="${key}">${phIcon('car')} ${t('flex.drive')}</button>` : `<span class="muted">${t('flex.noCarToDrive')}</span>`}
       </div>
     </div>`;
   }).join('');
-  return foldHtml(`flex|${day}|${direction}`, t('flex.title'), `<p class="muted" style="margin:0 0 4px">${t('flex.intro')}</p>
+  return foldHtml(`flex|${day}|${direction}`, t('flex.title'), `<p class="muted muted--tight">${t('flex.intro')}</p>
     ${rows}`, 'group flexSignup');
 }
 
@@ -253,13 +253,13 @@ function devRideHtml(day,direction,idx,cars,ctx){
           ${removeBtn}
         </div>` : ''}
       </div>`;
-    }).join('') || `<p class="muted" style="margin:0">${t('deviation.geen_passagiers')}</p>`;
+    }).join('') || `<p class="muted m-0">${t('deviation.geen_passagiers')}</p>`;
     body = `<div class="devForm">
       <div class="devFormTop">
         <label class="devField"><span>${t('deviation.vertrek')}</span><input type="time" class="devDeptimeInp devInput timeBig" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" value="${c.departureTime||''}" aria-label="${t('deviation.vertrektijd')}"></label>
         <label class="devField"><span>${t('deviation.chauffeur')}</span><select class="devDriverSel devInput" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${driverOptions}</select></label>
       </div>
-      ${!driverOk? `<p class="fitbad" style="font-size:12px;margin:0">${phIcon('warning')} ${t('deviation.deze_ouder_heeft_voor_dit')}</p>` : ''}
+      ${!driverOk? `<p class="fitbad m-0">${phIcon('warning')} ${t('deviation.deze_ouder_heeft_voor_dit')}</p>` : ''}
       <label class="devField"><span>${t('deviation.ophalen')}</span><select class="devLocSel devInput" id="devLoc_${day}_${direction}_${idx}" data-day="${day}" data-direction="${direction}" data-caridx="${idx}">${locationOptions}</select></label>
       ${showFree? `<input type="text" class="devLocText devInput" id="devLocText_${day}_${direction}_${idx}" data-day="${day}" data-direction="${direction}" data-caridx="${idx}" maxlength="${FREE_TEXT_MAX}" value="${esc(free)}" placeholder="${esc(t('loc.freePlaceholder'))}" aria-label="${esc(t('loc.freeLabel'))}">` : ''}
       <div class="devField"><span>${t('deviation.aankomst')}</span>

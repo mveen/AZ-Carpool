@@ -583,23 +583,23 @@ export async function removeLocationPlace(id){
 
 // The four cards of Beheer that used to be written inside renderBeheer (the other cards have their own *CardHtml functions).
 function familiesCardHtml(claimed, dupGroups){
-  const dupWarning = dupGroups.length? `<div class="group warning" style="margin-bottom:10px">
+  const dupWarning = dupGroups.length? `<div class="group warning">
       <div class="fitbad">${phIcon('warning')} ${t('beheer.mogelijk_dubbele_gezinnen_controleer_en')}</div>
-      ${dupGroups.map(list=>`<div style="margin-top:6px"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn danger" data-coorddel="${id}" style="margin-left:4px;min-width:30px;min-height:30px" aria-label="${t('beheer.verwijder')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
+      ${dupGroups.map(list=>`<div class="mt-2"><strong>${esc(list[0][1].girlName)}</strong> (${list.length}x):<br>${list.map(([id,fd])=>`<span class="pill">${esc(fd.parentName||id)} <button type="button" class="iconbtn iconbtn--small danger" data-coorddel="${id}" aria-label="${t('beheer.verwijder')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></span>`).join(' ')}</div>`).join('')}
     </div>` : '';
   const rows = sortFamEntriesByGirl(Object.entries(S.families)).map(([id,fd])=>{
     const isCoord = S.coordinatorConfig && S.coordinatorConfig.familyId===id;
     // Phone numbers and invite codes are only shown inside "Wijzig"; the list only flags what's missing.
     const missing = [!fd.parentPhone1&&!fd.parentPhone2? 'telefoonnummer' : '', !S.inviteByFamily[id]? 'code' : ''].filter(Boolean);
     return `
-    <div class="rowflex" style="padding:10px 0;border-bottom:1px solid var(--line);gap:8px">
-      <div style="flex:1;min-width:0">
+    <div class="rowflex famRow">
+      <div class="fieldGrow">
         <div class="famName">${esc(fd.girlName||'(naam?)')}</div>
         <div class="muted">${esc(fd.parentName||'(ouder?)')}</div>
         <div class="famTags">${claimed[id]?`<span class="tag tag--ok">${t('beheer.gekoppeld')}</span>`:''}${isCoord?`<span class="tag tag--accent">${t('beheer.coordinator_tag')}</span>`:''}${fd.familyType==='flex'?`<span class="tag tag--flex">${t('flex.badge')}</span>`:''}</div>
         ${missing.length? `<div class="fitbad famMissing">${phIcon('warning')} ${t('beheer.geen')} ${missing.join(t('beheer.en'))}</div>` : ''}
       </div>
-      <span style="display:flex;gap:6px;flex-shrink:0">
+      <span class="iconRow iconRow--fixed">
         <button type="button" class="btn small secondary" data-coordedit="${id}">${t('beheer.wijzig')}</button>
         <button type="button" class="iconbtn" data-imptest="${id}" aria-label="Test de app als ${esc(fd.parentName||t('beheer.deze_ouder'))}" title="${t('beheer.testweergave_als_deze_ouder')}">${phIcon('eye')}</button>
         <button type="button" class="iconbtn danger" data-coorddel="${id}" aria-label="Verwijder ${esc(fd.girlName||'gezin')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button>
@@ -645,10 +645,10 @@ function feedsCardHtml(){
         <h2>${t('beheer.wedstrijdkalenders_google_calendar')}</h2>
         <p class="muted">${t('beheer.deze_agenda_s_voeden_wedstrijden')}</p>
         ${activeMatchFeeds().map((f,i)=>`
-          <div class="rowflex" style="margin-top:6px;align-items:flex-end;gap:6px">
-            <div class="grid2" style="flex:1">
-              <div><label style="margin-top:0">${t('beheer.naam')}</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
-              <div><label style="margin-top:0">${t('beheer.calendar_id')}</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="${t('beheer.xxxx_group_v_calendar_google')}"></div>
+          <div class="rowflex rowflex--tight rowflex--end mt-2">
+            <div class="grid2 fieldGrow">
+              <div><label class="label--flush">${t('beheer.naam')}</label><input type="text" class="matchFeedLabel" data-feedidx="${i}" value="${esc(f.label)}"></div>
+              <div><label class="label--flush">${t('beheer.calendar_id')}</label><input type="text" class="matchFeedCalId" data-feedidx="${i}" value="${esc(f.calendarId)}" placeholder="${t('beheer.xxxx_group_v_calendar_google')}"></div>
             </div>
             <button type="button" class="iconbtn danger" data-delfeed="${i}" aria-label="${t('beheer.verwijder_kalender')}" title="${t('beheer.verwijder_kalender')}">${phIcon('trash')}</button>
           </div>
@@ -663,7 +663,7 @@ function feedsCardHtml(){
           <button type="button" class="btn small secondary" id="addMatchFeedBtn">${t('beheer.nieuwe_kalender_toevoegen')}</button>
           <button type="button" class="btn small secondary" id="refreshMatchesBtn">${phIcon('refresh')} ${t('beheer.nu_verversen')}</button>
         </div>
-        ${S.matchFetchFailedTeams.length? `<p class="muted" style="margin-top:6px">${t('beheer.mislukt')}${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : ''}
+        ${S.matchFetchFailedTeams.length? `<p class="muted mt-2">${t('beheer.mislukt')}${esc(S.matchFetchFailedTeams.map(f=>f.label+' ('+f.error+')').join('; '))}</p>` : ''}
       </div>`;
 }
 
@@ -924,21 +924,21 @@ export function renderCoordEditor(){
   const isCoordThis = !isNew && S.coordinatorConfig && S.coordinatorConfig.familyId===S.coordEditId;
   const selfLinkedThis = !isNew && !!(S.links[S.me] && S.links[S.me].familyId===S.coordEditId);
   const coordToggleHtml = isNew? '' : `
-    <div class="rowflex" style="margin:10px 0;padding:10px;border:1px solid var(--line);border-radius:var(--radius-control);background:var(--surface-page)">
-      <span style="font-size:14px">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
+    <div class="rowflex coordToggleRow">
+      <span class="textBody">${isCoordThis? t('beheer.span_class_badge_rec_coordinator') : t('beheer.span_class_muted_nog_geen_2')}</span>
       <button type="button" class="btn small secondary" id="coordToggleBtn">${isCoordThis? t('beheer.coordinator_intrekken') : (selfLinkedThis? t('beheer.maak_coordinator') : phIcon('warning')+t('beheer.maak_coordinator_2'))}</button>
     </div>`;
-  area.innerHTML = `<div class="card" style="margin-top:10px;border-color:var(--accent)">
+  area.innerHTML = `<div class="card coordFormCard">
     <h2>${isNew? t('beheer.nieuw_gezin_toevoegen_2') : t('beheer.bewerken')+esc((f.girlName||f.parentName)||'')}</h2>
     ${coordToggleHtml}
     <label>${t('beheer.uitnodigingscode_meerdere_mensen_kunnen_dezelfde')}</label>
-    <div class="rowflex" style="gap:6px">
-      <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" style="flex:1">
+    <div class="rowflex rowflex--tight">
+      <input type="text" id="coord_inviteCode" value="${esc(currentCode)}" class="fieldGrow">
       <button type="button" class="btn small secondary" id="genCodeBtn">${phIcon('dice')} ${t('beheer.nieuwe_code')}</button>
     </div>
     ${familyFormHtml('coord', f)}
     <button type="button" class="btn secondary" id="coordCancel">${t('beheer.sluiten')}</button>
-    <p class="muted" style="margin-top:8px">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
+    <p class="muted mt-3">${t('beheer.wijzigingen_worden_automatisch_opgeslagen')}</p>
   </div>`;
   const card=area.querySelector('.card');
   if(card) card.addEventListener('change', ()=>saveCoordFamily());
@@ -969,24 +969,24 @@ export function timeChangesCardHtml(){
   if(!pending.length) return '';
   const total = pending.reduce((n,f)=>n+f.changes.length,0);
   const famHtml = pending.map(f=>{
-    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary" data-tcday="${esc(c.day)}" style="padding:2px 8px;min-height:26px;margin-right:6px">${esc(dayUp(c.day))}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
+    const lines = f.changes.map(c=>`<div class="timeChangeLine"><button type="button" class="btn small secondary btn--chip" data-tcday="${esc(c.day)}">${esc(dayUp(c.day))}</button>${esc(describeChange(c).replace(/^\S+ · /,''))}</div>`).join('');
     const when = f.latestAt? new Date(f.latestAt).toLocaleString(locale(),{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
     const by = f.changes.find(c=>c.by)?.by || '';
     return `<div class="timeChangeFam">
-      <div class="rowflex" style="align-items:flex-start">
+      <div class="rowflex rowflex--top">
         <div><strong>${esc(f.girlName||f.parentName||f.familyId)}</strong>
-          <div class="muted" style="font-size:12px">${by? t('beheer.door')+esc(by)+' · ' : ''}${when}</div></div>
+          <div class="muted">${by? t('beheer.door')+esc(by)+' · ' : ''}${when}</div></div>
         <button type="button" class="btn small secondary" data-tcseen="${esc(f.familyId)}">${phIcon('check')} ${t('beheer.gezien')}</button>
       </div>
       ${lines}
     </div>`;
   }).join('');
   return `<div class="card timeChangeCard">
-    <div class="rowflex" style="align-items:baseline">
-      <h2 style="margin:0">${phIcon('warning')} ${t('beheer.gewijzigde_tijden')}${total})</h2>
+    <div class="rowflex rowflex--baseline">
+      <h2 class="m-0">${phIcon('warning')} ${t('beheer.gewijzigde_tijden')}${total})</h2>
       ${pending.length>1? `<button type="button" class="btn small secondary" id="tcSeenAll">${t('beheer.alles_gezien')}</button>` : ''}
     </div>
-    <p class="muted" style="margin:4px 0 6px">${t('beheer.deze_ouders_hebben_hun_aankomst')}</p>
+    <p class="muted timeChangeHint">${t('beheer.deze_ouders_hebben_hun_aankomst')}</p>
     ${famHtml}
   </div>`;
 }

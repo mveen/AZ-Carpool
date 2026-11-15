@@ -2,6 +2,7 @@
 // The Beheer tab (coordinator only): families, shift priority, travel preferences, availability overview,
 // planning settings, match calendars, and the "Gewijzigde tijden" notifications.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 import fsV206 from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -837,7 +838,7 @@ test('the calendar card shows each feed with its bus choice, escapes names and l
   assert.match(card, /AZ &lt;b&gt;O13/);
 });
 
-// Inline styles of ui-beheer.js are being replaced by classes, part by part (it had 79). It may only go down.
+// Inline styles of ui-beheer.js are being replaced by classes, part by part (it had 79; 1 left). It may only go down.
 test('ui-beheer.js: availability table, rules, priority and back-up use classes from components.css, not inline styles', () => {
   const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
   const css = fsV206.readFileSync(new URL('../components.css', import.meta.url), 'utf8');
@@ -851,10 +852,15 @@ test('ui-beheer.js: availability table, rules, priority and back-up use classes 
 test('ui-beheer.js part 2: Periode, Locaties, API-sleutels and dag-coördinatoren use classes; the progress bar width is the one data-driven inline style up there', () => {
   const src = fsV206.readFileSync(new URL('../ui-beheer.js', import.meta.url), 'utf8');
   const css = fsV206.readFileSync(new URL('../components.css', import.meta.url), 'utf8');
-  assert.ok((src.match(/style="/g) || []).length <= 24, 'inline styles in ui-beheer.js grew');
+  assert.ok((src.match(/style="/g) || []).length <= 1, 'inline styles in ui-beheer.js grew');
   assert.match(src, /<span style="width:\$\{pct\}%"><\/span>/);
   for (const c of ['dayCoordLabel', 'periodField', 'periodHint', 'btn.mt-4', 'label--flush', 'fieldGrow']) assert.ok(css.includes(c), c + ' missing in components.css');
   for (const c of ['dayCoordLabel', 'periodField', 'periodHint', 'mt-4', 'label--flush', 'fieldGrow']) assert.ok(src.includes(c), c + ' not used in ui-beheer.js');
+});
+
+test('ui-beheer.js: inline style="..." count is 1 (only the data-driven width of the progress bar stays inline); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-beheer.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 1);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

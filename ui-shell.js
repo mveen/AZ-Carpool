@@ -143,7 +143,7 @@ export function openShare(){
     <div class="sheet__handle"></div>
     <h3 id="sheetTitle">${esc(t('shell.share_title'))}</h3><p class="sheet__sub">${esc(t('shell.share_sub'))}</p>
     <div class="sharePreview">${esc(text)}</div>
-    <button type="button" class="btn" id="doShare" style="width:100%">${phIcon('share-network')}${esc(t('shell.share_button'))}</button>
+    <button type="button" class="btn btn--block" id="doShare">${phIcon('share-network')}${esc(t('shell.share_button'))}</button>
   </div>`;
   document.body.appendChild(ov);
   ov.addEventListener('click', e => { if(e.target === ov) closeSheet(); });
