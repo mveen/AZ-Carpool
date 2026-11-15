@@ -1,8 +1,9 @@
 name: Deploy azcarpool.nl
 
 # Runs after every merge to main (and by hand: Actions -> Deploy azcarpool.nl -> Run workflow).
-# Order: tests + lint (side by side) -> put it on the TEST site -> robot smoke test on the test site -> only then LIVE.
-# If a step fails, everything after it is skipped: live stays exactly as it was.
+# Order: the TEST site chain (upload to test -> robot smoke test) runs side by side with tests + lint, to save the time the tests take.
+# LIVE waits for all of them: tests, lint and the smoke test must be green. Only the test site ever gets a version the tests have not yet passed.
+# If a step fails, live stays exactly as it was.
 # By hand you can tick "skip_smoke" to go live even when the robot is red (emergency only).
 # GitHub Pages is switched off (2026-11-14): this workflow is the only way the app reaches azcarpool.nl.
 on:
@@ -51,8 +52,8 @@ jobs:
       - name: Lint (never upload an app with an undefined name)
         run: bash scripts/run-lint.sh
 
+  # No `needs`: the test site is where a version is tried, so it may start while the tests still run. Live (below) waits for the tests.
   deploy-test:
-    needs: [tests, lint]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
@@ -138,9 +139,9 @@ jobs:
         run: node scripts/smoke-test.mjs
 
   deploy-live:
-    needs: [deploy-test, smoke]
+    needs: [tests, lint, deploy-test, smoke]
     # Runs when the smoke test is green, or when it was skipped on purpose by hand. Never when anything failed.
-    if: ${{ !cancelled() && needs.deploy-test.result == 'success' && (needs.smoke.result == 'success' || (needs.smoke.result == 'skipped' && inputs.skip_smoke)) }}
+    if: ${{ !cancelled() && needs.tests.result == 'success' && needs.lint.result == 'success' && needs.deploy-test.result == 'success' && (needs.smoke.result == 'success' || (needs.smoke.result == 'skipped' && inputs.skip_smoke)) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     env:
