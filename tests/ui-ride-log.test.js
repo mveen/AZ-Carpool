@@ -1,6 +1,7 @@
 // Run with: node ui-ride-log.test.js
 // Gereden shifts: the Beheer card (month / year view, stepping, export) and the coordinator's app writing the log (logPassedShifts).
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -246,6 +247,14 @@ await testAsync('a parent cannot remove a ride', async () => {
   sampleParentState({ rideLog: { '2026-09-28_heen': doc('2026-09-28', 'heen', 'f1') } });
   assert.equal(await setRideRemoved('2026-09-28_heen', 0, 'f1', true), false);
   assert.equal(fake.get('rideLog/2026-09-28_heen').cars[0].removed, undefined);
+});
+
+test('ui-ride-log.js keeps one inline style (the data-driven width of the bar); everything else is a class in components.css', () => {
+  const src = readFileSync(new URL('../ui-ride-log.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../components.css', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 1);
+  assert.match(src, /class="rideLogBar" aria-hidden="true" style="width:\$\{Math\.round\(r\.total\/max\*100\)\}%"/);
+  for (const c of ['rideLogOpen', 'rideLogBar', 'rideLogModes', 'rideLogStep', 'rideLogShift', 'rideLogList', 'rideLogDay', 'rideLogHead', 'rideLogRemovedBox', 'rideLogDir--heen', 'rideLogDir--terug', 'cardActions--roomy', 'mt-0', 'mt-5']) assert.ok(css.includes('.' + c), c + ' missing in components.css');
 });
 
 test('design v2: ui-ride-log.js only uses variables from tokens.css in its inline styles', async () => {
