@@ -62,9 +62,10 @@ await test('the test job uploads to the test folder only, the live job to the li
   assert.match(l, /TARGET_DIR: domains\/azcarpool\.nl\/public_html\//); assert.match(l, /build:deploy\n/);
   assert.ok(!/test\.azcarpool\.nl/.test(l));
 });
-await test('the smoke job gets only the smoke secrets and never the deploy key', () => {
+await test('the smoke job gets only the smoke secrets, the account name and the restricted tunnel key, and NEVER the deploy key', () => {
   const j = job('smoke');
-  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
+  assert.ok(!/DEPLOY_KEY/.test(j));
+  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_USER', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
   assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
 });
 
@@ -85,11 +86,12 @@ await test('both workflows install both browsers', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
   for (const f of [y, t]) assert.match(f, /playwright install --with-deps chromium webkit/);
 });
-await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets', () => {
+await test('a branch put on the test site by hand is smoke-tested too, after the upload, with only the smoke secrets (and never the deploy key)', () => {
   const t = readFileSync(join(repo, '.github/workflows/deploy-test.yml'), 'utf8');
   const j = t.slice(t.indexOf('\n  smoke:\n')); assert.ok(t.includes('\n  smoke:\n'));
+  assert.ok(!/DEPLOY_KEY/.test(j));
   assert.match(j, /needs: deploy\n/); assert.match(j, /node scripts\/smoke-test\.mjs/); assert.match(j, /SMOKE_SITE: https:\/\/test\.azcarpool\.nl/);
-  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE']);
+  assert.deepEqual([...new Set([...j.matchAll(/secrets\.([A-Z_]+)/g)].map(m => m[1]))].sort(), ['DEPLOY_USER', 'SMOKE_CODE_COORD', 'SMOKE_CODE_PARENT', 'SMOKE_PHONE', 'TUNNEL_KEY']);
 });
 
 console.log('=== fixed codes in the test data ===');

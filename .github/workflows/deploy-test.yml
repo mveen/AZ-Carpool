@@ -84,6 +84,13 @@ jobs:
         run: |
           npm install --no-save --no-package-lock playwright@1.56.0
           npx playwright install --with-deps chromium webkit
+      - name: Open the tunnel to the test site (own restricted key; skipped without the TUNNEL_KEY secret)
+        env:
+          TUNNEL_KEY: ${{ secrets.TUNNEL_KEY }}
+          SSH_USER: ${{ secrets.DEPLOY_USER }}
+          SSH_HOST: h70.mijn.host
+          SSH_PORT: '26'
+        run: bash .github/scripts/open-site-tunnel.sh test.azcarpool.nl
       - name: Smoke test the test site (coordinator and parent)
         env:
           SMOKE_SITE: https://test.azcarpool.nl
