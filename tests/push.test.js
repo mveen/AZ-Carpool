@@ -215,12 +215,16 @@ console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);
 
 test('pushFamilySplit: families with a phone vs without, sorted by name; test devices, empty familyId and broken entries do not count', () => {
-  const families = { f1: { parentName: 'Jan Jansen', girlName: 'Eline' }, f2: { parentName: 'Anna Bos', girlName: 'Saar' }, f3: { girlName: 'Noor' }, f4: { parentName: 'Kees' }, f5: null };
-  const devices = { a: { familyId: 'f1' }, b: { familyId: 'f1' }, c: { owner: 'coordinator' }, d: { owner: 'coordinator', familyId: '' }, e: { familyId: 'f3' }, g: { familyId: 'unknown' } };
-  const r = pushFamilySplit(devices, families);
+  const families = { f1: { parentName: 'Jan Jansen', girlName: 'Eline', parentPhone1: '0611111111', parentPhone2: '0699999222' }, f2: { parentName: 'Anna Bos', girlName: 'Saar', parentPhone1: '06 2222 2333' }, f3: { girlName: 'Noor' }, f4: { parentName: 'Kees' }, f5: null };
+  const devices = { a: { familyId: 'f1', uid: 'u1' }, b: { familyId: 'f1', uid: 'u2' }, c: { owner: 'coordinator' }, d: { owner: 'coordinator', familyId: '' }, e: { familyId: 'f3' }, g: { familyId: 'unknown' } };
+  const r = pushFamilySplit(devices, families, { u1: { phoneKey: '0699999222' }, u2: { phoneKey: '0699999222' } });
   assert.deepEqual(r.on.map(e => e.id), ['f1', 'f3']);
   assert.deepEqual(r.off.map(e => e.id), ['f2', 'f4']);
   assert.equal(r.on[0].label, 'Jan Jansen (ouder van Eline)'); assert.equal(r.on[1].label, 'Ouder van Noor'); assert.equal(r.off[1].label, 'Kees');
   assert.equal(r.on.length + r.off.length, 4);
   assert.deepEqual(pushFamilySplit(null, null), { on: [], off: [] });
+  // the number the phone was linked with says which parent; without a link it falls back to the family's numbers; a family without push shows its numbers
+  assert.deepEqual(r.on[0].tails, ['222']); assert.deepEqual(r.on[1].tails, []);
+  assert.deepEqual(pushFamilySplit({ a: { familyId: 'f1', uid: 'x' } }, families, {}).on[0].tails, ['111', '222']);
+  assert.deepEqual(r.off[0].tails, ['333']); assert.deepEqual(r.off[1].tails, []);
 });

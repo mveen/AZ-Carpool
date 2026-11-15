@@ -317,9 +317,9 @@ function pushLiveHtml(nowMs){
 }
 // Beheer: who has push switched on and who has not (two folds under the counter).
 function pushFamiliesHtml(){
-  const { on, off } = pushFamilySplit(S.push.devices, S.families);
+  const { on, off } = pushFamilySplit(S.push.devices, S.families, S.links);
   const fold = (id, titleKey, emptyKey, list) => `<details class="fold" id="${id}"><summary>${t(titleKey, { n: list.length })}</summary>
-        ${list.length ? `<ul class="pushFamList">${list.map(f => `<li>${esc(f.label)}</li>`).join('')}</ul>` : `<p class="muted">${t(emptyKey)}</p>`}</details>`;
+        ${list.length ? `<ul class="pushFamList">${list.map(f => `<li>${esc(f.label)}${f.tails.length ? ` <span class="muted">${esc(f.tails.map(n => t('ritbeurs.beheer.push.tel', { n })).join(', '))}</span>` : ''}</li>`).join('')}</ul>` : `<p class="muted">${t(emptyKey)}</p>`}</details>`;
   return fold('pushFamOn', 'ritbeurs.beheer.push.metTitel', 'ritbeurs.beheer.push.metLeeg', on)
     + fold('pushFamOff', 'ritbeurs.beheer.push.zonderTitel', 'ritbeurs.beheer.push.zonderLeeg', off);
 }

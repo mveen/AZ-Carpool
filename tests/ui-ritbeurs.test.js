@@ -339,11 +339,12 @@ test('on: the switch is on and the card says how many families have a phone swit
 test('on: two folds list the families with and without a phone; escaped; absent while the switch is off', () => {
   sampleCoordinatorState({ ritbeurs: { on: true }, pushSettings: { mode: 'uit', live: true, liveSince: 1 } });
   S.families = { ...S.families, f3: { ...S.families.f3, parentName: '<b>Els</b>' } };
-  S.push.devices = { a: { familyId: 'f3' }, d: { owner: 'coordinator' } };
+  S.push.devices = { a: { familyId: 'f3', uid: 'u3' }, d: { owner: 'coordinator' } }; S.links = { u3: { familyId: 'f3', phoneKey: '0633333333' } };
   const html = ritbeursCardHtml(); const n = Object.keys(S.families).length;
   assert.match(html, /<details class="fold" id="pushFamOn"><summary>Met push-meldingen \(1\)<\/summary>/);
   assert.match(html, new RegExp(`<details class="fold" id="pushFamOff"><summary>Zonder push-meldingen \\(${n - 1}\\)<\\/summary>`));
-  const on = html.match(/id="pushFamOn">[\s\S]*?<\/details>/)[0]; assert.match(on, /&lt;b&gt;Els&lt;\/b&gt;/); assert.doesNotMatch(on, /<b>Els/);
+  const on = html.match(/id="pushFamOn">[\s\S]*?<\/details>/)[0]; assert.match(on, /&lt;b&gt;Els&lt;\/b&gt;/); assert.doesNotMatch(on, /<b>Els/); assert.match(on, /telnr …333/);
+  assert.match(html.match(/id="pushFamOff">[\s\S]*?<\/details>/)[0], /Piet Pieters \(ouder van Jahaimy\) <span class="muted">telnr …222<\/span>/);
   assert.doesNotMatch(html.match(/id="pushFamOff">[\s\S]*?<\/details>/)[0], /Els/);
   S.pushSettings = { mode: 'uit', live: false }; assert.doesNotMatch(ritbeursCardHtml(), /pushFamOn|pushFamOff/);
 });

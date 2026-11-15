@@ -1157,6 +1157,7 @@ export default {
   "ritbeurs.beheer.push.label": "Push-meldingen aan",
   "ritbeurs.beheer.push.statusAan": "Aan: {n} van {m} gezinnen hebben een telefoon aangemeld.",
   "ritbeurs.beheer.push.statusUit": "Uit: er gaat niets naar ouders.",
+  "ritbeurs.beheer.push.tel": "telnr …{n}",
   "ritbeurs.beheer.push.metTitel": "Met push-meldingen ({n})",
   "ritbeurs.beheer.push.zonderTitel": "Zonder push-meldingen ({n})",
   "ritbeurs.beheer.push.metLeeg": "Nog geen gezin heeft push-meldingen aangezet.",
