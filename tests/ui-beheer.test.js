@@ -93,7 +93,8 @@ test('the family panel has no Opslaan/Annuleer buttons: changes are saved at onc
   withFakeNow(NOW, () => { renderBeheer(); renderCoordEditor(); });
   const s = text(dom.html('coordEditSlot-f2'));
   assert.doesNotMatch(s, /Opslaan|Annuleer/);
-  assert.match(s, /Wijzigingen worden automatisch opgeslagen/);
+  assert.doesNotMatch(dom.html('coordEditSlot-f2'), /id="coordCancel"/);   // closing is done by the button in the family's own row
+  assert.doesNotMatch(s, /Sluiten/);
 });
 test('a new family still opens below the list', () => {
   useFakeDb(sampleDbSeed());
@@ -101,6 +102,7 @@ test('a new family still opens below the list', () => {
   withFakeNow(NOW, () => renderBeheer());
   assert.match(text(dom.html('coordEditArea')), /Nieuw gezin toevoegen/);
   assert.doesNotMatch(dom.html('tab-beheer'), /famItem--open/);
+  assert.match(dom.html('coordEditArea'), /id="coordCancel"/);   // no row to close it from, so this form keeps its own Sluiten
 });
 
 console.log('\n=== overview cards ===');

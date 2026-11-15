@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "56e1b428fc7d0af0161c89a9728939f0ae0f510f2a35b17b5a8040fc22f43ab8",
-    "test": "6c3c06eb9540a917c70eb9fd5217f4761816b8596c3f25b5f9db37ff1ecffc80"
+    "module": "bb2dbdd26f59e3db0fe3432cedd8f2565ecf485c246566a157162dc40eb58bfc",
+    "test": "617aaac3fc6bf2e40c70db52f3974946839ca35f9fe02559c2b8417283e8202c"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -184,8 +184,8 @@
     "test": "a278b6bac0a8d3b98109c445fa5b9ed106f8333271358c04148f8029e1f2c345"
   },
   "ui-beheer.js": {
-    "module": "24eb9a8389281d60042dfcdd8cc046f33ac950e0e08481eaeaa8bbdc7c963974",
-    "test": "00d90108aaefae653260e9a7d5a8b324246607db14097b5b369571074705f00e"
+    "module": "7aedd2f3f7ad1c7923b42afdd713c1dc1f1bc95f4f90c79ea6c97ec4d9517c2b",
+    "test": "3b36b10ac5a6ff921d56b93a56676ebe99459d3e611faf137bce5aa9837362f1"
   },
   "ui-common.js": {
     "module": "58fa882f76b0bd49215fc2fb7a929a341abd0696b14236bc05fc81f5c12e6cf8",
