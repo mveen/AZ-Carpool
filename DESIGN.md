@@ -75,6 +75,10 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 `.pushStatus`, `.pushDevice` (+ `__main`), `.pushHint`, `.pushSel`, `.pushScen`, `.pushPreview` (the phone-style list), `.pushNotif` (+ `__app`, `__icon`, `__time`, `__body`, `__meta`) and `.pushWho`. All from tokens; the state chips reuse `.noticeChip`.
 
+## Small helpers (replace one-off inline styles)
+
+`.gateBox` (centred 420 px column of the gate screens), `.hiddenCheck` (hidden checkbox), `.devAlert--flush`, `.rowflex--start`, `.rowflex--tight`, `.fieldGrow`, `.muted--note`, `label.label--flush` / `label.label--tight`, `.mt-3` / `.mt-4` (top margin from a space token), `.unlinkBar`. Inline `style="..."` is being removed screen by screen; the count may only go down (`INLINE_STYLE_BASELINE` in `tests/design-rules.test.js`).
+
 ## Avatar choice
 
 - Default = initials (ink circle). A parent can pick one of 10 Phosphor icons (`avatars.js`, `AVATARS`); the id is stored as the optional field `avatar` on `families/<id>` ('' or missing = initials). Never rename an id: they live in Firestore.
