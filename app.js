@@ -71,17 +71,29 @@ export async function readCoordinator(){
   }
 }
 let coordinatorRefreshedFor = null;
-export async function refreshCoordinatorConfig(){
+// Right after the gate the link is on this phone first and on the server a moment later; a read in between is still refused. So a refusal is
+// asked again a few times (1, 3 and 8 s later) instead of being given up on: without this the coordinator could be left without the Beheer tab.
+export const COORDINATOR_RETRY_DELAYS_MS = [1000, 3000, 8000];
+export async function refreshCoordinatorConfig(delays = COORDINATOR_RETRY_DELAYS_MS){
   if(!S.coordinatorExists || S.coordinatorConfig || !S.me) return;
   const link = S.links && S.links[S.me];
-  if(!link || !link.familyId || coordinatorRefreshedFor === link.familyId) return;   // only a linked browser can read it: once per family
-  coordinatorRefreshedFor = link.familyId;
-  try{
-    const coord = await readCoordinator();
-    if(!coord.config) return;
-    S.coordinatorConfig = coord.config;
-    recomputeCanEdit(); syncCoordinatorNav(); renderAll();
-  }catch(e){ logError({ where:'start', code:'coordinator-'+((e&&e.code)||'error'), message:e && e.message }); }
+  if(!link || !link.familyId || coordinatorRefreshedFor === link.familyId) return;   // only a linked browser can read it: one run per family at a time
+  const familyId = link.familyId;
+  coordinatorRefreshedFor = familyId;
+  for(let attempt = 0; ; attempt++){
+    try{
+      const coord = await readCoordinator();
+      if(coord.config){
+        S.coordinatorConfig = coord.config;
+        recomputeCanEdit(); syncCoordinatorNav(); renderAll();
+        return;   // got it: stays marked, so it is not read again for this family
+      }
+    }catch(e){ logError({ where:'start', code:'coordinator-'+((e&&e.code)||'error'), message:e && e.message }); break; }
+    if(attempt >= delays.length) break;
+    if(delays[attempt] > 0) await new Promise(r => setTimeout(r, delays[attempt]));
+    if(S.coordinatorConfig || !S.links || !S.links[S.me] || S.links[S.me].familyId !== familyId) break;   // solved or changed meanwhile
+  }
+  coordinatorRefreshedFor = null;   // not got it: the next change of the links may try again
 }
 
 // The SDK's sign-in is shared by all tabs of this browser. When it is gone or another one (another tab signed out, or the browser data was wiped while this

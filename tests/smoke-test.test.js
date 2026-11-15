@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES, isHostWaitPage, withHostRetry, HOST_RETRIES, HOST_RETRY_WAIT_MS, waitForSelectorOrHostWait, runSmoke, isHostBlockedProblem, openTab } from '../scripts/smoke-test.mjs';
+import { readSmokeConfig, readEngines, isHarmless, TEST_ORIGIN, TABS, ENGINES, isHostWaitPage, withHostRetry, HOST_RETRIES, HOST_RETRY_WAIT_MS, waitForSelectorOrHostWait, runSmoke, isHostBlockedProblem, openTab, beheerTabShown } from '../scripts/smoke-test.mjs';
 import { encodeFields } from '../cron/lib/firestore-rest.mjs';
 import { transformBackup, checkFixedCodes } from '../scripts/seed-test-data.mjs';
 
@@ -223,6 +223,24 @@ await test('a tab that never shows fails with its NAME and what the page looked 
   const pg = tabPage({ showsAfterClicks: 99 });
   await assert.rejects(() => openTab(pg, 'deviation', () => {}, 'webkit parent'), e => /tab deviation never showed/.test(e.message) && /visible: \[tab-myweek\]/.test(e.message) && /active nav: \[myweek\]/.test(e.message));
   assert.equal(pg.clicks, 2);
+});
+console.log('=== the Beheer tab comes a moment after the login (rights are read once the phone is linked) ===');
+const beheerPage = ({ showAfterMs = null } = {}) => {
+  const t0 = Date.now(), up = () => showAfterMs !== null && Date.now() - t0 >= showAfterMs;
+  return {
+    waitForSelector: async (sel, { timeout }) => { while (!up()) { if (Date.now() - t0 >= timeout) throw new Error('timeout'); await new Promise(r => setTimeout(r, 5)); } },
+    waitForTimeout: ms => new Promise(r => setTimeout(r, ms)), isVisible: async () => up(),
+  };
+};
+await test('the coordinator whose Beheer tab shows a moment late passes (this was the failing smoke test)', async () => {
+  assert.equal(await beheerTabShown(beheerPage({ showAfterMs: 60 }), true, { timeoutMs: 500 }), true);
+});
+await test('the coordinator whose Beheer tab never shows still fails, after the wait', async () => {
+  assert.equal(await beheerTabShown(beheerPage(), true, { timeoutMs: 80 }), false);
+});
+await test('a parent must not get the Beheer tab, not even a moment later', async () => {
+  assert.equal(await beheerTabShown(beheerPage(), false, { parentWaitMs: 10 }), false);
+  assert.equal(await beheerTabShown(beheerPage({ showAfterMs: 5 }), false, { parentWaitMs: 30 }), true);
 });
 await test('the smoke job has time for the retries', () => { assert.match(job('smoke'), /timeout-minutes: 12/); });
 
