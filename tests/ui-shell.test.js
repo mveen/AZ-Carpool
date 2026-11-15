@@ -1,6 +1,7 @@
 // Run with: node ui-shell.test.js
 // The frame around every screen: header (title, week line, share button, avatar letters) and the Instellingen sheet.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
   try { fn(); passed++; console.log('  ✓', name); }
@@ -365,6 +366,11 @@ test('the context line says where you are: Mijn week is "mijn gezin", Rooster is
   sampleParentState({});
   assert.equal(contextLine('myweek'), 'Week 40 · mijn gezin'); assert.equal(contextLine('schedule'), 'Week 40 · iedereen');
   resetState({}); S.currentWeekKey = ''; assert.equal(contextLine('myweek'), 'AZ Carpool', 'no week known yet');
+});
+
+test('ui-shell.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-shell.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);

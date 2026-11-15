@@ -327,10 +327,10 @@ export function renderDirectionStandard(day,direction){
       ${editing? '' : carRouteHtml(car,direction,day,{row:true})}
       ${editHtml}
       <div class="rideRow__pass"><div class="chips">${pills}</div></div>
-      ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard" style="margin-top:8px;border-color:var(--warn-icon)">
-          <p class="fitbad" style="margin:0 0 6px">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
+      ${S.pendingSwapRequest && S.pendingSwapRequest.toGid===gid? `<div class="dayFormCard dayFormCard--warn mt-3">
+          <p class="fitbad fitbad--note">${t('schedule.geen_plek_meer_in_deze')}${g.girlIds.length}/${seats(driver)} ${t('schedule.bezet_wil_je')} ${girlName(S.pendingSwapRequest.girlId)} ${t('schedule.wisselen_met_een_andere_passagier')}</p>
           <select id="swapPickGirl" aria-label="${t('schedule.wissel_met_welke_passagier')}">${sortGirlIds(g.girlIds).map(id=>`<option value="${id}">${esc(fam(id).girlName||fam(id).parentName||id)}</option>`).join('')}</select>
-          <div class="rowflex" style="margin-top:8px;gap:6px">
+          <div class="rowflex rowflex--tight mt-3">
             <button type="button" class="btn small" data-swapconfirm="${gid}">${t('schedule.wissel')}</button>
             <button type="button" class="btn small secondary" data-swapcancel="${gid}">${t('common.annuleren')}</button>
           </div>
@@ -371,7 +371,7 @@ export function renderDirectionStandard(day,direction){
     const all = [...addOpts, ...options.map(o=>({kind:'new', ...o}))];
     window.__planOptions = window.__planOptions||{};
     window.__planOptions[day+'|'+direction] = all;
-    const intro = `<p class="muted" style="margin:10px 0 4px" id="sugg-${direction}">${n===1? t('schedule.nog_niet_ingedeeld', { p1: names }) : t('schedule.nog_niet_ingedeeld_2', { p1: n, p2: names })} ${t('schedule.voorstellen_2')}</p>`;
+    const intro = `<p class="muted muted--sugg" id="sugg-${direction}">${n===1? t('schedule.nog_niet_ingedeeld', { p1: names }) : t('schedule.nog_niet_ingedeeld_2', { p1: n, p2: names })} ${t('schedule.voorstellen_2')}</p>`;
     if(all.length){
       suggestHtml = intro + all.map((opt,i)=>{
         // "Aanbevolen" only for the first option, and only when it is a checked, complete planning (or an add to an existing car).
@@ -385,7 +385,7 @@ export function renderDirectionStandard(day,direction){
         return `<div class="group suggestion${rec?t('schedule.primary'):''}">
           <div class="fitok">${rec?t('schedule.span_class_badge_rec_aanbevolen'):''}${t('schedule.optie')} ${i+1}: ${title}</div>
           <div class="subtime">${sub}</div>
-          <button type="button" class="btn small${rec?'':t('schedule.secondary')}" data-useoption="${day}|${direction}|${i}" style="margin-top:8px">${t('schedule.gebruik_deze_optie')}</button>
+          <button type="button" class="btn mt-3 small${rec?'':t('schedule.secondary')}" data-useoption="${day}|${direction}|${i}">${t('schedule.gebruik_deze_optie')}</button>
         </div>`;
       }).join('');
     } else {
@@ -397,10 +397,10 @@ export function renderDirectionStandard(day,direction){
       return (a[1].girlName||'').localeCompare(b[1].girlName||'');
     });
     pickerHtml = `
-    <div class="group" style="border-style:dashed">
-      <h3 style="margin-bottom:6px">${t('schedule.aangepaste_combinatie')}</h3>
-      ${ungroupedSorted.map(([id,f])=>`<div class="girlchk"><label style="margin:0;flex:1"><input type="checkbox" class="girlpick" value="${id}"> ${esc(f.girlName||f.parentName)} — ${f.schedule[day][direction]}</label></div>`).join('')}
-      <button type="button" class="btn small secondary" data-makegroup="${day}|${direction}" style="margin-top:8px">${t('schedule.nieuwe_auto_met_deze_meiden')}</button>
+    <div class="group group--dashed">
+      <h3 class="h-tight">${t('schedule.aangepaste_combinatie')}</h3>
+      ${ungroupedSorted.map(([id,f])=>`<div class="girlchk"><label class="girlLbl"><input type="checkbox" class="girlpick" value="${id}"> ${esc(f.girlName||f.parentName)} — ${f.schedule[day][direction]}</label></div>`).join('')}
+      <button type="button" class="btn small secondary mt-3" data-makegroup="${day}|${direction}">${t('schedule.nieuwe_auto_met_deze_meiden')}</button>
     </div>`;
   } else if(S.canEdit){
     pickerHtml = `<p class="muted">${t('schedule.iedereen_is_ingedeeld')}</p>`;

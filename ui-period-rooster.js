@@ -94,13 +94,13 @@ function overviewCardHtml(p, phase){
   return `<div class="card" id="periodOverview_${k}">
       <h2>${esc(t('period.ov.title',{p1:v.name, p2:isoRangeLabel(v.firstDay, v.lastDay)}))}</h2>
       <div class="rowflex"><span class="muted">${t('period.ov.handed')}</span><b>${esc(t('period.ov.handedValue',{p1:pr.done, p2:pr.total}))}</b></div>
-      <p class="muted" style="margin:4px 0 0">${esc(deadline)}</p>
+      <p class="muted muted--top1">${esc(deadline)}</p>
       <div class="periodChips">${chips}</div>
-      <div class="rowflex" style="gap:6px;margin-top:10px">
+      <div class="rowflex rowflex--tight mt-4">
         <button type="button" class="btn small${made? ' secondary' : ''}" id="${made? 'periodRemake_' : 'periodMake_'}${k}" ${made? 'data-periodremake' : 'data-periodmake'}="${k}">${t(made? 'period.ov.remake' : 'period.ov.make')}</button>
         ${made? `<button type="button" class="iconbtn danger" id="periodRemove_${k}" data-periodremove="${k}" aria-label="${esc(t('period.ov.remove'))}" title="${esc(t('period.ov.remove'))}">${phIcon('trash')}</button>` : ''}
       </div>
-      <p class="muted" style="margin:8px 0 0;font-size:12px">${t('period.ov.explain')}</p>
+      <p class="muted muted--top3">${t('period.ov.explain')}</p>
     </div>`;
 }
 
@@ -216,9 +216,9 @@ export function periodDirectionHtml(iso, direction){
     ? `<div class="alertCard alertCard--stack" role="alert"><div class="alertCard__text"><b><span class="alertCard__icon">${phIcon('warning-circle-fill')}</span> ${esc(t('period.view.overruled'))}</b></div>
         <div class="alertCard__row"><button type="button" class="btn small secondary" data-pdevclear="${iso}|${direction}">${t('period.view.overruledClear')}</button></div></div>` : '';
   const replan = S.canEdit? `<button type="button" class="btn small secondary" data-preplan="${iso}|${direction}">${t('period.view.replan')}</button>` : '';
-  return `<div class="periodDir" data-perdir="${iso}|${direction}" style="margin-bottom:12px">
+  return `<div class="periodDir" data-perdir="${iso}|${direction}">
       <div class="sectionHead"><div class="sectionHead__title">${direction==='heen'? t('dir.heenShort') : t('dir.terugShort')}</div>${replan}</div>
-      <div class="periodTimes"><div class="muted" style="font-size:12px;margin:6px 0 2px">${t('period.view.times')}</div>${periodTimesHtml(iso, direction)}</div>
+      <div class="periodTimes"><div class="muted periodTimesHead">${t('period.view.times')}</div>${periodTimesHtml(iso, direction)}</div>
       ${overruleHtml}${body}
     </div>`;
 }
@@ -229,7 +229,7 @@ export function periodViewHtml(){
   const list = availablePeriods();
   const days = periodWorkdays(p.firstDay, p.lastDay), open = periodViewDay();
   const pick = list.length>1
-    ? `<div style="margin-bottom:10px"><label class="periodLbl" for="periodPick">${t('period.view.pick')}</label>
+    ? `<div class="mb-4"><label class="periodLbl" for="periodPick">${t('period.view.pick')}</label>
         <select id="periodPick" class="periodSel" data-periodpick="1">${list.map(q => `<option value="${q.firstDay}"${q.firstDay===p.firstDay? ' selected' : ''}>${esc(q.name)} · ${esc(isoRangeLabel(q.firstDay, q.lastDay))}</option>`).join('')}</select></div>` : '';
   const pills = days.map(iso => {
     const carCount = ['heen','terug'].reduce((n, d) => n + (periodCarsFor(iso, d) || []).length, 0);

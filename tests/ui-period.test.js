@@ -1,6 +1,7 @@
 // Run with: node ui-period.test.js
 // Step 2 of "periode met andere tijden": task card, form and "doorgegeven" card in Wijzigen, and the badge on the Wijzigen tab.
 import assert from 'node:assert/strict';
+import { readFileSync as readSrcInline } from 'node:fs';
 import { readFileSync as readSrcFile } from 'node:fs';
 let passed = 0, failed = 0;
 function test(name, fn) {
@@ -462,6 +463,11 @@ test('Ritbeurs: the Wijzigen badge also counts open rides of other families, and
 
 test('no lightning icon in this screen (owner, 2026-10-31)', () => {
   assert.doesNotMatch(readSrcFile(new URL('../ui-period.js', import.meta.url), 'utf8'), /lightning/);
+});
+
+test('ui-period.js: inline style="..." count is 0 (everything is a class from components.css); the last inline styles moved to components.css', () => {
+  const src = readSrcInline(new URL('../ui-period.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/style="/g) || []).length, 0);
 });
 
 console.log(`\n${passed} passed, ${failed} failed`);
