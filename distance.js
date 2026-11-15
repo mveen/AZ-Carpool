@@ -7,9 +7,9 @@ import { fixedVenue, parseCoordinates } from './locations.js';
 
 export const ORS_BASE = 'https://api.openrouteservice.org';
 const AALSMEER = { lon: 4.7605, lat: 52.2625 }; // bias for the address search
-// The search is limited to the Netherlands: the club plays here, and without it a street + number + postcode can match a place abroad
-// (Noorddammerweg 48-C, 1187 ZT Amstelveen came out as Konglerudtoppen 48 in Oslo, 1396 km away).
-export const GEOCODE_COUNTRY = 'NL';
+// The search is limited to the countries where matches are played (the Netherlands, Belgium, Germany): without it a street + number +
+// postcode can match a place far away (Noorddammerweg 48-C, 1187 ZT Amstelveen came out as Konglerudtoppen 48 in Oslo, 1396 km away).
+export const GEOCODE_COUNTRY = 'NL,BE,DE';
 // No match is further away than this (one way, from Aalsmeer). A longer route is a wrong place, so it is never shown ("locatie onbekend").
 export const MAX_PLAUSIBLE_KM = 300;
 

@@ -78,10 +78,10 @@ await testAsync('routeKm: geocodes both places, asks for the car route and retur
   assert.equal(f.urls.length, 3);
   assert.match(f.urls[2], /\/v2\/directions\/driving-car\?api_key=K&start=4\.76,52\.26&end=5\.06,52\.64$/);
 });
-await testAsync('the address search is limited to the Netherlands (a street + number + postcode must not land in Oslo)', async () => {
+await testAsync('the address search is limited to the Netherlands, Belgium and Germany (a street + number + postcode must not land in Oslo)', async () => {
   const f = fakeOrs({});
   await geocode(f.fetchFn, 'K', 'Noorddammerweg 48-C, 1187 ZT Amstelveen');
-  assert.match(f.urls[0], /&boundary\.country=NL(&|$)/);
+  assert.match(f.urls[0], /&boundary\.country=NL,BE,DE(&|$)/);
 });
 await testAsync('routeKm: a route longer than any real match is a wrong place: "notfound", never a number', async () => {
   const far = await routeKm({ fetchFn: fakeOrs({ meters: 1396000 }).fetchFn, apiKey: 'K', originText: 'A', destinationText: 'B' });
