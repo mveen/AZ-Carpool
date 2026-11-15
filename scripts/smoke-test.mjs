@@ -99,6 +99,14 @@ export async function openTab(page, tab, log = () => {}, who = '') {
   throw new Error(`tab ${tab} never showed (after 2 clicks, 15 s)` + (seen ? `; visible: [${seen.visible}], active nav: [${seen.active}], hidden nav: [${seen.hidden}]` : ''));
 }
 
+// The coordinator's rights arrive a moment after the login (the app reads who the coordinator is once the phone is linked), so the Beheer tab
+// may show a second later. When it must be there, wait for it (up to `timeoutMs`); when it must not be there, give it the same time to wrongly appear.
+export async function beheerTabShown(page, expected, { timeoutMs = 20000, parentWaitMs = 3000 } = {}) {
+  if (expected) return page.waitForSelector('#navBeheer', { state: 'visible', timeout: timeoutMs }).then(() => true, () => false);
+  await page.waitForTimeout(parentWaitMs);
+  return page.isVisible('#navBeheer');
+}
+
 async function checkRole(browser, cfg, role, log, engine = 'chromium') {
   const problems = [];
   let hostWait = false;
@@ -124,7 +132,7 @@ async function checkRole(browser, cfg, role, log, engine = 'chromium') {
     if (week === 'wait') { hostWait = true; throw new Error('the wait page of the host came up after the login'); }
     if (week === 'timeout') throw new Error('the app did not open after the login within 30 s');
     log(`${who}: logged in`);
-    const beheerVisible = await page.isVisible('#navBeheer');
+    const beheerVisible = await beheerTabShown(page, role.beheer);
     if (beheerVisible !== role.beheer) problems.push(`${who}: Beheer tab ${beheerVisible ? 'is' : 'is not'} visible`);
     for (const tab of role.beheer ? [...TABS, 'beheer'] : TABS) {
       await openTab(page, tab, log, who);

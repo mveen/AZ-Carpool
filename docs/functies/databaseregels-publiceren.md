@@ -18,3 +18,5 @@
 
 ## GitHub Actions vastgezet op commit (v278)
 - `actions/checkout`, `actions/setup-node` en `actions/setup-java` staan in alle workflows op de volledige commit-hash, met de versie als commentaar (`# v7`). Een tag kan verschuiven; een hash niet. Dependabot (`.github/dependabot.yml`, wekelijks) werkt hash en commentaar samen bij.
+
+Na het koppelen kan de eerste lezing van `config/coordinator` nog geweigerd worden, omdat de koppeling dan eerst alleen op de telefoon staat en een moment later op de server. `refreshCoordinatorConfig` vraagt het daarom tot drie keer opnieuw (na 1, 3 en 8 s). De smoke test wacht tot 20 s op de Beheer-tab van de coördinator (`beheerTabShown`).

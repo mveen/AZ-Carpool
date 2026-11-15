@@ -1,7 +1,7 @@
 {
   "app.js": {
-    "module": "94243c64bb6db63f41548d0ebeac59467413ee93c7aa7c6bca2469c40fd160da",
-    "test": "c5aafb7039968f39e7a150032b5849e20b3def6217236c5d5f90b0d8bb41100b"
+    "module": "647f8be2fc5744952b17779bc633ce3e18ce8edaa310926c73255f98018c151a",
+    "test": "089f2bf19cda0b1a2c9e9274bf8d8c2f111794e11d537a4a27c6f5c551bfb0a0"
   },
   "avatars.js": {
     "module": "ee943ef71429fc73ac1d3881c72087180842405a5ea021dc00f1e71250a6ea1a",
@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "aa069622fb770e858c001a7052790a8c6681cc7745f515304e8352aba3c4e337",
-    "test": "202173c8669997355b908dc0c2cf3912684b8df8caeb9bc40d2e20a296a49309"
+    "module": "7e5dcc5da0fdf9d3d3eaa1f24408acc8f035ba24704021000132e46caaf2ba27",
+    "test": "068dbb8b59f5e3af52ccced439a90b500f62230ca7b5c2290a9defe2c3c4bcd5"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",

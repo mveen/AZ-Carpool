@@ -210,6 +210,26 @@ await testAsync('once the browser is linked the coordinator config is read again
   assert.equal(S.coordinatorConfig, null, 'not read a second time for the same family');
   assert.ok(fake);
 });
+await testAsync('a read refused right after linking is asked again until the server knows the link (coordinator keeps the Beheer tab)', async () => {
+  installNav(); useFakeDb({ ...sampleDbSeed(), 'config/coordinator': { familyId: 'f5' } }, { uid: 'p7' });
+  sampleParentState({ me: 'p7', links: { p7: { familyId: 'f5' } }, coordinatorExists: true, coordinatorConfig: null, canEdit: false });
+  let reads = 0;
+  const { initDb } = await import('../data.js');
+  initDb({ doc: () => ({ get: async () => { reads++; if (reads < 3) throw Object.assign(new Error('no'), { code: 'permission-denied' }); return { exists: true, data: () => ({ familyId: 'f5' }) }; } }) });
+  await withFakeNowAsync(NOW, () => refreshCoordinatorConfig([0, 0, 0]));
+  assert.equal(reads, 3); assert.deepEqual(S.coordinatorConfig, { familyId: 'f5' }); assert.equal(S.canEdit, true);
+});
+await testAsync('when the read stays refused it stops after the delays and the next link change may try again', async () => {
+  installNav(); useFakeDb({ ...sampleDbSeed(), 'config/coordinator': { familyId: 'f6' } }, { uid: 'p6' });
+  sampleParentState({ me: 'p6', links: { p6: { familyId: 'f6' } }, coordinatorExists: true, coordinatorConfig: null, canEdit: false });
+  let reads = 0;
+  const { initDb } = await import('../data.js');
+  initDb({ doc: () => ({ get: async () => { reads++; throw Object.assign(new Error('no'), { code: 'permission-denied' }); } }) });
+  await withFakeNowAsync(NOW, () => refreshCoordinatorConfig([0, 0]));
+  assert.equal(reads, 3, 'one read plus two retries'); assert.equal(S.coordinatorConfig, null);
+  await withFakeNowAsync(NOW, () => refreshCoordinatorConfig([0]));
+  assert.equal(reads, 5, 'tried again later');
+});
 await testAsync('refreshCoordinatorConfig does nothing without a link, without a coordinator, or when the config is already known', async () => {
   installNav(); useFakeDb({ ...sampleDbSeed(), 'config/coordinator': { familyId: 'f4' } }, { uid: 'p8' });
   sampleParentState({ me: 'p8', links: {}, coordinatorExists: true, coordinatorConfig: null });
