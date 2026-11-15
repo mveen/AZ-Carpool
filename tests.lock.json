@@ -12,8 +12,8 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "19f0a655679fe6d8a42a0d0059a6073921f3e55679b1701b131bb5bc625ad119",
-    "test": "02a15415b9c78678e7ebc622164957d69a8a90acdc9b0cbcf167ea03276a3fd8"
+    "module": "1b8606435be5157e027a788344e17aa3d4c4c1e2670c52e9566034fb7a3a9b9e",
+    "test": "eaece8a6fb2eb765b7c7b5665cb845b19a7d42fadff887b349c4f8307480ee73"
   },
   "coordinator.js": {
     "module": "b1fe01db3c86839b83e10fdc176e32f0abef10c2d06dedc9d5ca622e8fe28cff",
@@ -256,8 +256,8 @@
     "test": "ec81084cd428acd01af618ba12cdadfc8cc1ab606cad9e512fa3f716b09a39a5"
   },
   "ui-ride-log.js": {
-    "module": "9254e7d73e707d3f067eea194f2a4d98605334f23127c9e60df397ab6efc8c1d",
-    "test": "e346f659464cf8f12e62c9e055e65682c4d71d8c62a3dc151a6e9f0cbe34f757"
+    "module": "5e555fee8828727c32f169f2dfe2fa005576f4a7244e7afad799ab82876874c7",
+    "test": "c37a4364756c944e33f6138ab3fd0dc4a43765a8104d8beeb594ffa973cd4fc0"
   },
   "ui-ritbeurs.js": {
     "module": "b71b583c421a14a313bb3fbbf9a82720b608fa4a202ab7d9b3c3cd26a73f848d",
