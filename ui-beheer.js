@@ -29,21 +29,21 @@ import { renderMyWeek } from './ui-myweek.js';
 export function renderAvailabilityTable(){
   const rows = Object.entries(S.families).sort((a,b)=>(a[1].parentName||'').localeCompare(b[1].parentName||''));
   if(!rows.length) return `<p class="muted">${t('beheer.nog_geen_gezinnen')}</p>`;
-  const head = `<tr><th style="text-align:left">${t('beheer.ouder')}</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
-    <tr><th></th>${DAYS.map(()=>`<th style="font-size:12px;color:var(--text-muted)">H</th><th style="font-size:12px;color:var(--text-muted)">T</th>`).join('')}</tr>`;
+  const head = `<tr><th class="availWho">${t('beheer.ouder')}</th>${DAYS.map(([k])=>`<th colspan="2">${dayUp(k)}</th>`).join('')}</tr>
+    <tr><th></th>${DAYS.map(()=>`<th class="availSub">H</th><th class="availSub">T</th>`).join('')}</tr>`;
   const body = rows.map(([id,f])=>{
     const cells = DAYS.map(([k])=>{
       const a=(f.availability&&f.availability[k])||{};
       // Standaard = solid green cell; back-up = plain grey number.
       const cellFor = (isDefault,isBackup) => isDefault
         ? `<span class="availStd">${seats(f)}</span>`
-        : isBackup ? `<span style="color:var(--text-muted);font-weight:500">${seats(f)}</span>` : t('beheer.span_class_muted_span');
-      return `<td style="text-align:center">${cellFor(a.heen,a.backupHeen)}</td><td style="text-align:center">${cellFor(a.terug,a.backupTerug)}</td>`;
+        : isBackup ? `<span class="availBackup">${seats(f)}</span>` : t('beheer.span_class_muted_span');
+      return `<td class="availCell">${cellFor(a.heen,a.backupHeen)}</td><td class="availCell">${cellFor(a.terug,a.backupTerug)}</td>`;
     }).join('');
-    return `<tr style="border-top:1px solid var(--line)"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
+    return `<tr class="availRow"><td>${esc(f.parentName||'?')}</td>${cells}</tr>`;
   }).join('');
-  return `<div style="overflow-x:auto"><table class="avail">${head}${body}</table></div>
-    <p class="muted" style="margin-top:6px"><span class="availStd">4</span> ${t('beheer.groen_vlak_standaard_beschikbaar')} <span style="color:var(--text-muted);font-weight:500">4</span> ${t('beheer.grijs_cijfer_back_up_indien')}</p>`;
+  return `<div class="scrollX"><table class="avail">${head}${body}</table></div>
+    <p class="muted mt-2"><span class="availStd">4</span> ${t('beheer.groen_vlak_standaard_beschikbaar')} <span class="availBackup">4</span> ${t('beheer.grijs_cijfer_back_up_indien')}</p>`;
 }
 
 export function renderPrefsCard(){
@@ -54,7 +54,7 @@ export function renderPrefsCard(){
       : r.type==='ownCar'
         ? t('beheer.eigen_ouder_regel', { p1: girlName(r.girlId) })
         : t('beheer.voorkeur_met',{p1:girlName(r.girlId),p2:(r.withAny||[]).map(id=>girlName(id)).join(t('beheer.of'))});
-    return `<div class="rowflex" style="padding:6px 0;border-bottom:1px solid var(--line)"><span style="font-size:14px">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
+    return `<div class="rowflex ruleRow"><span class="textBody">${label}</span><button type="button" class="iconbtn danger" data-delpref="${i}" aria-label="${t('beheer.voorkeur_verwijderen')}" title="${t('beheer.verwijder')}">${phIcon('trash')}</button></div>`;
   }).join('') || `<p class="muted">${t('beheer.nog_geen_voorkeuren')}</p>`;
   const togetherChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefTogetherPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   const preferSelect = `<select id="preferGirlSelect">${girls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
@@ -63,11 +63,11 @@ export function renderPrefsCard(){
   const ownCarSelect = `<select id="ownCarGirlSelect">${ownGirls.map(([id,f])=>`<option value="${id}">${esc(f.girlName)}</option>`).join('')}</select>`;
   const preferChecks = girls.map(([id,f])=>`<label class="chip"><input type="checkbox" class="prefWithPick" value="${id}">${esc(f.girlName)}</label>`).join('');
   return `${ruleRows}
-    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0">
+    <hr class="divider">
     <p class="muted"><strong>${t('beheer.samen_reizen')}</strong> ${t('beheer.moeten_altijd_samen_in_1')}</p>
     <div>${togetherChecks || t('beheer.span_class_muted_nog_geen')}</div>
     <button type="button" class="btn small secondary" id="addTogetherPref">${t('beheer.toevoegen')}</button>
-    <p class="muted" style="margin-top:14px"><strong>${t('beheer.voorkeur')}</strong> ${t('beheer.moet_met_minstens_een_van')}</p>
+    <p class="muted mt-6"><strong>${t('beheer.voorkeur')}</strong> ${t('beheer.moet_met_minstens_een_van')}</p>
     <label>${t('beheer.wie')}</label>${preferSelect}
     <label>${t('beheer.bij_voorkeur_met_kies_een')}</label><div>${preferChecks || t('beheer.span_class_muted_nog_geen')}</div>
     <button type="button" class="btn small secondary" id="addPreferPref">${t('beheer.toevoegen')}</button>
@@ -84,7 +84,7 @@ export function renderPriorityCard(){
   const options = shifts.map(([key,label])=>`<option value="${key}" ${key===S.selectedShiftKey?'selected':''}>${label}</option>`).join('');
   return `<p class="muted">${t('beheer.bepaal_per_shift_in_welke')}</p>
     <label>${t('beheer.shift')}</label><select id="shiftPrioritySelect">${options}</select>
-    <div id="shiftPriorityRows" style="margin-top:8px"></div>`;
+    <div id="shiftPriorityRows" class="mt-3"></div>`;
 }
 
 export function renderShiftPriorityRows(shiftKeyVal){
@@ -94,9 +94,9 @@ export function renderShiftPriorityRows(shiftKeyVal){
   const rows = sortByShiftPriority(day,direction, availableDrivers(day,direction));
   if(!rows.length){ div.innerHTML=`<p class="muted">${t('beheer.geen_beschikbare_chauffeurs_voor_deze')}</p>`; return; }
   div.innerHTML = rows.map(([id,f],i)=>`
-    <div class="rowflex" style="padding:8px 6px;border-bottom:1px solid var(--line)">
+    <div class="rowflex prioRow">
       <span>${i+1}. ${driverNameHtml(id)} <span class="muted">(${esc(f.girlName||'')}, ${seats(f)} ${t(isStandaardDriver(f,day,direction)?'beheer.pl':'beheer.pl_back_up')}</span></span>
-      <span style="display:flex;gap:4px">
+      <span class="iconRow">
         <button type="button" class="iconbtn" data-prioup="${id}" aria-label="${esc(f.parentName||'chauffeur')} hoger in prioriteit" ${i===0?'disabled':''}>${phIcon('arrow-up')}</button>
         <button type="button" class="iconbtn" data-priodown="${id}" aria-label="${esc(f.parentName||'chauffeur')} lager in prioriteit" ${i===rows.length-1?'disabled':''}>${phIcon('arrow-down')}</button>
       </span>
@@ -129,20 +129,20 @@ export function familyBackupCardHtml(){
   if(pendingBackup && pendingBackup.errors){
     const shown = pendingBackup.errors.slice(0, MAX_SHOWN_ERRORS).map(e=>`<li>${esc(e.line? t('backup.line',{p1:e.line,p2:t(e.key,e.params)}) : t(e.key,e.params))}</li>`).join('');
     const more = pendingBackup.errors.length - MAX_SHOWN_ERRORS;
-    pending = `<div class="group warning" id="backupPending" style="margin-top:10px">
+    pending = `<div class="group warning mt-4" id="backupPending">
       <div class="fitbad">${phIcon('warning')} ${t('backup.errors_title')}</div>
-      <ul style="margin:6px 0 8px 18px;padding:0;font-size:14px">${shown}${more>0? `<li>${t('backup.errors_more',{p1:more})}</li>` : ''}</ul>
+      <ul class="backupErrors">${shown}${more>0? `<li>${t('backup.errors_more',{p1:more})}</li>` : ''}</ul>
       <button type="button" class="btn small secondary" id="backupCancel">${t('backup.cancel')}</button>
     </div>`;
   } else if(pendingBackup){
     const plan = pendingBackup.plan;
     const fresh = plan.items.filter(i=>i.isNew).length;
     const coordName = plan.coordinatorFamilyId && plan.items.find(i=>i.id===plan.coordinatorFamilyId);
-    pending = `<div class="group" id="backupPending" style="margin-top:10px">
+    pending = `<div class="group mt-4" id="backupPending">
       <div><strong>${t('backup.preview_title',{p1:esc(pendingBackup.fileName)})}</strong></div>
-      <p style="margin:6px 0">${t('backup.preview_summary',{p1:plan.items.length-fresh,p2:fresh})}${plan.untouched.length? ' '+t('backup.preview_untouched',{p1:plan.untouched.length}) : ''}</p>
-      ${coordName? `<p class="fitbad" style="margin:6px 0">${phIcon('warning')} ${t('backup.preview_coordinator',{p1:esc(coordName.data.parentName||coordName.data.girlName)})}</p>` : ''}
-      <div class="rowflex" style="gap:8px;justify-content:flex-start">
+      <p class="my-2">${t('backup.preview_summary',{p1:plan.items.length-fresh,p2:fresh})}${plan.untouched.length? ' '+t('backup.preview_untouched',{p1:plan.untouched.length}) : ''}</p>
+      ${coordName? `<p class="fitbad my-2">${phIcon('warning')} ${t('backup.preview_coordinator',{p1:esc(coordName.data.parentName||coordName.data.girlName)})}</p>` : ''}
+      <div class="rowflex rowflex--left">
         <button type="button" class="btn small" id="backupConfirm">${t('backup.confirm')}</button>
         <button type="button" class="btn small secondary" id="backupCancel">${t('backup.cancel')}</button>
       </div>
@@ -151,10 +151,10 @@ export function familyBackupCardHtml(){
   return `<div class="card" id="backupCard">
       <h2>${t('backup.title')}</h2>
       <p class="muted">${t('backup.intro')}</p>
-      <div class="rowflex" style="gap:8px;justify-content:flex-start;flex-wrap:wrap">
+      <div class="rowflex rowflex--left rowflex--wrap">
         <button type="button" class="btn secondary" id="backupMake">${t('backup.make')}</button>
         <button type="button" class="btn secondary" id="backupRestore">${t('backup.restore')}</button>
-        <input type="file" id="backupFile" accept=".csv,text/csv,text/plain" style="display:none">
+        <input type="file" id="backupFile" accept=".csv,text/csv,text/plain" class="hiddenInput">
       </div>
       ${pending}
     </div>`;
