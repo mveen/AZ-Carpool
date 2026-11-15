@@ -70,17 +70,17 @@ export function weekschemaWarningInnerHtml(){
   const changes = weekschemaChanges();
   return `<p class="devAlertTitle">${phIcon('warning')} ${t('profile.weekschema_waarschuwing_titel')}</p>
     <ul class="devIntentList">${changes.map(c=>`<li>${esc(describeWeekschemaChange(c))}</li>`).join('')}</ul>
-    <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_waarschuwing_tekst')}</p>
-    <div class="rowflex" style="justify-content:flex-start;gap:8px;flex-wrap:wrap;margin-top:8px">
+    <p class="devAlertBody">${t('profile.weekschema_waarschuwing_tekst')}</p>
+    <div class="rowflex rowflex--start">
       <button type="button" class="btn small" id="weekschemaConfirm">${t('profile.weekschema_bevestigen')}</button>
       <button type="button" class="btn small secondary" id="weekschemaToWijzigen">${t('profile.weekschema_naar_wijzigen')}</button>
     </div>
-    <p class="devAlertBody" style="font-size:12px">${t('profile.weekschema_eenmalig_uitleg')}</p>`;
+    <p class="devAlertBody">${t('profile.weekschema_eenmalig_uitleg')}</p>`;
 }
 
 export function weekschemaWarningHtml(){
   const has = weekschemaChanges().length>0;
-  return `<div class="devAlert" id="weekschemaWarn" role="status" aria-live="polite" style="margin:8px 0 0"${has? '' : ' hidden'}>${has? weekschemaWarningInnerHtml() : ''}</div>`;
+  return `<div class="devAlert devAlert--flush" id="weekschemaWarn" role="status" aria-live="polite"${has? '' : ' hidden'}>${has? weekschemaWarningInnerHtml() : ''}</div>`;
 }
 
 // Redraws just the warning (no full re-render, so typing and focus are not disturbed).
@@ -205,17 +205,17 @@ export function familyFormHtml(prefix,f){
     const os=(f.schedule&&f.schedule[k])||{}; const oa=(f.availability&&f.availability[k])||{};
     return `<input type="hidden" id="${prefix}_sch_${k}_heen" value="${os.heen||''}">
       <input type="hidden" id="${prefix}_sch_${k}_terug" value="${os.terug||''}">
-      <input type="checkbox" style="display:none" id="${prefix}_av_${k}_heen" ${oa.heen?'checked':''}>
-      <input type="checkbox" style="display:none" id="${prefix}_av_${k}_terug" ${oa.terug?'checked':''}>
-      <input type="checkbox" style="display:none" id="${prefix}_bkH_${k}" ${oa.backupHeen?'checked':''}>
-      <input type="checkbox" style="display:none" id="${prefix}_bkT_${k}" ${oa.backupTerug?'checked':''}>`;
+      <input type="checkbox" class="hiddenCheck" id="${prefix}_av_${k}_heen" ${oa.heen?'checked':''}>
+      <input type="checkbox" class="hiddenCheck" id="${prefix}_av_${k}_terug" ${oa.terug?'checked':''}>
+      <input type="checkbox" class="hiddenCheck" id="${prefix}_bkH_${k}" ${oa.backupHeen?'checked':''}>
+      <input type="checkbox" class="hiddenCheck" id="${prefix}_bkT_${k}" ${oa.backupTerug?'checked':''}>`;
   }).join('');
   const seats = Math.max(0,(f.capacity||4)-1);
   const phoneField = (n,placeholder)=>{
-    const input = `<input type="tel" inputmode="tel" autocomplete="off" ${prefix==='coord'? 'style="flex:1;min-width:0" ' : ''}id="${prefix}_parentPhone${n}" value="${esc(f['parentPhone'+n]||'')}" placeholder="${placeholder}">`;
+    const input = `<input type="tel" inputmode="tel" autocomplete="off" ${prefix==='coord'? 'class="fieldGrow" ' : ''}id="${prefix}_parentPhone${n}" value="${esc(f['parentPhone'+n]||'')}" placeholder="${placeholder}">`;
     if(prefix!=='coord') return input;
     const code = (S.inviteByFamily[S.coordEditId]||'');
-    return `<div class="rowflex" style="gap:6px">${input}${introWaIconHtml(n, f['parentPhone'+n]||'', code)}</div>`;
+    return `<div class="rowflex rowflex--tight">${input}${introWaIconHtml(n, f['parentPhone'+n]||'', code)}</div>`;
   };
   // Beheer only: when a browser of this family last opened the app (sessions/{uid}); before that data exists,
   // the moment the family was linked. Nothing is shown without data.
@@ -224,13 +224,13 @@ export function familyFormHtml(prefix,f){
     const seen = Number((S.lastSeenByFamily||{})[S.coordEditId]) || 0;
     const linked = Math.max(0, ...Object.values(S.links||{}).filter(l=>l && l.familyId===S.coordEditId).map(l=>Number(l.linkedAt)||0));
     const [label, at] = seen? ['Laatste sessie', seen] : ['Gekoppeld op', linked];
-    return at? `<p class="muted" style="font-size:12px;margin:6px 0 0">${label}: ${new Date(at).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'})}</p>` : '';
+    return at? `<p class="muted muted--note">${label}: ${new Date(at).toLocaleString('nl-NL',{dateStyle:'medium',timeStyle:'short'})}</p>` : '';
   };
   const phoneInput1 = phoneField(1,'06-12345678'), phoneInput2 = phoneField(2,'06-...');
   return `
     <div class="grid2">
-      <div><label style="margin-top:0">${t('profile.naam_ouder')}</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}"></div>
-      <div><label style="margin-top:0">${t('profile.naam_dochter')}</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
+      <div><label class="label--flush">${t('profile.naam_ouder')}</label><input type="text" id="${prefix}_parentName" value="${esc(f.parentName||'')}"></div>
+      <div><label class="label--flush">${t('profile.naam_dochter')}</label><input type="text" id="${prefix}_girlName" value="${esc(f.girlName||'')}"></div>
     </div>${prefix==='coord'? `
     <label>${t('profile.gezinstype')}</label>
     <div class="segmented" role="group" aria-label="${esc(t('profile.gezinstype'))}">
@@ -242,8 +242,8 @@ export function familyFormHtml(prefix,f){
       <option value="flex" ${f.familyType==='flex'?'selected':''}>${t('profile.gezinstype.flex')}</option>
     </select>` : ''}
     <div class="grid2">
-      <div><label style="margin-top:8px">${prefix==='me'? t('profile.tel_nr_1_wa') : t('profile.tel_nr_1')}</label>${phoneInput1}</div>
-      <div><label style="margin-top:8px">${t('profile.tel_nr_2')}</label>${phoneInput2}</div>
+      <div><label class="label--tight">${prefix==='me'? t('profile.tel_nr_1_wa') : t('profile.tel_nr_1')}</label>${phoneInput1}</div>
+      <div><label class="label--tight">${t('profile.tel_nr_2')}</label>${phoneInput2}</div>
     </div>${lastSeenHtml()}
     <div class="panel panel--row stepperCard">
       <div class="stepperInfo">${phIcon('car')}<div>
@@ -343,12 +343,12 @@ export function readFamilyForm(prefix){
 export function renderClaimCoordinator(){
   const box=document.getElementById('tab-gate');
   if(!box) return;
-  box.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
+  box.innerHTML = `<div class="gateBox">
     <div class="card">
       <h2>${t('profile.welkom_bij_az_carpool')}</h2>
       <p class="muted">${t('profile.er_is_nog_geen_coordinator')}</p>
       <button type="button" class="btn" id="claimCoordBtn">${t('profile.ik_ben_de_coordinator')}</button>
-      <p class="muted" style="margin-top:10px">${t('profile.ben_je_een_ouder_en')}</p>
+      <p class="muted mt-4">${t('profile.ben_je_een_ouder_en')}</p>
     </div>
   </div>`;
   const btn=document.getElementById('claimCoordBtn');
@@ -375,7 +375,7 @@ export function renderGateOrApp(){
     if(nav) nav.style.display='none';
     ['schedule','myweek','deviation','profile','beheer'].forEach(t=>{ const el=document.getElementById('tab-'+t); if(el) el.style.display='none'; });
     gateDiv.style.display='block';
-    gateDiv.innerHTML = `<div style="max-width:420px;margin:30px auto 0"><div class="card"><p class="muted">${t('profile.laden')}</p></div></div>`;
+    gateDiv.innerHTML = `<div class="gateBox"><div class="card"><p class="muted">${t('profile.laden')}</p></div></div>`;
     adjustMainPadding();
     return;
   }
@@ -408,7 +408,7 @@ export function renderGateOrApp(){
 export function renderGate(){
   const box=document.getElementById('tab-gate');
   if(!box) return;
-  box.innerHTML = `<div style="max-width:420px;margin:30px auto 0">
+  box.innerHTML = `<div class="gateBox">
     <div class="card">
       <h2>${t('profile.toegang_tot_az_carpool')}</h2>
       <p class="muted">${t('profile.vul_je_telefoonnummer_en_de')}</p>
@@ -417,7 +417,7 @@ export function renderGate(){
       <label>${t('profile.code')}</label>
       <input type="text" id="gateCode" inputmode="numeric" autocomplete="one-time-code" maxlength="32" placeholder="${t('profile.code_van_de_coordinator')}">
       <button type="button" class="btn" id="gateSubmit">${t('profile.toegang_aanvragen')}</button>
-      <p id="gateMsg" class="muted" style="margin-top:8px" role="status"></p>
+      <p id="gateMsg" class="muted mt-3" role="status"></p>
       <p class="muted"><button type="button" class="linkbtn" id="gateReset">${t('profile.probleem_met_inloggen_opnieuw_beginnen')}</button></p>
     </div>
   </div>`;
@@ -490,7 +490,7 @@ export function renderProfile(){
       const effId = myFamilyId();
       overlayWeekschemaEdit(effId);
       const lf = fam(effId);
-      const unlinkCtl = S.impersonateFamilyId? '' : `<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:4px"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
+      const unlinkCtl = S.impersonateFamilyId? '' : `<div class="unlinkBar"><button type="button" class="linkbtn danger" id="unlinkBtn">${t('profile.ontkoppelen_van_deze_dochter')}</button></div>`;
       html += `<div class="profileForm" id="profileForm">
         <div class="backRow"><button type="button" class="backBtn" data-opensettings="1">${phIcon('caret-left')}${t('shell.back')}</button><span class="backRow__note">${t('shell.saved_instantly')}</span></div>
         <div class="panel panel--row familyHead"><span class="familyHead__initial">${esc((lf.girlName||lf.parentName||'?').trim().charAt(0).toUpperCase())}</span>
