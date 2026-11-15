@@ -77,7 +77,7 @@ Planned (see Migration): FoldCard, Stepper, Field, full form layouts.
 
 ## Small helpers (replace one-off inline styles)
 
-`.gateBox` (centred 420 px column of the gate screens), `.hiddenCheck` (hidden checkbox), `.devAlert--flush`, `.rowflex--start`, `.rowflex--tight`, `.fieldGrow`, `.muted--note`, `label.label--flush` / `label.label--tight`, `.mt-3` / `.mt-4` (top margin from a space token), `.unlinkBar`. Inline `style="..."` is being removed screen by screen; the count may only go down (`INLINE_STYLE_BASELINE` in `tests/design-rules.test.js`).
+`.gateBox` (centred 420 px column of the gate screens), `.hiddenCheck` (hidden checkbox), `.devAlert--flush`, `.rowflex--start`, `.rowflex--tight`, `.fieldGrow`, `.muted--note`, `label.label--flush` / `label.label--tight`, `.mt-2` … `.mt-6` (top margin from a space token), `.btn.mt-4`, `.my-2`, `.scrollX`, `.divider`, `.textBody`, `.rowflex--left` / `--wrap`, `.iconRow`, `.unlinkBar`; Beheer: `.availWho/Sub/Cell/Row/Backup`, `.ruleRow`, `.prioRow`, `.backupErrors`, `.dayCoordLabel`, `.periodField`, `.periodHint`. Inline `style="..."` is being removed screen by screen; the count may only go down (`INLINE_STYLE_BASELINE` in `tests/design-rules.test.js`).
 
 ## Avatar choice
 
