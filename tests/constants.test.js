@@ -110,6 +110,7 @@ test('v277: this version is at least v277', () => { assert.ok(Number(APP_VERSION
 test('v278: this version is at least v278', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 278); });
 test('v279: this version is at least v279', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 279); });
 test('v280: this version is at least v280', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 280); });
+test('v281: this version is at least v281', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 281); });
 test('v276: this version is at least v276', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 276); });
 test('v275: this version is at least v275', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 275); });
 test('v273: this version is at least v273', () => { assert.ok(Number(APP_VERSION.slice(1)) >= 273); });

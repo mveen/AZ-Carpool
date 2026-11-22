@@ -194,7 +194,10 @@ export function takeableOfferOf(n, nowMs = Date.now()){
   const me = myLinkedFamilyId(), o = n && n.kind === 'offerBackup' && n.sourceId ? S.offers[n.sourceId] : null;
   return o && me && o.status === 'open' && o.offeredBy !== me && rideStartMs(o.date, o.time) > nowMs ? { id: n.sourceId, ...o } : null;
 }
-const notifDone = (n, nowMs) => n.kind === 'offerBackup' ? !takeableOfferOf(n, nowMs) : ridesInSlotOf(n, nowMs).length > 0 && !offerableRidesFor(n, nowMs).length;
+// Past: the ride (or back-up moment) the notification is about has started or ended, so nothing is left to do with it; it is hidden everywhere
+// instead of staying until it expires (NOTIFICATION_DAYS). Without a date it is never past. A ride without a time counts until the end of that day.
+export const notifPast = (n, nowMs = Date.now()) => !!(n && n.date && rideStartMs(n.date, n.time || n.momentTo) <= nowMs);
+const notifDone = (n, nowMs) => notifPast(n, nowMs) || (n.kind === 'offerBackup' ? !takeableOfferOf(n, nowMs) : ridesInSlotOf(n, nowMs).length > 0 && !offerableRidesFor(n, nowMs).length);
 function notifCardHtml({ n, txt }, go, nowMs = Date.now()){
   const rides = offerableRidesFor(n, nowMs);
   const take = n.isTest ? null : takeableOfferOf(n, nowMs);
