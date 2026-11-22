@@ -21,7 +21,7 @@ import { updatePeriodBadge } from '../ui-period.js';
 import {
   ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, syncVervangerNav, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
   dismissNotification, resetDismissedNotifications, ritbeursCardHtml, wireRitbeursCard, takeRide, saveMomentDraft, testNotificationsForView,
-  myWeekNotificationsHtml, takeFromNotification, takeableOfferOf,
+  myWeekNotificationsHtml, takeFromNotification, takeableOfferOf, notifPast,
 } from '../ui-ritbeurs.js';
 
 const dom = installFakeDom();
@@ -168,6 +168,18 @@ test('v227: nothing to decide any more (taken by somebody else, withdrawn, own o
     asF3({ offers, notifications: { a: vrij() } });
     assert.doesNotMatch(mywk(), /Rit vrij|data-rbnotiftake/); assert.doesNotMatch(view(), /Rit vrij|data-rbnotiftake/);
   }
+});
+test('v281: a notification about a ride that is over (e.g. "neemt je rit over" of last week) is hidden everywhere, not kept until it expires', () => {
+  resetDismissedNotifications();
+  const taken = (extra = {}) => ({ ...vrij(), kind: 'taken', fromFamilyId: 'f2', toFamilyId: 'f3', ...extra });
+  asF3({ offers: {}, notifications: { t1: taken({ date: '2026-09-29', time: '16:15' }) } });   // before NOW
+  assert.doesNotMatch(mywk(), /neemt je rit over/); assert.doesNotMatch(view(), /neemt je rit over/);
+  asF3({ offers: {}, notifications: { t2: taken({ date: '2026-10-05', time: '16:15' }) } });   // after NOW: still shown
+  assert.match(mywk(), /neemt je rit over/); assert.match(view(), /neemt je rit over/);
+  assert.equal(notifPast({ date: '2026-09-29', time: '16:15' }, new Date(NOW).getTime()), true);
+  assert.equal(notifPast({ date: '2026-10-05', time: '16:15' }, new Date(NOW).getTime()), false);
+  assert.equal(notifPast({ momentTo: '10:00', date: '2026-09-29' }, new Date(NOW).getTime()), true, 'a back-up moment counts until its end');
+  assert.equal(notifPast({ kind: 'taken' }, new Date(NOW).getTime()), false, 'no date: never past');
 });
 test('v227: a seat or time problem is shown on the card up front and the button reads "Toch overnemen" (a warning, never a block)', () => {
   resetDismissedNotifications();
