@@ -21,7 +21,7 @@ import { updatePeriodBadge } from '../ui-period.js';
 import {
   ritbeursAvailable, visibleNotifications, ritbeursBadgeCount, syncVervangerNav, setRbView, ritbeursViewHtml, momentDraft, momentPreview,
   dismissNotification, resetDismissedNotifications, ritbeursCardHtml, wireRitbeursCard, takeRide, saveMomentDraft, testNotificationsForView,
-  myWeekNotificationsHtml, takeFromNotification, takeableOfferOf, notifPast,
+  myWeekNotificationsHtml, takeFromNotification, takeableOfferOf, notifPast, uncoveredSettled,
 } from '../ui-ritbeurs.js';
 
 const dom = installFakeDom();
@@ -180,6 +180,18 @@ test('v281: a notification about a ride that is over (e.g. "neemt je rit over" o
   assert.equal(notifPast({ date: '2026-10-05', time: '16:15' }, new Date(NOW).getTime()), false);
   assert.equal(notifPast({ momentTo: '10:00', date: '2026-09-29' }, new Date(NOW).getTime()), true, 'a back-up moment counts until its end');
   assert.equal(notifPast({ kind: 'taken' }, new Date(NOW).getTime()), false, 'no date: never past');
+});
+test('v282: "nog niet gedekt" disappears as soon as the offer is taken over or withdrawn, and stays while it is open or unknown', () => {
+  resetDismissedNotifications();
+  const unc = { ...vrij(), kind: 'uncovered', sourceId: 'o1', date: '2026-10-07', time: '16:15' };   // after NOW
+  asF3({ offers: { o1: offerBy('f2') }, notifications: { u: unc } });
+  assert.match(view(), /nog niet gedekt/); assert.equal(uncoveredSettled(unc), false, 'still open: stays');
+  asF3({ offers: { o1: { ...offerBy('f2'), status: 'taken' } }, notifications: { u: unc } });
+  assert.doesNotMatch(view(), /nog niet gedekt/); assert.doesNotMatch(mywk(), /nog niet gedekt/); assert.equal(uncoveredSettled(unc), true);
+  asF3({ offers: { o1: { ...offerBy('f2'), status: 'withdrawn' } }, notifications: { u: unc } });
+  assert.doesNotMatch(view(), /nog niet gedekt/);
+  asF3({ offers: {}, notifications: { u: unc } });
+  assert.match(view(), /nog niet gedekt/); assert.equal(uncoveredSettled({ kind: 'taken', sourceId: 'o1' }), false);
 });
 test('v227: a seat or time problem is shown on the card up front and the button reads "Toch overnemen" (a warning, never a block)', () => {
   resetDismissedNotifications();

@@ -12,7 +12,7 @@
     "test": "3fe2cb9af104254ea272df0c6c5512a71de96362962f987fbfb91f08a9befab4"
   },
   "constants.js": {
-    "module": "2953020e5d8a4b1c5aa7b2aaf6a00b5c87f5fab3ed9068e8a10178f9c6123620",
+    "module": "36c862ce5a1808ee6a71f1c71681c2ebd1164214493366a1ff9339df50a5bd7a",
     "test": "1bb72ac2a23eb74c9ead5ffb6b14b9b173ba0eb6f7813a255a798ae8b6955466"
   },
   "coordinator.js": {
@@ -260,8 +260,8 @@
     "test": "c37a4364756c944e33f6138ab3fd0dc4a43765a8104d8beeb594ffa973cd4fc0"
   },
   "ui-ritbeurs.js": {
-    "module": "746dc2d1e7fbff42fe3c74dfb74b0b3f34f91ac6fa5f8499e7239e39b4d336ab",
-    "test": "be6686913d2898ed2448b82df5a110d4868b8773d6105e489d66706453725eca"
+    "module": "99a014f1297bd497197a67effa9529a37b96aea0742195e094ea7423ba5b27e5",
+    "test": "fd2418a2925640c24ebe6457b4d89879197bc126556777c3b5bc23c9f5d88f9d"
   },
   "ui-schedule.js": {
     "module": "8bcc3b33ab7133a95ffd857e06151bda86aa6d9e69f33902ea83e7b9a5f42b15",
