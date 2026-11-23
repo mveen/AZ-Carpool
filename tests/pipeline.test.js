@@ -49,7 +49,8 @@ await test('the SSH setup comes before every step that uses the key, in every jo
 });
 await test('the Playwright version is written in one place only, and its browsers are cached', () => {
   const a = read(actionFiles[1]);
-  assert.match(a, /actions\/cache@[0-9a-f]{40}/); assert.match(a, /path: ~\/\.cache\/ms-playwright/); assert.match(a, /key: playwright-.*1\.56\.0/); assert.match(a, /playwright@1\.56\.0/);
+  assert.match(a, /actions\/cache@[0-9a-f]{40}/); assert.match(a, /path: ~\/\.cache\/ms-playwright/); const v = (a.match(/playwright@(\d+\.\d+\.\d+)/) || [])[1]; assert.ok(v, 'one exact version'); assert.ok(a.includes('key: playwright-') && new RegExp('key: playwright-.*' + v.replace(/\./g, '\\.')).test(a), 'the cache key carries the same version');
+  assert.ok(+v.split('.')[1] >= 61 || +v.split('.')[0] > 1, 'Playwright 1.61 or newer: older ones cannot install browsers on ubuntu 26.04 (ubuntu-latest)');
   for (const f of workflows) assert.doesNotMatch(read('.github/workflows/' + f), /playwright@\d/, f);
 });
 

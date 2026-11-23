@@ -89,6 +89,8 @@ export async function openTab(page, tab, log = () => {}, who = '') {
   await page.click(`button.navtab[data-tab="${tab}"]`);
   try { await page.waitForSelector(sel, { state: 'visible', timeout: 5000 }); return; } catch {}
   log(`${who}: tab ${tab} did not show within 5 s, clicking again`);
+  const state = await page.evaluate(() => ({ url: location.href, nav: document.querySelectorAll('button.navtab').length, text: (document.body.innerText || '').replace(/\s+/g, ' ').slice(0, 160) })).catch(e => ({ error: String(e.message).split('\n')[0] }));
+  log(`${who}: page at that moment: ${JSON.stringify(state)}`);
   await page.click(`button.navtab[data-tab="${tab}"]`);
   try { await page.waitForSelector(sel, { state: 'visible', timeout: 10000 }); log(`${who}: tab ${tab} showed after the second click`); return; } catch {}
   const seen = await page.evaluate(() => ({
@@ -144,7 +146,7 @@ async function checkRole(browser, cfg, role, log, engine = 'chromium') {
     const sw = await page.evaluate(async () => !!(await navigator.serviceWorker?.getRegistration()));
     if (!sw) problems.push(`${who}: no service worker registered`);
   } catch (e) {
-    problems.push(`${who}: ${e.message.split('\n')[0]}`);
+    problems.push(`${who}: ${e.message.split('\n').slice(0, 12).join('\n     ')}`);   // the first lines hold Playwright's call log (why a click timed out)
   } finally { await ctx.close(); }
   return { problems, hostWait };
 }
